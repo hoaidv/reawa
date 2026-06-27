@@ -1,0 +1,6 @@
+paramiko
+pyobjc-framework-Quartz
+pyobjc-framework-Cocoa
+pyobjc-framework-ApplicationServices
+rumps
+keyring

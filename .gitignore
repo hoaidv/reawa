@@ -1,0 +1,44 @@
+# IPython Notebooks
+.ipynb_checkpoints/
+output/
+
+# Byte-compiled / optimized / dll files
+__pycache__/
+*.pyc
+*.pyd
+*.so
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+build/
+develop-eggs/
+dist/
+
+# Editor/IDE-specific files
+.vscode/        # Visual Studio Code
+.idea/          # PyCharm/IntelliJ
+*.swp           # Vim
+
+# Miscellaneous
+*.log
+*.temp
+*.tmp
+.DS_Store
+
+
+# Reawa packaging build artifacts (py2app)
+packaging/build/
+packaging/dist/
+packaging/src/
+packaging/app_icon.icns
+packaging/app_icon.iconset/
+
+# Dev SSH keys (runtime keys live in Application Support)
+.ssh/
+
+# Learn RAG course: datasets & model caches (keep the folder via .gitkeep)
+learn-rag/data/*
+!learn-rag/data/.gitkeep

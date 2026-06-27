@@ -1,0 +1,37 @@
+Reawa — Trademark and third-party notices
+=========================================
+
+Trademarks
+----------
+
+reMarkable® is a registered trademark of reMarkable AS (Norway).
+
+Wacom® is a registered trademark of Wacom Co., Ltd.
+
+Reawa is an independent open-source project. It is not affiliated with,
+endorsed by, or sponsored by reMarkable AS, Wacom Co., Ltd., or Apple Inc.
+
+Use of third-party trademarks in this project is for identification and
+compatibility description only (nominative fair use). This project does not
+imply any official relationship with the trademark owners.
+
+Third-party software
+--------------------
+
+This project depends on open-source libraries. When distributing a built
+application (e.g. Reawa.app), include this NOTICE file and comply with each
+dependency's license. Summary of primary runtime dependencies:
+
+  - Paramiko — LGPL-2.1 (https://www.paramiko.org/)
+  - PyObjC — MIT License (https://pyobjc.readthedocs.io/)
+  - rumps — BSD License (https://github.com/jaredks/rumps)
+  - keyring — MIT License (https://github.com/jaraco/keyring)
+  - cryptography, cffi, PyNaCl — bundled transitively by Paramiko
+
+For LGPL-covered components such as Paramiko, recipients must be able to
+modify or replace those components and rebuild or relink the application. If
+you distribute a frozen binary, provide the corresponding source or written
+offer required by LGPL-2.1.
+
+See THIRD_PARTY_LICENSES.md for the release checklist and dependency license
+summary.
