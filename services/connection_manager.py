@@ -12,7 +12,7 @@ from remarkable.services.keychain import KeychainStore
 class ConnectionManager:
     def __init__(self) -> None:
         self.store = ConnectionStore()
-        self.keychain = KeychainStore()
+        self._keychain: KeychainStore | None = None
         self._reachable: set[str] = set()
         self._discovered_ips: set[str] = set()
         self._errors: dict[str, str] = {}
@@ -21,6 +21,12 @@ class ConnectionManager:
         self._active_conn: Connection | None = None
         self._listeners: list[Callable[[], None]] = []
         self._lock = threading.Lock()
+
+    @property
+    def keychain(self) -> KeychainStore:
+        if self._keychain is None:
+            self._keychain = KeychainStore()
+        return self._keychain
 
     def add_listener(self, callback: Callable[[], None]) -> None:
         self._listeners.append(callback)
@@ -141,8 +147,13 @@ class ConnectionManager:
             self._active_conn = conn
             self._notify()
 
-            password = self.keychain.get_password(connection_id)
             key_path = self.store.private_key_path(connection_id)
+            # Avoid keychain access on connect when the SSH key is already installed.
+            # Password is only needed for first-time setup (add_connection) or if the
+            # private key file is missing.
+            password = None
+            if not key_path.exists():
+                password = self.keychain.get_password(connection_id)
 
             session = DriverSession(
                 connection=conn,

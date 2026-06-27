@@ -16,6 +16,8 @@ from AppKit import (
     NSSegmentedControl,
     NSTableColumn,
     NSTableView,
+    NSTabView,
+    NSTabViewItem,
     NSTextField,
     NSView,
     NSWindow,
@@ -28,6 +30,7 @@ from PyObjCTools import AppHelper
 from remarkable.models.connection import Connection, ConnectionStatus
 from remarkable.services.connection_manager import ConnectionManager
 from remarkable.services.network_discovery import discover_usb_ssh_hosts
+from remarkable.ui.log_panel import LogPanelController
 
 
 class ConnectionsWindowController(objc.lookUpClass("NSObject")):
@@ -95,6 +98,8 @@ class ConnectionsWindowController(objc.lookUpClass("NSObject")):
         self._scanning = False
         # None => the form is composing a NEW connection; otherwise editing this id.
         self._editing_id: str | None = None
+        self._log_panel = LogPanelController.alloc().init()
+        self._tab_view = None
         return self
 
     def show(self) -> None:
@@ -115,20 +120,52 @@ class ConnectionsWindowController(objc.lookUpClass("NSObject")):
             self.on_close()
 
     def _build_window(self) -> None:
-        frame = NSMakeRect(200, 200, 720, 520)
+        # The connections layout uses absolute coordinates up to ~512pt tall, so
+        # the tab view's *content* area must be at least that high. NSTabView
+        # reserves space at the top for the tab strip, so the window content view
+        # is made taller than the panel to compensate.
+        panel_w = 720
+        panel_h = 520
+        window_frame = NSMakeRect(200, 200, panel_w, panel_h + 48)
         self._window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
-            frame,
+            window_frame,
             NSWindowStyleMaskTitled | NSWindowStyleMaskClosable,
             NSBackingStoreBuffered,
             False,
         )
-        self._window.setTitle_("Reawa Connections")
+        self._window.setTitle_("Reawa Settings")
         # Closing the window must not deallocate it; we reuse the instance.
         # Otherwise reopening dereferences freed memory and segfaults.
         self._window.setReleasedWhenClosed_(False)
         self._window.setDelegate_(self)
         _install_edit_menu()
 
+        content_view = self._window.contentView()
+        self._tab_view = NSTabView.alloc().initWithFrame_(content_view.bounds())
+        self._tab_view.setAutoresizingMask_(18)  # width + height resizable
+        self._tab_view.setDelegate_(self)
+
+        # Size each panel to the tab view's content rect so nothing is clipped
+        # behind the tab strip.
+        panel_frame = self._tab_view.contentRect()
+
+        connections_tab = NSTabViewItem.alloc().initWithIdentifier_("connections")
+        connections_tab.setLabel_("Connections")
+        connections_tab.setView_(self._build_connections_panel(panel_frame))
+        self._tab_view.addTabViewItem_(connections_tab)
+
+        logs_tab = NSTabViewItem.alloc().initWithIdentifier_("logs")
+        logs_tab.setLabel_("Logs")
+        logs_tab.setView_(self._log_panel.build_view(panel_frame))
+        self._tab_view.addTabViewItem_(logs_tab)
+
+        content_view.addSubview_(self._tab_view)
+
+    def tabView_didSelectTabViewItem_(self, tabView, item):
+        if item.label() == "Logs":
+            self._log_panel.note_visible()
+
+    def _build_connections_panel(self, frame) -> NSView:
         content = NSView.alloc().initWithFrame_(frame)
 
         left_x = 20
@@ -224,7 +261,6 @@ class ConnectionsWindowController(objc.lookUpClass("NSObject")):
         self._save_button.setKeyEquivalent_("\r")  # Enter triggers Save
         content.addSubview_(self._save_button)
 
-        self._window.setContentView_(content)
         self._table.setDelegate_(self)
         self._table.setDataSource_(self)
         self._discovered_table.setDelegate_(self)
@@ -239,6 +275,7 @@ class ConnectionsWindowController(objc.lookUpClass("NSObject")):
         self._update_save_button()
         if getattr(self, "_connect_button", None) is not None:
             self._connect_button.setEnabled_(False)
+        return content
 
     def _wire_form_change_notifications(self) -> None:
         for field in (

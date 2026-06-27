@@ -35,6 +35,7 @@ packaging/dist/
 packaging/src/
 packaging/app_icon.icns
 packaging/app_icon.iconset/
+packaging/.eggs/
 
 # Dev SSH keys (runtime keys live in Application Support)
 .ssh/

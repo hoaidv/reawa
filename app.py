@@ -434,6 +434,9 @@ class RemarkableApp(rumps.App):
 
 
 def main() -> None:
+    from remarkable.services.app_log import install_app_logging
+
+    install_app_logging()
     RemarkableApp().run()
 
 

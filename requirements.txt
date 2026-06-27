@@ -1,6 +1,11 @@
+# App runtime
 paramiko
 pyobjc-framework-Quartz
 pyobjc-framework-Cocoa
 pyobjc-framework-ApplicationServices
 rumps
 keyring
+
+# Packaging (./packaging/build.sh → Reawa.app)
+py2app
+setuptools
