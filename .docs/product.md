@@ -20,6 +20,7 @@ The app is designed for creative and productivity workflows where the reMarkable
 | Two input modes | **Relative** (trackpad-like) or **Absolute** (screen-mapped to a window) |
 | USB auto-detect | Discovers the tablet when plugged in without hardcoding its IP |
 | Auto-connect | Optionally connect automatically when the device appears |
+| Planned native pen device mode (Swift) | Future output backend that exposes the reMarkable as a macOS-recognized tablet/stylus device instead of only mouse events |
 
 ## Menu Bar Experience
 
@@ -122,6 +123,29 @@ Choosing **Absolute** — in settings, via the menu bar, or on auto-connect when
 
 The overlay spans **all connected displays**, so the snapped window can live on any monitor.
 
+## Planned Native Pen Device Mode
+
+This is a **planned Swift feature**, not the current shipping behavior.
+
+Today the app translates reMarkable input into Quartz mouse events. The next product direction is an additional output backend that publishes the reMarkable as a **macOS pen / tablet device**, so supported apps can recognize it as pen input instead of only as a mouse.
+
+Target behavior:
+
+| Goal | Description |
+|------|-------------|
+| Native pen recognition | Apps should receive tablet/stylus input from macOS rather than synthesized mouse-only input |
+| Pressure-aware drawing | Pressure should reach drawing apps directly when the hardware reports it |
+| Pen metadata | Proximity, tip contact, barrel button, and tilt should be forwarded when available |
+| Optional backend | Mouse emulation remains available; pen-device mode is an additional output path, not a replacement |
+| App-first validation | The first validation target is **Krita** (Tablet Tester), followed by end-to-end checks in apps such as **Photoshop** |
+
+Product constraints for this feature:
+
+1. The app should expose a **generic macOS digitizer / stylus device**, not pretend to be a specific Wacom-branded device.
+2. The existing SSH pen stream and connection model should remain the source of truth for reMarkable input.
+3. Mouse-emulation workflows must keep working even if pen-device mode is unavailable on a given machine.
+4. Shipping this mode may require additional Apple-controlled entitlements and a separate install/approval flow from the current mouse-emulation build.
+
 ## USB Auto-Detect
 
 When the reMarkable is plugged in via USB, the app scans local network interfaces (especially USB Ethernet) for subnets and probes hosts for SSH. This finds the device (typically at `10.11.99.1`) without hardcoding the IP.
@@ -185,6 +209,8 @@ These choices define what the product does and how it behaves. Implementation de
 9. **Closing the snapped window exits Absolute mode.** If the target application window is closed, the app returns to Relative mode rather than leaving pen input in an invalid state.
 
 10. **Minimize hides the overlay; close exits Absolute.** A minimized window hides the region outline but keeps Absolute mode active. Closing the window reverts to Relative.
+
+11. **Future pen-device mode is additive, not disruptive.** The Swift app should support both mouse emulation and native pen-device output; users should not lose the existing Quartz-based workflow when the tablet-device path is unavailable.
 
 ## Related Documentation
 
