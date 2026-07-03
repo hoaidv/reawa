@@ -259,23 +259,23 @@ flowchart TD
 
 ### Data the tablet backend must carry
 
-The current Swift `PenFrame` already carries enough data for a basic pen path:
+The current Swift `PenFrame` now carries the RM2 data needed for richer diagnostics and a future tablet-class backend:
 
 - `x`, `y`
 - `pressure`
 - `touching`
 - `inProximity`
+- `stylusButton` (`BTN_STYLUS`)
+- `distance` (`ABS_DISTANCE`)
+- `tiltX`, `tiltY`
+- `rawEvents` captured until each `SYN_REPORT`
 
-For full tablet-class behavior, the Swift pipeline should also surface the data already present in the RM2 event stream but not yet modeled in the Swift app:
+For the planned tablet backend, the implementation should preserve and forward this metadata rather than collapsing the stream down to mouse-only semantics.
 
-- `BTN_STYLUS` → barrel / side button
-- `ABS_TILT_X`
-- `ABS_TILT_Y`
+That means the planned implementation should build on:
 
-That means the planned implementation should extend:
-
-- `Sources/ReawaApp/Models.swift` — add stylus metadata fields to `PenFrame`
-- `Sources/ReawaApp/SSHSession.swift` — parse tilt and barrel-button state from the RM2 stream
+- `Sources/ReawaApp/Models.swift` — already-expanded `PenFrame`, `PenRawEvent`, and `PenStateSnapshot`
+- `Sources/ReawaApp/SSHSession.swift` — current RM2 event parsing and per-frame raw-event retention
 - `Sources/ReawaApp/InputDrivers.swift` or a sibling backend file — normalize `PenFrame` into either Quartz mouse output or virtual tablet reports
 
 ### Preferred implementation path
@@ -298,8 +298,8 @@ Explicitly avoided:
 
 | Swift area | Planned change |
 | ---------- | -------------- |
-| `Sources/ReawaApp/Models.swift` | Expand `PenFrame` for barrel button and tilt |
-| `Sources/ReawaApp/SSHSession.swift` | Parse additional RM2 event codes and emit richer pen frames |
+| `Sources/ReawaApp/Models.swift` | Reuse the richer `PenFrame` / `PenRawEvent` model for a tablet backend |
+| `Sources/ReawaApp/SSHSession.swift` | Reuse the current RM2 parser, raw-event retention, and richer pen-frame emission |
 | `Sources/ReawaApp/InputDrivers.swift` | Split Quartz mouse output from tablet-device output |
 | `Sources/ReawaApp/ConnectionManager.swift` | Carry backend selection into the live session |
 | `Sources/ReawaApp/SettingsUI.swift` | Expose backend choice and capability / availability state |
@@ -481,21 +481,46 @@ cocoa_y = primary_height - quartz_y - height
 - Settings window open: `NSApplicationActivationPolicyRegular` (Dock icon).
 - Uses `NSApplication.sharedApplication()` (not `NSApp()`, which is `None` before the run loop starts).
 
-### Settings Window (`ui/connections_window.py`)
+### Settings Window (`Sources/ReawaApp/SettingsUI.swift`)
 
-AppKit `NSWindow` with:
+Native `NSWindow` hosting SwiftUI, with:
 
-- Connection table + form (New / Remove / Connect / Save).
-- **Save changes** enabled only when non-mode fields differ from saved connection.
-- USB scan (`network_discovery.discover_usb_ssh_hosts()`) in background thread; results via `AppHelper.callAfter`.
-- Segmented control: Relative | Absolute (saves immediately; Absolute starts snap UX when active).
-- When Absolute: snapped window label only.
-- `setReleasedWhenClosed_(False)` — closing must not deallocate; reopening otherwise segfaults.
-- Standard Edit menu installed for Cut/Copy/Paste (rumps does not provide one).
+- A tabbed settings surface: **Connections**, **App Behavior Log**, and **Pen Event Log**
+- A two-pane connection editor: discovered devices and saved connections on the left, active connection form on the right
+- Immediate-apply editing for existing connections; new connections still use **Add connection**
+- Segmented **Relative | Absolute** mode control; switching to Absolute still enters the snap-picker flow when that connection is active
+- A higher-level **Tablet orientation** picker replacing raw `swap_xy` / `invert_x` / `invert_y` controls
+- Absolute-mode context such as the snapped-window reference and border color in the same editor
+- `window.isReleasedWhenClosed = false` in `SettingsWindowController`, so reopening the window reuses the controller safely
+
+### Logging / Diagnostics (`Sources/ReawaApp/Logging.swift` + log tabs)
+
+The Swift app now has two separate in-memory log channels:
+
+- **Behavior log** — always on; intended for mode changes, settings changes, connection/session/SSH events, notifications, device detection, and Absolute-mode picker / snapped-window lifecycle
+- **Pen event log** — off by default; enabled from the UI and intended for RM2 event debugging
+
+Pen-event presentation is driven by the richer parser state:
+
+- Raw Linux event names such as `EV_KEY BTN_STYLUS 1`
+- Accumulated semantic state such as `PEN TOUCH (x, y) = (...)`
+- Recognized gesture-state labels such as `START`, `MOVE`, `END`, and `OUT`
+- Observed capability chips (`BTN_STYLUS`, `ABS_TILT_X`, `ABS_DISTANCE`, etc.) which can also be clicked in the UI to prefill log search
 
 ---
 
 ## Services
+
+### AppLogger
+
+`AppLogger` is now a small logging hub rather than a single flat list:
+
+- `behaviorEntries` — capped, always-on stream for product / app behavior debugging
+- `penEntries` — separate capped stream for high-frequency pen diagnostics
+- `penLoggingEnabled` — runtime toggle, off by default
+- `penCapabilityLabels` — observed event-family / capability labels derived from the RM2 stream
+
+High-frequency pen logs are appended through a locked background-safe store and then published back to SwiftUI as debounced main-actor snapshots. This keeps the pen log usable without pushing every event directly through a main-thread-only observable list.
 
 ### ConnectionManager
 
@@ -540,6 +565,7 @@ Cross-thread rules:
 - UI mutations always on main thread (`AppHelper.callAfter`).
 - Config changes go through `ConnectionManager.update_connection()` which updates `_active_conn`; session sees changes on next pen frame.
 - Do **not** disconnect/reconnect SSH to change output mode — live driver swap handles it.
+- Pen-event logs are appended off the session thread into a locked store, then surfaced to SwiftUI as main-actor snapshots.
 
 ---
 

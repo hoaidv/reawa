@@ -784,10 +784,7 @@ struct AppBehaviorLogView: View {
     }
 
     var body: some View {
-        LogTabShell(
-            title: "App behavior log",
-            subtitle: "Always on. Captures mode changes, settings changes, connection state, window-picking flow, SSH/session events, and device detection."
-        ) {
+        LogTabShell {
             HStack(spacing: 10) {
                 TextField("Search app behavior logs", text: $query)
                     .textFieldStyle(.roundedBorder)
@@ -866,43 +863,43 @@ struct PenEventLogView: View {
     }
 
     var body: some View {
-        LogTabShell(
-            title: "Pen event log",
-            subtitle: "Off by default. Shows raw Linux input events, accumulated pen semantics, recognized gesture states, and observed device capabilities."
-        ) {
+        LogTabShell {
             CardSurface {
                 VStack(alignment: .leading, spacing: 14) {
-                    Toggle("Capture pen events", isOn: captureBinding)
-                        .toggleStyle(.switch)
+                    HStack(spacing: 10) {
+                        Toggle("Capture pen events", isOn: captureBinding)
+                            .toggleStyle(.switch)
 
-                    if let sessionLabel = logger.penSessionLabel {
-                        Text("Current session: \(sessionLabel)")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 12)
+
+                        TextField("Search pen events", text: $query)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: 320)
+
+                        Button("Clear") {
+                            logger.clearPenLog()
+                        }
                     }
 
                     if !logger.penCapabilityLabels.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(logger.penCapabilityLabels, id: \.self) { capability in
-                                    Text(capability)
-                                        .font(.caption)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 5)
-                                        .background(
-                                            Capsule()
-                                                .fill(SettingsPalette.selectedFill)
-                                        )
+                                    Button {
+                                        query = capability
+                                    } label: {
+                                        Text(capability)
+                                            .font(.caption)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 5)
+                                            .background(
+                                                Capsule()
+                                                    .fill(SettingsPalette.selectedFill)
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
-                        }
-                    }
-
-                    HStack(spacing: 10) {
-                        TextField("Search pen events", text: $query)
-                            .textFieldStyle(.roundedBorder)
-                        Button("Clear") {
-                            logger.clearPenLog()
                         }
                     }
                 }
@@ -934,22 +931,10 @@ struct PenEventLogView: View {
 }
 
 struct LogTabShell<Content: View>: View {
-    let title: String
-    let subtitle: String
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            CardSurface {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(.title3.weight(.semibold))
-                    Text(subtitle)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
             content()
         }
         .padding(18)

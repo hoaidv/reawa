@@ -78,6 +78,17 @@ Per-connection pen behavior:
 
 All settings in the edit form apply immediately for existing connections, including output mode and tablet orientation.
 
+### Diagnostics
+
+The settings window also includes two diagnostics tabs:
+
+| Tab | Behavior |
+|-----|----------|
+| **App Behavior Log** | Always on. Searchable log of settings changes, mode changes, connection/session/SSH events, device detection, and Absolute-mode window-picking behavior |
+| **Pen Event Log** | Off by default. A **Capture pen events** toggle enables a searchable stream of raw Linux pen events, accumulated pen semantics, and recognized gesture states |
+
+In **Pen Event Log**, observed capability labels such as `BTN_STYLUS`, `ABS_TILT_X`, or `ABS_DISTANCE` can be clicked to fill the search box and immediately filter the log.
+
 ## Output Modes
 
 ### Relative Mode
