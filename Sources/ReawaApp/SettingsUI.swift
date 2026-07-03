@@ -408,17 +408,17 @@ final class SettingsViewModel: ObservableObject {
 struct SettingsRootView: View {
     @ObservedObject var viewModel: SettingsViewModel
     @ObservedObject var logger: AppLogger
+    @State private var selectedTab: SettingsSectionTab = .connections
 
     var body: some View {
-        TabView {
-            connectionsTab
-                .tabItem { Text("Connections") }
+        VStack(alignment: .leading, spacing: 0) {
+            SettingsTabBar(selection: $selectedTab)
+                .padding(.horizontal, 18)
+                .padding(.top, 16)
+                .padding(.bottom, 8)
 
-            AppBehaviorLogView(logger: logger)
-                .tabItem { Text("App Behavior Log") }
-
-            PenEventLogView(logger: logger)
-                .tabItem { Text("Pen Event Log") }
+            selectedTabContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(minWidth: 1_040, minHeight: 740)
         .background(SettingsPalette.canvas.ignoresSafeArea())
@@ -429,6 +429,18 @@ struct SettingsRootView: View {
                 viewModel.selectConnection(first)
             }
             viewModel.scanDevices()
+        }
+    }
+
+    @ViewBuilder
+    private var selectedTabContent: some View {
+        switch selectedTab {
+        case .connections:
+            connectionsTab
+        case .appBehaviorLog:
+            AppBehaviorLogView(logger: logger)
+        case .penEventLog:
+            PenEventLogView(logger: logger)
         }
     }
 
@@ -488,7 +500,7 @@ struct SettingsRootView: View {
                     Text("Connections")
                         .font(.headline)
 
-                    SidebarList {
+                    ConnectionSidebarList {
                         if viewModel.connections.isEmpty {
                             EmptySidebarMessage("No saved connections yet.")
                         } else {
@@ -525,8 +537,8 @@ struct SettingsRootView: View {
 
     private var editorPane: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                CardSurface {
+            CardSurface {
+                VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(viewModel.editingConnection == nil ? "New connection" : "Editing \(viewModel.draft.name)")
                             .font(.title3.weight(.semibold))
@@ -547,9 +559,9 @@ struct SettingsRootView: View {
                             }
                         }
                     }
-                }
 
-                CardSurface {
+                    Divider()
+
                     VStack(alignment: .leading, spacing: 18) {
                         Text("Connection settings")
                             .font(.headline)
@@ -626,20 +638,18 @@ struct SettingsRootView: View {
                             }
                         }
                     }
-                }
 
-                CardSurface {
-                    VStack(alignment: .leading, spacing: 10) {
-                        if viewModel.editingConnection == nil {
-                            Button("Add connection") {
-                                viewModel.save()
-                            }
-                            .disabled(!viewModel.canSave || viewModel.isSaving)
-                        } else {
-                            Text("Changes apply automatically.")
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
+                    if viewModel.editingConnection == nil {
+                        Divider()
+
+                        Button("Add connection") {
+                            viewModel.save()
                         }
+                        .disabled(!viewModel.canSave || viewModel.isSaving)
+                    } else {
+                        Text("Changes apply automatically.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -655,6 +665,25 @@ struct SettingsRootView: View {
             return "Connect"
         }
         return viewModel.manager.status(for: selected) == .connected ? "Disconnect" : "Connect"
+    }
+}
+
+enum SettingsSectionTab: String, CaseIterable, Identifiable {
+    case connections
+    case appBehaviorLog
+    case penEventLog
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .connections:
+            return "Connections"
+        case .appBehaviorLog:
+            return "App Behavior Log"
+        case .penEventLog:
+            return "Pen Event Log"
+        }
     }
 }
 
@@ -942,6 +971,37 @@ struct LogTabShell<Content: View>: View {
     }
 }
 
+struct SettingsTabBar: View {
+    @Binding var selection: SettingsSectionTab
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(SettingsSectionTab.allCases) { tab in
+                Button {
+                    selection = tab
+                } label: {
+                    Text(tab.title)
+                        .font(.subheadline.weight(selection == tab ? .semibold : .medium))
+                        .foregroundStyle(selection == tab ? .primary : .secondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(selection == tab ? SettingsPalette.selectedFill : Color.clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(selection == tab ? SettingsPalette.selectedStroke : Color.clear, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
 struct CardSurface<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
@@ -981,6 +1041,21 @@ struct SidebarList<Content: View>: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(SettingsPalette.subtleBorder, lineWidth: 1)
         )
+    }
+}
+
+struct ConnectionSidebarList<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 8) {
+                content()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
