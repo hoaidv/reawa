@@ -28,7 +28,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         self?.settingsModeChanged(connectionID: connectionID, mode: mode)
     }
     private lazy var settingsWindow = SettingsWindowController(viewModel: settingsViewModel, logger: logger)
-    private lazy var usbWatcher = USBWatcher(manager: manager, notifications: notifications)
+    private lazy var usbWatcher = USBWatcher(manager: manager, notifications: notifications, logger: logger)
 
     private var statusItem: NSStatusItem?
     private var followTimer: Timer?
@@ -36,6 +36,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     private var picking = false
     private var snappedConnectionID: String?
     private var snappedWindowState: WindowLifecycle = .normal
+    private var hoveredWindowReference: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setDockVisible(false)
@@ -47,7 +48,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         }
         usbWatcher.start()
         refreshMenu()
-        logger.log("Reawa started", level: "info")
+        logger.log("Reawa started.", level: "info", category: .app)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -55,6 +56,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         picker.stop()
         manager.disconnect()
         regionOverlay.hide()
+        logger.log("Reawa is shutting down.", level: "info", category: .app)
     }
 
     private func configureStatusItem() {
@@ -69,11 +71,13 @@ final class AppController: NSObject, NSApplicationDelegate {
     }
 
     private func configureSettingsWindow() {
-        settingsWindow.onOpen = {
+        settingsWindow.onOpen = { [weak self] in
             setDockVisible(true)
+            self?.logger.log("Settings window opened.", level: "info", category: .app)
         }
-        settingsWindow.onClose = {
+        settingsWindow.onClose = { [weak self] in
             setDockVisible(false)
+            self?.logger.log("Settings window closed.", level: "info", category: .app)
         }
     }
 
@@ -107,11 +111,17 @@ final class AppController: NSObject, NSApplicationDelegate {
             return
         }
         picking = true
+        hoveredWindowReference = nil
         manager.pauseInput()
         regionOverlay.hide()
         stopFollowTimer()
         settingsViewModel.statusMessage = "Selecting a window…"
+        let label = manager.connection(id: connectionID)?.name ?? connectionID
+        logger.log("Starting window picker for \(label).", level: "info", category: .absolute)
         picker.start(
+            onHoverChange: { [weak self] info in
+                self?.hoverWindowChanged(info)
+            },
             onPick: { [weak self] info in
                 self?.picked(info)
             },
@@ -125,6 +135,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         if picking {
             picker.stop()
             picking = false
+            hoveredWindowReference = nil
         }
     }
 
@@ -151,6 +162,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         manager.resumeInput()
         settingsViewModel.selectConnection(connection)
         settingsViewModel.statusMessage = "Snapped to \(reference)"
+        logger.log("Chose window \(reference) for Absolute mode.", level: "info", category: .absolute)
         refreshMenu()
     }
 
@@ -159,6 +171,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         guard let connection = activeConnection() else {
             return
         }
+        logger.log("Window picker cancelled for \(connection.name). Reverting to Relative mode.", level: "info", category: .absolute)
         revertToRelative(connectionID: connection.id)
     }
 
@@ -166,6 +179,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         guard let connection = activeConnection() else {
             return
         }
+        logger.log("Switching \(connection.name) to Relative mode.", level: "info", category: .mode)
         revertToRelative(connectionID: connection.id)
     }
 
@@ -177,6 +191,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         manager.updateConnection(connection)
         snappedConnectionID = nil
         cancelPick()
+        logger.log("Switching \(connection.name) to Absolute mode.", level: "info", category: .mode)
         refreshMenu()
     }
 
@@ -186,6 +201,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         }
         cancelPick()
         snappedConnectionID = nil
+        logger.log("Restarting window picker for \(connection.name).", level: "info", category: .absolute)
         startPick(connectionID: connection.id)
     }
 
@@ -206,6 +222,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         manager.resumeInput()
         settingsViewModel.selectConnection(connection)
         settingsViewModel.statusMessage = "Relative mode"
+        logger.log("Relative mode active for \(connection.name).", level: "info", category: .mode)
         refreshMenu()
     }
 
@@ -229,12 +246,17 @@ final class AppController: NSObject, NSApplicationDelegate {
 
         switch lifecycle {
         case .closed:
+            if snappedWindowState != .closed {
+                logger.log("Snapped window closed. Returning to Relative mode.", level: "info", category: .absolute)
+                snappedWindowState = .closed
+            }
             revertToRelative(connectionID: connection.id)
             return
         case .minimized:
             if snappedWindowState != .minimized {
                 regionOverlay.hide()
                 snappedWindowState = .minimized
+                logger.log("Snapped window minimized. Overlay hidden.", level: "info", category: .absolute)
             }
             return
         case .maximized:
@@ -244,17 +266,22 @@ final class AppController: NSObject, NSApplicationDelegate {
                 applyRegion(region, to: connection)
                 regionOverlay.show(region)
             }
+            if snappedWindowState != .maximized {
+                snappedWindowState = .maximized
+                logger.log("Snapped window maximized. Region resynced.", level: "info", category: .absolute)
+            }
             return
         case .normal:
             break
         }
 
-        if snappedWindowState == .minimized {
+        if snappedWindowState == .minimized || snappedWindowState == .maximized {
             snappedWindowState = .normal
             if windowSnap.syncRegionToWindow(&region) {
                 applyRegion(region, to: connection)
             }
             regionOverlay.show(region)
+            logger.log("Snapped window returned to normal state.", level: "info", category: .absolute)
         }
 
         guard let frame = windowSnap.currentWindowFrame() else {
@@ -409,6 +436,23 @@ final class AppController: NSObject, NSApplicationDelegate {
         refreshMenu()
     }
 
+    private func hoverWindowChanged(_ info: WindowInfo?) {
+        guard let info else {
+            hoveredWindowReference = nil
+            return
+        }
+        let reference = windowReference(for: info)
+        guard hoveredWindowReference != reference else {
+            return
+        }
+        hoveredWindowReference = reference
+        logger.log("Hovering window \(reference) in picker.", level: "info", category: .absolute)
+    }
+
+    private func windowReference(for info: WindowInfo) -> String {
+        info.name.isEmpty ? "pid \(info.pid)" : info.name
+    }
+
     private func makeMenuItem(_ title: String, action: Selector?) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
@@ -431,7 +475,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         do {
             try manager.toggleConnection(connectionID)
         } catch {
-            logger.log(error.localizedDescription, level: "error")
+            logger.log(error.localizedDescription, level: "error", category: .connection)
         }
         refreshMenu()
     }

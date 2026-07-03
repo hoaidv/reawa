@@ -20,6 +20,80 @@ enum WindowLifecycle: String, Sendable {
     case normal
 }
 
+enum LinuxInputEventType: UInt16, Sendable {
+    case syn = 0
+    case key = 1
+    case abs = 3
+
+    var name: String {
+        switch self {
+        case .syn:
+            return "EV_SYN"
+        case .key:
+            return "EV_KEY"
+        case .abs:
+            return "EV_ABS"
+        }
+    }
+}
+
+enum LinuxInputCode {
+    static let synReport: UInt16 = 0
+    static let absX: UInt16 = 0
+    static let absY: UInt16 = 1
+    static let absPressure: UInt16 = 24
+    static let absDistance: UInt16 = 25
+    static let absTiltX: UInt16 = 26
+    static let absTiltY: UInt16 = 27
+    static let btnToolPen: UInt16 = 320
+    static let btnTouch: UInt16 = 330
+    static let btnStylus: UInt16 = 331
+}
+
+func linuxInputTypeName(_ type: UInt16) -> String {
+    LinuxInputEventType(rawValue: type)?.name ?? "UNKNOWN(\(type))"
+}
+
+func linuxInputCodeName(type: UInt16, code: UInt16) -> String {
+    switch LinuxInputEventType(rawValue: type) {
+    case .syn:
+        if code == LinuxInputCode.synReport {
+            return "SYN_REPORT"
+        }
+    case .key:
+        switch code {
+        case LinuxInputCode.btnToolPen:
+            return "BTN_TOOL_PEN"
+        case LinuxInputCode.btnTouch:
+            return "BTN_TOUCH"
+        case LinuxInputCode.btnStylus:
+            return "BTN_STYLUS"
+        default:
+            break
+        }
+    case .abs:
+        switch code {
+        case LinuxInputCode.absX:
+            return "ABS_X"
+        case LinuxInputCode.absY:
+            return "ABS_Y"
+        case LinuxInputCode.absPressure:
+            return "ABS_PRESSURE"
+        case LinuxInputCode.absDistance:
+            return "ABS_DISTANCE"
+        case LinuxInputCode.absTiltX:
+            return "ABS_TILT_X"
+        case LinuxInputCode.absTiltY:
+            return "ABS_TILT_Y"
+        default:
+            break
+        }
+    case nil:
+        break
+    }
+    return "UNKNOWN(\(code))"
+}
+
 enum RM2 {
     static let user = "root"
     static let penFile = "/dev/input/event1"
@@ -136,6 +210,62 @@ struct ConnectionFile: Codable, Sendable {
     var connections: [Connection]
 }
 
+struct PenRawEvent: Equatable, Sendable {
+    let tvSec: UInt32
+    let tvUsec: UInt32
+    let type: UInt16
+    let code: UInt16
+    let value: Int
+
+    var typeName: String {
+        linuxInputTypeName(type)
+    }
+
+    var codeName: String {
+        linuxInputCodeName(type: type, code: code)
+    }
+
+    var rawDataText: String {
+        "\(typeName) \(codeName) \(value)"
+    }
+
+    var capabilityLabels: [String] {
+        switch (type, code) {
+        case (LinuxInputEventType.abs.rawValue, LinuxInputCode.absPressure):
+            return ["ABS_PRESSURE", "Pressure"]
+        case (LinuxInputEventType.abs.rawValue, LinuxInputCode.absDistance):
+            return ["ABS_DISTANCE", "Distance"]
+        case (LinuxInputEventType.abs.rawValue, LinuxInputCode.absTiltX),
+             (LinuxInputEventType.abs.rawValue, LinuxInputCode.absTiltY):
+            return [codeName, "Tilt"]
+        case (LinuxInputEventType.key.rawValue, LinuxInputCode.btnStylus):
+            return ["BTN_STYLUS", "Stylus button"]
+        case (LinuxInputEventType.key.rawValue, LinuxInputCode.btnTouch):
+            return ["BTN_TOUCH", "Touch"]
+        case (LinuxInputEventType.key.rawValue, LinuxInputCode.btnToolPen):
+            return ["BTN_TOOL_PEN", "Proximity"]
+        case (LinuxInputEventType.abs.rawValue, LinuxInputCode.absX):
+            return ["ABS_X", "Position"]
+        case (LinuxInputEventType.abs.rawValue, LinuxInputCode.absY):
+            return ["ABS_Y", "Position"]
+        default:
+            return [codeName]
+        }
+    }
+}
+
+struct PenStateSnapshot: Equatable, Sendable {
+    var x: Int?
+    var y: Int?
+    var pressure: Int?
+    var distance: Int?
+    var tiltX: Int?
+    var tiltY: Int?
+    var touching = false
+    var inProximity = false
+    var stylusButton = false
+}
+
 struct PenFrame: Equatable, Sendable {
     let tvSec: UInt32
     let tvUsec: UInt32
@@ -144,6 +274,53 @@ struct PenFrame: Equatable, Sendable {
     let pressure: Int?
     let touching: Bool
     let inProximity: Bool
+    let stylusButton: Bool
+    let distance: Int?
+    let tiltX: Int?
+    let tiltY: Int?
+    let rawEvents: [PenRawEvent]
+
+    init(
+        tvSec: UInt32,
+        tvUsec: UInt32,
+        x: Int,
+        y: Int,
+        pressure: Int?,
+        touching: Bool,
+        inProximity: Bool,
+        stylusButton: Bool = false,
+        distance: Int? = nil,
+        tiltX: Int? = nil,
+        tiltY: Int? = nil,
+        rawEvents: [PenRawEvent] = []
+    ) {
+        self.tvSec = tvSec
+        self.tvUsec = tvUsec
+        self.x = x
+        self.y = y
+        self.pressure = pressure
+        self.touching = touching
+        self.inProximity = inProximity
+        self.stylusButton = stylusButton
+        self.distance = distance
+        self.tiltX = tiltX
+        self.tiltY = tiltY
+        self.rawEvents = rawEvents
+    }
+
+    var snapshot: PenStateSnapshot {
+        PenStateSnapshot(
+            x: x,
+            y: y,
+            pressure: pressure,
+            distance: distance,
+            tiltX: tiltX,
+            tiltY: tiltY,
+            touching: touching,
+            inProximity: inProximity,
+            stylusButton: stylusButton
+        )
+    }
 }
 
 struct WindowInfo: Equatable, Sendable {

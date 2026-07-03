@@ -257,7 +257,7 @@ final class NotificationService {
         self.logger = logger
         canUseUserNotifications = Self.supportsUserNotifications(bundleURL: Bundle.main.bundleURL)
         guard canUseUserNotifications else {
-            logger.log("Notifications disabled for non-bundled runs.", level: "info")
+            logger.log("Notifications disabled for non-bundled runs.", level: "info", category: .notification)
             return
         }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
@@ -265,7 +265,7 @@ final class NotificationService {
 
     func send(title: String, body: String) {
         guard canUseUserNotifications else {
-            logger.log("notification suppressed outside app bundle: \(title) - \(body)", level: "info")
+            logger.log("notification suppressed outside app bundle: \(title) - \(body)", level: "info", category: .notification)
             return
         }
         let content = UNMutableNotificationContent()
@@ -273,7 +273,7 @@ final class NotificationService {
         content.body = body
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
-        logger.log("notification: \(title) - \(body)", level: "info")
+        logger.log("notification: \(title) - \(body)", level: "info", category: .notification)
     }
 
     nonisolated static func supportsUserNotifications(bundleURL: URL) -> Bool {
@@ -294,12 +294,14 @@ final class USBWatcher {
     private var wasDiscoveredIPs: Set<String> = []
     private weak var manager: ConnectionManager?
     private weak var notifications: NotificationService?
+    private let logger: AppLogger
     private let interval: TimeInterval
     private var onDetected: ((Connection) -> Void)?
 
-    init(manager: ConnectionManager, notifications: NotificationService, interval: TimeInterval = 3.0) {
+    init(manager: ConnectionManager, notifications: NotificationService, logger: AppLogger, interval: TimeInterval = 3.0) {
         self.manager = manager
         self.notifications = notifications
+        self.logger = logger
         self.interval = interval
     }
 
@@ -371,12 +373,15 @@ final class USBWatcher {
                 }
                 if connection.autoConnect {
                     do {
+                        logger.log("Detected \(connection.name) on USB; attempting auto-connect.", level: "info", category: .discovery)
                         try manager.connect(connectionID)
                         notifications?.send(title: "Reawa Connected", body: "Auto-connected to \(connection.name)")
                     } catch {
+                        logger.log("Auto-connect failed for \(connection.name): \(error.localizedDescription)", level: "error", category: .discovery)
                         notifications?.send(title: "Reawa Connection Failed", body: "\(connection.name): \(error.localizedDescription)")
                     }
                 } else {
+                    logger.log("Detected saved device \(connection.name) at \(connection.ip).", level: "info", category: .discovery)
                     notifications?.send(title: "Reawa Detected", body: "\(connection.name) is available — open the app to connect")
                     onDetected?(connection)
                 }
@@ -385,12 +390,14 @@ final class USBWatcher {
             let wentOffline = previousReachable.subtracting(currentReachable)
             if let activeID = manager.activeConnectionID, wentOffline.contains(activeID) {
                 let name = manager.connection(id: activeID)?.name ?? activeID
+                logger.log("Active device \(name) went offline.", level: "info", category: .discovery)
                 manager.disconnect()
                 notifications?.send(title: "Reawa Disconnected", body: "\(name) is no longer reachable")
             }
         } else {
             let newIPs = result.discovered.subtracting(previousDiscoveredIPs)
             if !newIPs.isEmpty {
+                logger.log("Detected SSH-capable device(s): \(newIPs.sorted().joined(separator: ", ")).", level: "info", category: .discovery)
                 notifications?.send(title: "Reawa Detected", body: "SSH device at \(newIPs.sorted().joined(separator: ", ")) — add a connection in Open")
             }
         }

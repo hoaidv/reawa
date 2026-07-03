@@ -69,11 +69,18 @@ final class PickerOverlayController {
     private var timer: Timer?
     private var onPick: ((WindowInfo) -> Void)?
     private var onCancel: (() -> Void)?
+    private var onHoverChange: ((WindowInfo?) -> Void)?
+    private var lastHoveredWindow: WindowInfo?
 
-    func start(onPick: @escaping (WindowInfo) -> Void, onCancel: @escaping () -> Void) {
+    func start(
+        onHoverChange: ((WindowInfo?) -> Void)? = nil,
+        onPick: @escaping (WindowInfo) -> Void,
+        onCancel: @escaping () -> Void
+    ) {
         stop()
         self.onPick = onPick
         self.onCancel = onCancel
+        self.onHoverChange = onHoverChange
 
         var showHint = true
         for screen in NSScreen.screens {
@@ -124,11 +131,16 @@ final class PickerOverlayController {
     func stop() {
         timer?.invalidate()
         timer = nil
+        if lastHoveredWindow != nil {
+            onHoverChange?(nil)
+        }
         for window in windows {
             window.orderOut(nil)
         }
         windows.removeAll()
         views.removeAll()
+        lastHoveredWindow = nil
+        onHoverChange = nil
     }
 
     private func poll() {
@@ -137,11 +149,20 @@ final class PickerOverlayController {
         }
         let point = CGEvent(source: nil)?.location ?? .zero
         guard let info = windowUnderPoint(point) else {
+            if lastHoveredWindow != nil {
+                lastHoveredWindow = nil
+                onHoverChange?(nil)
+            }
             for view in views where view.highlight != nil {
                 view.highlight = nil
                 view.needsDisplay = true
             }
             return
+        }
+
+        if info != lastHoveredWindow {
+            lastHoveredWindow = info
+            onHoverChange?(info)
         }
 
         let cocoaRect = cgRectToCocoa(info.bounds)

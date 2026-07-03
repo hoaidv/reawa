@@ -2,6 +2,15 @@ import AppKit
 import Combine
 import SwiftUI
 
+private enum SettingsPalette {
+    static let canvas = Color(nsColor: .windowBackgroundColor)
+    static let panel = Color(nsColor: .windowBackgroundColor)
+    static let panelBorder = Color.primary.opacity(0.08)
+    static let subtleBorder = Color.primary.opacity(0.05)
+    static let selectedFill = Color.accentColor.opacity(0.12)
+    static let selectedStroke = Color.accentColor.opacity(0.85)
+}
+
 enum TabletOrientation: String, CaseIterable, Identifiable {
     case gutOnTop
     case gutToLeft
@@ -20,6 +29,15 @@ enum TabletOrientation: String, CaseIterable, Identifiable {
             return "Gut at bottom"
         case .gutToRight:
             return "Gut to the right"
+        }
+    }
+
+    var isLandscape: Bool {
+        switch self {
+        case .gutOnTop, .gutAtBottom:
+            return true
+        case .gutToLeft, .gutToRight:
+            return false
         }
     }
 
@@ -184,7 +202,19 @@ final class SettingsViewModel: ObservableObject {
 
     func beginNewConnection(prefilledIP: String? = nil) {
         selectedConnectionID = nil
-        draft = ConnectionDraft(name: "reMarkable", ip: prefilledIP ?? "", password: "", autoConnect: false, outputMode: .relative, scaleText: "", swapXY: false, invertX: false, invertY: false, borderColor: AbsoluteConfig.defaultBorderColor, snappedWindowReference: nil)
+        draft = ConnectionDraft(
+            name: "reMarkable",
+            ip: prefilledIP ?? "",
+            password: "",
+            autoConnect: false,
+            outputMode: .relative,
+            scaleText: "",
+            swapXY: false,
+            invertX: false,
+            invertY: false,
+            borderColor: AbsoluteConfig.defaultBorderColor,
+            snappedWindowReference: nil
+        )
         statusMessage = "New connection"
     }
 
@@ -257,11 +287,7 @@ final class SettingsViewModel: ObservableObject {
         }
 
         let updated = draft.applied(to: connection)
-        guard updated != connection else {
-            return
-        }
-
-        manager.updateConnection(updated)
+        applyConnectionUpdate(updated, original: connection, shouldNotifyModeChange: false)
     }
 
     func removeSelectedConnection() {
@@ -291,6 +317,7 @@ final class SettingsViewModel: ObservableObject {
         }
         draft.outputMode = connection.deviceConfig.outputMode
         draft.snappedWindowReference = connection.deviceConfig.absolute.snappedWindowRef
+        draft.borderColor = connection.deviceConfig.absolute.borderColor
     }
 
     func notifyModeChanged(_ mode: OutputMode) {
@@ -303,10 +330,78 @@ final class SettingsViewModel: ObservableObject {
 
         var updated = connection
         updated.deviceConfig.outputMode = mode
+        applyConnectionUpdate(updated, original: connection, shouldNotifyModeChange: true)
+    }
+
+    private func applyConnectionUpdate(
+        _ updated: Connection,
+        original connection: Connection,
+        shouldNotifyModeChange: Bool
+    ) {
+        guard updated != connection else {
+            return
+        }
+
+        let changes = settingsChanges(from: connection, to: updated)
         manager.updateConnection(updated)
-        draft.outputMode = mode
-        draft.snappedWindowReference = updated.deviceConfig.absolute.snappedWindowRef
-        onModeChanged(updated.id, mode)
+
+        if !changes.isEmpty {
+            logger.log(
+                "\(updated.name): \(changes.joined(separator: "; "))",
+                level: "info",
+                category: .settings
+            )
+        }
+
+        if shouldNotifyModeChange, updated.deviceConfig.outputMode != connection.deviceConfig.outputMode {
+            draft.outputMode = updated.deviceConfig.outputMode
+            draft.snappedWindowReference = updated.deviceConfig.absolute.snappedWindowRef
+            onModeChanged(updated.id, updated.deviceConfig.outputMode)
+        }
+    }
+
+    private func settingsChanges(from old: Connection, to new: Connection) -> [String] {
+        var changes: [String] = []
+
+        if old.name != new.name {
+            changes.append("name -> \(new.name)")
+        }
+        if old.ip != new.ip {
+            changes.append("IP -> \(new.ip)")
+        }
+        if old.autoConnect != new.autoConnect {
+            changes.append("auto-connect -> \(new.autoConnect ? "on" : "off")")
+        }
+        if old.deviceConfig.outputMode != new.deviceConfig.outputMode {
+            changes.append("output mode -> \(new.deviceConfig.outputMode == .relative ? "Relative" : "Absolute")")
+        }
+        if old.deviceConfig.scale != new.deviceConfig.scale {
+            if let scale = new.deviceConfig.scale {
+                changes.append("scale -> \(scale)")
+            } else {
+                changes.append("scale -> Auto")
+            }
+        }
+
+        let oldOrientation = TabletOrientation(
+            swapXY: old.deviceConfig.swapXY,
+            invertX: old.deviceConfig.invertX,
+            invertY: old.deviceConfig.invertY
+        )
+        let newOrientation = TabletOrientation(
+            swapXY: new.deviceConfig.swapXY,
+            invertX: new.deviceConfig.invertX,
+            invertY: new.deviceConfig.invertY
+        )
+        if oldOrientation != newOrientation {
+            changes.append("tablet orientation -> \(newOrientation.title)")
+        }
+
+        if old.deviceConfig.absolute.borderColor != new.deviceConfig.absolute.borderColor {
+            changes.append("border color -> \(new.deviceConfig.absolute.borderColor)")
+        }
+
+        return changes
     }
 }
 
@@ -318,11 +413,15 @@ struct SettingsRootView: View {
         TabView {
             connectionsTab
                 .tabItem { Text("Connections") }
-            logsTab
-                .tabItem { Text("Logs") }
+
+            AppBehaviorLogView(logger: logger)
+                .tabItem { Text("App Behavior Log") }
+
+            PenEventLogView(logger: logger)
+                .tabItem { Text("Pen Event Log") }
         }
-        .padding(16)
-        .frame(minWidth: 860, minHeight: 560)
+        .frame(minWidth: 1_040, minHeight: 740)
+        .background(SettingsPalette.canvas.ignoresSafeArea())
         .onAppear {
             if viewModel.connections.isEmpty {
                 viewModel.beginNewConnection()
@@ -334,47 +433,80 @@ struct SettingsRootView: View {
     }
 
     private var connectionsTab: some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Discovered")
+        HStack(alignment: .top, spacing: 18) {
+            sidebar
+                .frame(width: 320)
+
+            editorPane
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .padding(18)
+    }
+
+    private var sidebar: some View {
+        CardSurface {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Discovered")
+                            .font(.headline)
+                        Spacer()
+                        if viewModel.isScanning {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Button("Scan devices") {
+                            viewModel.scanDevices()
+                        }
+                    }
+
+                    SidebarList {
+                        if viewModel.filteredDiscoveredIPs.isEmpty {
+                            EmptySidebarMessage("No new USB-discovered devices right now.")
+                        } else {
+                            ForEach(viewModel.filteredDiscoveredIPs, id: \.self) { ip in
+                                Button {
+                                    viewModel.selectDiscoveredIP(ip)
+                                } label: {
+                                    Text(ip)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(SettingsPalette.panel)
+                                )
+                            }
+                        }
+                    }
+                    .frame(height: 150)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Connections")
                         .font(.headline)
-                    Spacer()
-                    if viewModel.isScanning {
-                        ProgressView()
-                            .controlSize(.small)
+
+                    SidebarList {
+                        if viewModel.connections.isEmpty {
+                            EmptySidebarMessage("No saved connections yet.")
+                        } else {
+                            ForEach(viewModel.connections) { connection in
+                                ConnectionSidebarRow(
+                                    connection: connection,
+                                    status: viewModel.manager.status(for: connection.id),
+                                    isSelected: viewModel.selectedConnectionID == connection.id
+                                ) {
+                                    viewModel.selectConnection(connection)
+                                }
+                            }
+                        }
                     }
-                    Button("Scan devices") {
-                        viewModel.scanDevices()
-                    }
+                    .frame(minHeight: 320)
                 }
 
-                List(viewModel.filteredDiscoveredIPs, id: \.self) { ip in
-                    Button(ip) {
-                        viewModel.selectDiscoveredIP(ip)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .frame(minWidth: 260, minHeight: 120, maxHeight: 150)
-
-                Text("Connections")
-                    .font(.headline)
-
-                List(viewModel.connections, id: \.id, selection: $viewModel.selectedConnectionID) { connection in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(prefix(for: viewModel.manager.status(for: connection.id))) \(connection.name)")
-                        Text("\(connection.ip) — \(viewModel.manager.status(for: connection.id).rawValue)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .tag(connection.id)
-                    .onTapGesture {
-                        viewModel.selectConnection(connection)
-                    }
-                }
-                .frame(minWidth: 260, minHeight: 180)
-
-                HStack {
+                HStack(spacing: 10) {
                     Button("New") {
                         viewModel.beginNewConnection()
                     }
@@ -388,67 +520,134 @@ struct SettingsRootView: View {
                     .disabled(viewModel.selectedConnectionID == nil)
                 }
             }
-            .frame(width: 300)
-
-            Divider()
-
-            Form {
-                Section(viewModel.editingConnection == nil ? "New connection" : "Editing \(viewModel.draft.name)") {
-                    TextField("Name", text: $viewModel.draft.name)
-                    TextField("IP", text: $viewModel.draft.ip)
-                    SecureField("Password (new connections only)", text: $viewModel.draft.password)
-                    Toggle("Auto-connect on USB detect", isOn: $viewModel.draft.autoConnect)
-                    Picker("Output mode", selection: $viewModel.draft.outputMode) {
-                        Text("Relative").tag(OutputMode.relative)
-                        Text("Absolute").tag(OutputMode.absolute)
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: viewModel.draft.outputMode) { newValue in
-                        viewModel.notifyModeChanged(newValue)
-                    }
-
-                    TextField("Scale (empty = auto)", text: $viewModel.draft.scaleText)
-                    TabletOrientationPicker(
-                        selection: Binding(
-                            get: { viewModel.draft.tabletOrientation },
-                            set: { viewModel.draft.tabletOrientation = $0 }
-                        )
-                    )
-                    TextField("Border color", text: $viewModel.draft.borderColor)
-                    if viewModel.draft.outputMode == .absolute {
-                        Text("Snapped window: \(viewModel.draft.snappedWindowReference ?? "(none — pick a window)")")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Section {
-                    if viewModel.editingConnection == nil {
-                        Button("Add connection") {
-                            viewModel.save()
-                        }
-                        .disabled(!viewModel.canSave || viewModel.isSaving)
-                    } else {
-                        Text("Changes apply automatically.")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if !viewModel.statusMessage.isEmpty {
-                        Text(viewModel.statusMessage)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            .onChange(of: viewModel.draft) { _ in
-                viewModel.applyDraftChangesIfNeeded()
-            }
         }
     }
 
-    private var logsTab: some View {
-        LogView(logger: logger)
+    private var editorPane: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                CardSurface {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(viewModel.editingConnection == nil ? "New connection" : "Editing \(viewModel.draft.name)")
+                            .font(.title3.weight(.semibold))
+
+                        HStack(spacing: 8) {
+                            if let status = viewModel.selectedConnectionStatus {
+                                StatusPill(label: status.rawValue.capitalized, status: status)
+                            } else {
+                                StatusPill(label: "Not saved yet", status: nil)
+                            }
+
+                            Spacer()
+
+                            if !viewModel.statusMessage.isEmpty {
+                                Text(viewModel.statusMessage)
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+
+                CardSurface {
+                    VStack(alignment: .leading, spacing: 18) {
+                        Text("Connection settings")
+                            .font(.headline)
+
+                        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 14) {
+                            GridRow {
+                                SettingsFieldLabel("Name")
+                                TextField("reMarkable", text: $viewModel.draft.name)
+                                    .textFieldStyle(.roundedBorder)
+                            }
+
+                            GridRow {
+                                SettingsFieldLabel("IP")
+                                TextField("10.11.99.1", text: $viewModel.draft.ip)
+                                    .textFieldStyle(.roundedBorder)
+                            }
+
+                            GridRow {
+                                SettingsFieldLabel("Password")
+                                SecureField("New connections only", text: $viewModel.draft.password)
+                                    .textFieldStyle(.roundedBorder)
+                            }
+
+                            GridRow {
+                                SettingsFieldLabel("Auto-connect")
+                                Toggle("Auto-connect on USB detect", isOn: $viewModel.draft.autoConnect)
+                                    .toggleStyle(.switch)
+                            }
+
+                            GridRow {
+                                SettingsFieldLabel("Output mode")
+                                Picker("Output mode", selection: $viewModel.draft.outputMode) {
+                                    Text("Relative").tag(OutputMode.relative)
+                                    Text("Absolute").tag(OutputMode.absolute)
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(maxWidth: 280)
+                                .onChange(of: viewModel.draft.outputMode) { newValue in
+                                    viewModel.notifyModeChanged(newValue)
+                                }
+                            }
+
+                            GridRow {
+                                SettingsFieldLabel("Scale")
+                                TextField("Empty = auto", text: $viewModel.draft.scaleText)
+                                    .textFieldStyle(.roundedBorder)
+                            }
+
+                            GridRow(alignment: .top) {
+                                SettingsFieldLabel("Tablet orientation")
+                                    .padding(.top, 6)
+
+                                TabletOrientationPicker(
+                                    selection: Binding(
+                                        get: { viewModel.draft.tabletOrientation },
+                                        set: { viewModel.draft.tabletOrientation = $0 }
+                                    )
+                                )
+                            }
+
+                            GridRow {
+                                SettingsFieldLabel("Border color")
+                                TextField(AbsoluteConfig.defaultBorderColor, text: $viewModel.draft.borderColor)
+                                    .textFieldStyle(.roundedBorder)
+                            }
+
+                            if viewModel.draft.outputMode == .absolute {
+                                GridRow {
+                                    SettingsFieldLabel("Snapped window")
+                                    Text(viewModel.draft.snappedWindowReference ?? "(none — pick a window)")
+                                        .foregroundStyle(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                CardSurface {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if viewModel.editingConnection == nil {
+                            Button("Add connection") {
+                                viewModel.save()
+                            }
+                            .disabled(!viewModel.canSave || viewModel.isSaving)
+                        } else {
+                            Text("Changes apply automatically.")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .onChange(of: viewModel.draft) { _ in
+            viewModel.applyDraftChangesIfNeeded()
+        }
     }
 
     private var connectButtonTitle: String {
@@ -457,31 +656,19 @@ struct SettingsRootView: View {
         }
         return viewModel.manager.status(for: selected) == .connected ? "Disconnect" : "Connect"
     }
-
-    private func prefix(for status: ConnectionStatus) -> String {
-        switch status {
-        case .offline: return "○"
-        case .online: return "◎"
-        case .connected: return "●"
-        case .error: return "✗"
-        }
-    }
 }
 
 struct TabletOrientationPicker: View {
     @Binding var selection: TabletOrientation
 
     private let columns = [
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8)
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10),
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Tablet orientation")
-                .font(.headline)
-
-            LazyVGrid(columns: columns, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            LazyVGrid(columns: columns, spacing: 10) {
                 ForEach(TabletOrientation.allCases) { orientation in
                     orientationButton(orientation)
                 }
@@ -491,7 +678,6 @@ struct TabletOrientationPicker: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 4)
     }
 
     private func orientationButton(_ orientation: TabletOrientation) -> some View {
@@ -500,11 +686,12 @@ struct TabletOrientationPicker: View {
         return Button {
             selection = orientation
         } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 TabletOrientationIcon(orientation: orientation)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(orientation.title)
-                        .font(.body)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
                     if orientation == .gutOnTop {
                         Text("Default")
                             .font(.caption)
@@ -513,15 +700,15 @@ struct TabletOrientationPicker: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 74, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isSelected ? Color.accentColor.opacity(0.12) : Color(NSColor.controlBackgroundColor))
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(isSelected ? SettingsPalette.selectedFill : SettingsPalette.panel)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isSelected ? 2 : 1)
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(isSelected ? SettingsPalette.selectedStroke : SettingsPalette.panelBorder, lineWidth: isSelected ? 2 : 1)
             )
         }
         .buttonStyle(.plain)
@@ -532,79 +719,424 @@ struct TabletOrientationIcon: View {
     let orientation: TabletOrientation
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Color.primary.opacity(0.8), lineWidth: 1.5)
-                .frame(width: 30, height: 42)
-
-            Capsule()
-                .fill(Color.accentColor)
-                .frame(width: gutWidth, height: gutHeight)
-                .offset(gutOffset)
-        }
-        .frame(width: 36, height: 48)
-        .accessibilityHidden(true)
+        RoundedRectangle(cornerRadius: 8)
+            .stroke(Color.primary.opacity(0.7), lineWidth: 1.5)
+            .frame(width: tabletSize.width, height: tabletSize.height)
+            .overlay(alignment: gutAlignment) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.accentColor)
+                    .frame(width: gutSize.width, height: gutSize.height)
+                    .padding(gutPaddingEdges, 4)
+            }
+            .frame(width: 70, height: 58)
+            .accessibilityHidden(true)
     }
 
-    private var gutWidth: CGFloat {
-        switch orientation {
-        case .gutOnTop, .gutAtBottom:
-            return 14
-        case .gutToLeft, .gutToRight:
-            return 4
-        }
+    private var tabletSize: CGSize {
+        orientation.isLandscape ? CGSize(width: 56, height: 36) : CGSize(width: 36, height: 56)
     }
 
-    private var gutHeight: CGFloat {
-        switch orientation {
-        case .gutOnTop, .gutAtBottom:
-            return 4
-        case .gutToLeft, .gutToRight:
-            return 14
-        }
-    }
-
-    private var gutOffset: CGSize {
+    private var gutAlignment: Alignment {
         switch orientation {
         case .gutOnTop:
-            return CGSize(width: 0, height: -16)
+            return .top
         case .gutToLeft:
-            return CGSize(width: -10, height: 0)
+            return .leading
         case .gutAtBottom:
-            return CGSize(width: 0, height: 16)
+            return .bottom
         case .gutToRight:
-            return CGSize(width: 10, height: 0)
+            return .trailing
+        }
+    }
+
+    private var gutSize: CGSize {
+        switch orientation {
+        case .gutOnTop, .gutAtBottom:
+            return CGSize(width: tabletSize.width - 8, height: 5)
+        case .gutToLeft, .gutToRight:
+            return CGSize(width: 5, height: tabletSize.height - 8)
+        }
+    }
+
+    private var gutPaddingEdges: Edge.Set {
+        switch orientation {
+        case .gutOnTop:
+            return [.top]
+        case .gutToLeft:
+            return [.leading]
+        case .gutAtBottom:
+            return [.bottom]
+        case .gutToRight:
+            return [.trailing]
         }
     }
 }
 
-struct LogView: View {
+struct AppBehaviorLogView: View {
     @ObservedObject var logger: AppLogger
     @State private var query = ""
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            TextField("Search logs", text: $query)
-                .textFieldStyle(.roundedBorder)
+    private var filteredEntries: [LogEntry] {
+        if query.isEmpty {
+            return logger.behaviorEntries
+        }
+        return logger.behaviorEntries.filter { $0.searchableText.localizedCaseInsensitiveContains(query) }
+    }
 
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 4) {
-                    ForEach(filteredEntries) { entry in
-                        Text(entry.formatted)
-                            .font(.system(.body, design: .monospaced))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+    var body: some View {
+        LogTabShell(
+            title: "App behavior log",
+            subtitle: "Always on. Captures mode changes, settings changes, connection state, window-picking flow, SSH/session events, and device detection."
+        ) {
+            HStack(spacing: 10) {
+                TextField("Search app behavior logs", text: $query)
+                    .textFieldStyle(.roundedBorder)
+                Button("Clear") {
+                    logger.clearBehaviorLog()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            CardSurface {
+                if filteredEntries.isEmpty {
+                    LogEmptyState("No behavior logs match the current filter.")
+                } else {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 10) {
+                            ForEach(filteredEntries) { entry in
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack(spacing: 8) {
+                                        Text(entry.timestampText)
+                                            .font(.system(.caption, design: .monospaced))
+                                            .foregroundStyle(.secondary)
+
+                                        Text(entry.category.title.uppercased())
+                                            .font(.caption2.weight(.semibold))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(
+                                                Capsule()
+                                                    .fill(SettingsPalette.selectedFill)
+                                            )
+
+                                        Spacer()
+
+                                        if entry.level == "error" {
+                                            Text("ERROR")
+                                                .font(.caption2.weight(.semibold))
+                                                .foregroundStyle(.red)
+                                        }
+                                    }
+
+                                    Text(entry.message)
+                                        .font(.system(.body, design: .monospaced))
+                                        .foregroundStyle(entry.level == "error" ? .red : .primary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .padding(.bottom, 10)
+
+                                if entry.id != filteredEntries.last?.id {
+                                    Divider()
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
             }
         }
     }
+}
 
-    private var filteredEntries: [LogEntry] {
+struct PenEventLogView: View {
+    @ObservedObject var logger: AppLogger
+    @State private var query = ""
+
+    private var captureBinding: Binding<Bool> {
+        Binding(
+            get: { logger.penLoggingEnabled },
+            set: { logger.setPenLoggingEnabled($0) }
+        )
+    }
+
+    private var filteredEntries: [PenLogEntry] {
         if query.isEmpty {
-            return logger.entries
+            return logger.penEntries
         }
-        return logger.entries.filter { $0.formatted.localizedCaseInsensitiveContains(query) }
+        return logger.penEntries.filter { $0.searchableText.localizedCaseInsensitiveContains(query) }
+    }
+
+    var body: some View {
+        LogTabShell(
+            title: "Pen event log",
+            subtitle: "Off by default. Shows raw Linux input events, accumulated pen semantics, recognized gesture states, and observed device capabilities."
+        ) {
+            CardSurface {
+                VStack(alignment: .leading, spacing: 14) {
+                    Toggle("Capture pen events", isOn: captureBinding)
+                        .toggleStyle(.switch)
+
+                    if let sessionLabel = logger.penSessionLabel {
+                        Text("Current session: \(sessionLabel)")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if !logger.penCapabilityLabels.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(logger.penCapabilityLabels, id: \.self) { capability in
+                                    Text(capability)
+                                        .font(.caption)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 5)
+                                        .background(
+                                            Capsule()
+                                                .fill(SettingsPalette.selectedFill)
+                                        )
+                                }
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 10) {
+                        TextField("Search pen events", text: $query)
+                            .textFieldStyle(.roundedBorder)
+                        Button("Clear") {
+                            logger.clearPenLog()
+                        }
+                    }
+                }
+            }
+
+            CardSurface {
+                if filteredEntries.isEmpty {
+                    LogEmptyState(logger.penLoggingEnabled ? "No pen events captured yet." : "Pen event capture is currently off.")
+                } else {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 8) {
+                            ForEach(filteredEntries) { entry in
+                                Text(entry.formatted)
+                                    .font(.system(.body, design: .monospaced))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.bottom, 6)
+
+                                if entry.id != filteredEntries.last?.id {
+                                    Divider()
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
+            }
+        }
+    }
+}
+
+struct LogTabShell<Content: View>: View {
+    let title: String
+    let subtitle: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            CardSurface {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(.title3.weight(.semibold))
+                    Text(subtitle)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            content()
+        }
+        .padding(18)
+        .background(SettingsPalette.canvas)
+    }
+}
+
+struct CardSurface<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(SettingsPalette.panel)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(SettingsPalette.panelBorder, lineWidth: 1)
+        )
+    }
+}
+
+struct SidebarList<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 8) {
+                content()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(SettingsPalette.panel)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(SettingsPalette.subtleBorder, lineWidth: 1)
+        )
+    }
+}
+
+struct EmptySidebarMessage: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+    }
+}
+
+struct ConnectionSidebarRow: View {
+    let connection: Connection
+    let status: ConnectionStatus
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 8, height: 8)
+                    Text(connection.name)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                }
+
+                Text("\(connection.ip) — \(status.rawValue)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? SettingsPalette.selectedFill : SettingsPalette.panel)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? SettingsPalette.selectedStroke : SettingsPalette.subtleBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var statusColor: Color {
+        switch status {
+        case .offline:
+            return .secondary
+        case .online:
+            return .green
+        case .connected:
+            return .blue
+        case .error:
+            return .red
+        }
+    }
+}
+
+struct SettingsFieldLabel: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.body.weight(.medium))
+            .frame(width: 150, alignment: .leading)
+    }
+}
+
+struct StatusPill: View {
+    let label: String
+    let status: ConnectionStatus?
+
+    var body: some View {
+        Text(label)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                Capsule()
+                    .fill(fillColor)
+            )
+            .foregroundStyle(foregroundColor)
+    }
+
+    private var fillColor: Color {
+        switch status {
+        case .offline:
+            return Color.secondary.opacity(0.15)
+        case .online:
+            return Color.green.opacity(0.15)
+        case .connected:
+            return Color.blue.opacity(0.15)
+        case .error:
+            return Color.red.opacity(0.15)
+        case nil:
+            return Color.secondary.opacity(0.12)
+        }
+    }
+
+    private var foregroundColor: Color {
+        switch status {
+        case .error:
+            return .red
+        case .online:
+            return .green
+        case .connected:
+            return .blue
+        default:
+            return .secondary
+        }
+    }
+}
+
+struct LogEmptyState: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 
@@ -620,7 +1152,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let hostingController = NSHostingController(rootView: rootView)
         let window = NSWindow(contentViewController: hostingController)
         window.title = "Reawa Settings"
-        window.setContentSize(NSSize(width: 900, height: 620))
+        window.setContentSize(NSSize(width: 1_080, height: 760))
         window.isReleasedWhenClosed = false
         super.init(window: window)
         window.delegate = self

@@ -51,7 +51,18 @@ final class ConnectionManager: ObservableObject {
     }
 
     func updateReachability(_ reachable: Set<String>) {
+        let newlyOnline = reachable.subtracting(reachableIDs)
         let wentOffline = reachableIDs.subtracting(reachable)
+        for connectionID in newlyOnline {
+            if let connection = connection(id: connectionID) {
+                logger.log("\(connection.name) is reachable at \(connection.ip).", level: "info", category: .connection)
+            }
+        }
+        for connectionID in wentOffline {
+            if let connection = connection(id: connectionID) {
+                logger.log("\(connection.name) is no longer reachable.", level: "info", category: .connection)
+            }
+        }
         reachableIDs = reachable
         for connectionID in wentOffline {
             errors.removeValue(forKey: connectionID)
@@ -69,9 +80,9 @@ final class ConnectionManager: ObservableObject {
         try store.add(connection)
         do {
             try keychain.savePassword(password, for: connection.id)
-            try SSHKeyInstaller.setupKey(ip: ip, password: password, keyURL: AppPaths.privateKeyURL(for: connection.id))
+            try SSHKeyInstaller.setupKey(ip: ip, password: password, keyURL: AppPaths.privateKeyURL(for: connection.id), logger: logger)
             refreshConnections()
-            logger.log("Added connection \(connection.name) (\(connection.ip))", level: "info")
+            logger.log("Added connection \(connection.name) (\(connection.ip)).", level: "info", category: .connection)
             return connection
         } catch {
             try? store.remove(connection.id)
@@ -89,7 +100,7 @@ final class ConnectionManager: ObservableObject {
                 activeSession?.updateConfig(connection.deviceConfig)
             }
         } catch {
-            logger.log("Failed to update \(connection.id): \(error.localizedDescription)", level: "error")
+            logger.log("Failed to update \(connection.id): \(error.localizedDescription)", level: "error", category: .connection)
         }
     }
 
@@ -104,9 +115,9 @@ final class ConnectionManager: ObservableObject {
             reachableIDs.remove(connectionID)
             errors.removeValue(forKey: connectionID)
             refreshConnections()
-            logger.log("Removed connection \(connectionID)", level: "info")
+            logger.log("Removed connection \(connectionID).", level: "info", category: .connection)
         } catch {
-            logger.log("Failed to remove \(connectionID): \(error.localizedDescription)", level: "error")
+            logger.log("Failed to remove \(connectionID): \(error.localizedDescription)", level: "error", category: .connection)
         }
     }
 
@@ -116,6 +127,9 @@ final class ConnectionManager: ObservableObject {
         }
 
         if let activeConnectionID, activeConnectionID != connectionID {
+            if let activeConnection = connection(id: activeConnectionID) {
+                logger.log("Switching active connection from \(activeConnection.name).", level: "info", category: .connection)
+            }
             disconnect()
         }
 
@@ -126,6 +140,7 @@ final class ConnectionManager: ObservableObject {
         errors.removeValue(forKey: connectionID)
         activeConnectionID = connectionID
         activeSessionConnected = false
+        logger.log("Attempting connection to \(connection.name) (\(connection.ip)).", level: "info", category: .connection)
 
         let keyURL = AppPaths.privateKeyURL(for: connectionID)
         let password = FileManager.default.fileExists(atPath: keyURL.path) ? nil : keychain.getPassword(for: connectionID)
@@ -145,6 +160,9 @@ final class ConnectionManager: ObservableObject {
     }
 
     func disconnect() {
+        if let activeConnectionID, let connection = connection(id: activeConnectionID) {
+            logger.log("Disconnecting from \(connection.name).", level: "info", category: .connection)
+        }
         activeSession?.stop()
         activeSession = nil
         activeConnectionID = nil
@@ -172,14 +190,16 @@ final class ConnectionManager: ObservableObject {
         switch event {
         case .connected:
             activeSessionConnected = true
-            logger.log("[session] connected to \(connectionID)", level: "info")
+            let name = connection(id: connectionID)?.name ?? connectionID
+            logger.log("[session] connected to \(name)", level: "info", category: .session)
         case .stopped:
             activeSessionConnected = false
             if activeConnectionID == connectionID {
                 activeConnectionID = nil
                 activeSession = nil
             }
-            logger.log("[session] stopped for \(connectionID)", level: "info")
+            let name = connection(id: connectionID)?.name ?? connectionID
+            logger.log("[session] stopped for \(name)", level: "info", category: .session)
         case let .failed(message):
             activeSessionConnected = false
             errors[connectionID] = message
@@ -187,7 +207,8 @@ final class ConnectionManager: ObservableObject {
                 activeConnectionID = nil
                 activeSession = nil
             }
-            logger.log("[session] failed for \(connectionID): \(message)", level: "error")
+            let name = connection(id: connectionID)?.name ?? connectionID
+            logger.log("[session] failed for \(name): \(message)", level: "error", category: .session)
         }
         objectWillChange.send()
     }
