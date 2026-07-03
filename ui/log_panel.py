@@ -14,7 +14,7 @@ from AppKit import (
 from Foundation import NSNotificationCenter
 from PyObjCTools import AppHelper
 
-from remarkable.services.app_log import app_log
+from ..services.app_log import app_log
 
 
 class LogPanelController(objc.lookUpClass("NSObject")):

@@ -13,8 +13,8 @@ import sys
 
 from setuptools import setup
 
-HERE = os.path.dirname(os.path.abspath(__file__))          # remarkable/packaging
-PKG_DIR = os.path.dirname(HERE)                            # remarkable
+HERE = os.path.dirname(os.path.abspath(__file__))          # reawa/packaging
+PKG_DIR = os.path.dirname(HERE)                            # reawa
 ASSETS = os.path.join(PKG_DIR, "assets")
 LEGAL_FILES = [
     os.path.join(PKG_DIR, "LICENSE"),
@@ -27,9 +27,9 @@ LEGAL_FILES = [
 # keys, or build output. py2app may copy a package wholesale when it isn't
 # zip-safe, so the package it discovers must be clean.
 STAGING = os.path.join(HERE, "src")
-if not os.path.isdir(os.path.join(STAGING, "remarkable")):
+if not os.path.isdir(os.path.join(STAGING, "reawa")):
     raise SystemExit(
-        "Missing staged sources at %s/remarkable. Run build.sh (it rsyncs the "
+        "Missing staged sources at %s/reawa. Run build.sh (it rsyncs the "
         "package's .py files into ./src) before building." % STAGING
     )
 sys.path.insert(0, STAGING)
@@ -58,7 +58,7 @@ OPTIONS = {
         "LSMinimumSystemVersion": "12.0",
     },
     # Copy these as full packages so their compiled extensions / data /
-    # backend submodules are bundled intact. NOTE: `remarkable` is deliberately
+    # backend submodules are bundled intact. NOTE: `reawa` is deliberately
     # NOT listed here -- py2app copies `packages` directories wholesale, which
     # would pull in the dev .venv, .ssh keys, and __pycache__. Instead the
     # package's modules are discovered by import analysis and zipped, and the

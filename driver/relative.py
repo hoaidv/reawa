@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import Quartz
 
-from remarkable import rm2
-from remarkable.driver.mouse import MouseController
+from . import rm2
+from .mouse import MouseController
 
 
 class RelativeDriver:

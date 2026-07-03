@@ -27,10 +27,10 @@ from AppKit import (
 from Foundation import NSIndexSet
 from PyObjCTools import AppHelper
 
-from remarkable.models.connection import Connection, ConnectionStatus
-from remarkable.services.connection_manager import ConnectionManager
-from remarkable.services.network_discovery import discover_usb_ssh_hosts
-from remarkable.ui.log_panel import LogPanelController
+from ..models.connection import Connection, ConnectionStatus
+from ..services.connection_manager import ConnectionManager
+from ..services.network_discovery import discover_usb_ssh_hosts
+from .log_panel import LogPanelController
 
 
 class ConnectionsWindowController(objc.lookUpClass("NSObject")):

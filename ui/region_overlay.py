@@ -21,8 +21,8 @@ from AppKit import (
 )
 from Quartz import CGEventCreate, CGEventGetLocation
 
-from remarkable.models.connection import RM2_ASPECT, AbsoluteConfig
-from remarkable.ui.display_bounds import (
+from ..models.connection import RM2_ASPECT, AbsoluteConfig
+from .display_bounds import (
     cg_point_to_cocoa,
     cg_rect_to_cocoa,
     desktop_bounds,

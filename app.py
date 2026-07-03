@@ -5,15 +5,15 @@ import os
 import rumps
 from PyObjCTools import AppHelper
 
-from remarkable.driver.window_snap import WindowSnapController
-from remarkable.models.connection import ConnectionStatus
-from remarkable.services.connection_manager import ConnectionManager
-from remarkable.services.notifications import NotificationService
-from remarkable.services.usb_watcher import USBWatcher
-from remarkable.ui.connections_window import create_connections_window
-from remarkable.ui.dock_policy import set_dock_visible
-from remarkable.ui.region_overlay import RegionOverlayController
-from remarkable.ui.snap_picker import SnapPicker
+from .driver.window_snap import WindowSnapController
+from .models.connection import ConnectionStatus
+from .services.connection_manager import ConnectionManager
+from .services.notifications import NotificationService
+from .services.usb_watcher import USBWatcher
+from .ui.connections_window import create_connections_window
+from .ui.dock_policy import set_dock_visible
+from .ui.region_overlay import RegionOverlayController
+from .ui.snap_picker import SnapPicker
 
 
 STATUS_PREFIX = {
@@ -434,7 +434,7 @@ class RemarkableApp(rumps.App):
 
 
 def main() -> None:
-    from remarkable.services.app_log import install_app_logging
+    from .services.app_log import install_app_logging
 
     install_app_logging()
     RemarkableApp().run()

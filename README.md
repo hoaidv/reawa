@@ -61,15 +61,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Stage sources so imports resolve as `remarkable` (same rsync step as packaging)
-mkdir -p packaging/src
-rsync -a --prune-empty-dirs \
-  --exclude='packaging' --exclude='.venv' --exclude='.ssh' \
-  --exclude='__pycache__' --exclude='.docs' --exclude='.git' \
-  --include='*/' --include='*.py' --exclude='*' \
-  ./ packaging/src/remarkable/
-
-PYTHONPATH=packaging/src python -m remarkable
+PYTHONPATH=.. python -m reawa
 ```
 
 ### Package `Reawa.app`

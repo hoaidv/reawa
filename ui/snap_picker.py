@@ -22,8 +22,8 @@ from AppKit import (
 from Foundation import NSString, NSTimer
 from Quartz import CGEventCreate, CGEventGetLocation
 
-from remarkable.driver.window_snap import window_under_point
-from remarkable.ui.display_bounds import cg_rect_to_cocoa
+from ..driver.window_snap import window_under_point
+from .display_bounds import cg_rect_to_cocoa
 
 _ESCAPE_KEYCODE = 53
 

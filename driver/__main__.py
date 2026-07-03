@@ -6,8 +6,8 @@ from __future__ import annotations
 import sys
 import time
 
-from remarkable.models.store import ConnectionStore
-from remarkable.services.connection_manager import ConnectionManager
+from ..models.store import ConnectionStore
+from ..services.connection_manager import ConnectionManager
 
 
 def main() -> None:
@@ -15,7 +15,7 @@ def main() -> None:
     connections = store.list_connections()
     if not connections:
         print(
-            "No connections configured. Run the menubar app: python -m remarkable",
+            "No connections configured. Run the menubar app: PYTHONPATH=.. python -m reawa",
             file=sys.stderr,
         )
         sys.exit(1)

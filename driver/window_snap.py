@@ -26,9 +26,9 @@ from ApplicationServices import (
 from AppKit import NSApplicationActivateAllWindows, NSRunningApplication, NSScreen
 from CoreFoundation import CGPoint, CGSize
 
-from remarkable import rm2
-from remarkable.models.connection import AbsoluteConfig
-from remarkable.ui.display_bounds import primary_height
+from . import rm2
+from ..models.connection import AbsoluteConfig
+from ..ui.display_bounds import primary_height
 
 # pid, window_number, title, (x, y, w, h) in Quartz top-left global coordinates
 WindowInfo = tuple[int, int, str, tuple[float, float, float, float]]

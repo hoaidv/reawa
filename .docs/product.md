@@ -158,8 +158,8 @@ Status updates automatically (~every 3 seconds). Offline becomes online when the
 From the project root:
 
 ```bash
-pip install -r remarkable/requirements.txt
-python -m remarkable
+pip install -r requirements.txt
+PYTHONPATH=.. python -m reawa
 ```
 
 ## Product Decisions

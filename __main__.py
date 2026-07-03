@@ -1,4 +1,4 @@
 if __name__ == "__main__":
-    from remarkable.app import main
+    from .app import main
 
     main()

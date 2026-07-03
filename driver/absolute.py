@@ -4,9 +4,9 @@ import Quartz
 
 from typing import Callable
 
-from remarkable import rm2
-from remarkable.driver.mouse import MouseController
-from remarkable.models.connection import AbsoluteConfig
+from . import rm2
+from .mouse import MouseController
+from ..models.connection import AbsoluteConfig
 
 
 class AbsoluteDriver:

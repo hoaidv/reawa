@@ -19,7 +19,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PKG_DIR="$(dirname "$HERE")"            # remarkable/
+PKG_DIR="$(dirname "$HERE")"            # reawa/
 VENV_PY="$PKG_DIR/.venv/bin/python"
 ICON_SRC="$PKG_DIR/assets/app_icon.png"
 APP="$HERE/dist/Reawa.app"
@@ -126,7 +126,7 @@ rsync -a --prune-empty-dirs \
   --exclude='packaging' --exclude='.venv' --exclude='.ssh' \
   --exclude='__pycache__' --exclude='.docs' --exclude='.git' \
   --include='*/' --include='*.py' --exclude='*' \
-  "$PKG_DIR/" src/remarkable/
+  "$PKG_DIR/" src/reawa/
 
 echo "==> Generating app_icon.icns"
 rm -rf app_icon.iconset app_icon.icns

@@ -3,10 +3,10 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
-from remarkable.driver.session import DriverSession
-from remarkable.models.connection import Connection, ConnectionStatus
-from remarkable.models.store import ConnectionStore
-from remarkable.services.keychain import KeychainStore
+from ..driver.session import DriverSession
+from ..models.connection import Connection, ConnectionStatus
+from ..models.store import ConnectionStore
+from .keychain import KeychainStore
 
 
 class ConnectionManager:
@@ -100,9 +100,9 @@ class ConnectionManager:
 
         key_path = self.store.private_key_path(conn.id)
         try:
-            from remarkable import rm2 as rm2_mod
+            from ..driver.rm2 import setup_key
 
-            rm2_mod.setup_key(ip, password, key_path)
+            setup_key(ip, password, key_path)
         except Exception as exc:
             self.store.remove(conn.id)
             self.keychain.delete_password(conn.id)

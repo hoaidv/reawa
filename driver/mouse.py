@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import Quartz
 
-from remarkable import rm2
-from remarkable.models.connection import DeviceConfig
+from . import rm2
+from ..models.connection import DeviceConfig
 
 
 class MouseController:

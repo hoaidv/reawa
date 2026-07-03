@@ -9,11 +9,11 @@ from typing import Callable
 
 import paramiko
 
-from remarkable import rm2
-from remarkable.driver.absolute import AbsoluteDriver
-from remarkable.driver.mouse import MouseController
-from remarkable.driver.relative import RelativeDriver
-from remarkable.models.connection import Connection, DeviceConfig
+from . import rm2
+from .absolute import AbsoluteDriver
+from .mouse import MouseController
+from .relative import RelativeDriver
+from ..models.connection import Connection, DeviceConfig
 
 
 class DriverSession:

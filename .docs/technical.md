@@ -1,6 +1,6 @@
 # reMarkable RM2 → macOS Pen Driver — Technical Reference
 
-This document describes the internal architecture, data flow, implementation details, and engineering history of the `remarkable` package. For product behavior and user-facing setup, see [doc.md](doc.md).
+This document describes the internal architecture, data flow, implementation details, and engineering history of the `reawa` package. For product behavior and user-facing setup, see [doc.md](doc.md).
 
 ---
 
@@ -58,7 +58,7 @@ This document describes the internal architecture, data flow, implementation det
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  rm2.py — SSH, key setup, /dev/input/event1 parsing                     │
+│  driver/rm2.py — SSH, key setup, /dev/input/event1 parsing              │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -105,7 +105,7 @@ App-level flags:
 | Path                             | Responsibility                                                   |
 | -------------------------------- | ---------------------------------------------------------------- |
 | `app.py`                         | Menu bar entry, snap-flow orchestration, overlay lifecycle       |
-| `rm2.py`                         | SSH connection, RSA key install, pen event binary parsing        |
+| `driver/rm2.py`                  | SSH connection, RSA key install, pen event binary parsing        |
 | `models/connection.py`           | `Connection`, `DeviceConfig`, `AbsoluteConfig`, status enum      |
 | `models/store.py`                | JSON persistence, per-connection SSH key paths, legacy migration |
 | `services/connection_manager.py` | Active session, connect/disconnect, live config cache            |
@@ -213,7 +213,7 @@ class PenFrame:
     in_proximity: bool  # BTN_TOOL_PEN
 ```
 
-### SSH and Key Setup (`rm2.py`)
+### SSH and Key Setup (`driver/rm2.py`)
 
 - Connect with RSA key; fall back to password + `setup_key()` on auth failure.
 - `setup_key()`: generate 3072-bit RSA key, install public key in `authorized_keys` on device.
@@ -492,8 +492,8 @@ Legacy migration: project-local `.rm2_config.json` + `.ssh/id_rsa` → first con
 ## Entry Points
 
 ```bash
-python -m remarkable              # menu bar app (__main__.py → app.main)
-python -m remarkable.driver       # CLI: connect to first saved connection
+PYTHONPATH=.. python -m reawa                   # menu bar app from repo root
+PYTHONPATH=packaging/src python -m reawa.driver # CLI: connect to first saved connection
 ```
 
 ---

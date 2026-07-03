@@ -4,11 +4,11 @@ import threading
 import time
 from typing import Callable
 
-from remarkable.driver.session import is_host_reachable
-from remarkable.models.connection import Connection
-from remarkable.services.connection_manager import ConnectionManager
-from remarkable.services.network_discovery import discover_ssh_hosts, discover_usb_ssh_hosts
-from remarkable.services.notifications import NotificationService
+from ..driver.session import is_host_reachable
+from ..models.connection import Connection
+from .connection_manager import ConnectionManager
+from .network_discovery import discover_ssh_hosts, discover_usb_ssh_hosts
+from .notifications import NotificationService
 
 
 class USBWatcher:
