@@ -57,9 +57,9 @@ A **connection** is a saved profile for reaching one reMarkable device.
 
 The settings window (**Open**) provides a single form for creating and editing connections:
 
-- **New** clears the form and shows "New connection". The save button reads **Add connection**.
+- **New** clears the form and shows "New connection". The form shows an **Add connection** button.
 - Enter Name, IP, and Password, then click **Add connection**. Use **Scan devices** to refresh the **Discovered** list (IPs already saved are hidden). Select a discovered device to pre-fill the form.
-- Select an existing connection to edit it. The header shows "Editing: \<name\>" and the save button reads **Save changes** (enabled only when something other than output mode has changed). Password is required only when adding.
+- Select an existing connection to edit it. The header shows "Editing \<name\>". Changes apply immediately as you edit; there is no **Save changes** button. Password is required only when adding.
 
 After the first successful setup, subsequent connections use the SSH key only — no password is needed.
 
@@ -73,11 +73,10 @@ Per-connection pen behavior:
 |---------|---------|-------------|
 | **Output mode** | Relative | Relative or Absolute (segmented toggle in settings) |
 | **Scale** | Auto | Screen points per digitizer unit; auto uses display PPI |
-| **Swap XY** | Off | Swap pen axes |
-| **Invert X / Y** | Off | Flip axis direction |
+| **Tablet orientation** | Gut on top | Four options: **Gut on top**, **Gut to the left**, **Gut at bottom**, **Gut to the right**. Each option is shown with an icon and maps to the underlying axis transform so pen motion feels natural for the tablet's physical rotation |
 | **Border color** | `#3B82F6` | Color of the region outline in Absolute mode |
 
-The output mode toggle in settings saves and applies immediately — it does not require **Save changes**.
+All settings in the edit form apply immediately for existing connections, including output mode and tablet orientation.
 
 ## Output Modes
 

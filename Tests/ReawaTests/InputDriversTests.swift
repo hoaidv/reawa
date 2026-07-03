@@ -3,6 +3,27 @@ import XCTest
 @testable import ReawaApp
 
 final class InputDriversTests: XCTestCase {
+    func testTabletOrientationMapsToExistingAxisFlags() {
+        XCTAssertEqual(TabletOrientation(swapXY: false, invertX: false, invertY: false), .gutOnTop)
+        XCTAssertEqual(TabletOrientation(swapXY: true, invertX: false, invertY: true), .gutToLeft)
+        XCTAssertEqual(TabletOrientation(swapXY: false, invertX: true, invertY: true), .gutAtBottom)
+        XCTAssertEqual(TabletOrientation(swapXY: true, invertX: true, invertY: false), .gutToRight)
+    }
+
+    func testDraftOrientationUpdatesAxisFlags() {
+        var draft = ConnectionDraft()
+
+        draft.tabletOrientation = .gutToRight
+        XCTAssertTrue(draft.swapXY)
+        XCTAssertTrue(draft.invertX)
+        XCTAssertFalse(draft.invertY)
+
+        draft.tabletOrientation = .gutAtBottom
+        XCTAssertFalse(draft.swapXY)
+        XCTAssertTrue(draft.invertX)
+        XCTAssertTrue(draft.invertY)
+    }
+
     func testFallbackDisplayIDReturnsMatchingActiveDisplay() {
         let displays = [
             DisplayCandidate(id: 1, bounds: CGRect(x: 0, y: 0, width: 1440, height: 900)),

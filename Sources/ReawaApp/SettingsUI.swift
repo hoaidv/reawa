@@ -2,6 +2,70 @@ import AppKit
 import Combine
 import SwiftUI
 
+enum TabletOrientation: String, CaseIterable, Identifiable {
+    case gutOnTop
+    case gutToLeft
+    case gutAtBottom
+    case gutToRight
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .gutOnTop:
+            return "Gut on top"
+        case .gutToLeft:
+            return "Gut to the left"
+        case .gutAtBottom:
+            return "Gut at bottom"
+        case .gutToRight:
+            return "Gut to the right"
+        }
+    }
+
+    var swapXY: Bool {
+        switch self {
+        case .gutOnTop, .gutAtBottom:
+            return false
+        case .gutToLeft, .gutToRight:
+            return true
+        }
+    }
+
+    var invertX: Bool {
+        switch self {
+        case .gutAtBottom, .gutToRight:
+            return true
+        case .gutOnTop, .gutToLeft:
+            return false
+        }
+    }
+
+    var invertY: Bool {
+        switch self {
+        case .gutToLeft, .gutAtBottom:
+            return true
+        case .gutOnTop, .gutToRight:
+            return false
+        }
+    }
+
+    init(swapXY: Bool, invertX: Bool, invertY: Bool) {
+        switch (swapXY, invertX, invertY) {
+        case (false, false, false):
+            self = .gutOnTop
+        case (true, false, true):
+            self = .gutToLeft
+        case (false, true, true):
+            self = .gutAtBottom
+        case (true, true, false):
+            self = .gutToRight
+        default:
+            self = .gutOnTop
+        }
+    }
+}
+
 struct ConnectionDraft: Equatable {
     var name = ""
     var ip = ""
@@ -19,6 +83,14 @@ struct ConnectionDraft: Equatable {
     var trimmedIP: String { ip.trimmingCharacters(in: .whitespacesAndNewlines) }
     var trimmedPassword: String { password.trimmingCharacters(in: .whitespacesAndNewlines) }
     var parsedScale: Double? { Double(scaleText.trimmingCharacters(in: .whitespacesAndNewlines)) }
+    var tabletOrientation: TabletOrientation {
+        get { TabletOrientation(swapXY: swapXY, invertX: invertX, invertY: invertY) }
+        set {
+            swapXY = newValue.swapXY
+            invertX = newValue.invertX
+            invertY = newValue.invertY
+        }
+    }
 
     mutating func load(from connection: Connection) {
         name = connection.name
@@ -148,19 +220,13 @@ final class SettingsViewModel: ObservableObject {
             return
         }
 
-        isSaving = true
-        statusMessage = ""
-
-        if let connection = editingConnection {
-            let updated = draft.applied(to: connection)
-            manager.updateConnection(updated)
-            if updated.deviceConfig.outputMode != connection.deviceConfig.outputMode {
-                onModeChanged(updated.id, updated.deviceConfig.outputMode)
-            }
-            isSaving = false
-            statusMessage = "Saved changes"
+        if editingConnection != nil {
+            applyDraftChangesIfNeeded()
             return
         }
+
+        isSaving = true
+        statusMessage = ""
 
         let name = draft.trimmedName.isEmpty ? "reMarkable" : draft.trimmedName
         let ip = draft.trimmedIP.isEmpty ? "10.11.99.1" : draft.trimmedIP
@@ -180,6 +246,22 @@ final class SettingsViewModel: ObservableObject {
             }
             isSaving = false
         }
+    }
+
+    func applyDraftChangesIfNeeded() {
+        guard let connection = editingConnection else {
+            return
+        }
+        guard !draft.trimmedName.isEmpty, !draft.trimmedIP.isEmpty else {
+            return
+        }
+
+        let updated = draft.applied(to: connection)
+        guard updated != connection else {
+            return
+        }
+
+        manager.updateConnection(updated)
     }
 
     func removeSelectedConnection() {
@@ -326,9 +408,12 @@ struct SettingsRootView: View {
                     }
 
                     TextField("Scale (empty = auto)", text: $viewModel.draft.scaleText)
-                    Toggle("Swap XY", isOn: $viewModel.draft.swapXY)
-                    Toggle("Invert X", isOn: $viewModel.draft.invertX)
-                    Toggle("Invert Y", isOn: $viewModel.draft.invertY)
+                    TabletOrientationPicker(
+                        selection: Binding(
+                            get: { viewModel.draft.tabletOrientation },
+                            set: { viewModel.draft.tabletOrientation = $0 }
+                        )
+                    )
                     TextField("Border color", text: $viewModel.draft.borderColor)
                     if viewModel.draft.outputMode == .absolute {
                         Text("Snapped window: \(viewModel.draft.snappedWindowReference ?? "(none — pick a window)")")
@@ -337,10 +422,16 @@ struct SettingsRootView: View {
                 }
 
                 Section {
-                    Button(viewModel.editingConnection == nil ? "Add connection" : "Save changes") {
-                        viewModel.save()
+                    if viewModel.editingConnection == nil {
+                        Button("Add connection") {
+                            viewModel.save()
+                        }
+                        .disabled(!viewModel.canSave || viewModel.isSaving)
+                    } else {
+                        Text("Changes apply automatically.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
                     }
-                    .disabled(!viewModel.canSave || viewModel.isSaving)
 
                     if !viewModel.statusMessage.isEmpty {
                         Text(viewModel.statusMessage)
@@ -350,6 +441,9 @@ struct SettingsRootView: View {
                 }
             }
             .formStyle(.grouped)
+            .onChange(of: viewModel.draft) { _ in
+                viewModel.applyDraftChangesIfNeeded()
+            }
         }
     }
 
@@ -370,6 +464,116 @@ struct SettingsRootView: View {
         case .online: return "◎"
         case .connected: return "●"
         case .error: return "✗"
+        }
+    }
+}
+
+struct TabletOrientationPicker: View {
+    @Binding var selection: TabletOrientation
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tablet orientation")
+                .font(.headline)
+
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(TabletOrientation.allCases) { orientation in
+                    orientationButton(orientation)
+                }
+            }
+
+            Text("Adjusts pen movement to feel natural for the way the tablet is rotated.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func orientationButton(_ orientation: TabletOrientation) -> some View {
+        let isSelected = selection == orientation
+
+        return Button {
+            selection = orientation
+        } label: {
+            HStack(spacing: 10) {
+                TabletOrientationIcon(orientation: orientation)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(orientation.title)
+                        .font(.body)
+                    if orientation == .gutOnTop {
+                        Text("Default")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isSelected ? Color.accentColor.opacity(0.12) : Color(NSColor.controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isSelected ? 2 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct TabletOrientationIcon: View {
+    let orientation: TabletOrientation
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.primary.opacity(0.8), lineWidth: 1.5)
+                .frame(width: 30, height: 42)
+
+            Capsule()
+                .fill(Color.accentColor)
+                .frame(width: gutWidth, height: gutHeight)
+                .offset(gutOffset)
+        }
+        .frame(width: 36, height: 48)
+        .accessibilityHidden(true)
+    }
+
+    private var gutWidth: CGFloat {
+        switch orientation {
+        case .gutOnTop, .gutAtBottom:
+            return 14
+        case .gutToLeft, .gutToRight:
+            return 4
+        }
+    }
+
+    private var gutHeight: CGFloat {
+        switch orientation {
+        case .gutOnTop, .gutAtBottom:
+            return 4
+        case .gutToLeft, .gutToRight:
+            return 14
+        }
+    }
+
+    private var gutOffset: CGSize {
+        switch orientation {
+        case .gutOnTop:
+            return CGSize(width: 0, height: -16)
+        case .gutToLeft:
+            return CGSize(width: -10, height: 0)
+        case .gutAtBottom:
+            return CGSize(width: 0, height: 16)
+        case .gutToRight:
+            return CGSize(width: 10, height: 0)
         }
     }
 }
