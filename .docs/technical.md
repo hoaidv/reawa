@@ -284,6 +284,13 @@ Primary target:
 
 - Implement the feature in **Swift** as a user-space virtual HID device backend when the necessary Apple entitlement is available.
 
+Current repository state:
+
+- The Swift app now contains a **Native Stylus** backend spike using `CoreHID.HIDVirtualDevice`.
+- The code path is useful for integration work, HID report design, fallback behavior, and packaging preparation.
+- However, **actual virtual HID device creation is still blocked until Apple approves** `com.apple.developer.hid.virtual.device` for the signing team and the app is launched as a signed `.app` bundle with that entitlement.
+- `swift run reawa` cannot exercise this feature because the SwiftPM-built executable is not a provisioned app bundle with the restricted entitlement.
+
 Fallback / advanced path:
 
 - If the user-space virtual-HID path is insufficient, move the tablet backend into a **HIDDriverKit / DriverKit system extension** while keeping the existing Swift app as the controller and SSH event source.
@@ -316,6 +323,10 @@ Recommended validation order:
 ### Major delivery risk
 
 The biggest non-code risk is Apple entitlement approval for virtual HID / DriverKit capabilities. The product should therefore treat native pen-device output as an optional backend and preserve mouse emulation as a supported fallback.
+
+Practical implication:
+
+- Without Apple approval, local development can prepare the code, app bundle, signing flow, and entitlement files, but it **cannot** make macOS accept the process as a real Virtual HID publisher in the supported path.
 
 ---
 

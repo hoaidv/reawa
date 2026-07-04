@@ -5,6 +5,7 @@ final class ConnectionManager: ObservableObject {
     @Published private(set) var connections: [Connection]
     @Published private(set) var discoveredIPs: [String] = []
     @Published private(set) var activeConnectionID: String?
+    @Published private(set) var nativeStylusStatuses: [String: NativeStylusStatus] = [:]
 
     private let store = ConnectionStore()
     private let keychain = KeychainStore()
@@ -12,12 +13,21 @@ final class ConnectionManager: ObservableObject {
 
     private var reachableIDs: Set<String> = []
     private var errors: [String: String] = [:]
+    private var lastWorkingMouseModes: [String: OutputMode] = [:]
     private var activeSession: DriverSession?
     private var activeSessionConnected = false
 
     init(logger: AppLogger) {
         self.logger = logger
         connections = store.listConnections()
+        lastWorkingMouseModes = Dictionary(
+            uniqueKeysWithValues: connections.compactMap { connection in
+                guard connection.deviceConfig.outputMode.isMouseEmulation else {
+                    return nil
+                }
+                return (connection.id, connection.deviceConfig.outputMode)
+            }
+        )
     }
 
     func refreshConnections() {
@@ -43,6 +53,10 @@ final class ConnectionManager: ObservableObject {
 
     func errorMessage(for connectionID: String) -> String? {
         errors[connectionID]
+    }
+
+    func nativeStylusStatus(for connectionID: String) -> NativeStylusStatus? {
+        nativeStylusStatuses[connectionID]
     }
 
     func setDiscoveredIPs(_ ips: Set<String>) {
@@ -96,6 +110,9 @@ final class ConnectionManager: ObservableObject {
         do {
             try store.update(connection)
             refreshConnections()
+            if connection.deviceConfig.outputMode.isMouseEmulation {
+                lastWorkingMouseModes[connection.id] = connection.deviceConfig.outputMode
+            }
             if activeConnectionID == connection.id {
                 activeSession?.updateConfig(connection.deviceConfig)
             }
@@ -140,6 +157,9 @@ final class ConnectionManager: ObservableObject {
         errors.removeValue(forKey: connectionID)
         activeConnectionID = connectionID
         activeSessionConnected = false
+        if connection.deviceConfig.outputMode.isMouseEmulation {
+            lastWorkingMouseModes[connectionID] = connection.deviceConfig.outputMode
+        }
         logger.log("Attempting connection to \(connection.name) (\(connection.ip)).", level: "info", category: .connection)
 
         let keyURL = AppPaths.privateKeyURL(for: connectionID)
@@ -165,6 +185,9 @@ final class ConnectionManager: ObservableObject {
         }
         activeSession?.stop()
         activeSession = nil
+        if let activeConnectionID {
+            nativeStylusStatuses.removeValue(forKey: activeConnectionID)
+        }
         activeConnectionID = nil
         activeSessionConnected = false
         objectWillChange.send()
@@ -203,12 +226,31 @@ final class ConnectionManager: ObservableObject {
         case let .failed(message):
             activeSessionConnected = false
             errors[connectionID] = message
+            nativeStylusStatuses.removeValue(forKey: connectionID)
             if activeConnectionID == connectionID {
                 activeConnectionID = nil
                 activeSession = nil
             }
             let name = connection(id: connectionID)?.name ?? connectionID
             logger.log("[session] failed for \(name): \(message)", level: "error", category: .session)
+        case let .nativeStylusStatus(status):
+            if let status {
+                nativeStylusStatuses[connectionID] = status
+            } else {
+                nativeStylusStatuses.removeValue(forKey: connectionID)
+            }
+        case let .modeFallback(requested, active, reason):
+            guard var connection = connection(id: connectionID) else {
+                break
+            }
+            let resolvedFallback = active.isMouseEmulation ? active : (lastWorkingMouseModes[connectionID] ?? .relative)
+            connection.deviceConfig.outputMode = resolvedFallback
+            updateConnection(connection)
+            logger.log(
+                "\(connection.name): \(requested.title) is unavailable, falling back to \(resolvedFallback.title). \(reason)",
+                level: "error",
+                category: .mode
+            )
         }
         objectWillChange.send()
     }

@@ -4,6 +4,39 @@ import Foundation
 enum OutputMode: String, Codable, CaseIterable, Sendable {
     case relative = "RELATIVE"
     case absolute = "ABSOLUTE"
+    case nativeStylus = "NATIVE_STYLUS"
+
+    var title: String {
+        switch self {
+        case .relative:
+            return "Relative"
+        case .absolute:
+            return "Absolute"
+        case .nativeStylus:
+            return "Native Stylus"
+        }
+    }
+
+    var isMouseEmulation: Bool {
+        switch self {
+        case .relative, .absolute:
+            return true
+        case .nativeStylus:
+            return false
+        }
+    }
+}
+
+enum NativeStylusStatusKind: String, Sendable {
+    case info
+    case success
+    case warning
+    case error
+}
+
+struct NativeStylusStatus: Equatable, Sendable {
+    let kind: NativeStylusStatusKind
+    let message: String
 }
 
 enum ConnectionStatus: String, Sendable {

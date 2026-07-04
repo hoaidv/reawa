@@ -67,6 +67,34 @@ Run the menu bar app from source:
 swift run reawa
 ```
 
+This is fine for `Relative` and `Absolute` development, but it cannot exercise
+`Native Stylus`. That mode needs a signed `.app` bundle with the restricted
+Virtual HID entitlement.
+
+To package a local app bundle:
+
+```bash
+sh scripts/build-macos-app.sh --configuration debug
+```
+
+To check local signing readiness for `Native Stylus`:
+
+```bash
+sh scripts/check-native-stylus-setup.sh
+```
+
+To build and sign a bundle after Apple has approved the entitlement for your
+developer team:
+
+```bash
+sh scripts/build-macos-app.sh \
+  --configuration debug \
+  --sign "Apple Development: YOUR NAME (TEAMID)" \
+  --provisioning-profile "/path/to/Reawa.provisionprofile" \
+  --show-entitlements \
+  --open
+```
+
 You can also open `Package.swift` directly in Xcode. The native bundle metadata
 and entitlements live in `Config/`.
 

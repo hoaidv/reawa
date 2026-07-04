@@ -137,6 +137,12 @@ The overlay spans **all connected displays**, so the snapped window can live on 
 
 This is a **planned Swift feature**, not the current shipping behavior.
 
+Repository note:
+
+- The repo now includes an initial Native Stylus backend spike and local app-bundle/signing preparation.
+- Even with that code in place, the feature cannot create a real macOS virtual HID pen device in the normal supported path until Apple approves the restricted entitlement `com.apple.developer.hid.virtual.device` for the signing team.
+- Approving the later macOS Accessibility prompt is a separate local step and is **not** a substitute for Apple entitlement approval.
+
 Today the app translates reMarkable input into Quartz mouse events. The next product direction is an additional output backend that publishes the reMarkable as a **macOS pen / tablet device**, so supported apps can recognize it as pen input instead of only as a mouse.
 
 Target behavior:
@@ -155,6 +161,10 @@ Product constraints for this feature:
 2. The existing SSH pen stream and connection model should remain the source of truth for reMarkable input.
 3. Mouse-emulation workflows must keep working even if pen-device mode is unavailable on a given machine.
 4. Shipping this mode may require additional Apple-controlled entitlements and a separate install/approval flow from the current mouse-emulation build.
+
+Local-development constraint:
+
+- `swift run reawa` remains valid for mouse-emulation development, but it cannot test Native Stylus because it does not launch a signed app bundle with the restricted Virtual HID entitlement.
 
 ## USB Auto-Detect
 

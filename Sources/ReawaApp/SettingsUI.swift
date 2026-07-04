@@ -193,6 +193,13 @@ final class SettingsViewModel: ObservableObject {
         return manager.status(for: selectedConnectionID)
     }
 
+    var selectedNativeStylusStatus: NativeStylusStatus? {
+        guard let selectedConnectionID else {
+            return nil
+        }
+        return manager.nativeStylusStatus(for: selectedConnectionID)
+    }
+
     var canSave: Bool {
         if editingConnection == nil {
             return !draft.trimmedName.isEmpty && !draft.trimmedIP.isEmpty && !draft.trimmedPassword.isEmpty
@@ -373,7 +380,7 @@ final class SettingsViewModel: ObservableObject {
             changes.append("auto-connect -> \(new.autoConnect ? "on" : "off")")
         }
         if old.deviceConfig.outputMode != new.deviceConfig.outputMode {
-            changes.append("output mode -> \(new.deviceConfig.outputMode == .relative ? "Relative" : "Absolute")")
+            changes.append("output mode -> \(new.deviceConfig.outputMode.title)")
         }
         if old.deviceConfig.scale != new.deviceConfig.scale {
             if let scale = new.deviceConfig.scale {
@@ -596,11 +603,21 @@ struct SettingsRootView: View {
                                 Picker("Output mode", selection: $viewModel.draft.outputMode) {
                                     Text("Relative").tag(OutputMode.relative)
                                     Text("Absolute").tag(OutputMode.absolute)
+                                    Text("Native Stylus").tag(OutputMode.nativeStylus)
                                 }
                                 .pickerStyle(.segmented)
-                                .frame(maxWidth: 280)
+                                .frame(maxWidth: 420)
                                 .onChange(of: viewModel.draft.outputMode) { newValue in
                                     viewModel.notifyModeChanged(newValue)
+                                }
+                            }
+
+                            if viewModel.draft.outputMode == .nativeStylus || viewModel.selectedNativeStylusStatus != nil {
+                                GridRow(alignment: .top) {
+                                    SettingsFieldLabel("Native Stylus")
+                                        .padding(.top, 6)
+
+                                    NativeStylusStatusView(status: viewModel.selectedNativeStylusStatus)
                                 }
                             }
 
@@ -1181,6 +1198,83 @@ struct StatusPill: View {
             return .blue
         default:
             return .secondary
+        }
+    }
+}
+
+struct NativeStylusStatusView: View {
+    let status: NativeStylusStatus?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(status?.message ?? "Will create a generic virtual stylus device when this connection is active. Requires a signed `.app` build with the restricted Virtual HID entitlement and Accessibility permission.")
+                .font(.callout)
+                .foregroundStyle(foregroundColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(helperText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(backgroundColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(borderColor, lineWidth: 1)
+        )
+    }
+
+    private var helperText: String {
+        switch status?.kind {
+        case .success:
+            return "Validate in Krita Tablet Tester first to confirm the app is seeing a stylus device instead of only mouse movement."
+        case .warning, .error:
+            return "If startup fails, Reawa keeps the existing mouse-emulation backends available as a fallback. `swift run reawa` cannot provide the Virtual HID entitlement."
+        case .info, nil:
+            return "Absolute-only features such as snapped-window picking stay disabled in Native Stylus mode. For local testing, use a signed app bundle rather than `swift run reawa`."
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch status?.kind {
+        case .success:
+            return Color.green.opacity(0.10)
+        case .warning:
+            return Color.yellow.opacity(0.12)
+        case .error:
+            return Color.red.opacity(0.10)
+        case .info, nil:
+            return Color.blue.opacity(0.08)
+        }
+    }
+
+    private var borderColor: Color {
+        switch status?.kind {
+        case .success:
+            return Color.green.opacity(0.35)
+        case .warning:
+            return Color.yellow.opacity(0.45)
+        case .error:
+            return Color.red.opacity(0.35)
+        case .info, nil:
+            return Color.blue.opacity(0.25)
+        }
+    }
+
+    private var foregroundColor: Color {
+        switch status?.kind {
+        case .success:
+            return .green
+        case .warning:
+            return .yellow
+        case .error:
+            return .red
+        case .info, nil:
+            return .primary
         }
     }
 }

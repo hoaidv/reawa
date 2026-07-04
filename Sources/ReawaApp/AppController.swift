@@ -176,23 +176,43 @@ final class AppController: NSObject, NSApplicationDelegate {
     }
 
     private func switchToRelative() {
-        guard let connection = activeConnection() else {
-            return
-        }
-        logger.log("Switching \(connection.name) to Relative mode.", level: "info", category: .mode)
-        revertToRelative(connectionID: connection.id)
+        switchToMode(.relative)
     }
 
     private func switchToAbsolute() {
+        switchToMode(.absolute)
+    }
+
+    private func switchToNativeStylus() {
+        switchToMode(.nativeStylus)
+    }
+
+    private func switchToMode(_ mode: OutputMode) {
         guard var connection = activeConnection() else {
             return
         }
-        connection.deviceConfig.outputMode = .absolute
-        manager.updateConnection(connection)
-        snappedConnectionID = nil
-        cancelPick()
-        logger.log("Switching \(connection.name) to Absolute mode.", level: "info", category: .mode)
-        refreshMenu()
+        logger.log("Switching \(connection.name) to \(mode.title) mode.", level: "info", category: .mode)
+
+        switch mode {
+        case .relative:
+            revertToRelative(connectionID: connection.id)
+        case .absolute:
+            connection.deviceConfig.outputMode = .absolute
+            manager.updateConnection(connection)
+            snappedConnectionID = nil
+            cancelPick()
+            refreshMenu()
+        case .nativeStylus:
+            cancelPick()
+            snappedConnectionID = nil
+            stopFollowTimer()
+            regionOverlay.hide()
+            manager.resumeInput()
+            connection.deviceConfig.outputMode = .nativeStylus
+            manager.updateConnection(connection)
+            settingsViewModel.statusMessage = "Native Stylus mode"
+            refreshMenu()
+        }
     }
 
     private func restartPick() {
@@ -338,20 +358,14 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     private func addModeItems(to menu: NSMenu) {
         let mode = activeMode()
-        let relative = makeMenuItem(
-            "\(mode == .relative ? "🟢" : "⚪️") Relative",
-            action: mode == .absolute ? #selector(menuSwitchRelative) : nil
-        )
-        let absolute = makeMenuItem(
-            "\(mode == .absolute ? "🟢" : "⚪️") Absolute",
-            action: mode == .relative ? #selector(menuSwitchAbsolute) : nil
-        )
-
-        relative.isEnabled = mode == .absolute
-        absolute.isEnabled = mode == .relative
-
-        menu.addItem(relative)
-        menu.addItem(absolute)
+        for candidate in OutputMode.allCases {
+            let item = makeMenuItem(
+                "\(mode == candidate ? "🟢" : "⚪️") \(candidate.title)",
+                action: mode == nil || mode == candidate ? nil : selector(for: candidate)
+            )
+            item.isEnabled = mode != nil && mode != candidate
+            menu.addItem(item)
+        }
 
         if mode == .absolute {
             menu.addItem(.separator())
@@ -417,7 +431,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     }
 
     private func settingsModeChanged(connectionID: String, mode: OutputMode) {
-        if mode == .relative {
+        switch mode {
+        case .relative:
             if manager.activeConnectionID == connectionID {
                 revertToRelative(connectionID: connectionID)
             } else if var connection = manager.connection(id: connectionID) {
@@ -426,14 +441,22 @@ final class AppController: NSObject, NSApplicationDelegate {
                 manager.updateConnection(connection)
                 refreshMenu()
             }
-            return
+        case .absolute:
+            if manager.activeConnectionID == connectionID {
+                snappedConnectionID = nil
+                cancelPick()
+            }
+            refreshMenu()
+        case .nativeStylus:
+            if manager.activeConnectionID == connectionID {
+                snappedConnectionID = nil
+                cancelPick()
+                stopFollowTimer()
+                regionOverlay.hide()
+                manager.resumeInput()
+            }
+            refreshMenu()
         }
-
-        if manager.activeConnectionID == connectionID {
-            snappedConnectionID = nil
-            cancelPick()
-        }
-        refreshMenu()
     }
 
     private func hoverWindowChanged(_ info: WindowInfo?) {
@@ -488,6 +511,10 @@ final class AppController: NSObject, NSApplicationDelegate {
         switchToAbsolute()
     }
 
+    @objc private func menuSwitchNativeStylus() {
+        switchToNativeStylus()
+    }
+
     @objc private func menuChooseWindow() {
         restartPick()
     }
@@ -511,5 +538,16 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     @objc private func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    private func selector(for mode: OutputMode) -> Selector {
+        switch mode {
+        case .relative:
+            return #selector(menuSwitchRelative)
+        case .absolute:
+            return #selector(menuSwitchAbsolute)
+        case .nativeStylus:
+            return #selector(menuSwitchNativeStylus)
+        }
     }
 }

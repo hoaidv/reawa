@@ -24,6 +24,8 @@ enum DriverSessionEvent: Sendable {
     case connected
     case stopped
     case failed(String)
+    case nativeStylusStatus(NativeStylusStatus?)
+    case modeFallback(requested: OutputMode, active: OutputMode, reason: String)
 }
 
 struct StreamProcess {
@@ -387,7 +389,7 @@ final class DriverSession: @unchecked Sendable {
 
     private func run() {
         var streamProcess: StreamProcess?
-        var activeDriver: PenDriver?
+        var activeBackend: PenOutputBackend?
 
         do {
             logger.logAsync("[session] connecting to \(connection.name) (\(connection.ip))…", level: "info", category: .session)
@@ -397,9 +399,10 @@ final class DriverSession: @unchecked Sendable {
             emit(.connected)
 
             var config = snapshotConfig()
-            let mouse = MouseController(config: config)
             var currentMode = config.outputMode
-            activeDriver = makeDriver(mode: currentMode, mouse: mouse, config: config)
+            var lastMouseMode = currentMode.isMouseEmulation ? currentMode : .relative
+            let initialSelection = makeBackend(mode: currentMode, config: config, fallbackMode: lastMouseMode)
+            activeBackend = initialSelection.backend
             var parser = PenFrameParser()
             parser.onRawEvent = { [logger] rawEvent, snapshot, gestureState in
                 logger.logPen(
@@ -422,32 +425,37 @@ final class DriverSession: @unchecked Sendable {
                     }
 
                     if isPaused() {
-                        activeDriver?.cleanup()
+                        activeBackend?.cleanup()
                         continue
                     }
 
                     config = snapshotConfig()
-                    mouse.config = config
+                    if config.outputMode.isMouseEmulation {
+                        lastMouseMode = config.outputMode
+                    }
 
                     if config.outputMode != currentMode {
-                        activeDriver?.cleanup()
+                        activeBackend?.cleanup()
                         logger.logBehavior(
                             "[session] output mode changed from \(currentMode.rawValue) to \(config.outputMode.rawValue)",
                             level: "info",
                             category: .mode
                         )
+                        let selection = makeBackend(mode: config.outputMode, config: config, fallbackMode: lastMouseMode)
                         currentMode = config.outputMode
-                        activeDriver = makeDriver(mode: currentMode, mouse: mouse, config: config)
+                        activeBackend = selection.backend
+                        if config.outputMode.isMouseEmulation {
+                            emit(.nativeStylusStatus(nil))
+                        }
                     }
 
-                    if let absoluteDriver = activeDriver as? AbsolutePenDriver {
-                        absoluteDriver.updateRegion(config.absolute)
-                    }
-                    activeDriver?.handle(frame: frame)
+                    activeBackend?.updateConfig(config)
+                    activeBackend?.handle(frame: frame)
                 }
             }
 
-            activeDriver?.cleanup()
+            activeBackend?.cleanup()
+            emit(.nativeStylusStatus(nil))
             if let process = streamProcess?.process {
                 process.waitUntilExit()
                 if process.terminationStatus != 0, !shouldStop() {
@@ -460,7 +468,8 @@ final class DriverSession: @unchecked Sendable {
                 emit(.stopped)
             }
         } catch {
-            activeDriver?.cleanup()
+            activeBackend?.cleanup()
+            emit(.nativeStylusStatus(nil))
             if !shouldStop() {
                 logger.logAsync("[session] error: \(error.localizedDescription)", level: "error", category: .session)
                 emit(.failed(error.localizedDescription))
@@ -473,12 +482,53 @@ final class DriverSession: @unchecked Sendable {
         lock.unlock()
     }
 
-    private func makeDriver(mode: OutputMode, mouse: MouseController, config: DeviceConfig) -> PenDriver {
+    private func makeBackend(
+        mode: OutputMode,
+        config: DeviceConfig,
+        fallbackMode: OutputMode
+    ) -> (backend: PenOutputBackend, activeMode: OutputMode) {
         switch mode {
         case .absolute:
-            AbsolutePenDriver(mouse: mouse, region: config.absolute)
+            return (
+                AbsolutePenDriver(mouse: MouseController(config: config), region: config.absolute),
+                .absolute
+            )
         case .relative:
-            RelativePenDriver(mouse: mouse)
+            return (
+                RelativePenDriver(mouse: MouseController(config: config)),
+                .relative
+            )
+        case .nativeStylus:
+            do {
+                let backend = try NativeStylusBackend(
+                    config: config,
+                    logger: logger,
+                    onStatus: { [weak self] status in
+                        self?.emit(.nativeStylusStatus(status))
+                    }
+                )
+                return (backend, .nativeStylus)
+            } catch {
+                let resolvedFallback = fallbackMode.isMouseEmulation ? fallbackMode : .relative
+                logger.logAsync(
+                    "Native Stylus unavailable: \(error.localizedDescription). Falling back to \(resolvedFallback.title).",
+                    level: "error",
+                    category: .mode
+                )
+                emit(
+                    .modeFallback(
+                        requested: .nativeStylus,
+                        active: resolvedFallback,
+                        reason: error.localizedDescription
+                    )
+                )
+                emit(
+                    .nativeStylusStatus(
+                        NativeStylusStatus(kind: .error, message: error.localizedDescription)
+                    )
+                )
+                return makeBackend(mode: resolvedFallback, config: config, fallbackMode: .relative)
+            }
         }
     }
 

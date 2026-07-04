@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>Reawa</string>
 	<key>CFBundleExecutable</key>
-	<string>Reawa</string>
+	<string>reawa</string>
 	<key>CFBundleIdentifier</key>
 	<string>io.github.hoaidv.reawa</string>
 	<key>CFBundleInfoDictionaryVersion</key>

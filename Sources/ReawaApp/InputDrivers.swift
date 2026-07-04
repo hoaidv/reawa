@@ -6,6 +6,38 @@ struct DisplayCandidate: Sendable {
     let bounds: CGRect
 }
 
+enum PenCoordinateMapper {
+    static func mapDelta(dx: Int, dy: Int, config: DeviceConfig, scale: Double) -> CGPoint {
+        var mappedX = dx
+        var mappedY = dy
+        if config.swapXY {
+            swap(&mappedX, &mappedY)
+        }
+        if config.invertX {
+            mappedX *= -1
+        }
+        if config.invertY {
+            mappedY *= -1
+        }
+        return CGPoint(x: Double(mappedX) * scale, y: Double(mappedY) * scale)
+    }
+
+    static func mapPenCoordinates(x: Int, y: Int, config: DeviceConfig) -> CGPoint {
+        var mappedX = x
+        var mappedY = y
+        if config.swapXY {
+            swap(&mappedX, &mappedY)
+        }
+        if config.invertX {
+            mappedX = RM2.penXMax - mappedX
+        }
+        if config.invertY {
+            mappedY = RM2.penYMax - mappedY
+        }
+        return CGPoint(x: mappedX, y: mappedY)
+    }
+}
+
 final class MouseController {
     var config: DeviceConfig
 
@@ -87,33 +119,11 @@ final class MouseController {
     }
 
     func mapDelta(dx: Int, dy: Int, scale: Double) -> CGPoint {
-        var mappedX = dx
-        var mappedY = dy
-        if config.swapXY {
-            swap(&mappedX, &mappedY)
-        }
-        if config.invertX {
-            mappedX *= -1
-        }
-        if config.invertY {
-            mappedY *= -1
-        }
-        return CGPoint(x: Double(mappedX) * scale, y: Double(mappedY) * scale)
+        PenCoordinateMapper.mapDelta(dx: dx, dy: dy, config: config, scale: scale)
     }
 
     func mapPenCoordinates(x: Int, y: Int) -> CGPoint {
-        var mappedX = x
-        var mappedY = y
-        if config.swapXY {
-            swap(&mappedX, &mappedY)
-        }
-        if config.invertX {
-            mappedX = RM2.penXMax - mappedX
-        }
-        if config.invertY {
-            mappedY = RM2.penYMax - mappedY
-        }
-        return CGPoint(x: mappedX, y: mappedY)
+        PenCoordinateMapper.mapPenCoordinates(x: x, y: y, config: config)
     }
 
     func postMouseEvent(type: CGEventType, at point: CGPoint) {
@@ -149,9 +159,10 @@ final class MouseController {
     }
 }
 
-protocol PenDriver: AnyObject {
+protocol PenOutputBackend: AnyObject {
     func handle(frame: PenFrame)
     func cleanup()
+    func updateConfig(_ config: DeviceConfig)
 }
 
 enum RelativeGesturePhase {
@@ -192,7 +203,7 @@ struct RelativeGesture {
     }
 }
 
-final class RelativePenDriver: PenDriver {
+final class RelativePenDriver: PenOutputBackend {
     private static let externalCursorRebaseDistanceThreshold: CGFloat = 6
 
     private let mouse: MouseController
@@ -201,6 +212,10 @@ final class RelativePenDriver: PenDriver {
 
     init(mouse: MouseController) {
         self.mouse = mouse
+    }
+
+    func updateConfig(_ config: DeviceConfig) {
+        mouse.config = config
     }
 
     func handle(frame: PenFrame) {
@@ -287,7 +302,7 @@ final class RelativePenDriver: PenDriver {
     }
 }
 
-final class AbsolutePenDriver: PenDriver {
+final class AbsolutePenDriver: PenOutputBackend {
     private let mouse: MouseController
     private var region: AbsoluteConfig
     private var wasTouching = false
@@ -296,6 +311,11 @@ final class AbsolutePenDriver: PenDriver {
     init(mouse: MouseController, region: AbsoluteConfig) {
         self.mouse = mouse
         self.region = region
+    }
+
+    func updateConfig(_ config: DeviceConfig) {
+        mouse.config = config
+        region = config.absolute
     }
 
     func updateRegion(_ region: AbsoluteConfig) {
