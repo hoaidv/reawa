@@ -197,15 +197,6 @@ Status updates automatically (~every 3 seconds). Offline becomes online when the
 | **Accessibility** | Yes | Mouse control and window snapping (System Settings → Privacy & Security → Accessibility) |
 | **Notifications** | No | Auto-connect and device-detect alerts |
 
-## Getting Started
-
-From the project root:
-
-```bash
-pip install -r requirements.txt
-PYTHONPATH=.. python -m reawa
-```
-
 ## Product Decisions
 
 These choices define what the product does and how it behaves. Implementation details are documented in [technical.md](technical.md).

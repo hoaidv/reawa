@@ -1,51 +1,54 @@
 # Reawa
 
-Reawa is now a native macOS app written in Swift. It runs as a menu bar utility
-that turns a reMarkable tablet into a pen input device for the Mac, with
-Relative and window-bound Absolute modes, USB discovery, live SSH pen streaming,
-and Accessibility-based window snapping.
+Reawa is a native macOS menu bar app that turns a reMarkable tablet into a pen
+input device for the Mac. The active implementation is the Swift app in
+`Sources/ReawaApp/`; the earlier Python version remains in `legacy/python/` as
+reference material.
 
-The original Python app has been archived under `legacy/python/` as a reference
-implementation. The active codebase is the Swift project in `Sources/ReawaApp/`.
+## Purpose
 
-## Repository Layout
+Reawa exists to make a reMarkable tablet useful as a Mac input surface. The
+project focuses on getting pen data from the tablet onto macOS with a workflow
+that feels lightweight, direct, and practical for everyday use.
 
-- `Sources/ReawaApp/` — native Swift implementation
-- `Tests/ReawaTests/` — parser and compatibility tests
-- `Config/Info.plist` — app bundle metadata for the native app
-- `Config/Reawa.entitlements` — signing/entitlement placeholder for the native bundle
-- `Sources/ReawaApp/Resources/assets/` — native app assets
-- `legacy/python/` — archived Python implementation and old `py2app` packaging flow
-- `.docs/` — product and technical reference retained during the port
+## Features
 
-## Current Native Architecture
+- Native macOS app written in Swift
+- Menu bar-first workflow
+- Move your mouse with reMarkable tablet
+  - Relative mode for trackpad-like cursor movement
+  - Absolute mode that targets a real window
+- USB discovery and SSH-based pen streaming
 
-- `ConnectionManager.swift` handles saved connections, live session state, and
-  compatibility with the previous app-support and Keychain layout.
-- `SSHSession.swift` uses the system `ssh` tool to install per-device SSH keys,
-  stream `/dev/input/event1`, and parse pen frames in Swift.
-- `InputDrivers.swift` maps pen frames into native Quartz mouse events.
-- `WindowSnap.swift` reimplements the Accessibility and `CGWindowList` logic
-  needed for snapped Absolute mode, including Stage Manager-aware lifecycle checks.
-- `Overlays.swift` provides the picker overlay and resizeable region overlay in AppKit.
-- `SettingsUI.swift` hosts the settings and logs UI in SwiftUI.
 
-## Compatibility
 
-The Swift app preserves the existing user data layout where feasible:
+## Usage
 
-- reads and migrates saved connections from `~/Library/Application Support/remarkable-rm2/connections.json`
-- copies legacy per-connection SSH keys from `~/Library/Application Support/remarkable-rm2/keys/`
-- reads passwords from both Keychain service names: `Reawa` and `remarkable-rm2`
+- Tested against Figma's Marker tool
 
-New native data is written to:
 
-```text
-~/Library/Application Support/Reawa/
-  connections.json
-  keys/<connection-id>/id_rsa
-  keys/<connection-id>/id_rsa.pub
-```
+
+## Future development
+
+- Expose the tablet as a native pen/stylus device - In progress - Waiting for developer account with proper entitlement. This feature expects supported macOS applications can recognize the tablet as an input device.
+- Add a Markup tool to macOS - So you can easily markup pictures, screenshots, PDFs on macOS.
+- ... add your idea here ;)
+
+
+
+## Testing And Ideas
+
+Testing on different Mac and reMarkable setups would be especially helpful right now. Bug reports, UX feedback, and feature ideas are all welcome.
+
+If you try the app, useful details to share include:
+
+- macOS version
+- reMarkable model and OS version
+- which input mode you used
+- what worked, what felt off, and how to reproduce problems
+
+Ideas are welcome too, especially around pen feel, connection setup, overlays,
+window behavior, and packaging.
 
 ## Run From Source
 
@@ -55,7 +58,7 @@ Requirements:
 - Xcode 16 or a Swift 6 toolchain
 - Accessibility permission enabled for cursor control and window snapping
 
-Build and test:
+Run the test suite:
 
 ```bash
 swift test
@@ -67,11 +70,13 @@ Run the menu bar app from source:
 swift run reawa
 ```
 
-This is fine for `Relative` and `Absolute` development, but it cannot exercise
-`Native Stylus`. That mode needs a signed `.app` bundle with the restricted
-Virtual HID entitlement.
+Notes:
 
-To package a local app bundle:
+- Running from source is the main supported workflow today.
+- `Relative` and `Absolute` modes can be exercised from source.
+- `Native Stylus` requires a signed `.app` bundle with the restricted Virtual HID entitlement.
+
+To build a local debug app bundle:
 
 ```bash
 sh scripts/build-macos-app.sh --configuration debug
@@ -83,48 +88,33 @@ To check local signing readiness for `Native Stylus`:
 sh scripts/check-native-stylus-setup.sh
 ```
 
-To build and sign a bundle after Apple has approved the entitlement for your
-developer team:
+You can also open `Package.swift` directly in Xcode. Bundle metadata and
+entitlements live in `Config/`.
 
-```bash
-sh scripts/build-macos-app.sh \
-  --configuration debug \
-  --sign "Apple Development: YOUR NAME (TEAMID)" \
-  --provisioning-profile "/path/to/Reawa.provisionprofile" \
-  --show-entitlements \
-  --open
-```
+## Packaged App
 
-You can also open `Package.swift` directly in Xcode. The native bundle metadata
-and entitlements live in `Config/`.
+A polished signed `Reawa.app` is not available yet.
 
-## Product Behavior
+The project is currently waiting on Apple Developer account setup and the
+signing flow needed for the restricted Virtual HID entitlement. Until that is
+in place:
 
-The native port keeps the behavior specified in `.docs/`:
+- source builds are the supported way to try the app
+- local unsigned or debug bundles are mainly for development
+- a distributable build and full `Native Stylus` support are still blocked
 
-- menu bar–first workflow
-- one active tablet connection at a time
-- Relative mode for trackpad-like cursor movement
-- Absolute mode that always snaps to a real macOS window
-- pen input paused during window picking
-- overlay/window lifecycle handling for minimize, restore, maximize, close, and Stage Manager
+Once the developer account and entitlement approval are in place, the existing
+packaging scripts can be used to produce a signed app bundle.
 
-See `.docs/product.md` for the product spec and `.docs/technical.md` plus
-`.docs/issues-history/macos-window-lifecycle.md` for the porting reference.
+## License & Trademarks
 
-## Legacy Python App
+Reawa is licensed under the [MIT License](LICENSE).
 
-The old Python implementation is intentionally no longer the primary workflow.
-It remains in `legacy/python/` for reference while the native Swift app evolves.
+See [NOTICE](NOTICE) for trademark notices and attribution, and
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for release and distribution
+notes.
 
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
-See [NOTICE](NOTICE) for trademark disclaimers and attribution.
-See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for binary release notes.
-
-## Trademarks
-
-reMarkable is a registered trademark of reMarkable AS. Reawa is an independent
-project and is not affiliated with, endorsed by, or sponsored by reMarkable AS.
+reMarkable is a registered trademark of reMarkable AS. Wacom is a registered
+trademark of Wacom Co., Ltd. Reawa is an independent project and is not
+affiliated with, endorsed by, or sponsored by reMarkable AS, Wacom Co., Ltd.,
+or Apple Inc.
