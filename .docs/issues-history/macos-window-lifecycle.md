@@ -1,6 +1,6 @@
 # macOS Window Lifecycle Detection — Investigation & Design
 
-This document records how the `remarkable` app detects **minimize**, **maximize**, **close**, and **restore** for a snapped target window under normal macOS window management and **Stage Manager**. It is written as a porting and debugging reference: what signals exist, which ones lie, and how we arrived at the current implementation.
+This document records how the `reawa` app detects **minimize**, **maximize**, **close**, and **restore** for a snapped target window under normal macOS window management and **Stage Manager**. It is written as a porting and debugging reference: what signals exist, which ones lie, and how we arrived at the current implementation.
 
 For the concise API summary, see [technical.md — Window Follow and Lifecycle](technical.md#window-follow-and-lifecycle). For the bug-fix table, see [Bug Fix History](technical.md#bug-fix-history) entries #9–#14.
 
@@ -162,7 +162,7 @@ Treat `kAXErrorCannotComplete` as still alive (transient busy app).
 
 When lifecycle detection breaks after an OS update:
 
-1. **Reproduce with one app instance** — duplicate `python -m remarkable` processes double the follow timer and confuse logs.
+1. **Reproduce with one app instance** — duplicate `python -m reawa` processes double the follow timer and confuse logs.
 2. **Log per tick for the target only:** `stored_number`, AX frame, CG on-screen bounds, `ax_minimized`, `onscreen_list` membership, `ax_main`, `target_is_frontmost`, lifecycle result.
 3. **Build a compressed timeline** — print rows only when any key tuple changes; note timestamps for user actions (minimize, focus switch, restore).
 4. **Separate hypotheses:**

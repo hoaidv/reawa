@@ -1,6 +1,6 @@
 # reMarkable RM2 → macOS Pen Driver — Technical Reference
 
-This document describes the internal architecture, data flow, implementation details, and engineering history of the `remarkable` package. For product behavior and user-facing setup, see [doc.md](doc.md).
+This document describes the internal architecture, data flow, implementation details, and engineering history of the `reawa` package. For product behavior and user-facing setup, see [doc.md](doc.md).
 
 ---
 
@@ -11,19 +11,20 @@ This document describes the internal architecture, data flow, implementation det
 3. [Project Layout](#project-layout)
 4. [Data Model](#data-model)
 5. [Pen Event Pipeline](#pen-event-pipeline)
-6. [Driver Layer](#driver-layer)
-7. [Absolute Mode and Window Snapping](#absolute-mode-and-window-snapping)
-8. [Coordinate Systems](#coordinate-systems)
-9. [UI Architecture](#ui-architecture)
-10. [Services](#services)
-11. [Threading Model](#threading-model)
-12. [Storage](#storage)
-13. [RM2 Device Constants](#rm2-device-constants)
-14. [Dependencies](#dependencies)
-15. [Entry Points](#entry-points)
-16. [Key Design Decisions](#key-design-decisions)
-17. [Bug Fix History](#bug-fix-history)
-18. [Known Limitations](#known-limitations)
+6. [Planned Native Pen Device Mode (Swift)](#planned-native-pen-device-mode-swift)
+7. [Driver Layer](#driver-layer)
+8. [Absolute Mode and Window Snapping](#absolute-mode-and-window-snapping)
+9. [Coordinate Systems](#coordinate-systems)
+10. [UI Architecture](#ui-architecture)
+11. [Services](#services)
+12. [Threading Model](#threading-model)
+13. [Storage](#storage)
+14. [RM2 Device Constants](#rm2-device-constants)
+15. [Dependencies](#dependencies)
+16. [Entry Points](#entry-points)
+17. [Key Design Decisions](#key-design-decisions)
+18. [Bug Fix History](#bug-fix-history)
+19. [Known Limitations](#known-limitations)
 
 ---
 
@@ -58,7 +59,7 @@ This document describes the internal architecture, data flow, implementation det
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  rm2.py — SSH, key setup, /dev/input/event1 parsing                     │
+│  driver/rm2.py — SSH, key setup, /dev/input/event1 parsing              │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -105,7 +106,7 @@ App-level flags:
 | Path                             | Responsibility                                                   |
 | -------------------------------- | ---------------------------------------------------------------- |
 | `app.py`                         | Menu bar entry, snap-flow orchestration, overlay lifecycle       |
-| `rm2.py`                         | SSH connection, RSA key install, pen event binary parsing        |
+| `driver/rm2.py`                  | SSH connection, RSA key install, pen event binary parsing        |
 | `models/connection.py`           | `Connection`, `DeviceConfig`, `AbsoluteConfig`, status enum      |
 | `models/store.py`                | JSON persistence, per-connection SSH key paths, legacy migration |
 | `services/connection_manager.py` | Active session, connect/disconnect, live config cache            |
@@ -213,13 +214,119 @@ class PenFrame:
     in_proximity: bool  # BTN_TOOL_PEN
 ```
 
-### SSH and Key Setup (`rm2.py`)
+### SSH and Key Setup (`driver/rm2.py`)
 
 - Connect with RSA key; fall back to password + `setup_key()` on auth failure.
 - `setup_key()`: generate 3072-bit RSA key, install public key in `authorized_keys` on device.
 - Pen stream: `dd bs=24 if=/dev/input/event1` over SSH.
 - Event format: `struct` format `"2IHHi"` (timestamp, type, code, value).
 - Frames assembled on `EV_SYN` + `SYN_REPORT` when both X and Y are known.
+
+---
+
+## Planned Native Pen Device Mode (Swift)
+
+This section describes the **planned Swift-only pen-device backend**. The current shipping path still ends in Quartz mouse events.
+
+### Goal
+
+Add a second output backend that publishes reMarkable pen input to macOS as a **generic HID digitizer / stylus device**, so drawing apps can receive pen data directly instead of seeing only mouse movement and clicks.
+
+### Core design rules
+
+1. Reuse the existing Swift SSH/event parser pipeline as the input source of truth.
+2. Do **not** emulate a specific Wacom driver identity; expose a generic macOS tablet/stylus device.
+3. Keep the current Quartz mouse path as a fallback backend.
+4. Avoid classic kernel extensions; the target implementation is a modern Swift virtual-HID / DriverKit-compatible path.
+
+### Planned high-level flow
+
+```mermaid
+flowchart TD
+    RM2[RM2Digitizer] --> SSH[SSHSessionAndPenFrameParser]
+    SSH --> Normalize[SwiftPenStateNormalizer]
+    Normalize --> MouseBackend[QuartzMouseBackend]
+    Normalize --> TabletBackend[VirtualTabletDeviceBackend]
+    TabletBackend --> MacOS[macOSHIDTabletEvents]
+    MacOS --> Apps[CreativeApps]
+```
+
+### Intended backend split
+
+- **Current backend:** `InputDrivers.swift` posts Quartz `CGEvent` mouse events.
+- **Planned backend:** a new Swift tablet-device backend creates a virtual digitizer device and submits stylus reports into macOS.
+- **Selection model:** backend choice should be explicit and runtime-switchable, so the app can fall back to mouse emulation on machines where tablet-device mode is unavailable.
+
+### Data the tablet backend must carry
+
+The current Swift `PenFrame` now carries the RM2 data needed for richer diagnostics and a future tablet-class backend:
+
+- `x`, `y`
+- `pressure`
+- `touching`
+- `inProximity`
+- `stylusButton` (`BTN_STYLUS`)
+- `distance` (`ABS_DISTANCE`)
+- `tiltX`, `tiltY`
+- `rawEvents` captured until each `SYN_REPORT`
+
+For the planned tablet backend, the implementation should preserve and forward this metadata rather than collapsing the stream down to mouse-only semantics.
+
+That means the planned implementation should build on:
+
+- `Sources/ReawaApp/Models.swift` — already-expanded `PenFrame`, `PenRawEvent`, and `PenStateSnapshot`
+- `Sources/ReawaApp/SSHSession.swift` — current RM2 event parsing and per-frame raw-event retention
+- `Sources/ReawaApp/InputDrivers.swift` or a sibling backend file — normalize `PenFrame` into either Quartz mouse output or virtual tablet reports
+
+### Preferred implementation path
+
+Primary target:
+
+- Implement the feature in **Swift** as a user-space virtual HID device backend when the necessary Apple entitlement is available.
+
+Current repository state:
+
+- The Swift app now contains a **Native Stylus** backend spike using `CoreHID.HIDVirtualDevice`.
+- The code path is useful for integration work, HID report design, fallback behavior, and packaging preparation.
+- However, **actual virtual HID device creation is still blocked until Apple approves** `com.apple.developer.hid.virtual.device` for the signing team and the app is launched as a signed `.app` bundle with that entitlement.
+- `swift run reawa` cannot exercise this feature because the SwiftPM-built executable is not a provisioned app bundle with the restricted entitlement.
+
+Fallback / advanced path:
+
+- If the user-space virtual-HID path is insufficient, move the tablet backend into a **HIDDriverKit / DriverKit system extension** while keeping the existing Swift app as the controller and SSH event source.
+
+Explicitly avoided:
+
+- classic kernel extensions
+- Quartz mouse emulation as the only output path for drawing-app compatibility
+- spoofing Wacom branding instead of publishing a generic digitizer
+
+### Expected integration points in the Swift codebase
+
+| Swift area | Planned change |
+| ---------- | -------------- |
+| `Sources/ReawaApp/Models.swift` | Reuse the richer `PenFrame` / `PenRawEvent` model for a tablet backend |
+| `Sources/ReawaApp/SSHSession.swift` | Reuse the current RM2 parser, raw-event retention, and richer pen-frame emission |
+| `Sources/ReawaApp/InputDrivers.swift` | Split Quartz mouse output from tablet-device output |
+| `Sources/ReawaApp/ConnectionManager.swift` | Carry backend selection into the live session |
+| `Sources/ReawaApp/SettingsUI.swift` | Expose backend choice and capability / availability state |
+| `Sources/ReawaApp/Logging.swift` | Surface tablet-backend startup and entitlement errors |
+
+### Verification targets
+
+Recommended validation order:
+
+1. **Krita** — use Tablet Tester first to verify that macOS and the app see a pen device instead of a mouse.
+2. A browser pointer-events test page — quick sanity check for pen/pressure/tilt reporting where supported.
+3. **Photoshop** or another production drawing app — end-to-end validation after Krita works.
+
+### Major delivery risk
+
+The biggest non-code risk is Apple entitlement approval for virtual HID / DriverKit capabilities. The product should therefore treat native pen-device output as an optional backend and preserve mouse emulation as a supported fallback.
+
+Practical implication:
+
+- Without Apple approval, local development can prepare the code, app bundle, signing flow, and entitlement files, but it **cannot** make macOS accept the process as a real Virtual HID publisher in the supported path.
 
 ---
 
@@ -255,6 +362,8 @@ for frame in rm2.read_pen_frames(stdout):
 - Clamps cursor to union of all display bounds.
 - Hover → `kCGEventMouseMoved`; touch down/up/drag → left button events.
 - Releases button on proximity loss.
+- **Swift port note:** `RelativePenDriver` synthesizes a gesture lifecycle from `PenFrame.inProximity` / `touching`: hover-start → hover-move → hover-end, and touch-start → touch-drag → touch-end. Each gesture captures both the pen anchor `(x, y)` and the live cursor position at the start of the gesture (or phase transition), then computes cursor motion relative to that anchor. This preserves the scale fix without depending on a continuously refreshed live cursor baseline.
+- If the live cursor diverges from the gesture's expected cursor (for example from a trackpad or mouse move), the current relative gesture is **rebased** to the live cursor using the latest pen point as the new anchor. That prevents the next pen move from teleporting back to an older synthetic cursor position.
 
 ### AbsoluteDriver
 
@@ -383,21 +492,46 @@ cocoa_y = primary_height - quartz_y - height
 - Settings window open: `NSApplicationActivationPolicyRegular` (Dock icon).
 - Uses `NSApplication.sharedApplication()` (not `NSApp()`, which is `None` before the run loop starts).
 
-### Settings Window (`ui/connections_window.py`)
+### Settings Window (`Sources/ReawaApp/SettingsUI.swift`)
 
-AppKit `NSWindow` with:
+Native `NSWindow` hosting SwiftUI, with:
 
-- Connection table + form (New / Remove / Connect / Save).
-- **Save changes** enabled only when non-mode fields differ from saved connection.
-- USB scan (`network_discovery.discover_usb_ssh_hosts()`) in background thread; results via `AppHelper.callAfter`.
-- Segmented control: Relative | Absolute (saves immediately; Absolute starts snap UX when active).
-- When Absolute: snapped window label only.
-- `setReleasedWhenClosed_(False)` — closing must not deallocate; reopening otherwise segfaults.
-- Standard Edit menu installed for Cut/Copy/Paste (rumps does not provide one).
+- A tabbed settings surface: **Connections**, **App Behavior Log**, and **Pen Event Log**
+- A two-pane connection editor: discovered devices and saved connections on the left, active connection form on the right
+- Immediate-apply editing for existing connections; new connections still use **Add connection**
+- Segmented **Relative | Absolute** mode control; switching to Absolute still enters the snap-picker flow when that connection is active
+- A higher-level **Tablet orientation** picker replacing raw `swap_xy` / `invert_x` / `invert_y` controls
+- Absolute-mode context such as the snapped-window reference and border color in the same editor
+- `window.isReleasedWhenClosed = false` in `SettingsWindowController`, so reopening the window reuses the controller safely
+
+### Logging / Diagnostics (`Sources/ReawaApp/Logging.swift` + log tabs)
+
+The Swift app now has two separate in-memory log channels:
+
+- **Behavior log** — always on; intended for mode changes, settings changes, connection/session/SSH events, notifications, device detection, and Absolute-mode picker / snapped-window lifecycle
+- **Pen event log** — off by default; enabled from the UI and intended for RM2 event debugging
+
+Pen-event presentation is driven by the richer parser state:
+
+- Raw Linux event names such as `EV_KEY BTN_STYLUS 1`
+- Accumulated semantic state such as `PEN TOUCH (x, y) = (...)`
+- Recognized gesture-state labels such as `START`, `MOVE`, `END`, and `OUT`
+- Observed capability chips (`BTN_STYLUS`, `ABS_TILT_X`, `ABS_DISTANCE`, etc.) which can also be clicked in the UI to prefill log search
 
 ---
 
 ## Services
+
+### AppLogger
+
+`AppLogger` is now a small logging hub rather than a single flat list:
+
+- `behaviorEntries` — capped, always-on stream for product / app behavior debugging
+- `penEntries` — separate capped stream for high-frequency pen diagnostics
+- `penLoggingEnabled` — runtime toggle, off by default
+- `penCapabilityLabels` — observed event-family / capability labels derived from the RM2 stream
+
+High-frequency pen logs are appended through a locked background-safe store and then published back to SwiftUI as debounced main-actor snapshots. This keeps the pen log usable without pushing every event directly through a main-thread-only observable list.
 
 ### ConnectionManager
 
@@ -442,6 +576,7 @@ Cross-thread rules:
 - UI mutations always on main thread (`AppHelper.callAfter`).
 - Config changes go through `ConnectionManager.update_connection()` which updates `_active_conn`; session sees changes on next pen frame.
 - Do **not** disconnect/reconnect SSH to change output mode — live driver swap handles it.
+- Pen-event logs are appended off the session thread into a locked store, then surfaced to SwiftUI as main-actor snapshots.
 
 ---
 
@@ -492,8 +627,8 @@ Legacy migration: project-local `.rm2_config.json` + `.ssh/id_rsa` → first con
 ## Entry Points
 
 ```bash
-python -m remarkable              # menu bar app (__main__.py → app.main)
-python -m remarkable.driver       # CLI: connect to first saved connection
+PYTHONPATH=.. python -m reawa                   # menu bar app from repo root
+PYTHONPATH=packaging/src python -m reawa.driver # CLI: connect to first saved connection
 ```
 
 ---
@@ -563,6 +698,8 @@ These issues blocked ABSOLUTE mode end-to-end until fixed. Documented here for p
 | 12  | Overlay hidden when focusing another visible window in the same Stage Manager group (R2)            | Lingering `new_strip` delta from unrelated windows + `not frontmost` matched staging even though target CG bounds were still full-size                                                                                                                                                                                                                                           | **Final fix:** `_is_stage_manager_minimized()` compares live CGWindow on-screen area to AX frame area; staged when ratio below `_STAGE_AREA_RATIO` (0.5). Target-specific; unaffected by other windows or focus |
 | 13  | `kAXFullScreenAttribute` import crash on some PyObjC builds                                         | Constant not exported by all `ApplicationServices` bindings                                                                                                                                                                                                                                                                                                                      | Use raw attribute string `"AXFullScreen"`                                                                                                                                                                       |
 | 14  | Picking a Stage Manager thumbnail snapped to tiny bounds                                            | Picker lists strip thumbnails as on-screen windows; pick returns thumbnail-sized bounds                                                                                                                                                                                                                                                                                          | `restore_window()` on pick: clear minimized, raise, activate app, `_await_stable_frame()` before snapping                                                                                                       |
+| 15  | Swift relative mode felt under-scaled compared with Python                                          | The Swift port re-read `CGEventGetLocation` on every pen frame. Posted Quartz mouse events may not advance the live cursor immediately, so each new frame sometimes started from a stale cursor position and lost part of the intended delta accumulation                                                                                                                       | Stop using the live cursor as the per-frame movement baseline; compute relative motion from gesture anchors instead                                                                                              |
+| 16  | Swift relative mode teleported back after trackpad / mouse interference                             | The first scale fix kept a synthetic cursor alive across pen hover frames. If another input device moved the real cursor mid-gesture, the next pen move resumed from the stale synthetic cursor and jumped back before continuing                                                                                                                                             | Model explicit hover/touch gesture lifecycles in `RelativePenDriver` and rebase the current gesture to the live cursor whenever external input moves the cursor away from the gesture's expected position        |
 
 
 **Verified working after fixes:** snap picker opens on all displays, window hover highlight, click-to-snap, pen → mouse in ABSOLUTE mode, window move → region follow, minimize/restore/maximize/close lifecycle, Stage Manager thumbnail restore-on-pick, Stage Manager minimize/restore with other windows on screen (R1/R2 scenarios).

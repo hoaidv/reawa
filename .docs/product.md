@@ -20,6 +20,7 @@ The app is designed for creative and productivity workflows where the reMarkable
 | Two input modes | **Relative** (trackpad-like) or **Absolute** (screen-mapped to a window) |
 | USB auto-detect | Discovers the tablet when plugged in without hardcoding its IP |
 | Auto-connect | Optionally connect automatically when the device appears |
+| Planned native pen device mode (Swift) | Future output backend that exposes the reMarkable as a macOS-recognized tablet/stylus device instead of only mouse events |
 
 ## Menu Bar Experience
 
@@ -56,9 +57,9 @@ A **connection** is a saved profile for reaching one reMarkable device.
 
 The settings window (**Open**) provides a single form for creating and editing connections:
 
-- **New** clears the form and shows "New connection". The save button reads **Add connection**.
+- **New** clears the form and shows "New connection". The form shows an **Add connection** button.
 - Enter Name, IP, and Password, then click **Add connection**. Use **Scan devices** to refresh the **Discovered** list (IPs already saved are hidden). Select a discovered device to pre-fill the form.
-- Select an existing connection to edit it. The header shows "Editing: \<name\>" and the save button reads **Save changes** (enabled only when something other than output mode has changed). Password is required only when adding.
+- Select an existing connection to edit it. The header shows "Editing \<name\>". Changes apply immediately as you edit; there is no **Save changes** button. Password is required only when adding.
 
 After the first successful setup, subsequent connections use the SSH key only — no password is needed.
 
@@ -72,11 +73,21 @@ Per-connection pen behavior:
 |---------|---------|-------------|
 | **Output mode** | Relative | Relative or Absolute (segmented toggle in settings) |
 | **Scale** | Auto | Screen points per digitizer unit; auto uses display PPI |
-| **Swap XY** | Off | Swap pen axes |
-| **Invert X / Y** | Off | Flip axis direction |
+| **Tablet orientation** | Gut on top | Four options: **Gut on top**, **Gut to the left**, **Gut at bottom**, **Gut to the right**. Each option is shown with an icon and maps to the underlying axis transform so pen motion feels natural for the tablet's physical rotation |
 | **Border color** | `#3B82F6` | Color of the region outline in Absolute mode |
 
-The output mode toggle in settings saves and applies immediately — it does not require **Save changes**.
+All settings in the edit form apply immediately for existing connections, including output mode and tablet orientation.
+
+### Diagnostics
+
+The settings window also includes two diagnostics tabs:
+
+| Tab | Behavior |
+|-----|----------|
+| **App Behavior Log** | Always on. Searchable log of settings changes, mode changes, connection/session/SSH events, device detection, and Absolute-mode window-picking behavior |
+| **Pen Event Log** | Off by default. A **Capture pen events** toggle enables a searchable stream of raw Linux pen events, accumulated pen semantics, and recognized gesture states |
+
+In **Pen Event Log**, observed capability labels such as `BTN_STYLUS`, `ABS_TILT_X`, or `ABS_DISTANCE` can be clicked to fill the search box and immediately filter the log.
 
 ## Output Modes
 
@@ -122,6 +133,39 @@ Choosing **Absolute** — in settings, via the menu bar, or on auto-connect when
 
 The overlay spans **all connected displays**, so the snapped window can live on any monitor.
 
+## Planned Native Pen Device Mode
+
+This is a **planned Swift feature**, not the current shipping behavior.
+
+Repository note:
+
+- The repo now includes an initial Native Stylus backend spike and local app-bundle/signing preparation.
+- Even with that code in place, the feature cannot create a real macOS virtual HID pen device in the normal supported path until Apple approves the restricted entitlement `com.apple.developer.hid.virtual.device` for the signing team.
+- Approving the later macOS Accessibility prompt is a separate local step and is **not** a substitute for Apple entitlement approval.
+
+Today the app translates reMarkable input into Quartz mouse events. The next product direction is an additional output backend that publishes the reMarkable as a **macOS pen / tablet device**, so supported apps can recognize it as pen input instead of only as a mouse.
+
+Target behavior:
+
+| Goal | Description |
+|------|-------------|
+| Native pen recognition | Apps should receive tablet/stylus input from macOS rather than synthesized mouse-only input |
+| Pressure-aware drawing | Pressure should reach drawing apps directly when the hardware reports it |
+| Pen metadata | Proximity, tip contact, barrel button, and tilt should be forwarded when available |
+| Optional backend | Mouse emulation remains available; pen-device mode is an additional output path, not a replacement |
+| App-first validation | The first validation target is **Krita** (Tablet Tester), followed by end-to-end checks in apps such as **Photoshop** |
+
+Product constraints for this feature:
+
+1. The app should expose a **generic macOS digitizer / stylus device**, not pretend to be a specific Wacom-branded device.
+2. The existing SSH pen stream and connection model should remain the source of truth for reMarkable input.
+3. Mouse-emulation workflows must keep working even if pen-device mode is unavailable on a given machine.
+4. Shipping this mode may require additional Apple-controlled entitlements and a separate install/approval flow from the current mouse-emulation build.
+
+Local-development constraint:
+
+- `swift run reawa` remains valid for mouse-emulation development, but it cannot test Native Stylus because it does not launch a signed app bundle with the restricted Virtual HID entitlement.
+
 ## USB Auto-Detect
 
 When the reMarkable is plugged in via USB, the app scans local network interfaces (especially USB Ethernet) for subnets and probes hosts for SSH. This finds the device (typically at `10.11.99.1`) without hardcoding the IP.
@@ -158,8 +202,8 @@ Status updates automatically (~every 3 seconds). Offline becomes online when the
 From the project root:
 
 ```bash
-pip install -r remarkable/requirements.txt
-python -m remarkable
+pip install -r requirements.txt
+PYTHONPATH=.. python -m reawa
 ```
 
 ## Product Decisions
@@ -185,6 +229,8 @@ These choices define what the product does and how it behaves. Implementation de
 9. **Closing the snapped window exits Absolute mode.** If the target application window is closed, the app returns to Relative mode rather than leaving pen input in an invalid state.
 
 10. **Minimize hides the overlay; close exits Absolute.** A minimized window hides the region outline but keeps Absolute mode active. Closing the window reverts to Relative.
+
+11. **Future pen-device mode is additive, not disruptive.** The Swift app should support both mouse emulation and native pen-device output; users should not lose the existing Quartz-based workflow when the tablet-device path is unavailable.
 
 ## Related Documentation
 
