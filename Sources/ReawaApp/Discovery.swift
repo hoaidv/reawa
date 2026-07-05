@@ -1,3 +1,15 @@
+// Traceability (ADLC iter-000)
+// @implements SRS-RW-04
+// @implements SRS-RW-07
+// @implements SRS-RW-20
+// @implements SRS-RW-21
+// @implements SRS-RW-22
+// @implements SRS-RW-23
+// @implements SRS-RW-24
+// @implements SRS-RW-26
+// @implements SRS-RW-27
+// @implements SRS-RW-28
+
 import Foundation
 import Network
 import UserNotifications

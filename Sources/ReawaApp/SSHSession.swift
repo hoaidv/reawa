@@ -1,3 +1,9 @@
+// Traceability (ADLC iter-000)
+// @implements SRS-RW-10
+// @implements SRS-RW-29
+// @implements SRS-RW-32
+// @implements SRS-RW-51
+
 import Foundation
 
 private extension Data {

@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-07-05T15:22:14+00:00
+generated_at: 2026-07-05T15:50:57+00:00
 ---
 
 # Sync Report
@@ -11,74 +11,7 @@ generated_at: 2026-07-05T15:22:14+00:00
 _None._
 
 ## Orphan SRS (active, no implementing code)
-| SRS | Module |
-|---|---|
-| [SRS-RW-01] | reawa |
-| [SRS-RW-02] | reawa |
-| [SRS-RW-03] | reawa |
-| [SRS-RW-04] | reawa |
-| [SRS-RW-05] | reawa |
-| [SRS-RW-06] | reawa |
-| [SRS-RW-07] | reawa |
-| [SRS-RW-08] | reawa |
-| [SRS-RW-09] | reawa |
-| [SRS-RW-10] | reawa |
-| [SRS-RW-11] | reawa |
-| [SRS-RW-12] | reawa |
-| [SRS-RW-13] | reawa |
-| [SRS-RW-14] | reawa |
-| [SRS-RW-15] | reawa |
-| [SRS-RW-16] | reawa |
-| [SRS-RW-17] | reawa |
-| [SRS-RW-18] | reawa |
-| [SRS-RW-19] | reawa |
-| [SRS-RW-20] | reawa |
-| [SRS-RW-21] | reawa |
-| [SRS-RW-22] | reawa |
-| [SRS-RW-23] | reawa |
-| [SRS-RW-24] | reawa |
-| [SRS-RW-25] | reawa |
-| [SRS-RW-26] | reawa |
-| [SRS-RW-27] | reawa |
-| [SRS-RW-28] | reawa |
-| [SRS-RW-29] | reawa |
-| [SRS-RW-30] | reawa |
-| [SRS-RW-31] | reawa |
-| [SRS-RW-32] | reawa |
-| [SRS-RW-33] | reawa |
-| [SRS-RW-34] | reawa |
-| [SRS-RW-35] | reawa |
-| [SRS-RW-36] | reawa |
-| [SRS-RW-37] | reawa |
-| [SRS-RW-38] | reawa |
-| [SRS-RW-39] | reawa |
-| [SRS-RW-40] | reawa |
-| [SRS-RW-41] | reawa |
-| [SRS-RW-42] | reawa |
-| [SRS-RW-43] | reawa |
-| [SRS-RW-44] | reawa |
-| [SRS-RW-45] | reawa |
-| [SRS-RW-46] | reawa |
-| [SRS-RW-47] | reawa |
-| [SRS-RW-48] | reawa |
-| [SRS-RW-49] | reawa |
-| [SRS-RW-50] | reawa |
-| [SRS-RW-51] | reawa |
-| [SRS-RW-52] | reawa |
-| [SRS-RW-53] | reawa |
-| [SRS-RW-54] | reawa |
-| [SRS-RW-55] | reawa |
-| [SRS-RW-56] | reawa |
-| [SRS-RW-57] | reawa |
-| [SRS-RW-58] | reawa |
-| [SRS-RW-59] | reawa |
-| [SRS-RW-60] | reawa |
-| [SRS-RW-61] | reawa |
-| [SRS-RW-62] | reawa |
-| [SRS-RW-63] | reawa |
-| [SRS-RW-64] | reawa |
-| [SRS-RW-65] | reawa |
-| [SRS-RW-66] | reawa |
+_None._
 
 ## BDD coverage by SRS
 | SRS | Scenarios | Status |

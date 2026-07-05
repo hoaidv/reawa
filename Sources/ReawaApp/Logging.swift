@@ -1,3 +1,9 @@
+// Traceability (ADLC iter-000)
+// @implements SRS-RW-62
+// @implements SRS-RW-63
+// @implements SRS-RW-64
+// @implements SRS-RW-66
+
 import Foundation
 
 enum BehaviorLogCategory: String, CaseIterable, Sendable {

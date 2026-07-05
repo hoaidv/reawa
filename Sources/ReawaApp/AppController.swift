@@ -1,3 +1,18 @@
+// Traceability (ADLC iter-000)
+// @implements SRS-RW-01
+// @implements SRS-RW-02
+// @implements SRS-RW-03
+// @implements SRS-RW-05
+// @implements SRS-RW-06
+// @implements SRS-RW-37
+// @implements SRS-RW-40
+// @implements SRS-RW-41
+// @implements SRS-RW-43
+// @implements SRS-RW-46
+// @implements SRS-RW-48
+// @implements SRS-RW-49
+// @implements SRS-RW-50
+
 import AppKit
 import Combine
 

@@ -1,0 +1,23 @@
+---
+id: STORY-RW-057
+title: "Repository packaging artifacts"
+parent_srs: [SRS-RW-57]
+parent_req: [REQ-08]
+status: ready
+priority: P1
+iter: iter-000
+estimate: 1
+owner: dev
+acceptance_criteria:
+  - "Given existing Swift code, When @implements [SRS-RW-57] is added, Then adlc audit reports no orphan for [SRS-RW-57]."
+---
+
+# STORY-RW-057 — Repository packaging artifacts
+
+Implements [SRS-RW-57](../../../.docs/modules/reawa/features/pen-input-native-stylus/srs-logic.md).
+
+Retroactive traceability story — implementation pre-existed this iter.
+
+## Done When
+- `@implements [SRS-RW-57]` present in `Sources/`.
+- Sync-Auditor reports no orphan for [SRS-RW-57].

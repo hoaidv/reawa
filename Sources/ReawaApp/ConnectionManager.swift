@@ -1,3 +1,10 @@
+// Traceability (ADLC iter-000)
+// @implements SRS-RW-11
+// @implements SRS-RW-12
+// @implements SRS-RW-13
+// @implements SRS-RW-19
+// @implements SRS-RW-51
+
 import Foundation
 
 @MainActor

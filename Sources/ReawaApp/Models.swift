@@ -1,3 +1,9 @@
+// Traceability (ADLC iter-000)
+// @implements SRS-RW-08
+// @implements SRS-RW-09
+// @implements SRS-RW-29
+// @implements SRS-RW-53
+
 import CoreGraphics
 import Foundation
 

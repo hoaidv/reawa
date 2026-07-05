@@ -1,3 +1,14 @@
+// Traceability (ADLC iter-000)
+// @implements SRS-RW-15
+// @implements SRS-RW-16
+// @implements SRS-RW-17
+// @implements SRS-RW-25
+// @implements SRS-RW-33
+// @implements SRS-RW-47
+// @implements SRS-RW-58
+// @implements SRS-RW-59
+// @implements SRS-RW-65
+
 import AppKit
 import Combine
 import SwiftUI

@@ -1,3 +1,7 @@
+// Traceability (ADLC iter-000)
+// @implements SRS-RW-36
+// @implements SRS-RW-39
+
 import AppKit
 import Foundation
 

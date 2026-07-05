@@ -1,3 +1,8 @@
+// Traceability (ADLC iter-000)
+// @implements SRS-RW-38
+// @implements SRS-RW-42
+// @implements SRS-RW-49
+
 import AppKit
 import ApplicationServices
 import CoreGraphics

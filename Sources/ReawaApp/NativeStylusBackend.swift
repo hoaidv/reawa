@@ -1,3 +1,14 @@
+// Traceability (ADLC iter-000)
+// @implements SRS-RW-51
+// @implements SRS-RW-52
+// @implements SRS-RW-53
+// @implements SRS-RW-54
+// @implements SRS-RW-55
+// @implements SRS-RW-56
+// @implements SRS-RW-57
+// @implements SRS-RW-60
+// @implements SRS-RW-61
+
 import Foundation
 import Security
 
