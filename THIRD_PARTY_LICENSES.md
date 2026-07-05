@@ -1,27 +1,19 @@
 # Third-Party Licenses
 
-Reawa depends on third-party open-source packages. This file is a release
-checklist and attribution summary; when publishing a binary build, include the
-full license texts from the exact dependency versions that were bundled.
+Reawa is a native Swift application with no bundled third-party open-source
+packages. This file is a release checklist and attribution summary.
 
 ## Runtime Dependencies
 
-- Paramiko: LGPL-2.1
-- PyObjC: MIT License
-- rumps: BSD License
-- keyring: MIT License
-- cryptography: Apache License 2.0 or BSD License
-- cffi: MIT License
-- PyNaCl: Apache License 2.0
+The application uses macOS system frameworks and invokes system tools at
+runtime. These components are not bundled with Reawa and are provided by the
+operating system:
+
+- OpenSSH (`ssh`, `ssh-keygen`) — OpenSSH License
+- Apple system frameworks — subject to macOS and Xcode license terms
 
 ## Binary Distribution Checklist
 
 - Include `LICENSE`, `NOTICE`, and this file in the app bundle and release
   archive.
-- Include the full license texts for the exact versions of bundled third-party
-  packages.
-- For Paramiko's LGPL-2.1 license, make it possible for recipients to replace
-  or modify Paramiko and rebuild or relink the application.
-- Keep source code or a written source offer available for any LGPL-covered
-  components included in a frozen binary release.
-
+- Do not imply Apple, reMarkable, or Wacom affiliation (see `NOTICE`).

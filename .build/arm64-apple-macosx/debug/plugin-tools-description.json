@@ -1,0 +1,1065 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.xctest/Contents/MacOS/ReawaPackageTests",
+      "packagePath" : "/Users/hoaidv/Project/reawa",
+      "productName" : "ReawaPackageTests"
+    }
+  ],
+  "copyCommands" : {
+    "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Reawa_ReawaApp.bundle/Info.plist" : {
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Info.plist"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Reawa_ReawaApp.bundle/Info.plist"
+        }
+      ]
+    },
+    "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Reawa_ReawaApp.bundle/Resources" : {
+      "inputs" : [
+        {
+          "kind" : "directory",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Resources"
+        }
+      ],
+      "outputs" : [
+        {
+          "kind" : "directory",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Reawa_ReawaApp.bundle/Resources"
+        }
+      ]
+    }
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.ReawaApp-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/sources",
+      "importPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/AppController.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/ConnectionManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Discovery.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/InputDrivers.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Logging.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Models.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/NativeStylusBackend.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Overlays.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/SSHSession.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/SettingsUI.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Storage.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Utilities.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/WindowSnap.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/main.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/DerivedSources/resource_bundle_accessor.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<ReawaApp-arm64-apple-macosx-debug.module-resources>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "ReawaApp",
+      "moduleOutputPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules/ReawaApp.swiftmodule",
+      "objects" : [
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/AppController.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/ConnectionManager.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Discovery.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/InputDrivers.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Logging.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Models.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/NativeStylusBackend.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Overlays.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SSHSession.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SettingsUI.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Storage.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Utilities.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/WindowSnap.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/main.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/resource_bundle_accessor.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx13.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j14",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE",
+        "-module-cache-path",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "ReawaApp_main",
+        "-color-diagnostics",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "reawa"
+      ],
+      "outputFileMapPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/AppController.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/ConnectionManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Discovery.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/InputDrivers.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Logging.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Models.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/NativeStylusBackend.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Overlays.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SSHSession.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SettingsUI.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Storage.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Utilities.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/WindowSnap.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/main.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/resource_bundle_accessor.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules/ReawaApp.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/AppController.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/ConnectionManager.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Discovery.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/InputDrivers.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Logging.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Models.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/NativeStylusBackend.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Overlays.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/SSHSession.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/SettingsUI.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Storage.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Utilities.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/WindowSnap.swift",
+        "/Users/hoaidv/Project/reawa/Sources/ReawaApp/main.swift",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/DerivedSources/resource_bundle_accessor.swift"
+      ],
+      "tempsPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.ReawaPackageTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/sources",
+      "importPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules/ReawaTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "ReawaPackageTests",
+      "moduleOutputPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules/ReawaPackageTests.swiftmodule",
+      "objects" : [
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx13.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j14",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/include/ReawaPackageTests-Swift.h",
+        "-color-diagnostics",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "reawa"
+      ],
+      "outputFileMapPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules/ReawaPackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.ReawaTests-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/sources",
+      "importPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Tests/ReawaTests/InputDriversTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Tests/ReawaTests/LoggingTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Tests/ReawaTests/ModelCompatibilityTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Tests/ReawaTests/NativeStylusBackendTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Tests/ReawaTests/PenFrameParserTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/reawa"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "ReawaTests",
+      "moduleOutputPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules/ReawaTests.swiftmodule",
+      "objects" : [
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/InputDriversTests.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/LoggingTests.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/ModelCompatibilityTests.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/NativeStylusBackendTests.swift.o",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/PenFrameParserTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j14",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-color-diagnostics",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "reawa"
+      ],
+      "outputFileMapPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/InputDriversTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/LoggingTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/ModelCompatibilityTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/NativeStylusBackendTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/PenFrameParserTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules/ReawaTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/hoaidv/Project/reawa/Tests/ReawaTests/InputDriversTests.swift",
+        "/Users/hoaidv/Project/reawa/Tests/ReawaTests/LoggingTests.swift",
+        "/Users/hoaidv/Project/reawa/Tests/ReawaTests/ModelCompatibilityTests.swift",
+        "/Users/hoaidv/Project/reawa/Tests/ReawaTests/NativeStylusBackendTests.swift",
+        "/Users/hoaidv/Project/reawa/Tests/ReawaTests/PenFrameParserTests.swift"
+      ],
+      "tempsPath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "ReawaApp" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "ReawaApp",
+      "-package-name",
+      "reawa",
+      "-c",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/AppController.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/ConnectionManager.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Discovery.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/InputDrivers.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Logging.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Models.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/NativeStylusBackend.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Overlays.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/SSHSession.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/SettingsUI.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Storage.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Utilities.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/WindowSnap.swift",
+      "/Users/hoaidv/Project/reawa/Sources/ReawaApp/main.swift",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/DerivedSources/resource_bundle_accessor.swift",
+      "-I",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx13.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j14",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE",
+      "-module-cache-path",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "ReawaApp_main",
+      "-color-diagnostics",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "reawa",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "ReawaPackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "ReawaPackageTests",
+      "-package-name",
+      "reawa",
+      "-c",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.derived/runner.swift",
+      "-I",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx13.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j14",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/include/ReawaPackageTests-Swift.h",
+      "-color-diagnostics",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "reawa",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "ReawaTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "ReawaTests",
+      "-package-name",
+      "reawa",
+      "-c",
+      "/Users/hoaidv/Project/reawa/Tests/ReawaTests/InputDriversTests.swift",
+      "/Users/hoaidv/Project/reawa/Tests/ReawaTests/LoggingTests.swift",
+      "/Users/hoaidv/Project/reawa/Tests/ReawaTests/ModelCompatibilityTests.swift",
+      "/Users/hoaidv/Project/reawa/Tests/ReawaTests/NativeStylusBackendTests.swift",
+      "/Users/hoaidv/Project/reawa/Tests/ReawaTests/PenFrameParserTests.swift",
+      "-I",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j14",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-color-diagnostics",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "reawa",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "ReawaApp" : [
+
+    ],
+    "ReawaPackageTests" : [
+      "ReawaTests",
+      "ReawaApp"
+    ],
+    "ReawaTests" : [
+      "ReawaApp"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/AppController.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/ConnectionManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Discovery.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/InputDrivers.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Logging.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Models.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/NativeStylusBackend.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Overlays.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/SSHSession.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/SettingsUI.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Storage.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Utilities.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/WindowSnap.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Sources/ReawaApp/main.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/DerivedSources/resource_bundle_accessor.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/sources"
+    },
+    "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/sources"
+    },
+    "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/AppController.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/ConnectionManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Discovery.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/InputDrivers.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Logging.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Models.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/NativeStylusBackend.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Overlays.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SSHSession.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SettingsUI.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Storage.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Utilities.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/WindowSnap.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/main.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/resource_bundle_accessor.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/InputDriversTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/LoggingTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/ModelCompatibilityTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/NativeStylusBackendTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/PenFrameParserTests.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Tests/ReawaTests/InputDriversTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Tests/ReawaTests/LoggingTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Tests/ReawaTests/ModelCompatibilityTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Tests/ReawaTests/NativeStylusBackendTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/Tests/ReawaTests/PenFrameParserTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/sources"
+    },
+    "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/reawa-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/reawa-entitlement.plist"
+    },
+    "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/reawa.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/AppController.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/ConnectionManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Discovery.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/InputDrivers.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Logging.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Models.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/NativeStylusBackend.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Overlays.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SSHSession.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SettingsUI.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Storage.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Utilities.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/WindowSnap.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/main.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/resource_bundle_accessor.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/reawa.product/Objects.LinkFileList"
+    },
+    "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "": {
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/primary.swiftdeps"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/AppController.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/AppController.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/AppController.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/AppController~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/AppController.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/AppController.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/ConnectionManager.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/ConnectionManager.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/ConnectionManager.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/ConnectionManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/ConnectionManager.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/ConnectionManager.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Discovery.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Discovery.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Discovery.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Discovery~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Discovery.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Discovery.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/InputDrivers.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/InputDrivers.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/InputDrivers.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/InputDrivers~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/InputDrivers.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/InputDrivers.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Logging.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Logging.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Logging.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Logging~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Logging.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Logging.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Models.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Models.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Models.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Models~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Models.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Models.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/NativeStylusBackend.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/NativeStylusBackend.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/NativeStylusBackend.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/NativeStylusBackend~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/NativeStylusBackend.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/NativeStylusBackend.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Overlays.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Overlays.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Overlays.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Overlays~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Overlays.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Overlays.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/SSHSession.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SSHSession.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SSHSession.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SSHSession~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SSHSession.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SSHSession.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/SettingsUI.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SettingsUI.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SettingsUI.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SettingsUI~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SettingsUI.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/SettingsUI.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Storage.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Storage.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Storage.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Storage~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Storage.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Storage.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/Utilities.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Utilities.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Utilities.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Utilities~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Utilities.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/Utilities.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/WindowSnap.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/WindowSnap.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/WindowSnap.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/WindowSnap~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/WindowSnap.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/WindowSnap.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Sources/ReawaApp/main.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/main.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/main.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/main.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/main.dia"
+  },
+  "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/DerivedSources/resource_bundle_accessor.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/resource_bundle_accessor.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/resource_bundle_accessor.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/resource_bundle_accessor~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/resource_bundle_accessor.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaApp.build/resource_bundle_accessor.dia"
+  }
+}

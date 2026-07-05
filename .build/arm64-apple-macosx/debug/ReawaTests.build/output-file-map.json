@@ -1,0 +1,40 @@
+{
+  "": {
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/primary.swiftdeps"
+  },
+  "/Users/hoaidv/Project/reawa/Tests/ReawaTests/InputDriversTests.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/InputDriversTests.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/InputDriversTests.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/InputDriversTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/InputDriversTests.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/InputDriversTests.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Tests/ReawaTests/LoggingTests.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/LoggingTests.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/LoggingTests.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/LoggingTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/LoggingTests.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/LoggingTests.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Tests/ReawaTests/ModelCompatibilityTests.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/ModelCompatibilityTests.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/ModelCompatibilityTests.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/ModelCompatibilityTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/ModelCompatibilityTests.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/ModelCompatibilityTests.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Tests/ReawaTests/NativeStylusBackendTests.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/NativeStylusBackendTests.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/NativeStylusBackendTests.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/NativeStylusBackendTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/NativeStylusBackendTests.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/NativeStylusBackendTests.dia"
+  },
+  "/Users/hoaidv/Project/reawa/Tests/ReawaTests/PenFrameParserTests.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/PenFrameParserTests.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/PenFrameParserTests.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/PenFrameParserTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/PenFrameParserTests.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaTests.build/PenFrameParserTests.dia"
+  }
+}

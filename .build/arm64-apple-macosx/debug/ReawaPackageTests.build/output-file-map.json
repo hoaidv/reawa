@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/primary.swiftdeps"
+  },
+  "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.derived/runner.swift": {
+    "dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/runner.d",
+    "object": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/hoaidv/Project/reawa/.build/arm64-apple-macosx/debug/ReawaPackageTests.build/runner.dia"
+  }
+}
