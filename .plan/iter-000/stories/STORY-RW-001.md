@@ -3,7 +3,7 @@ id: STORY-RW-001
 title: "Application activation policy"
 parent_srs: [SRS-RW-01]
 parent_req: [REQ-01]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

@@ -3,7 +3,7 @@ id: STORY-RW-050
 title: "Close reverts to Relative"
 parent_srs: [SRS-RW-50]
 parent_req: [REQ-04]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

@@ -3,7 +3,7 @@ id: STORY-RW-028
 title: "Link-local candidate ordering"
 parent_srs: [SRS-RW-28]
 parent_req: [REQ-05]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

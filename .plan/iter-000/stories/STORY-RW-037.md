@@ -3,7 +3,7 @@ id: STORY-RW-037
 title: "Window picker flow"
 parent_srs: [SRS-RW-37]
 parent_req: [REQ-04]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

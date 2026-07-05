@@ -3,7 +3,7 @@ id: STORY-RW-008
 title: "Connection data model"
 parent_srs: [SRS-RW-08]
 parent_req: [REQ-02]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

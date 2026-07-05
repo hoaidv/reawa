@@ -3,7 +3,7 @@ id: STORY-RW-032
 title: "DriverSession integration"
 parent_srs: [SRS-RW-32]
 parent_req: [REQ-03]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

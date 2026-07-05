@@ -3,7 +3,7 @@ id: STORY-RW-030
 title: "RelativePenDriver mapping"
 parent_srs: [SRS-RW-30]
 parent_req: [REQ-03]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

@@ -3,7 +3,7 @@ id: STORY-RW-013
 title: "Connection status derivation"
 parent_srs: [SRS-RW-13]
 parent_req: [REQ-02]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

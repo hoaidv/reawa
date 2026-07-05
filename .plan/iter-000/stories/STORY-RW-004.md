@@ -3,7 +3,7 @@ id: STORY-RW-004
 title: "Notification service (bundled runs only)"
 parent_srs: [SRS-RW-04]
 parent_req: [REQ-09]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

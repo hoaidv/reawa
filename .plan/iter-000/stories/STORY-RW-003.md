@@ -3,7 +3,7 @@ id: STORY-RW-003
 title: "Accessibility permission gate"
 parent_srs: [SRS-RW-03]
 parent_req: [REQ-09]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

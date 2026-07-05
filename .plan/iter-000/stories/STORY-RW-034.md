@@ -3,7 +3,7 @@ id: STORY-RW-034
 title: "Pen-to-cursor latency"
 parent_srs: [SRS-RW-34]
 parent_req: [REQ-03]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

@@ -3,7 +3,7 @@ id: STORY-RW-025
 title: "Discovered devices list"
 parent_srs: [SRS-RW-25]
 parent_req: [REQ-05]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

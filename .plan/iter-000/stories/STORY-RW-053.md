@@ -3,7 +3,7 @@ id: STORY-RW-053
 title: "Pen metadata preservation"
 parent_srs: [SRS-RW-53]
 parent_req: [REQ-08]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

@@ -3,7 +3,7 @@ id: STORY-RW-061
 title: "Krita Tablet Tester visibility"
 parent_srs: [SRS-RW-61]
 parent_req: [REQ-08]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

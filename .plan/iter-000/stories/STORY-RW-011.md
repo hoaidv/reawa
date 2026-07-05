@@ -3,7 +3,7 @@ id: STORY-RW-011
 title: "Single active connection"
 parent_srs: [SRS-RW-11]
 parent_req: [REQ-02]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

@@ -3,7 +3,7 @@ id: STORY-RW-064
 title: "Future diagnostics gap (documented)"
 parent_srs: [SRS-RW-64]
 parent_req: [REQ-07]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

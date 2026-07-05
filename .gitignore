@@ -1,6 +1,7 @@
 # ADLC
 .agent/
 .cursor/
+.sandbox/
 
 # IPython Notebooks
 .ipynb_checkpoints/

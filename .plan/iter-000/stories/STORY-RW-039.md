@@ -3,7 +3,7 @@ id: STORY-RW-039
 title: "Region overlay and resize"
 parent_srs: [SRS-RW-39]
 parent_req: [REQ-04]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

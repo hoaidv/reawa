@@ -3,7 +3,7 @@ id: STORY-RW-023
 title: "Auto-connect and notification matrix"
 parent_srs: [SRS-RW-23]
 parent_req: [REQ-05]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

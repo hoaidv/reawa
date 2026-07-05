@@ -3,7 +3,7 @@ id: STORY-RW-056
 title: "Local development limitation"
 parent_srs: [SRS-RW-56]
 parent_req: [REQ-08]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

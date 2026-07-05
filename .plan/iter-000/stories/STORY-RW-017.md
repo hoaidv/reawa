@@ -3,7 +3,7 @@ id: STORY-RW-017
 title: "Menu bar connection status indicators"
 parent_srs: [SRS-RW-17]
 parent_req: [REQ-02]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

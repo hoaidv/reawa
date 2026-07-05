@@ -1,23 +1,23 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-07-05T15:50:27+00:00",
+  "generated_at": "2026-07-05T16:15:00+00:00",
   "current_iter": "iter-000",
   "by_status": {
     "draft": 0,
-    "ready": 66,
+    "ready": 0,
     "in-progress": 0,
     "in-review": 0,
-    "done": 0,
+    "done": 66,
     "blocked": 0
   },
   "by_module": {
     "reawa": {
       "total": 66,
-      "done": 0,
+      "done": 66,
       "in_review": 0
     }
   },
   "open_challenges": 0,
   "resolved_challenges_this_iter": 0,
-  "sync_orphans": 66
+  "sync_orphans": 0
 }

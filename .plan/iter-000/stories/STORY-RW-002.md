@@ -3,7 +3,7 @@ id: STORY-RW-002
 title: "Menu bar icon and menu rebuild"
 parent_srs: [SRS-RW-02]
 parent_req: [REQ-01]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

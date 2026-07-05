@@ -3,7 +3,7 @@ id: STORY-RW-024
 title: "Environment dependency (documented)"
 parent_srs: [SRS-RW-24]
 parent_req: [REQ-05]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

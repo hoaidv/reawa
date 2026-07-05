@@ -3,7 +3,7 @@ id: STORY-RW-054
 title: "Planned high-level flow"
 parent_srs: [SRS-RW-54]
 parent_req: [REQ-08]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

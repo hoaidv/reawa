@@ -3,7 +3,7 @@ id: STORY-RW-044
 title: "Picker overlay UX"
 parent_srs: [SRS-RW-44]
 parent_req: [REQ-04]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

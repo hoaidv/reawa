@@ -3,7 +3,7 @@ id: STORY-RW-046
 title: "Menu bar Absolute context"
 parent_srs: [SRS-RW-46]
 parent_req: [REQ-04]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

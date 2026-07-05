@@ -3,7 +3,7 @@ id: STORY-RW-015
 title: "Settings connection editor"
 parent_srs: [SRS-RW-15]
 parent_req: [REQ-06]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

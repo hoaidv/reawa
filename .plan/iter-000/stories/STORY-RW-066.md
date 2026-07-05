@@ -3,7 +3,7 @@ id: STORY-RW-066
 title: "Pen log main-thread isolation"
 parent_srs: [SRS-RW-66]
 parent_req: [REQ-07]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

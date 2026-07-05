@@ -3,7 +3,7 @@ id: STORY-RW-033
 title: "Relative mode selection"
 parent_srs: [SRS-RW-33]
 parent_req: [REQ-03]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

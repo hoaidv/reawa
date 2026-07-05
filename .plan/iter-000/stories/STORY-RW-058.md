@@ -3,7 +3,7 @@ id: STORY-RW-058
 title: "Output mode control"
 parent_srs: [SRS-RW-58]
 parent_req: [REQ-08]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

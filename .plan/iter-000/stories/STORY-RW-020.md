@@ -3,7 +3,7 @@ id: STORY-RW-020
 title: "Network interface scan"
 parent_srs: [SRS-RW-20]
 parent_req: [REQ-05]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

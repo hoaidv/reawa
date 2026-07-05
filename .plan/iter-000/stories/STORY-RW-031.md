@@ -3,7 +3,7 @@ id: STORY-RW-031
 title: "Gesture lifecycle and cursor rebase"
 parent_srs: [SRS-RW-31]
 parent_req: [REQ-03]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

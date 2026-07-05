@@ -3,7 +3,7 @@ id: STORY-RW-063
 title: "Pen event presentation"
 parent_srs: [SRS-RW-63]
 parent_req: [REQ-07]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

@@ -3,7 +3,7 @@ id: STORY-RW-022
 title: "USBWatcher poll loop"
 parent_srs: [SRS-RW-22]
 parent_req: [REQ-05]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

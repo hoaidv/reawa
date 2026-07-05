@@ -3,7 +3,7 @@ id: STORY-RW-016
 title: "Device configuration controls"
 parent_srs: [SRS-RW-16]
 parent_req: [REQ-06]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

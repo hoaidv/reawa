@@ -3,7 +3,7 @@ id: STORY-RW-047
 title: "Settings Absolute context"
 parent_srs: [SRS-RW-47]
 parent_req: [REQ-04]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

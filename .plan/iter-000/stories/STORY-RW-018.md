@@ -3,7 +3,7 @@ id: STORY-RW-018
 title: "Legacy store migration"
 parent_srs: [SRS-RW-18]
 parent_req: [REQ-02]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

@@ -3,7 +3,7 @@ id: STORY-RW-005
 title: "Menu structure"
 parent_srs: [SRS-RW-05]
 parent_req: [REQ-01]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

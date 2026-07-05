@@ -3,7 +3,7 @@ id: STORY-RW-042
 title: "Stage Manager detection"
 parent_srs: [SRS-RW-42]
 parent_req: [REQ-04]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

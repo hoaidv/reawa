@@ -3,7 +3,7 @@ id: STORY-RW-036
 title: "AbsolutePenDriver mapping"
 parent_srs: [SRS-RW-36]
 parent_req: [REQ-04]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1

@@ -3,7 +3,7 @@ id: STORY-RW-010
 title: "SSH authentication and key setup"
 parent_srs: [SRS-RW-10]
 parent_req: [REQ-02]
-status: ready
+status: done
 priority: P1
 iter: iter-000
 estimate: 1
