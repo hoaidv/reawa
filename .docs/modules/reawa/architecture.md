@@ -86,10 +86,10 @@ flowchart TB
 ### App-level Absolute mode state machine
 
 ```mermaid
-stateDiagram-v2 TD
-    PICKING:
-    RELATIVE:
-    ABSOLUTE:
+stateDiagram-v2
+    PICKING: PICKING
+    RELATIVE: RELATIVE
+    ABSOLUTE: ABSOLUTE
 
     [*] --> RELATIVE: start in RELATIVE
     [*] --> PICKING: start in ABSOLUTE
