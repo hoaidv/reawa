@@ -10,10 +10,7 @@ questions:
 4. Which problems encountered during the port were code issues versus system or
    environment issues?
 
-For product behavior, see [product.md](product.md). For the original Python
-architecture, see [technical.md](technical.md). For the deepest historical notes
-on macOS window lifecycle handling, see
-[issues-history/macos-window-lifecycle.md](issues-history/macos-window-lifecycle.md).
+For product behavior, see [PRD](../modules/reawa/prd.md). For architecture, see [architecture.md](../modules/reawa/architecture.md). For the deepest historical notes on macOS window lifecycle handling, see [macos-window-lifecycle-investigation.md](./macos-window-lifecycle-investigation.md).
 
 ---
 

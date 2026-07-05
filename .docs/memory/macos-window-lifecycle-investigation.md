@@ -2,7 +2,7 @@
 
 This document records how the `reawa` app detects **minimize**, **maximize**, **close**, and **restore** for a snapped target window under normal macOS window management and **Stage Manager**. It is written as a porting and debugging reference: what signals exist, which ones lie, and how we arrived at the current implementation.
 
-For the concise API summary, see [technical.md — Window Follow and Lifecycle](technical.md#window-follow-and-lifecycle). For the bug-fix table, see [Bug Fix History](technical.md#bug-fix-history) entries #9–#14.
+For the concise API summary, see [pen-input-absolute SRS — Window follow](../modules/reawa/features/pen-input-absolute/srs-logic.md#window-follow-timer). For the bug-fix table, see [Bug fix history](../modules/reawa/features/pen-input-absolute/srs-logic.md#bug-fix-history) entries #9–#14.
 
 ---
 
@@ -202,13 +202,14 @@ Suggested log fields (NDJSON) for one investigation session:
 
 | File | Role |
 |------|------|
-| `driver/window_snap.py` | `snapped_lifecycle_state()`, `_is_stage_manager_minimized()`, `window_cg_onscreen_bounds()`, `restore_window()`, `_STAGE_AREA_RATIO` |
-| `app.py` | `_follow_tick()`, `_snapped_window_state`, overlay show/hide on lifecycle transitions |
-| `ui/region_overlay.py` | Overlay visibility only (no lifecycle logic) |
+| `Sources/ReawaApp/WindowSnap.swift` | `snappedLifecycleState()`, Stage Manager ratio, `windowCGOnscreenBounds()`, `restoreWindow()`, `stageAreaRatio` |
+| `Sources/ReawaApp/AppController.swift` | Follow tick, `_snappedWindowState`, overlay show/hide on lifecycle transitions |
+| `Sources/ReawaApp/Overlays.swift` | Overlay visibility only (no lifecycle logic) |
 
 ---
 
 ## Related documents
 
-- [technical.md](technical.md) — full system design and bug-fix table
-- [doc.md](doc.md) — user-facing behavior for minimize/maximize/close/restore
+- [Module architecture](../modules/reawa/architecture.md) — full system design
+- [PRD — Absolute mode](../modules/reawa/prd.md#pen-input-absolute) — user-facing behavior for minimize/maximize/close/restore
+- [ADR-0004 — Stage Manager lifecycle](../adr/ADR-0004-stage-manager-lifecycle.md)
