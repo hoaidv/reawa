@@ -264,15 +264,15 @@ is the primary lever.
 
 ## 5. Before / after (measured 2026-08-09)
 
-| Lever | Before | After |
-|---|---|---|
-| Ink nodes | 2000 `Rectangle`s | One `QQuickPaintedItem` + persistent `QImage` |
-| Canvas size | `0x0` (`anchors.fill` on an unsized root) | `width/height` bound to the window |
-| Pen region | Tagged over a `0x0` rect (no effect) | Covers the full `1404x1872` canvas |
-| Flush gate | ≥3 px travel | Time-based, `kFlushIntervalMs = 8` |
-| Waveform | Backend default (often GC16) | `EPScreenModeItem(Mode::Pen)` |
-| Debug overlays | Text + blinker every sample | Status text refreshed between strokes |
-| Stroke TCP | Every sample on GUI thread | Off unless `RM_SYNC_HOST` |
+| Lever          | Before                                    | After                                         |
+| -------------- | ----------------------------------------- | --------------------------------------------- |
+| Ink nodes      | 2000 `Rectangle`s                         | One `QQuickPaintedItem` + persistent `QImage` |
+| Canvas size    | `0x0` (`anchors.fill` on an unsized root) | `width/height` bound to the window            |
+| Pen region     | Tagged over a `0x0` rect (no effect)      | Covers the full `1404x1872` canvas            |
+| Flush gate     | ≥3 px travel                              | Time-based, `kFlushIntervalMs = 8`            |
+| Waveform       | Backend default (often GC16)              | `EPScreenModeItem(Mode::Pen)`                 |
+| Debug overlays | Text + blinker every sample               | Status text refreshed between strokes         |
+| Stroke TCP     | Every sample on GUI thread                | Off unless `RM_SYNC_HOST`                     |
 
 Result: **at parity with xochitl by eye**, meeting the < 27 ms goal.
 
