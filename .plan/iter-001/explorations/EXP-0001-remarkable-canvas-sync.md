@@ -9,7 +9,7 @@ initiative:
   - I1-rm-native-draw
   - I2-macos-infinity-viewer
   - I3-region-sync-protocol
-status: paused-for-feedback
+status: promoted-partial
 mode: try-hard
 timebox: 2h per round
 token_budget: 80k per round
@@ -261,6 +261,12 @@ TCP JSON-lines (spike) → protobuf later. Sync **stroke data** RM→macOS; sync
 - **Experiment**: `mapInputToCanvas` rotates into an isotropic landscape frame — `renderX = penY·(w/h)`, `renderY = h − penX·(h/w)` (the `h −` flip corrects a left/right mirror found on first pass). Restored real line-segment ink; removed calibration logging. App running as PID `5716`.
 - **Observation** (human): **"Ink tracks my pen correctly — lines, direction, aspect all right."** ✅ Drawing on RM2 achieved.
 
+### Round 20 — redeploy for pen-ink re-check (2026-08-09)
+
+- **Experiment**: RM2 reachable on USB (`10.11.99.1` via `en7`); refreshed stale SSH host key; redeployed existing Round-19 binary `rm-canvas-spike` via `spike/scripts/deploy-rm2.sh` (no rebuild — sources and ELF both dated 2026-07-06 07:32).
+- **Device**: stopped `xochitl`; app running as PID `2843`. Log shows only benign epaper keymap / bin-file notices.
+- **Feedback gate**: **awaiting human** — draw on RM2 and confirm local ink (tracking, orientation, aspect) still matches Round 19.
+
 ## Outcome
 
 - **Result**: **drawing works on RM2** — pen ink renders locally on the e-paper with correct orientation and aspect, on stock firmware `3.28.0.157` (no `rm2fb`/root display hacks needed).
@@ -277,5 +283,6 @@ TCP JSON-lines (spike) → protobuf later. Sync **stroke data** RM→macOS; sync
 ## Code disposition
 
 - [x] Sandbox worktree created — `.sandbox/EXP-0001-remarkable-canvas-sync`
-- [ ] Discard sandbox worktree (default) — after routing
-- [ ] Promote to production via story(ies) — docs-first re-implementation
+- [x] Promote local pen ink → repo-root `Epaper/` ([CHG-0001](../changes/CHG-0001-promote-epaper.md), [SRS-EP-01](../../../.docs/modules/epaper/features/local-pen-ink/srs-logic.md))
+- [ ] Discard sandbox worktree (default) — after remaining EXP goals routed or closed
+- [ ] Promote macOS canvas / sync slices — still exploratory

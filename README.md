@@ -2,8 +2,11 @@
 
 Reawa is a native macOS menu bar app that turns a reMarkable tablet into a pen
 input device for the Mac. The active implementation is the Swift app in
-`Sources/ReawaApp/`; the earlier Python version remains in `legacy/python/` as
-reference material.
+`Sources/ReawaApp/`.
+
+**Epaper** (sibling folder `Epaper/`) is the on-device Qt app that draws local
+pen ink on the reMarkable 2 e-paper panel. It is built with the reMarkable SDK,
+not SwiftPM — see [`Epaper/README.md`](Epaper/README.md).
 
 ## Purpose
 

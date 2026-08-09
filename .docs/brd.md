@@ -35,7 +35,7 @@ The product serves creative and productivity workflows where the reMarkable's pa
 ## [BRD-04] Out of Scope
 
 - **macOS Markup tool** — Standalone markup for pictures, screenshots, PDFs (future idea from README).
-- **Windows / Linux / iOS** — macOS-only product.
+- **Windows / Linux / iOS** — macOS-only product (except the on-device Epaper binary for reMarkable 2).
 - **reMarkable Paper Pro / reMarkable Connect cloud** — reMarkable 2 over USB Ethernet only.
 - **Kernel extensions** — Classic kext-based tablet drivers are explicitly avoided.
 - **Wacom driver identity spoofing** — Generic macOS digitizer/stylus device only.
@@ -49,3 +49,11 @@ The product serves creative and productivity workflows where the reMarkable's pa
 - **Apple entitlements:** Native Stylus requires Apple-approved `com.apple.developer.hid.virtual.device`; `swift run reawa` cannot exercise this path.
 - **Single active connection:** Only one device drives the cursor at a time.
 - **Independent project:** Not affiliated with reMarkable AS states, Wacom, or Apple.
+
+## [BRD-06] On-device e-paper drawing (Epaper)
+
+Related product surface (sibling module, not the macOS pen driver): a Qt app that
+runs **on the reMarkable 2** and draws local pen ink on the e-paper panel with
+pen-matched coordinates. Code lives in repo-root `Epaper/`; product docs in
+`.docs/modules/epaper/`. Sync to a macOS infinity canvas remains exploratory
+([EXP-0001](../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md)).
