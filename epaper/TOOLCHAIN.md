@@ -13,12 +13,12 @@
 
 Documented in [EXP-0001](../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md) Rounds 8–11. Safe to delete with the sandbox worktree.
 
-| Artifact | Why skip | How to restore if needed |
-|---|---|---|
-| `rM2-stuff` / `rm2fb` | Built against older `libqsgepaper`; failed address lookup on OS `3.28` / Codex `5.8.197`. Local ink works **without** it. | `curl -L https://github.com/timower/rM2-stuff/archive/refs/heads/master.tar.gz` (or pin a tag); rebuild only if porting SWTCON |
-| `rm-fb-probe` | Direct `/dev/fb0` + `MXCFB_SEND_UPDATE` returned `EINVAL` on this firmware | Recreate a 50-line C probe writing `/dev/fb0` if re-testing framebuffer assumptions |
-| Spike `macos-canvas/` | Separate Swift viewport mock for EXP; not part of Reawa yet | Re-implement from EXP notes + `protocol/viewport-sync.md` when promoting S2/S3 |
-| SDK installer `.sh` (~400 MB) | Redistributable from reMarkable; too large for git | See below |
+| Artifact                      | Why skip                                                                                                                  | How to restore if needed                                                                                                       |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `rM2-stuff` / `rm2fb`         | Built against older `libqsgepaper`; failed address lookup on OS `3.28` / Codex `5.8.197`. Local ink works **without** it. | `curl -L https://github.com/timower/rM2-stuff/archive/refs/heads/master.tar.gz` (or pin a tag); rebuild only if porting SWTCON |
+| `rm-fb-probe`                 | Direct `/dev/fb0` + `MXCFB_SEND_UPDATE` returned `EINVAL` on this firmware                                                | Recreate a 50-line C probe writing `/dev/fb0` if re-testing framebuffer assumptions                                            |
+| Spike `macos-canvas/`         | Separate Swift viewport mock for EXP; not part of Reawa yet                                                               | Re-implement from EXP notes + `protocol/viewport-sync.md` when promoting S2/S3                                                 |
+| SDK installer `.sh` (~400 MB) | Redistributable from reMarkable; too large for git                                                                        | See below                                                                                                                      |
 
 ## Restore the SDK installer
 

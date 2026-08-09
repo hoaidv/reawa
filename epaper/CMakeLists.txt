@@ -12,6 +12,7 @@ qt_add_executable(epaper_bin
     tabletwindow.cpp
     tabletappfilter.cpp
     strokesync.cpp
+    epaperbridge.cpp
 )
 qt_add_qml_module(epaper_bin
     URI epaper
@@ -19,7 +20,7 @@ qt_add_qml_module(epaper_bin
     QML_FILES Main.qml
 )
 
-target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network)
+target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network ${CMAKE_DL_LIBS})
 set_target_properties(epaper_bin PROPERTIES
     OUTPUT_NAME epaper
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"

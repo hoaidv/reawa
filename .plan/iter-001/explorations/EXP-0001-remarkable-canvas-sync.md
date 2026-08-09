@@ -267,12 +267,46 @@ TCP JSON-lines (spike) → protobuf later. Sync **stroke data** RM→macOS; sync
 - **Device**: stopped `xochitl`; app running as PID `2843`. Log shows only benign epaper keymap / bin-file notices.
 - **Feedback gate**: **awaiting human** — draw on RM2 and confirm local ink (tracking, orientation, aspect) still matches Round 19.
 
+### Round 21 — Pen-mode latency path (2026-08-09)
+
+- **Experiment**: Device probe of `libqsgepaper.so` confirmed `EPScreenModeItem::Mode::{Pen,Mono,Animation,UI,Content,Sleep}`, `EPFramebuffer::swapBuffers(QRect, EPScreenMode, flags)`, and SWTCON ownership. No pixel-buffer getter exported.
+- **Code** (repo-root `epaper/`):
+  - `epaperbridge` — `dlsym` binding (no hardcoded addresses); attach Pen-mode region; `swapBuffers` after SG `afterRendering`.
+  - Single `QQuickPaintedItem` + `QImage` replaces 2000-item Rectangle pool.
+  - Time-based flush (~8 ms) replaces 3 px distance gate.
+  - `StrokeSync` inert unless `RM_SYNC_HOST`; deferred flush.
+  - `RM_INK_TRACE=1` arrival→flush / flush→swap percentiles.
+- **Docs**: [RENDERING.md](../../../epaper/RENDERING.md), [CHG-0003](../changes/CHG-0003-epaper-pen-latency.md), SRS-EP-01 latency section.
+- **Feedback gate**: **awaiting human eye check** — target < ~27 ms vs xochitl.
+
+### Round 22 — invisible painted ink, root-caused (2026-08-09)
+
+- **Symptom**: Round 21's `QQuickPaintedItem` ink layer produced **no ink** while `strokes` incremented. Reverting to the Rectangle pool restored visible-but-snaking ink, which suggested the backend could not render painted items.
+- **Static analysis** (SDK `libqsgepaper.so`): that hypothesis was **wrong**. `EPContext` exports `createPainterNode(QQuickPaintedItem*)` alongside `createInternalRectangleNode` / `createInternalImageNode`; disassembly shows it allocates a 152-byte private class that embeds an `EPNode` at `+0x50`, the same shape the renderer expects from rectangle and image nodes. Painter nodes are supported. No pixel-buffer getter exists, so on-screen truth still needs a human.
+- **Experiment**: since there is no framebuffer readback, two beacons were stamped into the ink `QImage` — a **static** square written once at image creation, and a **flush** square toggled every flush with no geometry change — plus `flush=` / `paint=` counters in the status line.
+- **Observation** (human): neither beacon visible; `flush=` climbing, `paint=` stuck at `0`. So Qt was never calling `paint()` — the failure was **above** the epaper backend.
+- **Root cause** (device log): the canvas was `0x0` forever, so `updatePaintNode()` returned a null node.
+
+  ```
+  [ink] componentComplete size QSizeF(0, 0) hasContents true
+        parentItem QQuickRootItem(geometry=0,0 0x0) parentSize QSizeF(0, 0)
+  [ink] updatePaintNode size QSizeF(0, 0) textureSize QSize(-1, -1) new Node(null)
+  ```
+
+  `Main.qml` used `anchors.fill: parent`, but the `QQuickRootItem` of our `QQuickWindow` subclass is **never resized** under this QPA — it stays `0x0` while the window is `1404x1872`. Everything that rendered before had its own size (`Text` implicit, pool `Rectangle`s explicit), which is why only the anchored item collapsed. This also meant `attachPenModeRegion` had been tagging a `0x0` rect, so the **Pen waveform never covered the canvas**.
+- **Fix**: bind `width`/`height` to the window instead of anchoring (`width: root.width`). Ink and waveform both corrected by the same change.
+- **Observation** (human): **"clean continuous line"**, and latency **"about the same as xochitl"** — the < 27 ms goal is met.
+- **Measurement**: `RM_INK_TRACE=1`, n=764 → `arrival->flush p50=305us p95=798us p99=1517us`; `flush->swap` no samples (`RM_EP_SWAP` unset). Explicit `swapBuffers` is **not required**; Pen-region tagging alone suffices. Remaining latency is input plumbing + SG render + SWTCON, not our ink layer.
+- **Incidental fixes**: double free of the placement-constructed `EPScreenModeItem` storage (Qt owns it via parent), and `SIGTERM` routed through the event loop so `killall` still dumps trace stats.
+
 ## Outcome
 
 - **Result**: **drawing works on RM2** — pen ink renders locally on the e-paper with correct orientation and aspect, on stock firmware `3.28.0.157` (no `rm2fb`/root display hacks needed).
 - **Root cause chain**: (1) the e-paper Qt scenegraph *does* render — it refreshes static nodes, in-place `visible` toggles, geometry moves, and `Repeater`/`itemAt` mutations; per-point `window()->update()` floods merely **starved** the event loop. (2) The input item was `visible:false` → zero-size → coords collapsed to (0,0). (3) The tablet is used in **landscape** vs a **portrait** panel → a 90° swap + aspect scale + one-axis flip fully corrects input→render.
-- **Working recipe**: `QT_QPA_PLATFORM=epaper`, ink as a pre-created QML `Rectangle` pool moved into place (no per-point full-window repaint), input via a visible-but-transparent `QQuickPaintedItem`, coordinate transform `renderX=penY·(w/h)`, `renderY=h−penX·(h/w)`.
-- **Still open**: verify macOS stroke sync uses the corrected coords; viewport/drawing-frame sync (S3); pressure-width and latency polish.
+- **Working recipe**: `QT_QPA_PLATFORM=epaper`; ink rasterised into a persistent `QImage` by a single `QQuickPaintedItem` with `update(bbox)`; the item **sized against the window, never anchored to the content root**; region tagged `EPScreenModeItem(Mode::Pen)`; time-based ~8 ms flush; coordinate transform `renderX=penY·(w/h)`, `renderY=h−penX·(h/w)`. The `Rectangle` pool survives as `RM_INK_MODE=pool` for comparison.
+- **Latency**: at parity with xochitl by eye (< 27 ms). Our software path costs p50 305 µs.
+- **Transferable lesson**: on this stack a zero-sized item fails *silently* — no warning, no node, no paint. When something is invisible, first prove whether Qt is even calling `paint()` (`RM_INK_BEACON=1` + the `paint=` counter) before blaming the epaper backend.
+- **Still open**: verify macOS stroke sync uses the corrected coords; viewport/drawing-frame sync (S3); pressure-width polish.
 
 ## Recommendation & routing
 

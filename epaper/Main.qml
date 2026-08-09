@@ -1,9 +1,10 @@
 import QtQuick
 import epaper 1.0
 
-// Local pen ink on RM2 e-paper (promoted from EXP-0001).
-// Input item must stay visible (even if transparent) so width/height are real;
-// ink is a pre-created Rectangle pool moved into place (geometry change refreshes).
+// Ink is rasterised by TabletCanvas (QQuickPaintedItem). RM_INK_MODE=pool falls
+// back to the Rectangle pool below, which is slower but proven visible on this
+// backend. Pen-mode tags the region; direct swapBuffers is opt-in via RM_EP_SWAP.
+// @implements [SRS-EP-01]
 TabletWindow {
     id: root
     width: Screen.width
@@ -13,9 +14,10 @@ TabletWindow {
     title: "epaper"
 
     property int inkNext: 0
-    property string lastSeg: "-"
 
     function addSeg(x1, y1, x2, y2, w) {
+        if (inkPool.count <= 0)
+            return
         var it = inkPool.itemAt(inkNext % inkPool.count)
         if (!it)
             return
@@ -29,19 +31,23 @@ TabletWindow {
         it.height = thick
         it.rotation = Math.atan2(dy, dx) * 180 / Math.PI
         inkNext++
-        root.lastSeg = Math.round(x1) + "," + Math.round(y1)
     }
 
     TabletCanvas {
         id: drawCanvas
-        anchors.fill: parent
+        // Bound to the window, not anchored: inside this QQuickWindow subclass
+        // `parent` never resolves, which left the item 0x0 and unpainted.
+        x: 0
+        y: 0
+        width: root.width
+        height: root.height
         z: 0
         onSegmentDrawn: (x1, y1, x2, y2, w) => addSeg(x1, y1, x2, y2, w)
     }
 
     Repeater {
         id: inkPool
-        model: 2000
+        model: drawCanvas.paintsInk ? 0 : 2000
         delegate: Rectangle {
             x: 1; y: 1; width: 2; height: 2
             color: "black"
@@ -51,23 +57,22 @@ TabletWindow {
         }
     }
 
-    Rectangle {
-        id: blink
-        x: parent.width - 90; y: 20; width: 60; height: 60; color: "black"; z: 5
-        Timer { interval: 800; running: true; repeat: true
-                onTriggered: blink.visible = !blink.visible }
-    }
-
     Text {
         z: 10
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.margins: 12
-        font.pixelSize: 16
+        anchors.margins: 8
+        font.pixelSize: 14
         color: "black"
-        text: "ink: " + root.inkNext + "  last: " + root.lastSeg
+        text: EpaperBridge.status
+              + (EpaperBridge.penModeAttached ? " | pen" : "")
+              + (drawCanvas.paintsInk ? " | painted" : " | pool " + root.inkNext)
+              + " | strokes " + drawCanvas.strokeCount
               + "  " + drawCanvas.debugInfo
     }
 
-    Component.onCompleted: root.canvas = drawCanvas
+    Component.onCompleted: {
+        root.canvas = drawCanvas
+        EpaperBridge.attachPenModeRegion(drawCanvas)
+    }
 }

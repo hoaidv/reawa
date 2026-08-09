@@ -6,14 +6,16 @@ e-paper panel with pen-matched coordinates (landscape use vs portrait panel).
 This tree sits beside `macOS/` (Swift Reawa host app). It is **not** a SwiftPM
 target — build with the reMarkable Qt SDK (x86_64 Linux / Docker on Apple Silicon).
 
-Promoted from [EXP-0001](../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md)
-after local ink was verified on firmware `3.28.0.157`. Spec: [SRS-EP-01](../.docs/modules/epaper/features/local-pen-ink/srs-logic.md).
+Promoted from [EXP-0001](../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md).
+Spec: [SRS-EP-01](../.docs/modules/epaper/features/local-pen-ink/srs-logic.md).
+Latency / SWTCON deep dive: [RENDERING.md](RENDERING.md).
 
 ## Working recipe
 
 - `QT_QPA_PLATFORM=epaper`, `QT_QUICK_BACKEND=epaper`, `evdevtablet`
-- Ink as a pre-created QML `Rectangle` pool moved into place (no per-point full-window repaint)
-- Input via a **visible but transparent** `QQuickPaintedItem` (zero-size if `visible: false`)
+- Single `QQuickPaintedItem` + persistent `QImage`; `update(bbox)` only
+- `EPScreenModeItem(Mode::Pen)` + `EPFramebuffer::swapBuffers` via runtime `dlsym`
+- Time-based flush (~8 ms), not a distance gate
 - Coordinate transform (landscape tablet, portrait panel):
 
   ```
@@ -26,17 +28,22 @@ after local ink was verified on firmware `3.28.0.157`. Spec: [SRS-EP-01](../.doc
 See [TOOLCHAIN.md](TOOLCHAIN.md) for SDK installer setup.
 
 ```bash
-# Cross-compile ARM binary via Docker amd64 + RM SDK
 ./scripts/build.sh
-
-# Deploy to USB RM2 (stops xochitl, launches epaper)
 ./scripts/deploy-rm2.sh
-
-# Or build + deploy in one step
-./scripts/deploy-rm2.sh --build
-
-# Restore stock UI
-./scripts/deploy-rm2.sh --restore
+./scripts/deploy-rm2.sh --build     # build then deploy
+./scripts/deploy-rm2.sh --restore   # kill epaper, start xochitl
 ```
+
+Optional env, forwarded to the device by `deploy-rm2.sh` when set locally:
+
+| Env | Effect |
+|---|---|
+| `RM_INK_TRACE=1` | Dump arrival→flush / flush→swap percentiles on exit |
+| `RM_INK_MODE=pool` | Fall back to the old QML `Rectangle` ink pool |
+| `RM_INK_BEACON=1` | Stamp render-path probe squares into the ink layer |
+| `RM_SYNC_HOST=<mac-ip>` | Enable deferred stroke TCP to macOS `:9877` |
+| `RM_EP_SWAP=1` | Also call `swapBuffers(Pen)` after each flush (experimental) |
+| `RM_EP_SCREEN_MODE=<int>` | Override Pen-mode enum value |
+| `RM_EP_CONTENT_TYPE=<int>` | Override content type (4-arg swapBuffers only) |
 
 Output binary: `build/bin/epaper`.

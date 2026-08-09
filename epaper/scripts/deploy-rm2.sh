@@ -24,7 +24,14 @@ Env:
   RM_HOST          default root@10.11.99.1
   RM_SSH_KEY       path to device SSH private key
   RM_REMOTE_PATH   default /home/root/epaper
-  RM_SYNC_HOST     optional macOS IP for stroke sync (passed to app)
+
+App env forwarded to the device when set locally:
+  RM_SYNC_HOST     macOS IP for stroke sync
+  RM_INK_MODE      painted (default) | pool
+  RM_INK_BEACON    1 (default) | 0 — render-path probe squares
+  RM_INK_TRACE     1 — latency instrumentation
+  RM_EP_SWAP       1 — direct EPFramebuffer::swapBuffers(Pen) after each flush
+  RM_EP_SCREEN_MODE / RM_EP_CONTENT_TYPE   override resolved enum values
 EOF
 }
 
@@ -75,13 +82,20 @@ if ! ping -c 1 -W 2 10.11.99.1 >/dev/null 2>&1; then
   fi
 fi
 
+echo "Stopping remote epaper (if any) ..."
+ssh_rm 'killall epaper rm-canvas-spike 2>/dev/null || true; sleep 0.3' || true
+
 echo "Deploying $(basename "$BIN") ($(ls -lh "$BIN" | awk '{print $5}')) to $HOST:$REMOTE ..."
 scp -i "$KEY" -o StrictHostKeyChecking=no "$BIN" "$HOST:$REMOTE"
 
-SYNC_EXPORT=""
-if [[ -n "${RM_SYNC_HOST:-}" ]]; then
-  SYNC_EXPORT="export RM_SYNC_HOST=$(printf '%q' "$RM_SYNC_HOST")"
-fi
+FORWARDED=(RM_SYNC_HOST RM_INK_MODE RM_INK_BEACON RM_INK_TRACE RM_EP_SWAP
+           RM_EP_SCREEN_MODE RM_EP_CONTENT_TYPE)
+APP_ENV=""
+for name in "${FORWARDED[@]}"; do
+  if [[ -n "${!name:-}" ]]; then
+    APP_ENV+="export $name=$(printf '%q' "${!name}")"$'\n'
+  fi
+done
 
 echo "Launching (stops xochitl) ..."
 ssh_rm bash -s <<EOF
@@ -93,7 +107,7 @@ export QT_QPA_PLATFORM="epaper:enable_fonts"
 export QT_QPA_EVDEV_TOUCHSCREEN_PARAMETERS="rotate=180:invertx"
 export QT_QPA_GENERIC_PLUGINS=evdevtablet
 export QT_QUICK_BACKEND=epaper
-$SYNC_EXPORT
+$APP_ENV
 cd /home/root
 nohup ./epaper -platform epaper > /tmp/epaper.log 2>&1 &
 sleep 1

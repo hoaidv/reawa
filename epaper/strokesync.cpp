@@ -1,10 +1,15 @@
 #include "strokesync.h"
 
 #include <QTimer>
+#include <QDebug>
 
 StrokeSync::StrokeSync(QObject *parent)
     : QObject(parent)
 {
+    m_enabled = qEnvironmentVariableIsSet("RM_SYNC_HOST");
+    if (!m_enabled)
+        return;
+
     connect(&m_socket, &QTcpSocket::readyRead, this, [this]() {
         m_buffer.append(m_socket.readAll());
     });
@@ -21,32 +26,53 @@ StrokeSync::StrokeSync(QObject *parent)
 
 void StrokeSync::connectToMac()
 {
+    if (!m_enabled)
+        return;
     if (m_socket.state() == QAbstractSocket::ConnectedState
         || m_socket.state() == QAbstractSocket::ConnectingState)
         return;
 
     const QByteArray host = qgetenv("RM_SYNC_HOST");
-    const QString macHost = host.isEmpty() ? QStringLiteral("10.11.99.2") : QString::fromUtf8(host);
-    m_socket.connectToHost(macHost, 9877);
+    if (host.isEmpty())
+        return;
+    m_socket.connectToHost(QString::fromUtf8(host), 9877);
 }
 
 void StrokeSync::sendLine(const QByteArray &jsonLine)
 {
+    if (!m_enabled)
+        return;
+
     QByteArray line = jsonLine;
     if (!line.endsWith('\n'))
         line.append('\n');
 
-    if (m_socket.state() != QAbstractSocket::ConnectedState) {
-        m_queue.append(line);
-        connectToMac();
-        return;
-    }
+    if (m_queue.size() >= kMaxQueue)
+        m_queue.remove(0, m_queue.size() - kMaxQueue + 1);
+    m_queue.append(line);
+    scheduleFlush();
+}
 
-    m_socket.write(line);
+void StrokeSync::scheduleFlush()
+{
+    if (m_flushScheduled)
+        return;
+    m_flushScheduled = true;
+    // Defer socket work off the pen hot path onto the next event-loop turn.
+    QTimer::singleShot(0, this, [this]() {
+        m_flushScheduled = false;
+        if (m_socket.state() != QAbstractSocket::ConnectedState) {
+            connectToMac();
+            return;
+        }
+        flushQueue();
+    });
 }
 
 void StrokeSync::flushQueue()
 {
+    if (!m_enabled)
+        return;
     if (m_socket.state() != QAbstractSocket::ConnectedState)
         return;
 
