@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
 
     QGuiApplication app(argc, argv);
 
-    qmlRegisterType<TabletCanvasItem>("Epaper", 1, 0, "TabletCanvas");
-    qmlRegisterType<TabletWindow>("Epaper", 1, 0, "TabletWindow");
+    qmlRegisterType<TabletCanvasItem>("epaper", 1, 0, "TabletCanvas");
+    qmlRegisterType<TabletWindow>("epaper", 1, 0, "TabletWindow");
 
     QQmlApplicationEngine engine;
     QObject::connect(

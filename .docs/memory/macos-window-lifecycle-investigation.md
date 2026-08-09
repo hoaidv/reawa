@@ -202,9 +202,9 @@ Suggested log fields (NDJSON) for one investigation session:
 
 | File | Role |
 |------|------|
-| `Sources/ReawaApp/WindowSnap.swift` | `snappedLifecycleState()`, Stage Manager ratio, `windowCGOnscreenBounds()`, `restoreWindow()`, `stageAreaRatio` |
-| `Sources/ReawaApp/AppController.swift` | Follow tick, `_snappedWindowState`, overlay show/hide on lifecycle transitions |
-| `Sources/ReawaApp/Overlays.swift` | Overlay visibility only (no lifecycle logic) |
+| `macOS/Sources/ReawaApp/WindowSnap.swift` | `snappedLifecycleState()`, Stage Manager ratio, `windowCGOnscreenBounds()`, `restoreWindow()`, `stageAreaRatio` |
+| `macOS/Sources/ReawaApp/AppController.swift` | Follow tick, `_snappedWindowState`, overlay show/hide on lifecycle transitions |
+| `macOS/Sources/ReawaApp/Overlays.swift` | Overlay visibility only (no lifecycle logic) |
 
 ---
 

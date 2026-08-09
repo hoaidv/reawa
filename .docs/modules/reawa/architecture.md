@@ -105,21 +105,21 @@ Flags: `picking`, `snappedConnectionID`, `snappedWindowState` (`normal` | `minim
 
 | Path | Responsibility |
 |---|---|
-| `Sources/ReawaApp/main.swift` | NSApplication bootstrap |
-| `Sources/ReawaApp/AppController.swift` | Menu bar, snap flow, overlay lifecycle, menu UI |
-| `Sources/ReawaApp/Models.swift` | Connection, DeviceConfig, PenFrame, enums |
-| `Sources/ReawaApp/Storage.swift` | JSON persistence, SSH keys, legacy migration |
-| `Sources/ReawaApp/ConnectionManager.swift` | Active session, statuses, live config |
-| `Sources/ReawaApp/SSHSession.swift` | SSH, key install, pen parsing |
-| `Sources/ReawaApp/InputDrivers.swift` | Relative/Absolute Quartz backends |
-| `Sources/ReawaApp/NativeStylusBackend.swift` | Virtual HID stylus (experimental) |
-| `Sources/ReawaApp/WindowSnap.swift` | CGWindowList, AX move/resize, lifecycle |
-| `Sources/ReawaApp/Overlays.swift` | Picker and region overlay windows |
-| `Sources/ReawaApp/SettingsUI.swift` | SwiftUI settings and logs |
-| `Sources/ReawaApp/Logging.swift` | Behavior + pen event logs |
-| `Sources/ReawaApp/Discovery.swift` | Network scan, USB watcher, notifications |
-| `Sources/ReawaApp/Utilities.swift` | Process runner, coordinate conversion |
-| `Tests/ReawaTests/` | Parser, models, drivers, logging tests |
+| `macOS/Sources/ReawaApp/main.swift` | NSApplication bootstrap |
+| `macOS/Sources/ReawaApp/AppController.swift` | Menu bar, snap flow, overlay lifecycle, menu UI |
+| `macOS/Sources/ReawaApp/Models.swift` | Connection, DeviceConfig, PenFrame, enums |
+| `macOS/Sources/ReawaApp/Storage.swift` | JSON persistence, SSH keys, legacy migration |
+| `macOS/Sources/ReawaApp/ConnectionManager.swift` | Active session, statuses, live config |
+| `macOS/Sources/ReawaApp/SSHSession.swift` | SSH, key install, pen parsing |
+| `macOS/Sources/ReawaApp/InputDrivers.swift` | Relative/Absolute Quartz backends |
+| `macOS/Sources/ReawaApp/NativeStylusBackend.swift` | Virtual HID stylus (experimental) |
+| `macOS/Sources/ReawaApp/WindowSnap.swift` | CGWindowList, AX move/resize, lifecycle |
+| `macOS/Sources/ReawaApp/Overlays.swift` | Picker and region overlay windows |
+| `macOS/Sources/ReawaApp/SettingsUI.swift` | SwiftUI settings and logs |
+| `macOS/Sources/ReawaApp/Logging.swift` | Behavior + pen event logs |
+| `macOS/Sources/ReawaApp/Discovery.swift` | Network scan, USB watcher, notifications |
+| `macOS/Sources/ReawaApp/Utilities.swift` | Process runner, coordinate conversion |
+| `macOS/Tests/ReawaTests/` | Parser, models, drivers, logging tests |
 
 ## Pen event pipeline
 
@@ -226,6 +226,7 @@ Legacy migration from `~/Library/Application Support/remarkable-rm2/` on first r
 ## Entry points
 
 ```bash
+cd macOS
 swift run reawa
 swift test
 open Package.swift

@@ -1,12 +1,21 @@
 # Reawa
 
 Reawa is a native macOS menu bar app that turns a reMarkable tablet into a pen
-input device for the Mac. The active implementation is the Swift app in
-`Sources/ReawaApp/`.
+input device for the Mac. The Swift package lives in [`macOS/`](macOS/)
+(`macOS/Sources/ReawaApp/`).
 
-**Epaper** (sibling folder `Epaper/`) is the on-device Qt app that draws local
-pen ink on the reMarkable 2 e-paper panel. It is built with the reMarkable SDK,
-not SwiftPM — see [`Epaper/README.md`](Epaper/README.md).
+**epaper** ([`epaper/`](epaper/)) is the on-device Qt app that draws local pen ink
+on the reMarkable 2 e-paper panel. It is built with the reMarkable SDK, not
+SwiftPM — see [`epaper/README.md`](epaper/README.md) and
+[`epaper/TOOLCHAIN.md`](epaper/TOOLCHAIN.md).
+
+```
+reawa/
+  macOS/     SwiftPM package (Package.swift, Sources, Tests, Config, scripts)
+  epaper/    Qt/C++ RM2 app + docker SDK helper
+  .docs/     Product docs
+  .plan/     Iter plans / explorations
+```
 
 ## Purpose
 
@@ -23,21 +32,15 @@ that feels lightweight, direct, and practical for everyday use.
   - Absolute mode that targets a real window
 - USB discovery and SSH-based pen streaming
 
-
-
 ## Usage
 
 - Tested against Figma's Marker tool
-
-
 
 ## Future development
 
 - Expose the tablet as a native pen/stylus device - In progress - Waiting for developer account with proper entitlement. This feature expects supported macOS applications can recognize the tablet as an input device.
 - Add a Markup tool to macOS - So you can easily markup pictures, screenshots, PDFs on macOS.
 - ... add your idea here ;)
-
-
 
 ## Testing And Ideas
 
@@ -61,15 +64,11 @@ Requirements:
 - Xcode 16 or a Swift 6 toolchain
 - Accessibility permission enabled for cursor control and window snapping
 
-Run the test suite:
+From the Swift package root:
 
 ```bash
+cd macOS
 swift test
-```
-
-Run the menu bar app from source:
-
-```bash
 swift run reawa
 ```
 
@@ -82,17 +81,17 @@ Notes:
 To build a local debug app bundle:
 
 ```bash
-sh scripts/build-macos-app.sh --configuration debug
+sh macOS/scripts/build-macos-app.sh --configuration debug
 ```
 
 To check local signing readiness for `Native Stylus`:
 
 ```bash
-sh scripts/check-native-stylus-setup.sh
+sh macOS/scripts/check-native-stylus-setup.sh
 ```
 
-You can also open `Package.swift` directly in Xcode. Bundle metadata and
-entitlements live in `Config/`.
+You can also open `macOS/Package.swift` directly in Xcode. Bundle metadata and
+entitlements live in `macOS/Config/`.
 
 ## Packaged App
 

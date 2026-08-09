@@ -1,9 +1,9 @@
-# Epaper
+# epaper
 
 Qt Quick + C++ app that runs **on the reMarkable 2**: local pen ink on the
 e-paper panel with pen-matched coordinates (landscape use vs portrait panel).
 
-This tree sits beside `Sources/` (Swift Reawa host app). It is **not** a SwiftPM
+This tree sits beside `macOS/` (Swift Reawa host app). It is **not** a SwiftPM
 target — build with the reMarkable Qt SDK (x86_64 Linux / Docker on Apple Silicon).
 
 Promoted from [EXP-0001](../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md)
@@ -21,21 +21,22 @@ after local ink was verified on firmware `3.28.0.157`. Spec: [SRS-EP-01](../.doc
   renderY = h − penX · (h/w)
   ```
 
-## Build (SDK container)
+## Build & deploy
+
+See [TOOLCHAIN.md](TOOLCHAIN.md) for SDK installer setup.
 
 ```bash
-source /opt/remarkable-sdk/environment-setup-cortexa7hf-neon-remarkable-linux-gnueabi
-cmake -B build -G Ninja
-cmake --build build
-```
+# Cross-compile ARM binary via Docker amd64 + RM SDK
+./scripts/build.sh
 
-Output: `build/epaper` (ARM 32-bit ELF).
-
-## Deploy
-
-```bash
+# Deploy to USB RM2 (stops xochitl, launches epaper)
 ./scripts/deploy-rm2.sh
+
+# Or build + deploy in one step
+./scripts/deploy-rm2.sh --build
+
+# Restore stock UI
+./scripts/deploy-rm2.sh --restore
 ```
 
-Stops `xochitl`, scp’s the binary to `root@10.11.99.1`, launches with epaper QPA.
-Restore UI with: `ssh root@10.11.99.1 'killall epaper; systemctl start xochitl'`.
+Output binary: `build/bin/epaper`.

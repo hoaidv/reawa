@@ -75,10 +75,10 @@ Full gate criteria: [native-stylus-packaging.md](../../../../memory/native-stylu
 
 | Path | Purpose |
 |---|---|
-| `Config/Reawa.entitlements` | Development entitlement file |
-| `scripts/build-macos-app.sh` | Build `.app` from SwiftPM executable |
-| `scripts/check-native-stylus-setup.sh` | Local signing readiness checklist |
-| `Sources/ReawaApp/NativeStylusBackend.swift` | Backend spike |
+| `macOS/Config/Reawa.entitlements` | Development entitlement file |
+| `macOS/scripts/build-macos-app.sh` | Build `.app` from SwiftPM executable |
+| `macOS/scripts/check-native-stylus-setup.sh` | Local signing readiness checklist |
+| `macOS/Sources/ReawaApp/NativeStylusBackend.swift` | Backend spike |
 
 ---
 

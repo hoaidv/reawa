@@ -27,7 +27,7 @@ Drawing apps need tablet/stylus-class input with pressure and tilt, not synthesi
 ## Consequences
 
 - `swift run reawa` cannot test Native Stylus (unsigned, no entitlement).
-- Repo includes `Config/Reawa.entitlements`, `scripts/build-macos-app.sh`, `scripts/check-native-stylus-setup.sh`.
+- Repo includes `macOS/Config/Reawa.entitlements`, `macOS/scripts/build-macos-app.sh`, `macOS/scripts/check-native-stylus-setup.sh`.
 - Validation order: Krita Tablet Tester → browser pointer-events page → Photoshop.
 - Accessibility prompt is local permission only; does not replace Apple entitlement approval.
 
@@ -46,7 +46,7 @@ When entitlement approved:
 
 ```bash
 sh scripts/check-native-stylus-setup.sh
-sh scripts/build-macos-app.sh \
+sh macOS/scripts/build-macos-app.sh \
   --configuration debug \
   --sign "Apple Development: YOUR NAME (TEAMID)" \
   --provisioning-profile "/path/to/Reawa.provisionprofile" \

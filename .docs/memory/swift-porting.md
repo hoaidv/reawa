@@ -38,10 +38,10 @@ old code moved aside.
 
 ### After
 
-- Swift package manifest at `Package.swift`
-- Native implementation under `Sources/ReawaApp/`
-- Native tests under `Tests/ReawaTests/`
-- Native bundle metadata under `Config/`
+- Swift package manifest at `macOS/Package.swift`
+- Native implementation under `macOS/Sources/ReawaApp/`
+- Native tests under `macOS/Tests/ReawaTests/`
+- Native bundle metadata under `macOS/Config/`
 - Archived Python implementation under `legacy/python/`
 
 ### Preserved Files
@@ -330,8 +330,8 @@ areas that need more hardening.
 
 ### Packaging
 
-- `Package.swift` is the active project entrypoint
-- `Config/Info.plist` and `Config/Reawa.entitlements` exist, but the repo does
+- `macOS/Package.swift` is the active project entrypoint
+- `macOS/Config/Info.plist` and `macOS/Config/Reawa.entitlements` exist, but the repo does
   not yet include a full Xcode `.app` target or release packaging flow
 
 ### SSH implementation maturity
@@ -382,21 +382,21 @@ areas that need more hardening.
 
 The main files added or created during the Swift port are:
 
-- `Package.swift`
-- `Config/Info.plist`
-- `Config/Reawa.entitlements`
-- `Sources/ReawaApp/main.swift`
-- `Sources/ReawaApp/AppController.swift`
-- `Sources/ReawaApp/Models.swift`
-- `Sources/ReawaApp/Storage.swift`
-- `Sources/ReawaApp/SSHSession.swift`
-- `Sources/ReawaApp/InputDrivers.swift`
-- `Sources/ReawaApp/WindowSnap.swift`
-- `Sources/ReawaApp/Overlays.swift`
-- `Sources/ReawaApp/Discovery.swift`
-- `Sources/ReawaApp/SettingsUI.swift`
-- `Sources/ReawaApp/Logging.swift`
-- `Tests/ReawaTests/`
+- `macOS/Package.swift`
+- `macOS/Config/Info.plist`
+- `macOS/Config/Reawa.entitlements`
+- `macOS/Sources/ReawaApp/main.swift`
+- `macOS/Sources/ReawaApp/AppController.swift`
+- `macOS/Sources/ReawaApp/Models.swift`
+- `macOS/Sources/ReawaApp/Storage.swift`
+- `macOS/Sources/ReawaApp/SSHSession.swift`
+- `macOS/Sources/ReawaApp/InputDrivers.swift`
+- `macOS/Sources/ReawaApp/WindowSnap.swift`
+- `macOS/Sources/ReawaApp/Overlays.swift`
+- `macOS/Sources/ReawaApp/Discovery.swift`
+- `macOS/Sources/ReawaApp/SettingsUI.swift`
+- `macOS/Sources/ReawaApp/Logging.swift`
+- `macOS/Tests/ReawaTests/`
 
 The Python implementation was archived under:
 

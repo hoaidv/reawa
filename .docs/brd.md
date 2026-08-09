@@ -54,6 +54,6 @@ The product serves creative and productivity workflows where the reMarkable's pa
 
 Related product surface (sibling module, not the macOS pen driver): a Qt app that
 runs **on the reMarkable 2** and draws local pen ink on the e-paper panel with
-pen-matched coordinates. Code lives in repo-root `Epaper/`; product docs in
+pen-matched coordinates. Code lives in repo-root `epaper/` (sibling of `macOS/`); product docs in
 `.docs/modules/epaper/`. Sync to a macOS infinity canvas remains exploratory
 ([EXP-0001](../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md)).

@@ -20,4 +20,7 @@ qt_add_qml_module(epaper_bin
 )
 
 target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network)
-set_target_properties(epaper_bin PROPERTIES OUTPUT_NAME epaper)
+set_target_properties(epaper_bin PROPERTIES
+    OUTPUT_NAME epaper
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)

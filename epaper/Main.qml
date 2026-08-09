@@ -1,5 +1,5 @@
 import QtQuick
-import Epaper 1.0
+import epaper 1.0
 
 // Local pen ink on RM2 e-paper (promoted from EXP-0001).
 // Input item must stay visible (even if transparent) so width/height are real;
@@ -10,7 +10,7 @@ TabletWindow {
     height: Screen.height
     visible: true
     color: "white"
-    title: "Epaper"
+    title: "epaper"
 
     property int inkNext: 0
     property string lastSeg: "-"

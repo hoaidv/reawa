@@ -13,7 +13,7 @@ SHOW_ENTITLEMENTS=0
 usage() {
     cat <<'EOF'
 Usage:
-  sh scripts/build-macos-app.sh [options]
+  sh macOS/scripts/build-macos-app.sh [options]
 
 Options:
   --configuration <debug|release>     Swift build configuration (default: debug)

@@ -283,6 +283,7 @@ TCP JSON-lines (spike) → protobuf later. Sync **stroke data** RM→macOS; sync
 ## Code disposition
 
 - [x] Sandbox worktree created — `.sandbox/EXP-0001-remarkable-canvas-sync`
-- [x] Promote local pen ink → repo-root `Epaper/` ([CHG-0001](../changes/CHG-0001-promote-epaper.md), [SRS-EP-01](../../../.docs/modules/epaper/features/local-pen-ink/srs-logic.md))
+- [x] Promote local pen ink → repo-root `epaper/` ([CHG-0001](../changes/CHG-0001-promote-epaper.md), [SRS-EP-01](../../../.docs/modules/epaper/features/local-pen-ink/srs-logic.md))
+- [x] Promote build helpers → `epaper/docker/` + `protocol/` + [TOOLCHAIN.md](../../../epaper/TOOLCHAIN.md) ([CHG-0002](../changes/CHG-0002-dual-roots.md)); leave `rM2-stuff` / `rm-fb-probe` out
 - [ ] Discard sandbox worktree (default) — after remaining EXP goals routed or closed
 - [ ] Promote macOS canvas / sync slices — still exploratory

@@ -1,0 +1,18 @@
+services:
+  rm-sdk:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Drop remarkable-*-x86_64-toolchain.sh here (not committed).
+      - ./sdk-installer:/sdk-installer:ro
+      - ..:/workspace/epaper
+      - rm-sdk-cache:/opt/remarkable-sdk
+    working_dir: /workspace/epaper
+    stdin_open: true
+    tty: true
+    network_mode: host
+
+volumes:
+  rm-sdk-cache:

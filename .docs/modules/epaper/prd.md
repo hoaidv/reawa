@@ -12,7 +12,7 @@ source: EXP-0001
 
 Native drawing surface that runs **on the reMarkable 2**: pen ink renders locally
 on the e-paper panel (not relayed via macOS). Sibling to the macOS Reawa module
-(`Sources/ReawaApp`); code lives in repo-root `Epaper/`.
+(`macOS/Sources/ReawaApp`); code lives in repo-root `epaper/`.
 
 ## Problem & Job-to-be-Done
 

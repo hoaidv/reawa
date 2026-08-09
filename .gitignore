@@ -49,6 +49,10 @@ packaging/.eggs/
 # Dev SSH keys (runtime keys live in Application Support)
 .ssh/
 
+# epaper: reMarkable SDK installer (~400MB) — download locally, see epaper/TOOLCHAIN.md
+epaper/docker/sdk-installer/*
+!epaper/docker/sdk-installer/.gitkeep
+
 # Learn RAG course: datasets & model caches (keep the folder via .gitkeep)
 learn-rag/data/*
 !learn-rag/data/.gitkeep

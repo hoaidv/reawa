@@ -12,7 +12,7 @@ For future reference, the key constraint is:
 
 ## Current State
 
-- The app now contains a `CoreHID.HIDVirtualDevice`-based output backend in `Sources/ReawaApp/NativeStylusBackend.swift`.
+- The app now contains a `CoreHID.HIDVirtualDevice`-based output backend in `macOS/Sources/ReawaApp/NativeStylusBackend.swift`.
 - The backend is intentionally runtime-gated:
   - it only attempts startup on supported macOS versions
   - it checks/request post-event access through `IOHIDRequestAccess(kIOHIDRequestTypePostEvent)`
@@ -89,9 +89,9 @@ Expected entitlements for that path include:
 
 The repo now includes the first local-development pieces:
 
-- `Config/Reawa.entitlements` — prepared development entitlement file
-- `scripts/build-macos-app.sh` — builds a real `.app` bundle from the SwiftPM executable
-- `scripts/check-native-stylus-setup.sh` — quick checklist for local signing readiness
+- `macOS/Config/Reawa.entitlements` — prepared development entitlement file
+- `macOS/scripts/build-macos-app.sh` — builds a real `.app` bundle from the SwiftPM executable
+- `macOS/scripts/check-native-stylus-setup.sh` — quick checklist for local signing readiness
 
 When entitlement approval exists, the next local steps are:
 

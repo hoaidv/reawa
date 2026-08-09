@@ -26,4 +26,4 @@ echo
 
 echo "== Local build reminder =="
 echo "Native Stylus cannot work from \`swift run reawa\`."
-echo "Use: sh scripts/build-macos-app.sh --configuration debug"
+echo "Use: sh macOS/scripts/build-macos-app.sh --configuration debug"

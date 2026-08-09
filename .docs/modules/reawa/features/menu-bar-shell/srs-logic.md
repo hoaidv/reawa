@@ -11,7 +11,7 @@ lifecycle: active
 
 The app uses `NSApplicationActivationPolicy.accessory` by default (menu bar only, no Dock icon). When the settings window opens, policy switches to `NSApplicationActivationPolicy.regular` (Dock icon visible). Closing the settings window restores accessory policy.
 
-Implementation: `AppController.setDockVisible(_:)` in `Sources/ReawaApp/AppController.swift`.
+Implementation: `AppController.setDockVisible(_:)` in `macOS/Sources/ReawaApp/AppController.swift`.
 
 ## [SRS-RW-02] Menu bar icon and menu rebuild
 
