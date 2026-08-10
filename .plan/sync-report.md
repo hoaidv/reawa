@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-07-05T15:50:57+00:00
+generated_at: 2026-08-10T16:09:50+00:00
 ---
 
 # Sync Report
@@ -11,11 +11,34 @@ generated_at: 2026-07-05T15:50:57+00:00
 _None._
 
 ## Orphan SRS (active, no implementing code)
-_None._
+| SRS | Module |
+|---|---|
+| [SRS-EP-01] | epaper |
+| [SRS-EP-02] | epaper |
+| [SRS-EP-03] | epaper |
+| [SRS-IN-01] | infini |
+| [SRS-IN-02] | infini |
+| [SRS-IN-03] | infini |
+| [SRS-IN-04] | infini |
+| [SRS-IN-05] | infini |
+| [SRS-IN-06] | infini |
+| [SRS-IN-07] | infini |
+| [SRS-IN-08] | infini |
 
 ## BDD coverage by SRS
 | SRS | Scenarios | Status |
 |---|---|---|
+| [SRS-EP-01] | 0 | missing |
+| [SRS-EP-02] | 0 | missing |
+| [SRS-EP-03] | 0 | missing |
+| [SRS-IN-01] | 0 | missing |
+| [SRS-IN-02] | 0 | missing |
+| [SRS-IN-03] | 0 | missing |
+| [SRS-IN-04] | 0 | missing |
+| [SRS-IN-05] | 0 | missing |
+| [SRS-IN-06] | 0 | missing |
+| [SRS-IN-07] | 0 | missing |
+| [SRS-IN-08] | 0 | missing |
 | [SRS-RW-01] | 0 | missing |
 | [SRS-RW-02] | 0 | missing |
 | [SRS-RW-03] | 0 | missing |

@@ -20,6 +20,9 @@ participants: analyst, pm, architect, sm, dev, qa
 - BDD features still empty; stories stayed `ready`/`done` without QA scenarios — acceptable for backfill but not a pattern to repeat.
 - `manifest.yaml` `paths.src` was `src` while SwiftPM uses `Sources/` — required manual fix for audit to scan code.
 
+## Iter memory reviewed
+- none (traceability-backfill iter; no `.plan/iter-000/memory/` notes)
+
 ## Memory captured
 - **Project** → `.docs/memory/swift-porting.md`, `macos-window-lifecycle-investigation.md`, `native-stylus-packaging.md`, `learn.ipynb` (migrated during doc rebuild)
 - **ADLC** → `.agent/templates/plan/story.md` relative link fix (applied); `manifest.yaml` `paths.src: Sources` (applied)

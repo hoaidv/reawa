@@ -5,7 +5,7 @@ start: 2026-07-05
 end: 2026-07-19
 capacity: 66
 committed_points: 66
-status: active
+status: closed
 ---
 
 # Iter 000 — Traceability backfill

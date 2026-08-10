@@ -35,7 +35,7 @@ The product serves creative and productivity workflows where the reMarkable's pa
 ## [BRD-04] Out of Scope
 
 - **macOS Markup tool** — Standalone markup for pictures, screenshots, PDFs (future idea from README).
-- **Windows / Linux / iOS** — macOS-only product (except the on-device Epaper binary for reMarkable 2).
+- **Windows / Linux / iOS** — Reawa pen-driver remains macOS-only. **Infini** (infinity canvas) may target desktop via Electron ([BRD-07](#brd-07-infinity-canvas--tablet-sync-infini--epaper)); mobile is still out.
 - **reMarkable Paper Pro / reMarkable Connect cloud** — reMarkable 2 over USB Ethernet only.
 - **Kernel extensions** — Classic kext-based tablet drivers are explicitly avoided.
 - **Wacom driver identity spoofing** — Generic macOS digitizer/stylus device only.
@@ -55,5 +55,20 @@ The product serves creative and productivity workflows where the reMarkable's pa
 Related product surface (sibling module, not the macOS pen driver): a Qt app that
 runs **on the reMarkable 2** and draws local pen ink on the e-paper panel with
 pen-matched coordinates. Code lives in repo-root `epaper/` (sibling of `macOS/`); product docs in
-`.docs/modules/epaper/`. Sync to a macOS infinity canvas remains exploratory
-([EXP-0001](../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md)).
+`.docs/modules/epaper/`.
+
+## [BRD-07] Infinity canvas + tablet sync (Infini ↔ Epaper)
+
+Product line that turns the reMarkable into a **drawing tablet for an infinite desktop
+canvas**: desktop Infini owns pan/zoom viewing; Epaper owns local ink; both share a
+vector document and a drawing-region mapping
+([EXP-0001](../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md) →
+modules [infini](modules/infini/prd.md) + [epaper](modules/epaper/prd.md)).
+
+| Goal | Measurable Outcome | Sponsor |
+|---|---|---|
+| Desktop infinity navigation | Smooth pan + zoom/pinch; transform = translate + uniform scale | Product |
+| Interchangeable vectors | One persistence format (SVG profile), one in-memory model, one transmit encoding | Product |
+| Tablet ↔ desktop session | Local ink on RM; vectors to Infini; Infini viewport drives RM drawing region with mapping ahead of full refresh | Product |
+
+**Out of this BRD (defer):** on-device pan/zoom on Epaper.
