@@ -20,4 +20,14 @@ lifecycle: active
 ### Invariants
 
 - Circle world geometry remains circular on screen under any allowed pan/zoom.
-- Zoom focuses on gesture focal point when the platform provides it; otherwise document window center (document in architecture spike).
+- Zoom focuses on gesture focal point when the platform provides it; otherwise **window center**.
+- On window resize, the **world point under the window center** stays fixed (SRS-UI locked decision).
+
+### UI-driving fields
+
+| Field | Required | Drives SRS-UI |
+|---|---|---|
+| `document.vectors.length` | yes ≥0 | `canvas.empty` when 0; `canvas.populated` when ≥1 |
+| `viewport.scale` | yes >0 | StatusZoom `{round(scale*100)}%` |
+| `viewport.translate` | yes | WorldLayer transform |
+| `ui.gesturing` | yes bool | `canvas.gesturing` while true |

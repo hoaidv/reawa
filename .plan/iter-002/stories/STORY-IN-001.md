@@ -4,7 +4,7 @@ title: "Design Infini infinity canvas"
 kind: design
 parent_srs: [SRS-IN-02]
 parent_req: [REQ-01]
-status: ready
+status: done
 priority: P1
 iter: iter-002
 estimate: 3
@@ -16,28 +16,20 @@ acceptance_criteria:
   - "Given scene.canvas is the composition, When hi-fi is produced, Then no card chrome dominates the first viewport; transform = translate + uniform scale is visible via grid/primitives."
   - "Given platform Electron desktop (macOS first), When ui-spec records platform profile, Then resize anchor choice (center vs top-left) is decided and noted for SRS-IN-02 canvas.resized."
 design_package: ".plan/iter-002/design/infinity-canvas/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-002/design/infinity-canvas/ui-spec.md"
+scenes:
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-empty.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-populated.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-gesturing.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-resized.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-states.html"
+hifi: ".plan/iter-002/design/infinity-canvas/infinity-canvas-populated.html"
 wireframe: ""
 ---
 
 # STORY-IN-001 — Design Infini infinity canvas
 
-Designs UI for [SRS-IN-02](../../../.docs/modules/infini/features/infinity-canvas/srs-ui.md)
-([REQ-01](../../../.docs/modules/infini/prd.md#infinity-canvas)).
+**Done.** Package `[UI-IN-01]` at `.plan/iter-002/design/infinity-canvas/`.
+Open `index.html` for validation navigator (desktop @ 100%).
 
-## Kind
-
-| Field | Value |
-|---|---|
-| Kind | `design` |
-| Owner | designer |
-| Package | `.plan/iter-002/design/infinity-canvas/` |
-
-## Acceptance (design)
-
-- Platform: Electron desktop, macOS-first; responsive = window resize, not mobile web.
-- States: `canvas.empty` | `populated` | `gesturing` | `resized` each covered.
-- Gesture legend for pan/zoom/pinch inputs from SRS gesture map.
-- `ui-spec-gate` pass; set `ui_spec`, `scenes`, `hifi` on this story when done.
+Parent: [SRS-IN-02](../../../.docs/modules/infini/features/infinity-canvas/srs-ui.md).

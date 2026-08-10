@@ -1,0 +1,190 @@
+/* Feature-shared Infini canvas layout — package allowlist with tokens.css only */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+[data-region="WindowFrame"] {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 640px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+/* Brand mark — title-level, not a card */
+.app-mark {
+  position: absolute;
+  top: var(--space-md);
+  left: var(--space-md);
+  z-index: 3;
+  font-family: var(--font-display-face);
+  font-size: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  pointer-events: none;
+  opacity: 0.88;
+}
+
+.c-canvas-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  outline: none;
+}
+
+.c-canvas-stage:hover {
+  cursor: grab;
+}
+
+.c-canvas-stage:active,
+.c-canvas-stage.is-gesturing {
+  cursor: grabbing;
+}
+
+.c-canvas-stage:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--color-focus);
+}
+
+.c-world-layer {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+  background-image:
+    linear-gradient(var(--color-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center center;
+}
+
+.c-world-layer .empty-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: 28rem;
+  text-align: center;
+  font-size: var(--font-body);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}
+
+.c-world-layer .figure {
+  position: absolute;
+  border: 2.5px solid var(--color-stroke);
+  background: transparent;
+}
+
+.c-world-layer .figure-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  left: calc(50% - 60px);
+  top: calc(50% - 60px);
+}
+
+.c-world-layer .figure-rect {
+  width: 160px;
+  height: 100px;
+  left: calc(50% + 80px);
+  top: calc(50% - 40px);
+}
+
+.c-world-layer .figure-line {
+  width: 180px;
+  height: 0;
+  border: 0;
+  border-top: 2.5px solid var(--color-stroke);
+  left: calc(50% - 200px);
+  top: calc(50% + 40px);
+  transform: rotate(-18deg);
+}
+
+.c-zoom-readout {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  z-index: 4;
+  min-width: 3.25rem;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-chrome);
+  font-size: var(--font-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+
+.gesture-legend {
+  position: absolute;
+  left: var(--space-md);
+  bottom: var(--space-md);
+  z-index: 3;
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  max-width: 22rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-chrome);
+  font-size: var(--font-caption);
+  color: var(--color-ink-muted);
+  line-height: 1.45;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+
+.gesture-legend strong {
+  display: block;
+  margin-bottom: var(--space-xs);
+  color: var(--color-ink);
+  font-size: var(--font-caption);
+}
+
+.resize-note {
+  position: absolute;
+  left: 50%;
+  top: var(--space-md);
+  transform: translateX(-50%);
+  z-index: 3;
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-control);
+  background: var(--color-chrome);
+  border: 1px solid var(--color-border);
+  font-size: var(--font-caption);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}
+
+/* Narrow frame demo for resized state */
+[data-state="canvas.resized"] [data-region="WindowFrame"] {
+  width: min(720px, 100%);
+  height: 480px;
+  margin: 12vh auto 0;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 12px 40px rgb(28 36 48 / 12%);
+}

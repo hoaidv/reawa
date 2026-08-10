@@ -4,7 +4,7 @@ title: "Scaffold Electron React Infini shell and canvas host"
 kind: implement
 parent_srs: [SRS-IN-01]
 parent_req: [REQ-01]
-status: draft
+status: ready
 priority: P1
 iter: iter-002
 estimate: 3
@@ -14,10 +14,14 @@ acceptance_criteria:
   - "Given ADR-0008, When the Infini app boots on macOS, Then an Electron window loads a React root that hosts a full-pane canvas surface (scene.canvas)."
   - "Given the shell, When the window opens, Then there is a stable mount point for the infinity canvas renderer (no production Reawa Swift code reused)."
   - "Given design package infinity-canvas, When implementing chrome, Then layout follows approved hi-fi regions/tokens (not invented layout)."
-design_package: ""
-ui_spec: ""
-scenes: []
-hifi: ""
+design_package: ".plan/iter-002/design/infinity-canvas/"
+ui_spec: ".plan/iter-002/design/infinity-canvas/ui-spec.md"
+scenes:
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-empty.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-populated.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-gesturing.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-resized.html"
+hifi: ".plan/iter-002/design/infinity-canvas/infinity-canvas-populated.html"
 wireframe: ""
 ---
 

@@ -1,0 +1,25 @@
+:root {
+  --color-surface: #f2f4f7;
+  --color-surface-elevated: #ffffff;
+  --color-ink: #1c2430;
+  --color-ink-muted: #5b6573;
+  --color-grid: #c5ccd6;
+  --color-stroke: #1c2430;
+  --color-border: #d0d5dd;
+  --color-primary: #0f766e;
+  --color-on-primary: #ffffff;
+  --color-focus: #0f766e;
+  --color-chrome: rgba(255, 255, 255, 0.92);
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --radius-control: 6px;
+  --font-caption: 12px;
+  --font-body: 14px;
+  --font-title: 16px;
+  --font-display: 22px;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-display-face: "Source Serif 4", Georgia, serif;
+}

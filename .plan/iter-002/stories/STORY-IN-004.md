@@ -4,7 +4,7 @@ title: "Wire pan zoom pinch gesture inputs"
 kind: implement
 parent_srs: [SRS-IN-02]
 parent_req: [REQ-01]
-status: draft
+status: ready
 priority: P1
 iter: iter-002
 estimate: 5
@@ -15,10 +15,14 @@ acceptance_criteria:
   - "Given Infini is focused, When the user pinches or uses modifier+wheel zoom, Then uniform scale changes about the gesture focus (or documented fallback from design)."
   - "Given canvas.gesturing, When a gesture is in progress, Then no modal chrome blocks the canvas."
   - "Given window resize (canvas.resized), When size changes, Then the world anchor matches the design decision (center or top-left)."
-design_package: ""
-ui_spec: ""
-scenes: []
-hifi: ""
+design_package: ".plan/iter-002/design/infinity-canvas/"
+ui_spec: ".plan/iter-002/design/infinity-canvas/ui-spec.md"
+scenes:
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-empty.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-populated.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-gesturing.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-resized.html"
+hifi: ".plan/iter-002/design/infinity-canvas/infinity-canvas-populated.html"
 wireframe: ""
 ---
 

@@ -4,20 +4,24 @@ title: "Verify gesture frame budget on 60Hz display"
 kind: implement
 parent_srs: [SRS-IN-03]
 parent_req: [REQ-01]
-status: draft
+status: ready
 priority: P1
 iter: iter-002
 estimate: 2
 owner: dev
-depends_on: [STORY-IN-004]
+depends_on: [STORY-IN-001, STORY-IN-004]
 acceptance_criteria:
   - "Given a 60 Hz display, When the user pans continuously for ≥5 s, Then perceived dropped frames are ≤2/s (manual or rAF counter evidence recorded in story notes)."
   - "Given pinch or modifier+wheel zoom for ≥5 s, When measuring the same budget, Then the target holds and circle aspect remains circular."
   - "Given ADR-0008 risk, When the spike fails the budget, Then a challenge is filed (do not silently switch shells)."
-design_package: ""
-ui_spec: ""
-scenes: []
-hifi: ""
+design_package: ".plan/iter-002/design/infinity-canvas/"
+ui_spec: ".plan/iter-002/design/infinity-canvas/ui-spec.md"
+scenes:
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-empty.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-populated.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-gesturing.html"
+  - ".plan/iter-002/design/infinity-canvas/infinity-canvas-resized.html"
+hifi: ".plan/iter-002/design/infinity-canvas/infinity-canvas-populated.html"
 wireframe: ""
 ---
 

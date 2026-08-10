@@ -64,7 +64,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
-| TRACK-001 | planned | active | **STORY-IN-001 /designer** | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
+| TRACK-001 | planned | active | **STORY-IN-002 /qa** | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 
 ### Open challenges / blocked
 
@@ -72,12 +72,12 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Design packages in flight
 
-- [infinity-canvas](./iter-002/design/infinity-canvas/) — STORY-IN-001 **ready**
+- [infinity-canvas](./iter-002/design/infinity-canvas/) — STORY-IN-001 **done** `[UI-IN-01]`
 - [vector-document](./iter-002/design/vector-document/) — STORY-IN-006 queued (draft)
 
 ### Execution board(s)
 
-- [execution-board](./iter-002/execution-board.md) — wave **W1-design**
+- [execution-board](./iter-002/execution-board.md) — wave **W2-qa-dev**
 
 ### Freeze notes
 

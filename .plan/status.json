@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-10T16:15:27+00:00",
+  "generated_at": "2026-08-10T16:22:37+00:00",
   "current_iter": "iter-002",
   "by_status": {
-    "draft": 5,
-    "ready": 1,
+    "draft": 1,
+    "ready": 4,
     "in-progress": 0,
     "in-review": 0,
-    "done": 66,
+    "done": 67,
     "blocked": 0
   },
   "by_module": {
@@ -18,7 +18,7 @@
     },
     "infini": {
       "total": 6,
-      "done": 0,
+      "done": 1,
       "in_review": 0
     }
   },
