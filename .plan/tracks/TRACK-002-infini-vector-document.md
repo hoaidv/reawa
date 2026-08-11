@@ -4,8 +4,8 @@ slug: infini-vector-document
 kind: planned
 status: active
 iter: iter-002
-cursor: "STORY-IN-006 /designer"
-goal: "Ship Infini vector document open/save + formats (REQ-02) under vertical WIP=1"
+cursor: "vector-document SRS /architect (sync readiness) — no designer; no dev yet"
+goal: "Document model + ADRs ready for epaper↔Infini sync; implement deferred to sync wave"
 owner: sm
 ---
 
@@ -13,20 +13,23 @@ owner: sm
 
 ## Goal
 
-Deliver [REQ-02](../../.docs/modules/infini/prd.md#vector-document) / feature
-`infini/vector-document` starting with open/save chrome design, then implement slices for
-SRS-IN-04 (three representations) and SRS-IN-05 (UI).
+Hold [REQ-02](../../.docs/modules/infini/prd.md#vector-document) / [REQ-04](../../.docs/modules/infini/prd.md#smart-group)
+architecture (tree-of-vectors, Smart Group) ready for the **sync** wave. Open/save chrome
+**design cancelled**; implement stories **not** opened until epaper ↔ desktop sync build.
 
 ## Scope
 
-- In: STORY-IN-006 (design); implement stories TBD after design `done`
-- Out: tablet-sync / region-sync until board advances; infinity-canvas (TRACK-001 **done**)
+- In: Architect review / bind document ops to session channels; keep SRS/ADRs coherent
+- Out (this wave): `/designer` STORY-IN-006; `/dev` implement of tree/SVG/chrome/Smart Group
+- Later: implement with tablet-sync / region-sync
 
 ## Stories
 
 | Id | Kind | Status | Notes |
 |---|---|---|---|
-| [STORY-IN-006](../iter-002/stories/STORY-IN-006.md) | design | **ready** | **cursor** → `/designer` |
+| [STORY-IN-006](../iter-002/stories/STORY-IN-006.md) | design | **blocked** (cancelled) | No design per human |
+
+Implement slices: **not created yet** (defer to sync).
 
 ## Board
 
@@ -36,4 +39,5 @@ SRS-IN-04 (three representations) and SRS-IN-05 (UI).
 
 | Date | Note |
 |---|---|
-| 2026-08-11 | Opened after F1 gate; W3 NOW = STORY-IN-006 |
+| 2026-08-11 | Opened after F1 gate; W3 was STORY-IN-006 /designer |
+| 2026-08-11 | Human: no design; cursor → `/architect`; no `/dev` until sync |

@@ -143,10 +143,10 @@ tablet cannot act as a true drawing tablet for an infinite desktop canvas.
 ## Open Questions
 
 - Exact SVG attribute grammar for Infini profile v1 (tighten [SRS-IN-09](./features/vector-document/srs-data.md)) — **owner:** architect — **needed by:** 2026-08-17
-- Transport (reuse EXP TCP JSON-lines vs other) — **owner:** architect — **needed by:** 2026-08-17
+- Transport framing — **baseline locked:** JSON-lines over local USB net ([SRS-IN-07](./features/tablet-sync/srs-logic.md)); binary framing deferred — **owner:** architect
 - Whether Infini ships macOS-first only in v0 while Electron enables later Windows/Linux — **owner:** pm — **needed by:** 2026-08-24
 - Local transforms for ordinary Groups/Frames — still deferred; **SmartGroup** has local TF per [ADR-0011](../../adr/ADR-0011-smart-group.md) — **owner:** architect
-
+- Session reconnect snapshot schema — **owner:** architect — **needed by:** W4 implement
 ## Linked Modules
 
 - [epaper](../epaper/prd.md) — tablet ink + region-sync consumer/producer

@@ -92,11 +92,15 @@ flowchart TB
 
 - [ADR-0008](../../adr/ADR-0008-electron-react-infini.md) — Electron + React shell
 - [ADR-0009](../../adr/ADR-0009-shared-document-viewport.md) — shared document + viewport channels
+- [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md) — tree-of-vectors document
+- [ADR-0011](../../adr/ADR-0011-smart-group.md) — Smart Group pilot
+- Sync bind: [tablet-sync SRS-IN-07](./features/tablet-sync/srs-logic.md) emit matrix (Epaper=`append_ink`; Infini=structure/Smart Group)
 
 ## Risks & technical debt
 
 | Risk | Threatens | Likelihood × impact | Mitigation / accepted |
 |---|---|---|---|
-| Chromium trackpad pinch jank | Gesture smoothness | M×H | Early spike; fallback Ctrl+wheel; accept Electron if spike fails → revisit Tauri/Qt |
+| Chromium trackpad pinch jank | Gesture smoothness | M×H | Spike done F1; revisit only if regresses |
 | Op-log divergence bugs | Consistency | M×H | Snapshot hash of drawing region on refresh; assert in debug builds |
 | Dual stack (TS + Qt) model drift | Maintainability | H×M | Single schema doc + golden fixtures both sides consume |
+| Reconnect without snapshot | Consistency | M×M | `hello`/`snapshot` TBD before W4 ship |

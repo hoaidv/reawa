@@ -173,7 +173,11 @@ Exact attribute grammar may tighten in an appendix without changing ADR-0010.
 | `set_smart_transform` | `{ id, transform }` |
 | `set_ink_scale_mode` | `{ id, inkScaleMode }` |
 
-Op envelope: `{ opId, type, payload, ts? }`. Apply is idempotent on `opId`.
+Op envelope: `{ opId, type, payload, ts?, source? }`. Apply is idempotent on `opId`.
+
+**Sync bind:** which peer emits which ops in v0 — see
+[tablet-sync SRS-IN-07](../tablet-sync/srs-logic.md) emit matrix and
+[region-sync SRS-EP-02](../../../epaper/features/region-sync/srs-logic.md).
 
 ### Fixtures
 

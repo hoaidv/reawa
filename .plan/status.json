@@ -1,14 +1,14 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-11T02:33:39+00:00",
+  "generated_at": "2026-08-11T03:33:34+00:00",
   "current_iter": "iter-002",
   "by_status": {
     "draft": 0,
-    "ready": 1,
+    "ready": 0,
     "in-progress": 0,
     "in-review": 0,
     "done": 71,
-    "blocked": 0
+    "blocked": 1
   },
   "by_module": {
     "reawa": {
@@ -24,7 +24,7 @@
   },
   "open_challenges": 0,
   "resolved_challenges_this_iter": 0,
-  "sync_orphans": 9,
+  "sync_orphans": 10,
   "master_plan": true,
   "tracks": [
     {
@@ -38,7 +38,7 @@
       "id": "TRACK-002",
       "kind": "planned",
       "status": "active",
-      "cursor": "STORY-IN-006 /designer",
+      "cursor": "vector-document SRS /architect (sync readiness) \u2014 no designer; no dev yet",
       "iter": "iter-002"
     }
   ]
