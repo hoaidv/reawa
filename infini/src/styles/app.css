@@ -1,0 +1,145 @@
+:root {
+  --color-surface: #f2f4f7;
+  --color-surface-elevated: #ffffff;
+  --color-ink: #1c2430;
+  --color-ink-muted: #5b6573;
+  --color-grid: #c5ccd6;
+  --color-border: #d0d5dd;
+  --color-focus: #0f766e;
+  --color-chrome: rgba(255, 255, 255, 0.92);
+  --space-sm: 8px;
+  --space-md: 16px;
+  --radius-control: 6px;
+  --font-caption: 12px;
+  --font-body: 14px;
+  --font-display: 22px;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-display-face: "Source Serif 4", Georgia, serif;
+}
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+[data-region="WindowFrame"] {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.c-canvas-stage {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  outline: none;
+  overflow: hidden;
+}
+
+.c-canvas-stage:hover {
+  cursor: grab;
+}
+
+.c-canvas-stage:active,
+.c-canvas-stage.is-gesturing {
+  cursor: grabbing;
+}
+
+.c-canvas-stage:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--color-focus);
+}
+
+.c-canvas-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.app-mark {
+  position: absolute;
+  top: var(--space-md);
+  left: var(--space-md);
+  z-index: 3;
+  font-family: var(--font-display-face);
+  font-size: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  pointer-events: none;
+  opacity: 0.88;
+}
+
+.c-zoom-readout {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  z-index: 4;
+  min-width: 3.25rem;
+  padding: 4px var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-chrome);
+  font-size: var(--font-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+
+.empty-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: 28rem;
+  text-align: center;
+  font-size: var(--font-body);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.gesture-legend {
+  position: absolute;
+  left: var(--space-md);
+  bottom: var(--space-md);
+  z-index: 3;
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  max-width: 26rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-chrome);
+  font-size: var(--font-caption);
+  color: var(--color-ink-muted);
+  line-height: 1.45;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+
+.gesture-legend strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-ink);
+}

@@ -4,7 +4,7 @@ title: "Verify gesture frame budget on 60Hz display"
 kind: implement
 parent_srs: [SRS-IN-03]
 parent_req: [REQ-01]
-status: ready
+status: in-review
 priority: P1
 iter: iter-002
 estimate: 2

@@ -64,7 +64,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
-| TRACK-001 | planned | active | **STORY-IN-002 /qa** | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
+| TRACK-001 | planned | active | **STORY-IN-002 /qa** (verify) | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 
 ### Open challenges / blocked
 

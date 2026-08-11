@@ -1,12 +1,12 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-10T16:22:37+00:00",
+  "generated_at": "2026-08-11T01:20:49+00:00",
   "current_iter": "iter-002",
   "by_status": {
     "draft": 1,
-    "ready": 4,
+    "ready": 0,
     "in-progress": 0,
-    "in-review": 0,
+    "in-review": 4,
     "done": 67,
     "blocked": 0
   },
@@ -19,19 +19,19 @@
     "infini": {
       "total": 6,
       "done": 1,
-      "in_review": 0
+      "in_review": 4
     }
   },
   "open_challenges": 0,
   "resolved_challenges_this_iter": 0,
-  "sync_orphans": 11,
+  "sync_orphans": 8,
   "master_plan": true,
   "tracks": [
     {
       "id": "TRACK-001",
       "kind": "planned",
       "status": "active",
-      "cursor": "STORY-IN-001 /designer",
+      "cursor": "STORY-IN-002 /qa (verify in-review)",
       "iter": "iter-002"
     }
   ]

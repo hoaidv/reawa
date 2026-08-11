@@ -32,7 +32,7 @@ features: (4) infini/infinity-canvas; infini/vector-document; infini/tablet-sync
 personas: /qa (NOW) → /dev; /sm maintains board
 forbidden: reawa/*; epaper on-device pan/zoom; second feature in-progress
 NOW feature: infini/infinity-canvas
-cursor: STORY-IN-002 /qa
+cursor: STORY-IN-002 /dev
 ```
 
 ## Execution map
@@ -43,7 +43,7 @@ cursor: STORY-IN-002 /qa
 |---|---|---|---|
 | W0 | done | — | PRD + ADR |
 | W1 | done | — | `/designer` STORY-IN-001 |
-| **W2** | **NOW** | serial | `/qa` then `/dev` 002→003→004→005 |
+| **W2** | **NOW** | serial | `/dev` 002→003→004→005 (BDD authored) |
 | W3 | queued | — | STORY-IN-006 |
 | W4 | later | — | tablet-sync + region-sync |
 
@@ -57,7 +57,7 @@ cursor: STORY-IN-002 /qa
 
 | Id | Feature / chore | Pri | Docs | Design story | Status | Wave | Next owner | Parallel group |
 |---|---|---|---|---|---|---|---|---|
-| F1 | infini/infinity-canvas | Must | ok | STORY-IN-001 **done** | **NOW** | W2 | qa → dev | A |
+| F1 | infini/infinity-canvas | Must | ok | STORY-IN-001 **done** | **NOW** | W2 | **dev** | A |
 | F2 | infini/vector-document | Must | ok | STORY-IN-006 | queued | W3 | — | — |
 | F3 | infini/tablet-sync | Must | ok | n/a | queued | W4 | — | — |
 | F4 | epaper/region-sync | Must | ok | n/a | queued | W4 | — | — |
@@ -66,17 +66,9 @@ cursor: STORY-IN-002 /qa
 
 | Agent | Story | Done-when |
 |---|---|---|
-| QA | IN-002…005 | BDD scenarios tagged to SRS-IN-01/02/03 |
-| Dev | IN-002…005 | AC green; Electron shell + canvas |
-
-## Parking lot
-
-| Item | Sink |
-|---|---|
-| Epaper on-device pan/zoom | backlog |
-| Reawa features | backlog |
-| STORY-IN-006 early start | blocked by wip |
+| Dev | IN-002…005 | AC green vs BDD; Electron shell + canvas |
+| QA | verify after in-review | scenarios pass → story `done` |
 
 ## Verdict
 
-Design complete. **Next: `/qa`** then **`/dev`** on F1 implement chain.
+BDD ready. **Next: `/dev`** on STORY-IN-002.
