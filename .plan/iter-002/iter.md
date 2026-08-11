@@ -5,12 +5,12 @@ start: 2026-08-10
 end: 2026-08-24
 capacity: 20
 committed_points: 41
-status: active
+status: closed
 ---
 
 # Iter 002 — Infini + Epaper sync
 
-Vertical campaign ([MASTER](../MASTER.md)): wave **W4** implement (`wip: 1`).
+Vertical campaign ([MASTER](../MASTER.md)): wave **W5** await human confirm → PM gate.
 
 ## Committed
 
@@ -26,13 +26,21 @@ Vertical campaign ([MASTER](../MASTER.md)): wave **W4** implement (`wip: 1`).
 
 - [STORY-IN-006](./stories/STORY-IN-006.md) — design — designer — 2 pts — **blocked** (cancelled)
 
-### NOW — W4 sync implement (21 pts Must + 3 Could)
+### Done — W4 sync Must (18 pts)
 
-- [STORY-IN-007](./stories/STORY-IN-007.md) — implement — dev — 5 pts — **ready** — SRS-IN-04
-- [STORY-IN-008](./stories/STORY-IN-008.md) — implement — dev — 3 pts — **ready** — depends_on IN-007
-- [STORY-IN-009](./stories/STORY-IN-009.md) — implement — dev — 5 pts — **ready** — depends_on IN-007, IN-008
-- [STORY-EP-001](./stories/STORY-EP-001.md) — implement — dev — 5 pts — **ready** — depends_on IN-009
-- [STORY-IN-010](./stories/STORY-IN-010.md) — implement — dev — 3 pts — **draft** — Smart Group Could
+- [STORY-IN-007](./stories/STORY-IN-007.md) — implement — dev — 5 pts — **done**
+- [STORY-IN-008](./stories/STORY-IN-008.md) — implement — dev — 3 pts — **done**
+- [STORY-IN-009](./stories/STORY-IN-009.md) — implement — dev — 5 pts — **done**
+- [STORY-EP-001](./stories/STORY-EP-001.md) — implement — dev — 5 pts — **done**
+
+### Done — W5 viewport live (pts per stories)
+
+- [STORY-IN-011](./stories/STORY-IN-011.md) — implement — dev — **done**
+- [STORY-EP-002](./stories/STORY-EP-002.md) — implement — dev — **done**
+
+### Parked — Could → carried to iter-003
+
+- STORY-IN-010 — moved to [iter-003](../iter-003/stories/STORY-IN-010.md)
 
 ## Carry-over candidates
 

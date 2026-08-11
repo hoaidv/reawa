@@ -1,7 +1,7 @@
 ---
 feature: vector-document
-parent_req: [REQ-02]
-version: 0.2.0
+parent_req: [REQ-02, REQ-04]
+version: 0.3.0
 lifecycle: active
 needs_design: true
 ---
@@ -195,3 +195,87 @@ Desktop targets ≥24 px for chrome buttons.
 - Brush / pen toolbars; pressure UI; cloud share; multiplayer cursors.
 - OCR convert-to-text UI for Smart Group (ink stays ink).
 - Full layers outliner (deferred); Smart Group may show selection handles only in pilot.
+
+---
+
+## [SRS-IN-14] Ink-box tools and selection overlay (Infini) {#srs-in-14-ink-box-ui}
+
+**Parent:** [REQ-04](../../prd.md#smart-group). **Logic:** [SRS-IN-11](./srs-logic.md#srs-in-11-selection-manipulation).
+**Decision:** [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md).
+Device sibling (deliberately **not** the same design): [epaper SRS-EP-05](../../../epaper/features/tool-modes/srs-ui.md).
+
+### Purpose
+
+**One job:** show what a pointer press will do right now, and make a Smart Group's extent,
+selection, and scale mode manipulable — without growing a properties panel.
+
+### Composition layers (binding, extends SRS-IN-05)
+
+| Layer id | Role | Notes |
+|---|---|---|
+| ToolStrip | `Selection` · `Ink-box` arming | Small, docked; must not collide with DocChrome or StatusZoom |
+| SelectionOverlay | Bounds outline, resize handles, `inkScaleMode` toggle | Painted in canvas space, above WorldLayer |
+| BoundsHint | Optional chrome for handles / hit-test only | Not a substitute for missing boundary ink |
+
+**Containment:** ToolStrip lives beside existing chrome (DocChrome leading, StatusZoom trailing —
+do not collide). SelectionOverlay is canvas-space and pans/zooms with content; it is **not** DOM
+chrome pinned to the window.
+
+### Closed control inventory
+
+| id | Control | Region |
+|---|---|---|
+| `tool.selection` | Arm Selection (default) | ToolStrip |
+| `tool.ink_box` | Arm Ink-box | ToolStrip |
+| `ind.manipulation_unavailable` | Below-LOD notice | ToolStrip or StatusZoom |
+| `ovl.selection_bounds` | Selected Smart Group bounds | SelectionOverlay |
+| `ovl.resize_handles` | Resize handles (**no rotation handle**) | SelectionOverlay |
+| `tgl.ink_scale_mode` | `withBounds` ↔ `fixedInk` | SelectionOverlay |
+| `hint.smart_group_bounds` | Optional chrome extent (handles / hit-test) | BoundsHint |
+
+### Box appearance (binding — BR-09d)
+
+| Origin | Unselected appearance | Rule |
+|---|---|---|
+| Enclosure or selection-with-surround | The creator's own **boundary** ink | Add **no** synthetic ink rectangle; the drawn surround is the box |
+| Create refused (no surround) | N/A — no Smart Group | CTA disabled or inline reason; selection unchanged |
+
+### Interaction map
+
+| Control | Action | Result | Feedback |
+|---|---|---|---|
+| `tool.selection` | Click | Arm Selection | Active state; cursor affordance changes |
+| `tool.ink_box` | Click | Arm Ink-box | Active state |
+| Canvas press inside bounds | Press + drag | Move node | Node follows pointer; canvas does not pan |
+| Canvas press inside bounds | Press, no drag | Select | Bounds + handles appear |
+| `ovl.resize_handles` | Drag | Resize bounds | Live bounds; content ink per mode |
+| `tgl.ink_scale_mode` | Click | Swap mode | Immediately visible on next resize |
+| Canvas press on empty | Press | Deselect | Overlay hides; press continues as pan |
+
+### Control states
+
+| Control | hover | focus | active | disabled |
+|---|---|---|---|---|
+| `tool.selection` | yes | yes | when armed | never |
+| `tool.ink_box` | yes | yes | when armed | never |
+| `ovl.resize_handles` | yes | yes | while dragging | **below 0.35 scale** |
+| `tgl.ink_scale_mode` | yes | yes | reflects current mode | when nothing selected |
+
+### States matrix
+
+| State id | ToolStrip | WorldLayer | SelectionOverlay |
+|---|---|---|---|
+| `tool.selection.idle` | Selection armed | Tree | hidden |
+| `tool.selection.selected` | Selection armed | Tree | bounds + handles + mode toggle |
+| `tool.selection.dragging` | Selection armed | Node follows pointer | bounds only |
+| `tool.ink_box.armed` | Ink-box armed | Tree | hidden |
+| `manipulation.unavailable` | `ind.manipulation_unavailable` visible | Tile-LOD paint | hidden |
+
+### Anti-patterns
+
+- A properties panel — the pilot has exactly one toggle, and it belongs on the overlay.
+- A rotation handle (the geometry does not support it — SRS-IN-11).
+- Drawing the bounds hint so it looks like ink; the creator must never mistake chrome for content.
+- Creating an AABB-only Smart Group from a selection with no surround stroke.
+- Chrome that swallows canvas gestures outside its own controls.
+

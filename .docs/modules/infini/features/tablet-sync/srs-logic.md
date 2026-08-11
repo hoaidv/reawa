@@ -1,7 +1,7 @@
 ---
 feature: tablet-sync
-parent_req: [REQ-03]
-version: 0.4.0
+parent_req: [REQ-03, REQ-04]
+version: 0.5.0
 lifecycle: active
 ---
 
@@ -122,8 +122,9 @@ Per [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md):
 | id | Channel | Direction |
 |---|---|---|
 | `viewport` | viewport | Infini → Epaper |
-| `doc_snapshot` | document picture | Infini → Epaper |
-| `stroke_begin` / `stroke_point` / `stroke_end` | stroke | Epaper → Infini |
+| `doc_snapshot` | document picture (+ `pickables`, [SRS-IN-13](#srs-in-13-tool-intent-transport)) | Infini → Epaper |
+| `stroke_begin` / `stroke_point` / `stroke_end` | stroke (`stroke_begin.intent`) | Epaper → Infini |
+| `tool_intent` | manipulation intent — pilot-scoped | Epaper → Infini |
 
 ### Closed ids — library / future (not live wire)
 
@@ -147,6 +148,71 @@ Per [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md):
 - Live paint SoT: `InfiniDocument` WorldLayer (demo primitives + RM paths).
 - `TabletSession` may hold a `VectorDocument` for future op sync; structure ops are not
   on the RM wire yet.
+
+---
+
+## [SRS-IN-13] Tool intent transport {#srs-in-13-tool-intent-transport}
+
+**Parent:** [REQ-03](../../prd.md#tablet-sync) · [REQ-04](../../prd.md#smart-group).
+**ADR:** [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md).
+
+Carries **what the creator meant** from Epaper to Infini without putting tool state, a document
+tree, or geometry recognition on the device. Tool mode itself is never transmitted (ADR-0013 §1).
+
+### Stroke intent (Epaper → Infini) — additive field
+
+| Field | Required | Meaning |
+|---|---|---|
+| `stroke_begin.intent` | no | `ink` (default) \| `enclose` |
+
+Absent or unrecognised → `ink`, which is today's behaviour, so an older device stays correct.
+The stroke still streams and paints as ordinary ink; `intent` only decides whether
+[SRS-IN-10](../vector-document/srs-logic.md) evaluates it at `stroke_end`.
+
+### Pickables (Infini → Epaper) — additive `doc_snapshot` array
+
+```text
+{ "type": "doc_snapshot",
+  "nodes":     [ WorldLayerNode, … ],          # unchanged
+  "pickables": [ { "id", "kind", "bounds" } ]  # new
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `id` | Node id, stable across snapshots |
+| `kind` | `smart_group` only in the pilot |
+| `bounds` | World AABB **after** transform — what the device hit-tests and ghosts |
+
+Sent with every `doc_snapshot`. Devices that ignore the array keep working (picking is simply
+unavailable there).
+
+### Tool intent (Epaper → Infini)
+
+```text
+{ "type": "tool_intent", "action": "select" | "move" | "resize",
+  "nodeId": …, "delta": { "dx", "dy" }?, "bounds": { … }?, "seq": n }
+```
+
+| Rule | Value |
+|---|---|
+| Emission | One message per completed gesture (on pen-up), never per sample |
+| Authority | Infini applies the op; the device's ghost is **advisory** and discarded on the next `doc_snapshot` |
+| Unknown `nodeId` | Log and ignore — the device may be acting on a stale snapshot |
+| Stale `seq` | Last write wins; no locking in v0 |
+| In-flight stroke | Queued behind an active Epaper stroke, same rule as structure ops (`setEpaperStrokeInFlight`) |
+
+`tool_intent` is a **pilot-scoped** channel. It retires when the ADR-0009 op-log migration lands
+and `doc_op` carries these edits in both directions.
+
+### Errors / partial failure (SRS-IN-13)
+
+| Case | Behavior |
+|---|---|
+| `intent: enclose` but guards fail | Stroke stays ink; no message back; device sees no change (correct) |
+| `tool_intent` for a node deleted meanwhile | Ignore; next snapshot re-syncs the device |
+| Snapshot arrives mid-ghost | Ghost discarded; authoritative geometry wins, even if it "jumps" |
+| Device never receives `pickables` | Selection tool inert on device; pen and ink-box unaffected |
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 feature: vector-document
-parent_req: [REQ-02]
-version: 0.2.0
+parent_req: [REQ-02, REQ-04]
+version: 0.3.0
 lifecycle: active
 ---
 
@@ -20,7 +20,14 @@ Session sync: [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md).
 | Live RM ink | Appended as WorldLayer `path`s — does **not** `append_ink` into the tree |
 | Doc open/save chrome | Not shipped |
 | Smart Group UI / enclose | Ops apply in library; no CanvasStage UX |
+| Selection / hit-testing / handles | **Not shipped** — pointer drag is pan ([SRS-IN-11](#srs-in-11-selection-manipulation)) |
+| Undo history | **Not shipped** — no history anywhere in `infini/src` ([SRS-IN-12](#srs-in-12-undo-history)) |
 | Live `doc_op` wire | Not shipped (see tablet-sync interim) |
+
+**Critical prerequisite.** `CanvasStage.rebuildWithRmInk` turns `stroke_*` into flat WorldLayer
+`path` primitives; no ink enters `VectorDocument`, so SRS-IN-10/11 have nothing to operate on.
+Tree-backed ink ingestion (`append_ink` on the live stroke path + paint from `tree.flatten()`
+via the existing `syncFromVectorDoc`) must land before any REQ-04 slice.
 
 ## [SRS-IN-04] Tree model and three representations
 
@@ -117,9 +124,12 @@ Anchor = {
 | 8 | `op.create_text` | client-op | Text leaf |
 | 9 | `op.create_primitive` | client-op | Primitive leaf |
 | 10 | `op.create_smart_group` | client-op | SmartGroup from ink ids + bounds |
-| 11 | `op.recognize_enclose` | client-op | Propose SmartGroup from enclosure stroke |
-| 12 | `op.set_smart_transform` | client-op | translate/rotate/scale SmartGroup |
+| 11 | `op.recognize_enclose` | **internal** | Guarded evaluation of an `intent: enclose` stroke — not a wire op (ADR-0013 §3) |
+| 12 | `op.set_smart_transform` | client-op | translate/scale SmartGroup (rotation out of pilot) |
 | 13 | `op.set_ink_scale_mode` | client-op | `withBounds` \| `fixedInk` |
+| 14 | `cta.tool_select` | client-action | Arm `Selection` — device-local, never on the wire |
+| 15 | `cta.tool_ink_box` | client-action | Arm `Ink-box` — device-local, never on the wire |
+| 16 | `cta.undo` | client-action | Restore previous snapshot ([SRS-IN-12](#srs-in-12-undo-history)) |
 
 ### Routes / presentations (UI-driving)
 
@@ -170,7 +180,7 @@ Anchor = {
 
 #### Smart Group (`SmartGroup`) — [ADR-0011](../../../../adr/ADR-0011-smart-group.md)
 
-- Ink children live in **group-local** coordinates; world = `transform ∘ local`.
+- Ink children live in **group-local** coordinates; world = `transform ∘ local` (with mode rules).
 - Each ink child has `role: content | boundary`.
 - **`bounds`:** recognized axis-aligned `(x, y, width, height)` from the enclose stroke at
   create (or AABB on explicit create). Used for selection handles, hit-testing, connector
@@ -180,14 +190,18 @@ Anchor = {
   **not** controlled by `inkScaleMode`.
 - `inkScaleMode` applies to **`role: content` ink only**:
   - `withBounds` — content ink scales/rotates with transform.
-  - `fixedInk` — geometric bounds + boundary ink still transform; content ink sample size stays
-    fixed (text-box padding feel).
+  - `fixedInk` — each content ink keeps sample size fixed and tracks the box via **its own**
+    UV / `layoutOffset` (ADR-0011 §3). Newly appended ink sets its own offset and does not
+    mutate siblings. Geometric bounds + boundary ink still transform.
+- **Free layout:** appending content never reflows or shifts siblings ([SRS-IN-15](#srs-in-15-draw-into-membership)).
+- **Paint / z order:** tree sibling order (later siblings paint above). Used as the tie-break for
+  membership when nested Smart Groups both qualify. No separate z-index field.
 - Connector target: resolve anchors against **geometric** `bounds` in world space (after transform),
   not the freehand boundary path.
-- **Enclose recognition (pilot):** detect roughly rectangular stroke that contains ≥1 content
-  ink; propose SmartGroup; on accept, reparent contained ink as `content`, keep enclose stroke
-  as `boundary`, set `bounds` from fitted rect of enclose. Always undoable. Explicit create
-  path required as fallback.
+- **Enclose recognition (pilot):** tool-armed `intent: enclose` → guards → immediate
+  `create_smart_group` ([SRS-IN-10](#srs-in-10)).
+- **Selection create (pilot):** requires a surround stroke among the selection
+  ([SRS-IN-16](#srs-in-16-selection-create-surround)).
 - No OCR — samples unchanged.
 
 #### Connectors
@@ -219,17 +233,135 @@ Anchor = {
 
 ## [SRS-IN-10] Enclose recognition (Smart Group pilot)
 
-**Parent:** [REQ-04](../../prd.md#smart-group). **ADR:** [ADR-0011](../../../../adr/ADR-0011-smart-group.md).
+**Parent:** [REQ-04](../../prd.md#smart-group).
+**ADR:** [ADR-0011](../../../../adr/ADR-0011-smart-group.md) as amended by
+[ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md).
+
+Runs **only** on a stroke whose `intent` is `enclose` — that is, one drawn while the `Ink-box`
+tool was armed ([SRS-IN-13](../tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport)).
+A stroke drawn in any other mode is ordinary ink and is never evaluated.
 
 | Step | Rule |
 |---|---|
-| Candidate stroke | Closed or near-closed polyline, roughly 4-sided |
-| Contained ink | Ink whose samples lie mostly inside candidate polygon (≥80% of samples) |
-| Propose | Transient SmartGroup preview; user accept/dismiss |
-| Accept | `create_smart_group`; keep enclose stroke as `role: boundary` ink; set geometric `bounds` from fitted (x,y,w,h); reparent content ink; dirty doc |
-| Reject / undo | Restore prior tree; ink untouched |
+| Trigger | `stroke_end` for a stroke marked `intent: enclose` (local or from Epaper) |
+| Candidate shape | Closed or near-closed polyline that fits an axis-aligned rect; **rectangle only** in pilot |
+| Fitted bounds | AABB of the enclose stroke samples → `(x, y, width, height)` |
+| Guard — size | Shorter side of the fitted rect ≥ `MIN_ENCLOSE_WORLD` (**48 world units**, ADR-0013 §6) |
+| Guard — content | ≥1 ink with ≥80% of its samples inside the fitted rect |
+| Guard — already grouped | Ink whose parent is already a `SmartGroup` is **skipped**; remaining ink still captures |
+| Commit | `create_smart_group` immediately — no proposal, no accept step: enclose stroke becomes `role: boundary` ink, captured ink becomes `role: content` in group-local coordinates, `bounds` = fitted rect, doc dirty |
+| Guard fails | **No-op** — the stroke stays ordinary ink; no error state, no banner |
+| Undo | One undo restores the pre-op snapshot exactly ([SRS-IN-12](#srs-in-12-undo-history)) |
 
+Recognition is an **internal** Infini step; `recognize_enclose` is not a wire op.
 Quality targets live in [srs-quality](./srs-quality.md).
+
+---
+
+## [SRS-IN-16] Selection create — surround stroke required {#srs-in-16-selection-create-surround}
+
+**Parent:** [REQ-04](../../prd.md#smart-group). **ADR:** [ADR-0011](../../../../adr/ADR-0011-smart-group.md) §4B.
+
+Explicit Smart Group from a multi-ink selection (Solution 3 / `Selection` tool).
+
+| Step | Rule |
+|---|---|
+| Input | ≥2 selected Ink nodes (or ≥1 content + 1 candidate surround) |
+| Surround candidate | For each selected stroke `S`, build an **artificial closed path** from `S` if open (close first→last for the test only — **do not** mutate stored samples). Test whether ≥80% of samples of **every other** selected ink lie inside that closed region |
+| Winner | Prefer the candidate that qualifies; if several qualify, highest paint/z order (later sibling) |
+| Commit | Winner → `role: boundary`; others → `role: content` in group-local coords; `bounds` = fitted AABB of the winner stroke; each content ink gets its own `fixedInk` UV/offset seed |
+| Refuse | **No** qualifying surround → do not create; selection unchanged; UI shows why (see srs-ui) |
+| Undo | One undo restores the pre-op snapshot ([SRS-IN-12](#srs-in-12-undo-history)) |
+
+This path always produces boundary ink when it succeeds — there is no AABB-only / hint-only Smart
+Group from selection.
+
+---
+
+## [SRS-IN-15] Draw-into membership (existing Smart Group) {#srs-in-15-draw-into-membership}
+
+**Parent:** [REQ-04](../../prd.md#smart-group). **ADR:** [ADR-0011](../../../../adr/ADR-0011-smart-group.md) §7.
+
+Runs on Infini at `stroke_end` for ordinary ink — `intent` absent or `ink` (Pen). **Never** runs
+on `intent: enclose` (that path is [SRS-IN-10](#srs-in-10)).
+
+| Step | Rule |
+|---|---|
+| Trigger | `stroke_end` for a new Ink node after samples are committed in world space |
+| Candidates | Every SmartGroup whose **world** geometric `bounds` contain ≥80% of the stroke’s samples |
+| None | Leave ink under its ordinary parent (document root in v0) — no membership |
+| One | Reparent as `role: content` under that SmartGroup (samples → group-local); **seed that ink’s own** `fixedInk` UV/offset from its centroid in the current bounds; dirty doc |
+| Several (incl. nested) | Reparent under the candidate with the **highest paint/z order** — tree sibling order, later siblings win; **no dual parent**; no separate z-index field |
+| Layout | Do **not** translate, scale, or reflow any **existing** content ink; new ink stays as drawn |
+| Bounds | SmartGroup `bounds` are **not** expanded by membership in the pilot |
+| Undo | One undo restores the pre-membership snapshot ([SRS-IN-12](#srs-in-12-undo-history)) |
+
+Paint order = document tree sibling order (SRS-IN-04 invariant 5). Nested Smart Groups that each
+contain 100% of a stroke resolve by that order (topmost / later sibling).
+
+---
+
+## [SRS-IN-11] Selection, hit-testing, and Smart Group manipulation {#srs-in-11-selection-manipulation}
+
+**Parent:** [REQ-04](../../prd.md#smart-group). **ADR:** ADR-0013.
+
+### Tool modes (Infini)
+
+| Tool | Pointer press on empty canvas | Pointer press on a pickable |
+|---|---|---|
+| `Selection` (default) | Pan (today's behaviour); clears selection | Select + begin move |
+| `Ink-box` | Draw an enclose stroke (`intent: enclose`) | Same — strokes are not blocked by content |
+
+Tool state is **device-local UI state** — not in the document, not on the wire (ADR-0013 §1).
+
+### Hit-testing
+
+| Rule | Value |
+|---|---|
+| Pickable set (pilot) | `SmartGroup` nodes only — resolved against world `bounds` after transform |
+| Resolution order | Topmost first (later siblings paint above, so they pick first) |
+| Hit region | Inside `bounds`, plus a handle tolerance band of 8 CSS px when selected |
+| LOD cutoff | Picking is **disabled** below `TILE_LOD_SCALE` (0.35) — `allowIndividualInteraction` |
+| Below cutoff | Press falls through to pan; UI must state that manipulation is unavailable (see srs-ui) |
+
+### Interactions
+
+| Gesture | Precondition | Result |
+|---|---|---|
+| Press inside bounds + drag | scale ≥0.35 | Move — `set_smart_transform` translate; canvas does **not** pan |
+| Press (no drag) | scale ≥0.35 | Select — handles appear on geometric `bounds` |
+| Drag a handle | node selected | Resize — `bounds` follow the handle; under `withBounds` content scales; under `fixedInk` each content ink’s own UV/offset preserved (ADR-0011 §3) |
+| Toggle `inkScaleMode` | node selected | `set_ink_scale_mode` — `withBounds` \| `fixedInk` |
+| Press empty canvas | — | Deselect; press continues as pan |
+| Press another pickable | — | Selection moves to that node |
+
+**Out of pilot:** rotation handles and connector attachment to a SmartGroup. `resolveAnchor`
+computes SmartGroup world AABB for translate + scale only (`anchors.ts`), so exposing rotation
+would resolve connector ports incorrectly. Landing rotation requires the anchor math first.
+
+### Op emission
+
+One op per completed gesture, not per frame: a drag emits a single `set_smart_transform` on
+release, with intermediate frames rendered locally. Keeps the undo ring meaningful and the wire
+quiet.
+
+---
+
+## [SRS-IN-12] Undo history {#srs-in-12-undo-history}
+
+**Parent:** [REQ-04](../../prd.md#smart-group). **ADR:** ADR-0013 §5.
+
+| Rule | Value |
+|---|---|
+| Mechanism | Ring buffer of `VectorDocument.snapshotString()` values |
+| Depth | **20** entries (pilot) |
+| Push | Before every structural op (`create_*`, `reparent`, `remove_node`, `set_smart_transform`, `set_ink_scale_mode`) |
+| Undo | Restore the previous snapshot wholesale; tree equals the pre-op tree exactly |
+| Not covered | Viewport pan/zoom, tool switches, selection changes — these are not document state |
+| Remote ops | Ops arriving from Epaper push a snapshot on the same ring (one shared timeline) |
+| Overflow | Oldest entry drops; undo past the ring is a no-op, not an error |
+
+Redo is **out of pilot**. Memory bound is measured in [srs-quality](./srs-quality.md).
 
 ---
 
@@ -237,3 +369,10 @@ Quality targets live in [srs-quality](./srs-quality.md).
 
 _None._ Prior “flat ordered collection” wording is replaced by this tree (same SRS-IN-04 id;
 lifecycle remains active — content thickened 2026-08-11). Smart Group added 2026-08-11.
+
+**SRS-IN-10 content revision (2026-08-11, same id, lifecycle `active`):** the propose → accept
+flow is replaced by tool-armed immediate creation with guards, per
+[ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md). SRS-IN-11 and SRS-IN-12 added the same
+day to cover selection/manipulation and undo, which REQ-04 depends on and which had no spec.
+**SRS-IN-15** added 2026-08-11 for draw-into membership + free layout; ADR-0011 §3 `fixedInk`
+per-ink offset clarified the same day. **SRS-IN-16** added for selection-create surround guard.

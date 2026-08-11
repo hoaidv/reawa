@@ -1,23 +1,21 @@
 ---
 updated: 2026-08-11
-current_iter: iter-002
+current_iter: iter-003
 owner: sm
 
-# Campaign: Infini + Epaper sync (EXP-0001 productization).
+# Campaign: Smart Group pilot (post Infini↔Epaper Must sync).
 execution:
   direction: vertical
   scope:
     modules: [infini, epaper]
     features:
-      - infini/infinity-canvas
       - infini/vector-document
-      - infini/tablet-sync
-      - epaper/region-sync
+      - epaper/tool-modes
   stop_line: verified
   autonomy: bounded
   out_of_scope: backlog
-  wip: 1
-  validated_by: "human / 2026-08-11 — W4 Must draw sync (RM2→Infini) confirmed; READY-WITH-CONCERNS see pm-gate-review-w4"
+  wip: 2
+  validated_by: ""
 ---
 
 # Master Plan
@@ -29,12 +27,19 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 | Field | Value | Why |
 |---|---|---|
-| Direction | **vertical** | Phases 1→2→3; one feature in flight (`wip: 1`) |
-| Scope | `infini` + `epaper` · 4 features | Canvas → document → sync |
+| Direction | **vertical** | Two features in flight (`wip: 2`) — the ink-box needs both ends |
+| Scope | `infini` · vector-document **+** `epaper` · tool-modes | Human expanded 2026-08-11 (see below) |
 | Stop line | **verified** | Design + implement through verify |
 | Autonomy | **bounded** | Out-of-scope → backlog |
 
-**Exit criteria:** REQ-01…03 + Epaper REQ-02 verified on hardware; human `validated_by`.
+**Scope expansion (2026-08-11, human-approved).** The adopted ink-box UX puts a three-tool
+toolbar (`Selection · Pen · Ink-box`) on the tablet, so `epaper` joins the campaign and WIP goes
+to 2. Recorded in [epaper REQ-03](../.docs/modules/epaper/prd.md#tool-modes) and
+[infini REQ-04](../.docs/modules/infini/prd.md#smart-group); rationale in the
+[PM → architect handoff](./iter-003/handoffs/2026-08-11-pm-to-architect-ink-box-ux.md).
+
+**Exit criteria:** REQ-04 Smart Group pilot **and** epaper REQ-03 tool modes accepted by human
+(AC from the thickened PRDs); design stories done for both (`Needs design: yes` on each).
 
 **Out-of-scope log**
 
@@ -42,8 +47,11 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 |---|---|---|
 | 2026-08-10 | Epaper on-device pan/zoom | backlog |
 | 2026-08-10 | `reawa/*` | backlog |
-| 2026-08-11 | STORY-IN-006 design wave | **cancelled** — no DocChrome design |
-| 2026-08-11 | vector-document `/dev` before sync | superseded — W4 opened with sync |
+| 2026-08-11 | STORY-IN-006 DocChrome | cancelled |
+| 2026-08-11 | `doc_op` / regionsync migration | backlog — **but** tool-intent transport is now in scope (REQ-04 open question) |
+| 2026-08-11 | Rotation + connectors on a Smart Group | backlog (REQ-04 Non-Goal, pilot) |
+| 2026-08-11 | Mouse ink drawing on Infini (`Pen` on desktop) | backlog (REQ-04 Non-Goal, pilot) |
+| 2026-08-11 | In-box content alignment / reflow | backlog (REQ-04 Non-Goal, pilot) |
 
 ## History spine
 
@@ -51,44 +59,49 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 |---|---|---|---|---|
 | iter-000 | Traceability backfill | closed; retro-gate passed | BDD optional | [iter](./iter-000/iter.md) |
 | iter-001 | EXP-0001 + epaper promote | closed; S1 proven | → Infini REQs | [EXP-0001](./iter-001/explorations/EXP-0001-remarkable-canvas-sync.md) |
-| iter-002 | Infini + sync | **active** — **W5** pan/zoom→tablet (W4 Must gated) | IN-006 cancelled; IN-010 parked | [iter](./iter-002/iter.md) |
+| iter-002 | Infini + sync | **closed** — Must W4+W5 gated READY-WITH-CONCERNS | IN-010 → iter-003 | [iter](./iter-002/iter.md) · [retro](./iter-002/retro.md) |
+| iter-003 | Smart Group pilot | **active** — PM adopted ink-box UX; scope expanded to epaper | — | [iter](./iter-003/iter.md) |
 
-## Now — iter-002
+## Now — iter-003
 
 ### Goal & capacity
 
-- Goal: **W5** live ADR-0009 viewport (marker + coalesce + stroke scale); draw anywhere via pan/zoom.
-- Capacity: IN-010 Could stays parked; no DocChrome design.
-- Risks: stroke Desktop↔Tablet parity; e-ink refresh budget; reconnect TBD.
+- Goal: ink-box pilot across both ends — tool-armed enclose + explicit selection, move/resize,
+  `inkScaleMode`; tablet gets a 3-tool toolbar.
+- Capacity: IN-010 still draft; architect must decide the tool-intent wire before SM slices.
+- Risks: **three prerequisites do not exist in code** (tree-backed ink ingestion, selection /
+  hit-testing, undo); RM2 touch availability from Qt is unverified; two features in flight.
 
 ### Tracks
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
-| TRACK-002 | planned | **active** | **`/architect` W5 thicken → /qa → /dev IN-011→EP-002** | [track](./tracks/TRACK-002-infini-vector-document.md) |
+| TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
+| TRACK-003 | planned | **active** | **`/sm`** — slice waves per architect handoff | [track](./tracks/TRACK-003-smart-group-pilot.md) |
 
 ### Open challenges / blocked
 
-- STORY-IN-006 **blocked** (design cancelled by human) — do not revive.
+- None open. IN-006 remains cancelled (historical).
 
 ### Design packages in flight
 
-- [infinity-canvas](./iter-002/design/infinity-canvas/) — STORY-IN-001 **done**
-- [vector-document](./iter-002/design/vector-document/) — **not painting** (IN-006 cancelled)
+- _none yet_ — plan after PM
 
 ### Execution board(s)
 
-- [execution-board](./iter-002/execution-board.md) — **W5 NOW**; W4 gated
+- [iter-003 execution-board](./iter-003/execution-board.md) — W0 await `/pm`
+- [iter-002 board (final)](./iter-002/execution-board.md) — frozen
 
 ### Freeze notes
 
-- **No `/designer`** on STORY-IN-006; no design stories for W5 marker (REQ-03 Needs design: no).
-- Gate W4: [pm-gate-review-w4](./iter-002/handoffs/2026-08-11-pm-gate-review-w4.md)
-- W5 open: [sm-to-architect-w5](./iter-002/handoffs/2026-08-11-sm-to-architect-w5.md)
+- **No `/dev`** on IN-010 until design story or PM waiver.
+- Smart Group requirements **received and adopted** 2026-08-11 → [PM → architect handoff](./iter-003/handoffs/2026-08-11-pm-to-architect-ink-box-ux.md).
+- Architect decomposed 2026-08-11 → [ADR-0013](../.docs/adr/ADR-0013-ink-box-tool-modes.md) + 7 SRS sections → [architect → SM handoff](./iter-003/handoffs/2026-08-11-architect-to-sm-ink-box.md).
+- **Do not start the epaper design story** before the RM2 touch spike resolves.
+- Retro-gate: [pm-retro-gate-pass](./iter-002/handoffs/2026-08-11-pm-retro-gate-pass.md)
 
 ## Forward
 
-- Optional: STORY-IN-010 Smart Group Could (Needs design: yes — plan design story if opened).
-- Follow-up: Qt `RegionSession` wire; reconnect snapshot/hello.
+- Now: `/architect` (amend ADR-0011, decide tool-intent wire, thicken SRS) → `/sm` design+implement slices → `/designer` → `/qa` → `/dev`
 - Backlog: [backlog.md](./backlog.md)

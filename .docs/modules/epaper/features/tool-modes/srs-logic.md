@@ -1,0 +1,78 @@
+---
+feature: tool-modes
+parent_req: [REQ-03]
+version: 0.1.0
+lifecycle: active
+---
+
+# SRS — Tool modes Epaper (Logic)
+
+Device-side rules for [REQ-03](../../prd.md#tool-modes).
+Decision: [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md).
+Wire peer: [SRS-IN-13](../../../infini/features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport).
+
+**Implementation status (code SoT, 2026-08-11):** none of this exists. `epaper/Main.qml` is a
+canvas plus a debug status line; `tabletappfilter.cpp` forwards **pen events only**. Touch
+handling, tool state, and the toolbar are all new.
+
+## [SRS-EP-04] Tool state and intent emission
+
+### Tool state
+
+| Rule | Value |
+|---|---|
+| Tools | `selection` \| `pen` \| `ink_box` |
+| Default on launch | `pen` — the device must still be a notebook if nothing else works |
+| Ownership | **Device-local UI state.** Never sent to Infini, never set by Infini (ADR-0013 §1) |
+| Persistence | Not persisted across restarts in v0 |
+| Input | Finger touch on the toolbar strip. Pen events are never consumed by the toolbar |
+
+### Input routing
+
+| Tool | Pen down on canvas | Finger on toolbar | Finger on canvas |
+|---|---|---|---|
+| `pen` | Local ink + `stroke_*` with `intent: ink` | Switch tool | Ignored (no on-device pan — PRD Non-Goal) |
+| `ink_box` | Local ink + `stroke_*` with `intent: enclose` | Switch tool | Ignored |
+| `selection` | Pick / move / resize (below) | Switch tool | Ignored |
+
+`ink_box` and `pen` differ **only** in the emitted `intent` field — the local ink path, the
+Round 19 map, and the paint are byte-identical, so ink latency cannot regress by tool
+([SRS-EP-01](../local-pen-ink/srs-logic.md)).
+
+### Enclose intent
+
+| Step | Rule |
+|---|---|
+| Arm | Creator taps `Ink-box`; the tool **stays armed** for repeated boxes until switched |
+| Emit | `stroke_begin` carries `intent: "enclose"`; points and end are unchanged |
+| Device role | Draw the stroke locally as ordinary ink. **No** rectangle fitting, **no** containment test |
+| Result | Arrives as a normal `doc_snapshot` re-raster; the device learns nothing about grouping |
+| Guards fail on Infini | Nothing comes back; the stroke simply stays ink on the panel (already drawn) |
+
+### Selection intent
+
+| Step | Rule |
+|---|---|
+| Pickable source | `pickables[]` from the most recent `doc_snapshot` (id, kind, world bounds) |
+| Hit-test | Local: `panelToWorld(pen)` inside a pickable's bounds; topmost (last in array) wins |
+| Select | Draw selection affordance locally; emit `tool_intent { action: "select", nodeId }` |
+| Move | Drag renders a **local ghost** of the bounds; on pen-up emit `tool_intent { action: "move", nodeId, delta }` |
+| Resize | Drag on a handle band; on pen-up emit `tool_intent { action: "resize", nodeId, bounds }` |
+| Authority | The ghost is advisory. The next `doc_snapshot` is truth, even if geometry jumps |
+| No pickables | Selection tool is inert — pen does nothing on canvas; must be visible in the UI |
+| Miss | Press outside every pickable clears selection |
+
+### Errors / partial failure
+
+| Case | Behavior |
+|---|---|
+| Touch layer unavailable at runtime | Fall back to `pen` permanently; surface it in the status line; never trap the creator in a non-drawing tool |
+| Session down | `pen` still inks locally (REQ-01 is offline-capable); `selection` / `ink_box` show as unavailable |
+| Snapshot older than the creator's edits | Ghost discarded on next snapshot; last write wins (no locking, ADR-0013 §4) |
+| Pen-down starts on the toolbar strip | Ignored entirely — not ink, not a tool switch |
+
+### Other logic
+
+- The toolbar strip is excluded from the ink drawing region so a stroke can never start under it.
+- Tool switching must not invalidate the full panel — partial refresh of the strip only
+  (the ink area keeps its content, [SRS-EP-06](./srs-quality.md)).

@@ -98,6 +98,7 @@ Kinds: `ink` | `text` | `primitive` | `group` | `smart_group` | `frame` | `conne
       "id": "ink_content_1",
       "kind": "ink",
       "role": "content",
+      "layoutOffset": { "u": 0.25, "v": 0.5 },
       "samples": []
     },
     {
@@ -115,7 +116,8 @@ Kinds: `ink` | `text` | `primitive` | `group` | `smart_group` | `frame` | `conne
 | `bounds` | Recognized geometric box `(x,y,width,height)` for handles / connectors |
 | `transform` | Local→world: translate, rotation (rad), scaleX/Y |
 | `inkScaleMode` | `withBounds` \| `fixedInk` — applies to **content** ink only; boundary ink always transforms |
-| `children[].role` | `content` (handwriting inside) \| `boundary` (preserved enclose stroke ink) |
+| `children[].role` | `content` (handwriting inside) \| `boundary` (preserved enclose / surround stroke) |
+| `children[].layoutOffset` | **Content only (pilot).** Relative UV `(u,v)` of that ink’s centroid in the SmartGroup bounds — used under `fixedInk` so each ink tracks the box independently. Seeded at create/membership; ignored for `boundary`. Architect may store an equivalent local offset vector instead of UV — one representation, round-trip stable. |
 
 ### InkSample schema
 

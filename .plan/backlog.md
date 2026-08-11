@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-11T05:06:52+00:00
+generated_at: 2026-08-11T06:42:35+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -18,7 +18,7 @@ generated_at: 2026-08-11T05:06:52+00:00
 | [STORY-IN-007](./iter-002/stories/STORY-IN-007.md) | In-memory document tree and idempotent op apply | implement | dev | infini | [SRS-IN-04] | done | iter-002 | 5 |
 | [STORY-IN-008](./iter-002/stories/STORY-IN-008.md) | SVG persistence and shared op JSON fixtures | implement | dev | infini | [SRS-IN-09] | done | iter-002 | 3 |
 | [STORY-IN-009](./iter-002/stories/STORY-IN-009.md) | Infini tablet session viewport and document channel | implement | dev | infini | [SRS-IN-07] | done | iter-002 | 5 |
-| [STORY-IN-010](./iter-002/stories/STORY-IN-010.md) | Smart Group enclose recognition pilot | implement | dev | infini | [SRS-IN-10] | draft | iter-002 | 3 |
+| [STORY-IN-010](./iter-003/stories/STORY-IN-010.md) | Smart Group enclose recognition pilot | implement | dev | infini | [SRS-IN-10] | draft | iter-003 | 3 |
 | [STORY-IN-011](./iter-002/stories/STORY-IN-011.md) | Drawing-region marker + coalesced viewport publish | implement | dev | infini | [SRS-IN-07] | done | iter-002 | 3 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |

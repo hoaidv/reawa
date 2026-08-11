@@ -5,83 +5,42 @@ track: TRACK-002
 owner: sm
 date: 2026-08-11
 lock: vertical · verified · 4 feature(s) · wip 1
-verdict: ""
-wave: W5
+verdict: "CLOSED — W5 gated; iter-002 closing; IN-010 → iter-003"
+wave: closed
 ---
 
-# Execution board — Infini ↔ Epaper
+# Execution board — Infini ↔ Epaper (iter-002 final)
 
-## Summary (as of 2026-08-11)
+## Summary
 
-| Band | Count | Meaning |
-|---|---|---|
-| Design **done** | 1 | STORY-IN-001 (F1 only) |
-| Feature **verified** | 1 | F1 infinity-canvas |
-| Wave **done** | W4 | Must tree/SVG/session + human RM→Infini draw |
-| Wave **NOW** | **W5** | Live pan/zoom → tablet (IN-011 → EP-002) |
-| Design cancelled | 1 | STORY-IN-006 blocked |
-| Implement **ready** | 2 | IN-011, EP-002 |
-| Implement draft | 1 | IN-010 Smart Group Could parked |
+| Band | Status |
+|---|---|
+| W4 Must | **gated** |
+| W5 live viewport | **gated** READY-WITH-CONCERNS |
+| Docs | code-truth |
+| IN-010 Smart Group | **carry → iter-003** (await PM reqs) |
+| Iter | **closing** → retro complete → PM retro-gate |
 
-## Lock (copy into every sub-agent brief)
+## Lock (final)
 
 ```
 direction: vertical
 stop_line: verified
-autonomy: bounded
-out_of_scope: backlog
-wip: 1
 modules: infini, epaper
-features: (4) infini/infinity-canvas; infini/vector-document; infini/tablet-sync; epaper/region-sync
-personas: /dev (NOW IN-011→EP-002); /qa verify after; /sm maintains board
-forbidden: reawa/*; epaper on-device pan/zoom; /designer on IN-006; revive DocChrome; IN-010
-NOW: W5 implement — STORY-IN-011 then STORY-EP-002
-cursor: /dev
+features: infinity-canvas; vector-document; tablet-sync; region-sync
+validated_by: human / 2026-08-11 — W4+W5 (pm-gate-review-w5)
+NOW: iter close
+cursor: /pm retro-gate → /sm open iter-003
 ```
 
-## Execution map
+## Waves (closed)
 
-### Wave legend
-
-| Wave | Status | Parallel? | What |
-|---|---|---|---|
-| W0–W3 | done | — | PRD/ADR → design F1 → impl F1 → arch sync bind |
-| **W4** | **done** | — | IN-007…009 + EP-001; hardware draw confirmed |
-| **W5** | **NOW** | serial (wip 1) | Viewport live wire: marker + publish + e-ink refresh + stroke scale |
-
-### Parallelism rules (current wave)
-
-| Lane | Work | Writes | Conflicts |
-|---|---|---|---|
-| **A** | Architect → QA BDD → Dev | `.docs/**/srs-*`, bdd, `infini/`, `epaper/` | honor depends_on; one story in flight |
-
-### Full task table
-
-| Id | Feature / chore | Pri | Docs | Design story | Status | Wave | Next owner | Parallel group |
-|---|---|---|---|---|---|---|---|---|
-| F1 | infini/infinity-canvas | Must | ok | IN-001 done | **done** | W2 | — | — |
-| F2 | infini/vector-document | Must | ok | IN-006 cancelled | **done** (W4) | W4 | — | — |
-| F2b | Smart Group pilot (REQ-04) | Could | ADR-0011 | n/a | draft IN-010 | park | — | — |
-| F3 | infini/tablet-sync | Must | thick | n/a | **ready** IN-011 | W5 | **dev** | A |
-| F4 | epaper/region-sync | Must | thick | n/a | **ready** EP-002 | W5 | **dev** | A |
-
-### Story order (W5)
-
-| Order | Story | SRS | Status | Depends |
-|---|---|---|---|---|
-| 1 | [STORY-IN-011](./stories/STORY-IN-011.md) | SRS-IN-07 | **done** | IN-009 |
-| 2 | [STORY-EP-002](./stories/STORY-EP-002.md) | SRS-EP-02 | **done** | EP-001, IN-011 |
-| — | [STORY-IN-010](./stories/STORY-IN-010.md) | SRS-IN-10 | draft Could | parked |
-
-### Sub-agent roster (W5)
-
-| Agent | Done-when |
+| Wave | Outcome |
 |---|---|
-| Architect | done (READY-WITH-CONCERNS) |
-| QA | **done** — PASS-WITH-CONCERNS; human hardware confirm |
-| Dev | done IN-011 → EP-002 (+ vector/digitizer follow-ups) |
+| W0–W3 | F1 canvas + arch bind |
+| W4 | Tree/SVG/session + draw sync |
+| W5 | Marker, coalesce, doc_snapshot, guts, stroke×zoom |
 
 ## Verdict
 
-**W5 stories done.** Next: **`/pm`** gate (confirm live pen axes + sharp vector settle on hardware).
-
+Campaign Must for this lock is **done**. Board frozen for iter-002. Next board lives under iter-003 after PM retro-gate.

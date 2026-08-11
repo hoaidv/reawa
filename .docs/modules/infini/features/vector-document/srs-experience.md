@@ -1,7 +1,7 @@
 ---
 feature: vector-document
-parent_req: [REQ-02]
-version: 0.2.0
+parent_req: [REQ-02, REQ-04]
+version: 0.3.0
 lifecycle: active
 owner: pm
 co_author: designer
@@ -53,15 +53,48 @@ structure.
 - **Realizes:** REQ-02 acceptance round-trip
 - **Steps:** Save → quit/reopen or Open same file → tree matches (±1 px)
 
-### Journey: `journey.smart_group` — Ink-box (pilot)
+### Journey: `journey.smart_group_enclose` — Ink-box by enclosure (primary)
 
-- **Realizes:** [REQ-04](../../prd.md#smart-group) · [ADR-0011](../../../../adr/ADR-0011-smart-group.md)
+- **Realizes:** [REQ-04](../../prd.md#smart-group) · [epaper REQ-03](../../../epaper/prd.md#tool-modes) · [ADR-0011](../../../../adr/ADR-0011-smart-group.md)
 - **Steps:**
-  1. Handwrite ideas (Epaper/Infini) · beat: ink samples on canvas
-  2. Draw rectangle around ink **or** select ink → Smart Group · beat: preview
-  3. Accept → Smart Group: geometric bounds from enclose; **enclosure stroke kept as boundary ink**; content ink reparented
-  4. Move / scale / rotate — **boundary ink always transforms**; toggle `fixedInk` vs `withBounds` for **content** ink only · beat: text-box feel
-  5. Attach connector to edge midpoint of **bounds** · beat: glue tracks geometric box, not wiggly path
+  1. Handwrite ideas in `Pen` mode (Epaper) · beat: ink samples on canvas, nothing groups
+  2. Switch to `Ink-box` (tablet toolbar or Infini toolbar) · beat: tool reads as armed
+  3. Draw a rectangle around the writing · beat: it is still just ink under the pen
+  4. Stroke ends → Infini recognizes, guards pass → Smart Group: bounds from the fitted rect;
+     **enclosure stroke kept as boundary ink**; contained ink reparented as content
+  5. Tablet settles → the box reads the same on both devices · beat: one object now
+- **Note:** the creator never confirms a proposal — arming the tool *was* the intent.
+
+### Journey: `journey.smart_group_select` — Ink-box from a selection (fallback)
+
+- **Realizes:** [REQ-04](../../prd.md#smart-group) · BR-09j · [SRS-IN-16](./srs-logic.md#srs-in-16-selection-create-surround)
+- **Steps:**
+  1. Switch to `Selection` · beat: pen/pointer now picks instead of draws
+  2. Select the surround stroke **and** the ink it should contain · beat: selection reads clearly
+  3. Invoke Smart Group · beat: surround → `boundary`; others → `content`; bounds from surround
+  4. If no surround qualifies · beat: create refused; selection unchanged; reason visible
+- **Note:** the surround stroke may be open; containment uses an artificial closed path for the test only.
+
+### Journey: `journey.smart_group_manipulate` — Live like a text box
+
+- **Realizes:** [REQ-04](../../prd.md#smart-group) manipulation scope
+- **Steps:**
+  1. In `Selection`, press inside a box and drag · beat: it moves; the canvas does not pan
+  2. Press it once to select · beat: resize handles appear on the geometric bounds
+  3. Drag a handle · beat: **boundary ink always transforms** with the bounds
+  4. Toggle `fixedInk` vs `withBounds` · beat: content pads with centroid UV tracking vs scales
+  5. Press empty canvas to deselect; press another node to select it instead
+
+### Journey: `journey.smart_group_draw_into` — Keep writing inside a box
+
+- **Realizes:** [REQ-04](../../prd.md#smart-group) · BR-09g · BR-09h · [SRS-IN-15](./srs-logic.md#srs-in-15-draw-into-membership)
+- **Steps:**
+  1. An ink-box already exists · beat: boundary ink or subtle hint
+  2. Switch to `Pen` and write more inside the box · beat: ink appears under the pen as usual
+  3. Stroke ends → Infini parents the stroke as content of that box · beat: it moves with the box later
+  4. Existing handwriting inside is untouched — no reflow/alignment · beat: free layout
+- **Nested variant:** when nested boxes both contain the stroke, membership goes to the highest
+  paint/z-order box (later sibling / topmost).
 
 ## Critical alternate journeys
 
@@ -69,8 +102,13 @@ structure.
 |---|---|---|
 | `journey.open_error` | Bad file | `doc.error`; no silent wipe |
 | `journey.abandon_dirty` | Close with dirty | v0: OS/Electron confirm or keep dirty (open option — see srs-ui) |
-| `journey.enclose_miss` | Recognition fails | Explicit Smart Group; ink untouched |
-| `journey.enclose_false` | Bad propose | Dismiss/undo; ink untouched |
+| `journey.enclose_miss` | Armed enclose not recognized as a rect | Nothing groups; stroke stays ink; fall back to `journey.smart_group_select` |
+| `journey.enclose_empty` | Armed enclose contains no ink, or is below minimum size | Nothing groups; stroke stays ink; **no error banner** |
+| `journey.enclose_false` | Grouped something the creator did not mean | One undo restores the prior tree; ink samples intact |
+| `journey.select_create_refuse` | Selection has no surround stroke at ≥80% | Create refused; selection unchanged |
+| `journey.manipulate_below_lod` | Drag a box at scale <0.35 | Manipulation unavailable and said so; drag pans instead |
+| `journey.draw_into_miss` | Pen stroke <80% inside every Smart Group | Stroke stays ordinary root ink |
+| `journey.tool_stale_refresh` | Tool switched while the panel refresh trails | Active tool still legible on the strip (partial refresh) |
 
 ## Bridge matrix
 
@@ -78,7 +116,10 @@ structure.
 |---|---|---|---|---|
 | doc_new_open_save.* | doc.none/open/dirty/error | SRS-IN-05 | BR-07 | SRS-IN-04 open/save |
 | tree_compose.* | doc.open (+ canvas) | chrome + WorldLayer | BR-01…06 | SRS-IN-04 tree · ADR-0010 |
-| smart_group.* | doc.open (+ canvas) | selection / bounds handles (design) | REQ-04 · BR-09 | SRS-IN-10 · ADR-0011 |
+| smart_group_enclose.* | doc.open (+ canvas) | tool strip, armed state (design) | REQ-04 · BR-09, BR-09a…c | SRS-IN-10 · ADR-0011 |
+| smart_group_select.* | doc.open (+ canvas) | selection + create/refuse affordance (design) | REQ-04 · BR-09j | SRS-IN-16 · ADR-0011 §4B |
+| smart_group_manipulate.* | doc.open (+ canvas) | bounds handles + inkScaleMode toggle (design) | REQ-04 · BR-09f, BR-09i | SRS-IN-11 · ADR-0011 |
+| smart_group_draw_into.* | doc.open (+ canvas) | (no extra chrome — freehand) | REQ-04 · BR-09g, BR-09h | SRS-IN-15 · ADR-0011 §7 |
 | round_trip.* | doc.open | — | REQ-02 px / ops | SRS-IN-06 · srs-data |
 
 ## Anti-invent / out-of-journey
@@ -87,6 +128,11 @@ structure.
 - Do not invent cloud share or multiplayer presence.
 - Connector auto-routing algorithms beyond a simple path are out of journey scope.
 - Do not invent OCR / “convert ink to Text” in Smart Group journeys.
+- Do not invent an accept/dismiss proposal step — arming the tool is the confirmation.
+- Do not invent rotation handles or connector glue on a Smart Group in pilot journeys.
+- Do not invent in-box alignment, snap-to-margin, or reflow when appending ink.
+- Do not invent a tool palette beyond `Selection` · `Pen` · `Ink-box` (Epaper) /
+  `Selection` · `Ink-box` (Infini).
 
 ## Designer co-session
 

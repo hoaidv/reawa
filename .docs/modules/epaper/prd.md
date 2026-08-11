@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.3.0
+version: 0.4.0
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -32,6 +32,7 @@ drawing-region sync with Infini.
 | Orientation / aspect match | Circle stays circle; axes match chosen gut pose | Manual |
 | Drawing-region map latency | Next sample uses Infini viewport (ahead of full refresh) | Manual / EXP S3 |
 | Stroke thickness under zoom | Live + rasterized ink use world × panel scale | Manual |
+| Tool switch (tap → active indicator) | p95 ≤ 300 ms; no measurable ink-latency regression | Manual |
 
 ## [REQ-01] Local pen-matched ink {#local-pen-ink}
 - **Priority:** Must · **Traces:** [BRD-06]
@@ -67,6 +68,37 @@ drawing-region sync with Infini.
 - Given zoom-out on Infini, When the user continues drawing, Then live stroke thickness
   matches thinned existing vectors (world width × current panel scale).
 
+## [REQ-03] On-device tool modes {#tool-modes}
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes
+- The creator decides **on the device** what the pen does, without reaching for the desktop.
+  A minimal, always-visible toolbar offers exactly three tools — **Selection · Pen · Ink-box** —
+  switched by **finger touch**, so the pen stays free for content. `Pen` is the default and
+  leaves [REQ-01](#local-pen-ink) local ink behaviour unchanged.
+- **Ink-box** arms the next stroke as an *enclose request*: the stroke still streams as ordinary
+  ink samples, and **Infini** performs recognition and grouping
+  ([infini REQ-04](../infini/prd.md#smart-group)). Epaper performs no geometry recognition and
+  holds no document tree.
+- **Selection** lets the creator pick the object under the pen and move or resize it; the
+  resulting document change is owned and applied by Infini.
+- Tool state is **local to the device** — Infini neither drives nor mirrors it.
+
+**Acceptance**
+- Given Epaper is running, When the creator taps a tool with a finger, Then the toolbar shows the
+  new active tool with p95 ≤300 ms and the pen's next action uses that tool.
+- Given the `Pen` tool, When the creator draws, Then local ink latency stays within
+  [REQ-01](#local-pen-ink) (p95 ≤30 ms pen-down → pixel) — the toolbar costs no ink latency.
+- Given the `Ink-box` tool, When the creator draws an enclosing stroke, Then Infini receives the
+  samples marked as an enclose request, and the resulting Smart Group appears on the panel after
+  settle with p95 ≤500 ms after the op.
+- Given any tool, When the pen passes over the toolbar strip, Then no ink is drawn there
+  (0 stray strokes on the chrome region).
+- Given a full-panel refresh is in flight, When the creator switches tools, Then the active-tool
+  indicator is still legible (partial refresh of the strip, no dependence on the settled frame).
+- **UI states / journeys to design:** default `Pen`; switching tools; `Selection` with nothing
+  selected; `Selection` with a Smart Group selected (handles); `Ink-box` armed; enclose rejected
+  (too small / no ink inside); toolbar during a trailing panel refresh.
+
 ---
 
 ## Non-Goals
@@ -74,7 +106,10 @@ drawing-region sync with Infini.
 - **On-device pan / zoom / pinch** on the Epaper UI (deferred).
 - Acting as a Reawa-style mouse/stylus driver for other Mac apps.
 - Cloud sync or multi-peer sessions.
-- Smart Group / enclose recognition on-device.
+- **Smart Group recognition / geometry on-device** — Epaper contributes tool intent and pen
+  samples only; Infini recognizes, groups, and owns the tree ([REQ-03](#tool-modes)).
+- A general on-device tool palette — the toolbar is exactly the three tools in
+  [REQ-03](#tool-modes); no brushes, colors, layers, or document browser.
 - Production use of `regionsync/` `append_ink` NetSink until wired into the Qt binary
   (library remains the future ADR-0009 shape).
 
@@ -89,6 +124,13 @@ drawing-region sync with Infini.
 
 - Wire Qt app to `regionsync/` / `doc_op` vs keep `stroke_*` — **owner:** architect
 - Soft (interim) vs sharp settle visual quality on e-ink — **owner:** qa / human
+- Is the RM2 capacitive touch surface usable from the Qt app — **owner:** architect —
+  **needed by:** before the first [REQ-03](#tool-modes) story. The app handles pen events only
+  today (`tabletappfilter`); if touch is unavailable, the fallback (pen-on-toolbar or a hardware
+  button) changes the design.
+- Does `Selection` pick on device — **owner:** architect — **needed by:** before the first
+  [REQ-03](#tool-modes) story. Hit-test against the last `doc_snapshot` locally, or relay the
+  pick to Infini.
 
 ## Linked Modules
 

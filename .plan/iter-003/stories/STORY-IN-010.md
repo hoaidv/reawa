@@ -6,7 +6,7 @@ parent_srs: [SRS-IN-10]
 parent_req: [REQ-04]
 status: draft
 priority: P2
-iter: iter-002
+iter: iter-003
 estimate: 3
 owner: dev
 depends_on: [STORY-IN-007, STORY-IN-009]
@@ -25,8 +25,11 @@ wireframe: ""
 # STORY-IN-010 — Smart Group enclose recognition pilot
 
 Implements [SRS-IN-10](../../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-10-enclose-recognition-smart-group-pilot)
-per [ADR-0011](../../../.docs/adr/ADR-0011-smart-group.md) (**Could** / pilot). Stays `draft`
-until Must sync path (IN-007…009 + EP-001) is in flight or done — rides W4 after session bind.
+per [ADR-0011](../../../.docs/adr/ADR-0011-smart-group.md) (**Could** / pilot).
+
+**Carried from iter-002.** Stays `draft` until human briefs **`/pm`** with Smart Group
+requirements and a `kind: design` story exists (REQ-04 Needs design: yes) — or PM
+explicitly waives design for a library-only slice.
 
 ## Kind
 
@@ -34,8 +37,9 @@ until Must sync path (IN-007…009 + EP-001) is in flight or done — rides W4 a
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Depends on | STORY-IN-007, STORY-IN-009 |
+| Depends on | STORY-IN-007, STORY-IN-009 (done in iter-002) |
 
 ## Done when
 
 - AC green under BDD `@SRS-IN-10`
+- Design dependency satisfied or waived in writing by PM

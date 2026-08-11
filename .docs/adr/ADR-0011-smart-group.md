@@ -5,9 +5,20 @@ status: accepted
 date: 2026-08-11
 deciders: [architect, pm]
 supersedes: null
+amended_by: ADR-0013
 ---
 
 # ADR-0011 — Smart Group (ink-box) pilot
+
+> **Amended 2026-08-11 by [ADR-0013](./ADR-0013-ink-box-tool-modes.md).** §4A's propose/accept
+> step is **withdrawn**: creation is tool-armed and immediate (undoable), and `recognize_enclose`
+> is an internal Infini step rather than a wire op. §1–§3 (node shape, local transform,
+> `inkScaleMode`), §4B, §5, and §6 otherwise stand. See the amendment table in ADR-0013.
+>
+> **Clarified 2026-08-11 (same day, PM UX):** §3 `fixedInk` uses **per-content-ink** UV/offset
+> (not a single shared centroid) so new ink never moves older content; §4B selection create
+> **requires** a surround stroke among the selection (open OK — artificial closed path for the
+> containment test); §7 covers draw-into membership and free layout.
 
 ## Context
 
@@ -48,24 +59,42 @@ Parent: [REQ-04](../modules/infini/prd.md#smart-group) (pilot) · tree model [RE
    | Mode | Feel | Behavior when bounds/scale change |
    |---|---|---|
    | `withBounds` (default) | Object scale | **Content** ink scales/rotates with the SmartGroup transform |
-   | `fixedInk` | Text-box chrome | Geometric bounds + **boundary ink** still transform; **content** ink sample size stays fixed (box grows like padding around handwriting) |
+   | `fixedInk` | Text-box chrome | Geometric bounds + **boundary ink** still transform; **each** content ink keeps sample size fixed and tracks the box via **its own** relative offset / UV |
 
-   Exact `fixedInk` layout rule: keep **content** ink’s local geometry unchanged while `bounds`
-   width/height change (letterbox / padding); do **not** OCR or reflow glyphs.
+   Exact `fixedInk` layout rule (pilot) — **per content ink**:
+
+   - Each `role: content` ink stores (or derives at membership time) its own anchor in the box,
+     e.g. UV `(u, v)` of that ink’s AABB centroid relative to the SmartGroup bounds top-left,
+     and/or an explicit `layoutOffset` / local origin used for `fixedInk` placement.
+   - On bounds or `scaleX`/`scaleY` change: **do not scale** that ink’s sample geometry; translate
+     it so its UV (or offset) in the new bounds matches the stored value.
+   - Newly appended content ink receives **its own** offset at membership time and never adjusts
+     siblings — this is how free draw-into coexists with `fixedInk` resize.
+   - Do **not** OCR, reflow glyphs, or auto-align content. In-box alignment is a later feature.
+
+   Example: ink A’s center at `(50, 100)` from the box top-left; box scales 2× → A’s center at
+   `(100, 200)`; ink B drawn later keeps its own UV and is untouched when A’s offset is updated.
+
+   **Preferred implementation (architect/dev):** track per-content-ink offset inside the Smart
+   Group; on `fixedInk` resize, adjust each ink’s offset independently. Avoid a single shared
+   “content centroid” for the whole group — that would move older ink when new ink is added.
 
    **Boundary ink always transforms** with the SmartGroup (same as the geometric frame). It is
    **not** gated by `inkScaleMode`. Only `role: content` ink respects the mode.
+
 4. **Creation paths (pilot)**  
-   A. **Enclose recognition:** user hand-draws a roughly rectangular stroke that surrounds
-      existing ink → system proposes SmartGroup. On accept:
-      - **Recognize** initial axis-aligned `bounds` `(x, y, width, height)` from the enclose
-        stroke (fitted rect / AABB of that stroke — used for handles, hit-testing, connectors).
-      - **Preserve** the enclose stroke as **boundary ink** inside the SmartGroup (do **not**
-        discard it). It always follows group transforms (never `fixedInk`-exempt).
-      - Reparent **content ink** (strokes inside) as siblings under the SmartGroup (`inkScaleMode`
-        applies to these only).   B. **Explicit:** multi-select ink → “Smart Group” → bounds = AABB; optional drawn boundary
-      ink may be added later. Any ink set can become a SmartGroup — rectangle gesture is the
-      delightful path, not the only path.
+   A. **Enclose recognition (tool-armed):** hand-draw a roughly rectangular stroke with
+      `intent: enclose` → immediate `create_smart_group` when guards pass (see ADR-0013):
+      - **Recognize** initial axis-aligned `bounds` from the enclose stroke.
+      - **Preserve** the enclose stroke as **boundary ink**.
+      - Reparent contained ink as `content`.
+   B. **Explicit selection:** multi-select ink → “Smart Group” **only if** one selected stroke
+      **surrounds almost all of the others** (≥80% of each other stroke’s samples inside that
+      surround stroke’s region). The surround stroke may be **open**; build an **artificial
+      closed path** for the containment test only (do not mutate the stored samples). That
+      stroke → `role: boundary`; others → `role: content`; `bounds` = fitted rect of the
+      surround stroke. **If no surround stroke qualifies → refuse create** (no AABB-only /
+      hint-only Smart Group).
 
 5. **Recognition quality (pilot bar)**  
    Enclosure detection is **best-effort**. False positives must be undoable. Misses fall back
@@ -77,13 +106,31 @@ Parent: [REQ-04](../modules/infini/prd.md#smart-group) (pilot) · tree model [RE
    `inkScaleMode`, children. Ops: `create_smart_group`, `set_smart_group_transform`,
    `set_ink_scale_mode`, `recognize_enclose` (optional client-side).
 
+7. **Draw-into membership (pilot)**  
+   On `stroke_end` for ordinary ink (`intent: ink` / Pen — **not** an enclose stroke):
+
+   - Candidate Smart Groups: those whose **world** geometric `bounds` contain ≥80% of the new
+     stroke’s samples.
+   - If none → ink stays where `append_ink` would put it (document root / ordinary parent).
+   - If one or more → reparent the stroke as `role: content` under the candidate with the
+     **highest paint / z order**. Paint order is tree sibling order (later siblings paint above);
+     there is **no separate z-index field**. Nested Smart Groups that each contain 100% of the
+     stroke resolve the same way (topmost / later sibling wins).
+   - Membership **never** shifts, realigns, or reflows existing content ink — freehand placement.
+   - Runs on Infini only (same authority as enclose recognition).
+
 ## Consequences
 
 - Pilot can ship without OCR, text layout, or full Figma-like groups.  
-- Viewport remains translate+uniform scale only; **node** rotation lives on SmartGroup.  
-- Epaper may only draw ink; recognition/create may run on Infini after sync (or on-device later).  
+- Viewport remains translate + uniform scale only; **node** rotation lives on SmartGroup.  
+- Epaper may only draw ink; recognition/create/membership run on Infini after sync.  
 - Connector glue uses SmartGroup world bounds after transform.  
-- Follow-up: promote local transforms to ordinary Group; richer enclose shapes (ellipse).
+- `fixedInk` tracks the box via **per-content-ink** UV/offset (not a shared group centroid).
+  Current library `smartLocalToWorld` omits that offset — implement stories must close the gap
+  when landing [SRS-IN-11](../modules/infini/features/vector-document/srs-logic.md#srs-in-11-selection-manipulation).  
+- Selection create without a surround stroke is refused — no hint-only Smart Group.  
+- Follow-up: promote local transforms to ordinary Group; richer enclose shapes; **in-box
+  alignment**.
 
 ## Alternatives Considered
 
@@ -93,4 +140,8 @@ Parent: [REQ-04](../modules/infini/prd.md#smart-group) (pilot) · tree model [RE
 | OCR to Text node | − handwriting | + | 0 | Rejected — user wants ink preserved |
 | Plain Group + no local TF | + | − | + | Rejected — cannot stretch/rotate box independently |
 | Always scale ink with bounds only | + | − fixedInk | + | Rejected — loses text-box padding feel |
+| `fixedInk` freeze samples (no offset) | + | − (content sticks to TL as box grows) | + | Rejected — PM: content must track box |
+| `fixedInk` shared content centroid | + | − (new ink shifts older UV) | + | Rejected — PM: per-ink offset |
+| Selection → AABB Smart Group (no surround) | − frame | − | + | Rejected — need surround stroke among selection |
 | Treat enclosure rect as Frame | 0 | − | 0 | Frames are root-only artboards — wrong metaphor |
+| Auto-align / reflow on append | − freehand | + typed feel | 0 | Deferred — free layout in pilot |

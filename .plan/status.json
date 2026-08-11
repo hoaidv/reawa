@@ -1,7 +1,7 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-11T05:06:52+00:00",
-  "current_iter": "iter-002",
+  "generated_at": "2026-08-11T06:42:35+00:00",
+  "current_iter": "iter-003",
   "by_status": {
     "draft": 1,
     "ready": 0,
@@ -29,7 +29,7 @@
   },
   "open_challenges": 0,
   "resolved_challenges_this_iter": 0,
-  "sync_orphans": 4,
+  "sync_orphans": 11,
   "master_plan": true,
   "tracks": [
     {
@@ -42,9 +42,16 @@
     {
       "id": "TRACK-002",
       "kind": "planned",
-      "status": "active",
-      "cursor": "/pm W5 gate \u2014 IN-011+EP-002 done (PASS-WITH-CONCERNS; human hardware confirm)",
+      "status": "done",
+      "cursor": "done \u2014 W5 gated; iter-002 closed",
       "iter": "iter-002"
+    },
+    {
+      "id": "TRACK-003",
+      "kind": "planned",
+      "status": "active",
+      "cursor": "/sm \u2014 slice ink-box waves per architect handoff",
+      "iter": "iter-003"
     }
   ]
 }

@@ -41,7 +41,9 @@ a shared op-log when migration lands.
 | Ink | Dense polyline of tablet samples — primary handwriting (tree library) |
 | WorldLayer path/line/rect/ellipse | Live paint + `doc_snapshot` nodes |
 | Text / Primitive / Group / Frame / Connector | Tree library |
-| SmartGroup | Ink-box pilot — library ops; no live UI yet ([ADR-0011](../../adr/ADR-0011-smart-group.md)) |
+| SmartGroup | Ink-box pilot — library ops; UI specced, not built ([ADR-0011](../../adr/ADR-0011-smart-group.md) + [ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md)) |
+| Tool mode | **Device-local UI state** — `Selection`/`Ink-box` (Infini), +`Pen` (Epaper). Never on the wire |
+| Intent | `stroke_begin.intent` + `tool_intent` — what the creator meant, carried without device-side geometry |
 | Viewport | translate, scale, gut orientation, tablet CSS frame → drawingRegion |
 | Session | TCP JSON-lines Epaper ↔ Infini |
 
@@ -95,7 +97,9 @@ flowchart TB
 - [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md) — tree-of-vectors document
 - [ADR-0011](../../adr/ADR-0011-smart-group.md) — Smart Group pilot (library)
 - [ADR-0012](../../adr/ADR-0012-world-stroke-viewport-parity.md) — world stroke width + viewport paint parity
+- [ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) — ink-box tool modes, intent transport, undo (amends ADR-0011)
 - Sync bind: [tablet-sync SRS-IN-07](./features/tablet-sync/srs-logic.md) shipped wire
+- Intent bind: [tablet-sync SRS-IN-13](./features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport)
 
 ## Risks & technical debt
 
@@ -107,3 +111,8 @@ flowchart TB
 | `regionsync/` unwired on device | Dual path confusion | H×M | Docs mark library vs Qt; wire or retire |
 | Reconnect without hello protocol | Consistency | M×M | Resend `doc_snapshot` on TCP connect today |
 | Gut orientation hardware edge cases | Map correctness | M×H | Human confirm four poses |
+| **RM2 touch unreachable from Qt** | epaper REQ-03 toolbar | M×H | Spike before slicing; fallback = pen-on-strip or hardware button ([ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md)) |
+| **No ink in the tree** (`rebuildWithRmInk` writes flat primitives) | All of REQ-04 | **H×H** | Prerequisite story: `append_ink` on the live stroke path + paint via `syncFromVectorDoc` |
+| No selection / hit-testing / undo in code | REQ-04 manipulation + undo AC | H×H | [SRS-IN-11](./features/vector-document/srs-logic.md#srs-in-11-selection-manipulation) + [SRS-IN-12](./features/vector-document/srs-logic.md#srs-in-12-undo-history) |
+| Two intent paths until op-log migration | Wire clarity | M×M | Accepted; `tool_intent` retires with the ADR-0009 migration |
+| Snapshot undo memory on large docs | Responsiveness | L×M | Ring depth 20; measured in srs-quality |
