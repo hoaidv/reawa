@@ -26,7 +26,7 @@ export interface InfiniNative {
   strokeIngestPort: () => Promise<number>;
   sendToRm?: (obj: unknown) => Promise<number>;
   rmClientCount?: () => Promise<number>;
-  onRmClient?: (cb: (ev: { type: "connected" | "closed"; n: number }) => void) => () => void;
+  onRmClient?: (cb: (ev: { type: "connected" | "closed" | "sync"; n: number }) => void) => () => void;
 }
 
 declare global {

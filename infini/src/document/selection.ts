@@ -174,64 +174,103 @@ export function smartGroupWithPreview(
   };
 }
 
-function resizeBounds(
-  origin: SmartBounds,
+/**
+ * World-space resize with opposite corner/edge pinned (ml-mindmap ShapeSizing pattern).
+ * @implements [SRS-IN-11] fixed-corner resize
+ */
+export function resizeWorldAabbFromHandle(
+  box: Aabb,
   handle: ResizeHandle,
-  dxLocal: number,
-  dyLocal: number,
-): SmartBounds {
-  let { x, y, width, height } = origin;
-  const applyW = (d: number) => {
-    width = Math.max(1, width + d);
-  };
-  const applyH = (d: number) => {
-    height = Math.max(1, height + d);
-  };
+  pointer: Vec2,
+): Aabb {
+  let { minX, minY, maxX, maxY } = box;
+  const px = pointer.x;
+  const py = pointer.y;
   switch (handle) {
     case "e":
-      applyW(dxLocal);
+      maxX = px;
       break;
     case "w":
-      x += dxLocal;
-      applyW(-dxLocal);
+      minX = px;
       break;
     case "s":
-      applyH(dyLocal);
+      maxY = py;
       break;
     case "n":
-      y += dyLocal;
-      applyH(-dyLocal);
+      minY = py;
       break;
     case "se":
-      applyW(dxLocal);
-      applyH(dyLocal);
-      break;
-    case "ne":
-      applyW(dxLocal);
-      y += dyLocal;
-      applyH(-dyLocal);
+      maxX = px;
+      maxY = py;
       break;
     case "sw":
-      x += dxLocal;
-      applyW(-dxLocal);
-      applyH(dyLocal);
+      minX = px;
+      maxY = py;
+      break;
+    case "ne":
+      maxX = px;
+      minY = py;
       break;
     case "nw":
-      x += dxLocal;
-      applyW(-dxLocal);
-      y += dyLocal;
-      applyH(-dyLocal);
+      minX = px;
+      minY = py;
       break;
   }
-  if (width < 1) {
-    x += width - 1;
-    width = 1;
+  if (minX > maxX) [minX, maxX] = [maxX, minX];
+  if (minY > maxY) [minY, maxY] = [maxY, minY];
+  if (maxX - minX < 1) maxX = minX + 1;
+  if (maxY - minY < 1) maxY = minY + 1;
+  return { minX, minY, maxX, maxY };
+}
+
+/** Map world AABB back to SmartGroup transform + bounds for resize commit. */
+export function smartTransformFromWorldAabb(
+  world: Aabb,
+  localBounds: SmartBounds,
+  base: SmartTransform,
+  mode: "fixedInk" | "withBounds",
+): { transform: SmartTransform; bounds: SmartBounds } {
+  const w = Math.max(1, world.maxX - world.minX);
+  const h = Math.max(1, world.maxY - world.minY);
+  const sx = base.scaleX || 1;
+  const sy = base.scaleY || 1;
+  if (mode === "fixedInk") {
+    return {
+      transform: { ...base },
+      bounds: {
+        x: (world.minX - base.x) / sx,
+        y: (world.minY - base.y) / sy,
+        width: w / sx,
+        height: h / sy,
+      },
+    };
   }
-  if (height < 1) {
-    y += height - 1;
-    height = 1;
-  }
-  return { x, y, width, height };
+  const scaleX = w / Math.max(1, localBounds.width);
+  const scaleY = h / Math.max(1, localBounds.height);
+  return {
+    transform: {
+      ...base,
+      x: world.minX - localBounds.x * scaleX,
+      y: world.minY - localBounds.y * scaleY,
+      scaleX,
+      scaleY,
+    },
+    bounds: { ...localBounds },
+  };
+}
+
+function originWorldAabb(
+  originBounds: SmartBounds,
+  originTransform: SmartTransform,
+): Aabb {
+  return smartGroupWorldAabb({
+    kind: "smart_group",
+    id: "_preview",
+    bounds: originBounds,
+    transform: originTransform,
+    inkScaleMode: "withBounds",
+    children: [],
+  });
 }
 
 export type PointerPhase = "down" | "move" | "up";
@@ -345,34 +384,23 @@ export function handleSelectionPointer(
       const node = tree.indexById().get(next.preview.id);
       const mode =
         node?.kind === "smart_group" ? node.inkScaleMode : "withBounds";
-      const sx = next.preview.originTransform.scaleX || 1;
-      const sy = next.preview.originTransform.scaleY || 1;
-      if (mode === "fixedInk") {
-        next.preview.liveBounds = resizeBounds(
-          next.preview.originBounds,
-          next.preview.handle,
-          dx / sx,
-          dy / sy,
-        );
-        next.preview.liveTransform = { ...next.preview.originTransform };
-      } else {
-        // withBounds: grow scale so world AABB follows the handle; local bounds stay.
-        const ox = Math.max(1, next.preview.originBounds.width * sx);
-        const oy = Math.max(1, next.preview.originBounds.height * sy);
-        let newW = ox;
-        let newH = oy;
-        const h = next.preview.handle;
-        if (h.includes("e") || h === "e") newW = Math.max(1, ox + dx);
-        if (h.includes("w") || h === "w") newW = Math.max(1, ox - dx);
-        if (h.includes("s") || h === "s") newH = Math.max(1, oy + dy);
-        if (h.includes("n") || h === "n") newH = Math.max(1, oy - dy);
-        next.preview.liveBounds = { ...next.preview.originBounds };
-        next.preview.liveTransform = {
-          ...next.preview.originTransform,
-          scaleX: (newW / next.preview.originBounds.width) || sx,
-          scaleY: (newH / next.preview.originBounds.height) || sy,
-        };
-      }
+      const originWorld = originWorldAabb(
+        next.preview.originBounds,
+        next.preview.originTransform,
+      );
+      const newWorld = resizeWorldAabbFromHandle(
+        originWorld,
+        next.preview.handle,
+        world,
+      );
+      const mapped = smartTransformFromWorldAabb(
+        newWorld,
+        next.preview.originBounds,
+        next.preview.originTransform,
+        mode === "fixedInk" ? "fixedInk" : "withBounds",
+      );
+      next.preview.liveTransform = mapped.transform;
+      next.preview.liveBounds = mapped.bounds;
       next.preview.moved = true;
     }
     return { session: next, consumed: true };

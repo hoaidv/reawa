@@ -17,6 +17,12 @@ function broadcastStroke(obj) {
   }
 }
 
+/** Push current RM client count when renderer attaches (STORY-IN-019). */
+function pushRmClientSync(webContents) {
+  if (!webContents || webContents.isDestroyed()) return;
+  webContents.send("rm-client", { type: "sync", n: rmClients.size });
+}
+
 /** Infini → Epaper (viewport / region_refresh) over the same TCP clients. */
 function sendToRmClients(obj) {
   const line = `${JSON.stringify(obj)}\n`;
@@ -100,6 +106,11 @@ function createWindow() {
   } else {
     void mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
+
+  // Eager sync: if Epaper connected before React subscribed, renderer still learns n on load.
+  mainWindow.webContents.on("did-finish-load", () => {
+    pushRmClientSync(mainWindow.webContents);
+  });
 }
 
 app.whenReady().then(() => {

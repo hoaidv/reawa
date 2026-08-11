@@ -220,6 +220,8 @@ void TabletCanvasItem::paint(QPainter *painter)
     ensureImage();
     m_paintCount.fetchAndAddRelaxed(1);
     painter->drawImage(0, 0, m_image);
+    // Selection chrome is composited (not baked) so move ghosts don't full-clear ink.
+    paintSelectionChrome(painter);
 }
 
 void TabletCanvasItem::paintSegment(const Point &from, const Point &to, qreal lineWidth)
@@ -464,6 +466,18 @@ void TabletCanvasItem::applyDocSnapshot(const QJsonObject &obj)
     // Ghost discarded — authoritative geometry (SRS-EP-04 / SRS-IN-13).
     m_selectionGesture = false;
     m_gesturePickableId.clear();
+    // Keep selection highlight if the pickable still exists after snapshot.
+    if (!m_selectedPickableId.isEmpty()) {
+        bool stillThere = false;
+        for (const QJsonValue &v : m_pickables) {
+            if (v.toObject().value(QStringLiteral("id")).toString() == m_selectedPickableId) {
+                stillThere = true;
+                break;
+            }
+        }
+        if (!stillThere)
+            m_selectedPickableId.clear();
+    }
     qInfo() << "[sync] doc_snapshot nodes" << m_vectorNodes.size()
             << "pickables" << m_pickables.size();
     emit pickablesChanged();
@@ -562,7 +576,11 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
     const QPointF world = panelToWorld(canvasPos);
     const QString id = hitPickable(world);
     if (id.isEmpty()) {
-        m_selectedPickableId.clear();
+        if (!m_selectedPickableId.isEmpty()) {
+            m_selectedPickableId.clear();
+            m_selectionChromeDirty = QRectF();
+            update(); // clear chrome
+        }
         return;
     }
     m_selectedPickableId = id;
@@ -570,6 +588,9 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
     m_gestureStartWorld = world;
     m_gestureLastWorld = world;
     m_selectionGesture = true;
+    m_selectionGhostClock.restart();
+    m_selectionChromeDirty = pickablePanelRect(id).adjusted(-8, -8, 8, 8);
+    update(m_selectionChromeDirty.toAlignedRect());
 }
 
 void TabletCanvasItem::updateSelectionGesture(const QPointF &canvasPos)
@@ -577,6 +598,18 @@ void TabletCanvasItem::updateSelectionGesture(const QPointF &canvasPos)
     if (!m_selectionGesture)
         return;
     m_gestureLastWorld = panelToWorld(canvasPos);
+    // Soft region refresh ≥20 Hz — chrome only, not full vector redraw (SRS-EP-04 ghost).
+    if (m_selectionGhostClock.isValid()
+        && m_selectionGhostClock.elapsed() < kSelectionGhostMinIntervalMs)
+        return;
+    m_selectionGhostClock.restart();
+
+    const double dx = m_gestureLastWorld.x() - m_gestureStartWorld.x();
+    const double dy = m_gestureLastWorld.y() - m_gestureStartWorld.y();
+    const QRectF next = pickablePanelRect(m_gesturePickableId, dx, dy).adjusted(-8, -8, 8, 8);
+    const QRectF dirty = m_selectionChromeDirty.isNull() ? next : m_selectionChromeDirty.united(next);
+    m_selectionChromeDirty = next;
+    update(dirty.toAlignedRect());
 }
 
 void TabletCanvasItem::endSelectionGesture()
@@ -592,12 +625,90 @@ void TabletCanvasItem::endSelectionGesture()
                     {"seq", m_toolIntentSeq}};
     if (qHypot(dx, dy) < 2.0) {
         obj.insert(QStringLiteral("action"), QStringLiteral("select"));
+        // Keep selection chrome visible after tap-select.
+        m_selectedPickableId = m_gesturePickableId;
     } else {
         obj.insert(QStringLiteral("action"), QStringLiteral("move"));
         obj.insert(QStringLiteral("delta"), QJsonObject{{"dx", dx}, {"dy", dy}});
+        // Keep selected; chrome stays until next snapshot (authority).
+        m_selectedPickableId = m_gesturePickableId;
     }
     syncToolIntent(obj);
     m_gesturePickableId.clear();
+    m_selectionChromeDirty = pickablePanelRect(m_selectedPickableId).adjusted(-8, -8, 8, 8);
+    update(m_selectionChromeDirty.toAlignedRect());
+}
+
+QRectF TabletCanvasItem::pickablePanelRect(const QString &id, double dxWorld, double dyWorld) const
+{
+    if (id.isEmpty() || !m_drawingRegion.valid)
+        return {};
+    for (const QJsonValue &v : m_pickables) {
+        const QJsonObject p = v.toObject();
+        if (p.value(QStringLiteral("id")).toString() != id)
+            continue;
+        const QJsonObject b = p.value(QStringLiteral("bounds")).toObject();
+        const double minX = b.value(QStringLiteral("minX")).toDouble() + dxWorld;
+        const double minY = b.value(QStringLiteral("minY")).toDouble() + dyWorld;
+        const double maxX = b.value(QStringLiteral("maxX")).toDouble() + dxWorld;
+        const double maxY = b.value(QStringLiteral("maxY")).toDouble() + dyWorld;
+        const QPointF tl = worldToPanel(minX, minY);
+        const QPointF br = worldToPanel(maxX, maxY);
+        return QRectF(tl, br).normalized();
+    }
+    return {};
+}
+
+void TabletCanvasItem::paintSelectionChrome(QPainter *painter) const
+{
+    if (m_toolMode != QLatin1String("selection"))
+        return;
+    if (m_selectedPickableId.isEmpty() && !m_selectionGesture)
+        return;
+
+    const QString id = m_selectionGesture ? m_gesturePickableId : m_selectedPickableId;
+    if (id.isEmpty())
+        return;
+
+    double dx = 0;
+    double dy = 0;
+    if (m_selectionGesture) {
+        dx = m_gestureLastWorld.x() - m_gestureStartWorld.x();
+        dy = m_gestureLastWorld.y() - m_gestureStartWorld.y();
+    }
+    const QRectF r = pickablePanelRect(id, dx, dy);
+    if (r.isEmpty())
+        return;
+
+    painter->save();
+    QPen pen(Qt::black);
+    pen.setWidthF(2.0);
+    if (m_selectionGesture && (qAbs(dx) > 0.5 || qAbs(dy) > 0.5))
+        pen.setStyle(Qt::DashLine);
+    else
+        pen.setStyle(Qt::SolidLine);
+    painter->setPen(pen);
+    painter->setBrush(Qt::NoBrush);
+    painter->drawRect(r);
+
+    // Corner + edge anchors (8 handles) — feedback only; resize stays Infini for now.
+    const qreal h = 10.0;
+    const QPointF pts[8] = {
+        r.topLeft(),
+        QPointF(r.center().x(), r.top()),
+        r.topRight(),
+        QPointF(r.right(), r.center().y()),
+        r.bottomRight(),
+        QPointF(r.center().x(), r.bottom()),
+        r.bottomLeft(),
+        QPointF(r.left(), r.center().y()),
+    };
+    painter->setBrush(Qt::white);
+    pen.setStyle(Qt::SolidLine);
+    painter->setPen(pen);
+    for (const QPointF &c : pts)
+        painter->drawRect(QRectF(c.x() - h * 0.5, c.y() - h * 0.5, h, h));
+    painter->restore();
 }
 
 void TabletCanvasItem::syncToolIntent(const QJsonObject &obj)

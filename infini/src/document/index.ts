@@ -15,6 +15,8 @@ export {
   smartGroupWithPreview,
   hitResizeHandle,
   HANDLE_TOLERANCE_CSS_PX,
+  resizeWorldAabbFromHandle,
+  smartTransformFromWorldAabb,
 } from "./selection";
 export type {
   InfiniTool,

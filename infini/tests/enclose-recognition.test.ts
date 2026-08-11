@@ -10,6 +10,8 @@ import {
   commitLiveStrokeToTree,
   MIN_ENCLOSE_WORLD,
   fractionSamplesInside,
+  flattenDrawables,
+  smartGroupWorldAabb,
 } from "../src/document";
 import type { InkNode, SmartGroupNode } from "../src/document/types";
 
@@ -59,6 +61,22 @@ describe("STORY-IN-010 / SRS-IN-10 enclose recognition", () => {
     expect(content[0].layoutOffset).toBeDefined();
     expect(content[0].layoutOffset!.u).toBeGreaterThan(0);
     expect(content[0].layoutOffset!.u).toBeLessThan(1);
+    // Local-space: transform carries world origin; bounds at (0,0).
+    expect(sg.transform.x).toBeCloseTo(40);
+    expect(sg.transform.y).toBeCloseTo(40);
+    expect(sg.bounds.x).toBe(0);
+    expect(sg.bounds.y).toBe(0);
+    // Flattened content stays near original world location (not vanished).
+    const box = smartGroupWorldAabb(sg);
+    expect(box.minX).toBeCloseTo(40);
+    expect(box.minY).toBeCloseTo(40);
+    const drawables = flattenDrawables(tree);
+    const ink = drawables.find((d) => d.id === "ink_in");
+    expect(ink?.kind).toBe("ink");
+    if (ink?.kind === "ink") {
+      expect(ink.samples[0].x).toBeGreaterThan(50);
+      expect(ink.samples[0].x).toBeLessThan(90);
+    }
 
     // Enclose stroke not also at root as ordinary ink
     expect(tree.rootChildren.some((n) => n.id === "enclose_1")).toBe(false);

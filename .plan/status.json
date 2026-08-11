@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-11T08:16:48+00:00",
+  "generated_at": "2026-08-11T09:40:51+00:00",
   "current_iter": "iter-003",
   "by_status": {
     "draft": 0,
     "ready": 0,
     "in-progress": 0,
-    "in-review": 0,
-    "done": 88,
+    "in-review": 4,
+    "done": 90,
     "blocked": 1
   },
   "by_module": {
@@ -17,14 +17,14 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 5,
-      "done": 5,
-      "in_review": 0
+      "total": 7,
+      "done": 6,
+      "in_review": 1
     },
     "infini": {
-      "total": 18,
-      "done": 17,
-      "in_review": 0
+      "total": 22,
+      "done": 18,
+      "in_review": 3
     }
   },
   "open_challenges": 0,
@@ -50,7 +50,7 @@
       "id": "TRACK-003",
       "kind": "planned",
       "status": "active",
-      "cursor": "TRACK-003 UI+tools shipped \u2014 await human verify / next track",
+      "cursor": "verify FAILED \u2014 fix EP-006 + IN-019 (parallel) \u2192 human re-verify checklist",
       "iter": "iter-003"
     }
   ]

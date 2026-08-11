@@ -10,7 +10,7 @@ status: active
 
 # Iter 003 — Smart Group / ink-box pilot
 
-Architect confirmed IN-15/16 + UV. Stories sliced. **NOW:** `/designer` (IN-013) ∥ `/qa`→`/dev` (IN-012 + EP-004).
+Pilot shipped; human verify **failed** 2026-08-11. **NOW:** `/dev` EP-006 ∥ IN-019 → re-verify checklist.
 
 ## Committed
 
@@ -35,7 +35,12 @@ Architect confirmed IN-15/16 + UV. Stories sliced. **NOW:** `/designer` (IN-013)
 
 - [STORY-EP-003](./stories/STORY-EP-003.md) — design — 3 pts — **draft** — blocked on EP-004 spike
 - [STORY-IN-018](./stories/STORY-IN-018.md) — implement — 5 pts — **draft** — tool intent transport
-- [STORY-EP-005](./stories/STORY-EP-005.md) — implement — 5 pts — **draft** — device tool modes
+- [STORY-EP-005](./stories/STORY-EP-005.md) — implement — 5 pts — **done** — device tool modes
+
+### W7 — verify-fix expedite (ready)
+
+- [STORY-EP-006](./stories/STORY-EP-006.md) — implement — 3 pts — **ready** — ToolChip capacitive touch
+- [STORY-IN-019](./stories/STORY-IN-019.md) — implement — 2 pts — **ready** — RM connection eager sync
 
 ## Risks
 

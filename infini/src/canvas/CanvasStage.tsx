@@ -30,6 +30,7 @@ import {
 import { allowIndividualInteraction } from "./TileCache";
 import type { RmStrokeMsg } from "../native";
 import { IpcRmTransport, MemoryTransport, TabletSession } from "../session";
+import { rmClientSyncHint, shouldPublishOnRmClient, type RmClientEvent } from "../session/rmClientSync";
 import { ToolStrip } from "./ToolStrip";
 import {
   createSelectionSession,
@@ -178,6 +179,11 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     const pickables = buildPickables(treeRef.current);
     void api.sendToRm({ type: "doc_snapshot", nodes, pickables });
     snapshotSentRef.current = true;
+  };
+
+  /** Push fresh vector doc + pickables after tree mutations (STORY-IN-020). */
+  const pushDocSnapshotToRm = () => {
+    sendDocSnapshot();
   };
 
   const publishViewportCoalesced = (force = false) => {
@@ -368,6 +374,19 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       setSyncHint("no native bridge (browser-only?)");
       return;
     }
+
+    const handleRmClient = (ev: RmClientEvent) => {
+      if (shouldPublishOnRmClient(ev)) {
+        snapshotSentRef.current = false;
+        sendDocSnapshot();
+        publishViewportCoalesced(true);
+      }
+      setSyncHint(rmClientSyncHint(ev));
+    };
+
+    // Subscribe before async rmClientCount — avoids missing connect during mount race (IN-019).
+    const unsubClient = api.onRmClient?.(handleRmClient) ?? (() => {});
+
     // Upgrade transport if preload arrived after first render
     if (api.sendToRm && !(transportRef.current instanceof IpcRmTransport)) {
       transportRef.current = new IpcRmTransport();
@@ -382,34 +401,17 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       sessionRef.current.connect();
     }
     void api.strokeIngestPort?.().then((p) => {
-      setSyncHint(`RM sync :${p}`);
+      setSyncHint((prev) => (prev.startsWith("RM connected") ? prev : `RM sync :${p}`));
     });
     void api.rmClientCount?.().then((n) => {
-      if (n > 0) {
-        snapshotSentRef.current = false;
-        sendDocSnapshot();
-        publishViewportCoalesced(true);
-        setSyncHint(`RM connected (n=${n})`);
-      }
-    });
-
-    const unsubClient = api.onRmClient?.((ev) => {
-      if (ev.type === "connected") {
-        snapshotSentRef.current = false;
-        sendDocSnapshot();
-        publishViewportCoalesced(true);
-        setSyncHint(`RM connected (n=${ev.n})`);
-      } else if (ev.type === "closed") {
-        setSyncHint(ev.n > 0 ? `RM connected (n=${ev.n})` : "RM disconnected — waiting");
-      }
+      handleRmClient({ type: "sync", n });
     });
 
     const unsub = api.onRmStroke((msg: RmStrokeMsg | import("../native").RmToolIntentMsg) => {
       if (msg.type === "tool_intent") {
         applyToolIntent(treeRef.current, undoRef.current, msg);
         rebuildWithRmInk();
-        snapshotSentRef.current = false;
-        sendDocSnapshot();
+        pushDocSnapshotToRm();
         return;
       }
       const cssW = sizeRef.current.w || 800;
@@ -430,8 +432,16 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         return;
       }
       if (msg.type === "stroke_point") {
-        const stroke = rmStrokesRef.current.get(msg.id);
-        if (!stroke) return;
+        let stroke = rmStrokesRef.current.get(msg.id);
+        // Recover if stroke_begin was dropped on the wire (intermittent miss).
+        if (!stroke) {
+          stroke = {
+            points: [],
+            width: 2.5,
+            intent: "ink",
+          };
+          rmStrokesRef.current.set(msg.id, stroke);
+        }
         const { u, v } = panelToFrameUv(
           msg.x,
           msg.y,
@@ -443,27 +453,34 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
           x: region.minX + u * (region.maxX - region.minX),
           y: region.minY + v * (region.maxY - region.minY),
         });
-        if (stroke.points.length === 2 || stroke.points.length % 3 === 0) {
-          rebuildWithRmInk();
-        }
+        // Live paint every sample — enclose boxes must stay visible while drawing.
+        rebuildWithRmInk();
         return;
       }
       if (msg.type === "stroke_end") {
         const stroke = rmStrokesRef.current.get(msg.id);
+        let encKind: string | undefined;
         if (stroke && stroke.points.length >= 2) {
-          commitStrokeWithEncloseRecognition(treeRef.current, undoRef.current, {
-            id: msg.id,
-            points: stroke.points,
-            width: stroke.width,
-            intent: normalizeStrokeIntent(stroke.intent),
-            source: "epaper",
-          });
+          const encResult = commitStrokeWithEncloseRecognition(
+            treeRef.current,
+            undoRef.current,
+            {
+              id: msg.id,
+              points: stroke.points,
+              width: stroke.width,
+              intent: normalizeStrokeIntent(stroke.intent),
+              source: "epaper",
+            },
+          );
+          encKind = encResult.kind;
         }
         rmStrokesRef.current.delete(msg.id);
+        // Rebuild BEFORE snapshot so tablet receives flattened Smart Group, not stale free ink.
         rebuildWithRmInk();
-        // Do NOT push doc_snapshot here — device already appends the path locally.
-        // A full snapshot white-clears + redraws the panel and races the next stroke
-        // (later ink missing on tablet while desktop still receives stroke_*).
+        if (encKind === "created") {
+          pushDocSnapshotToRm();
+        }
+        // Ordinary ink: no snapshot — device already drew locally (race avoidance).
       }
     });
 
@@ -688,6 +705,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         },
       });
       rebuildWithRmInk();
+      pushDocSnapshotToRm();
     }
     dragRef.current = null;
     // Settle flush after pan/selection drag — tablet must sharp-rasterize once more.
@@ -736,6 +754,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
           };
           setInkSelCount(0);
           rebuildWithRmInk();
+          pushDocSnapshotToRm();
           schedulePaint();
         }}
         createDisabled={inkSelCount < 2}
@@ -751,9 +770,13 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         aria-hidden="true"
       >
         <span className="c-handle c-handle-nw" data-handle="nw" />
+        <span className="c-handle c-handle-n" data-handle="n" />
         <span className="c-handle c-handle-ne" data-handle="ne" />
+        <span className="c-handle c-handle-e" data-handle="e" />
         <span className="c-handle c-handle-se" data-handle="se" />
+        <span className="c-handle c-handle-s" data-handle="s" />
         <span className="c-handle c-handle-sw" data-handle="sw" />
+        <span className="c-handle c-handle-w" data-handle="w" />
       </div>
       <div
         ref={markerRef}

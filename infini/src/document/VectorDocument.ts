@@ -279,7 +279,7 @@ export class VectorDocument {
       transform: cloneJson(
         (p.transform as SmartTransform) ?? IDENTITY_SMART_TRANSFORM,
       ),
-      inkScaleMode: (p.inkScaleMode as SmartGroupNode["inkScaleMode"]) ?? "withBounds",
+      inkScaleMode: (p.inkScaleMode as SmartGroupNode["inkScaleMode"]) ?? "fixedInk",
       children,
     };
     this.insertUnder(p.parentId as string | undefined, node);

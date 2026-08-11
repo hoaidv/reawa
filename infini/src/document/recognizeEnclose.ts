@@ -123,8 +123,8 @@ export function commitStrokeWithEncloseRecognition(
     return { kind: "ordinary_ink", reason: "not_enclose_intent" };
   }
 
-  const bounds = samplesAabb(stroke.points);
-  const shorter = Math.min(bounds.width, bounds.height);
+  const worldBounds = samplesAabb(stroke.points);
+  const shorter = Math.min(worldBounds.width, worldBounds.height);
   if (shorter < MIN_ENCLOSE_WORLD) {
     appendOrdinary(tree, stroke);
     tryDrawIntoMembership(tree, undo, stroke.id);
@@ -134,7 +134,7 @@ export function commitStrokeWithEncloseRecognition(
   const candidates: InkNode[] = [];
   walkInkCandidates(tree.rootChildren, false, candidates);
   const capturable = candidates.filter(
-    (ink) => fractionSamplesInside(ink.samples, bounds) >= 0.8,
+    (ink) => fractionSamplesInside(ink.samples, worldBounds) >= 0.8,
   );
   if (capturable.length === 0) {
     appendOrdinary(tree, stroke);
@@ -142,13 +142,30 @@ export function commitStrokeWithEncloseRecognition(
     return { kind: "ordinary_ink", reason: "no_content" };
   }
 
+  // Local-space Smart Group: bounds origin at (0,0), transform carries world origin.
+  // @implements [SRS-IN-10] enclose → create_smart_group geometry
+  const bounds: SmartBounds = {
+    x: 0,
+    y: 0,
+    width: worldBounds.width,
+    height: worldBounds.height,
+  };
+  const transform = {
+    ...IDENTITY_SMART_TRANSFORM,
+    x: worldBounds.x,
+    y: worldBounds.y,
+  };
+  const toLocal = (p: { x: number; y: number }) => ({
+    x: p.x - worldBounds.x,
+    y: p.y - worldBounds.y,
+  });
+
   const style: Style = {
     ...DEFAULT_STYLE,
     strokeWidth: stroke.width ?? DEFAULT_STYLE.strokeWidth,
   };
   const boundarySamples: InkSample[] = stroke.points.map((p, i) => ({
-    x: p.x,
-    y: p.y,
+    ...toLocal(p),
     t: i,
   }));
   const boundary: InkNode = {
@@ -162,6 +179,12 @@ export function commitStrokeWithEncloseRecognition(
   const contentChildren: InkNode[] = capturable.map((ink) => {
     const cloned = JSON.parse(JSON.stringify(ink)) as InkNode;
     cloned.role = "content";
+    cloned.samples = cloned.samples.map((s, i) => ({
+      ...s,
+      x: s.x - worldBounds.x,
+      y: s.y - worldBounds.y,
+      t: s.t ?? i,
+    }));
     cloned.layoutOffset = seedLayoutOffset(cloned.samples, bounds);
     return cloned;
   });
@@ -174,8 +197,8 @@ export function commitStrokeWithEncloseRecognition(
     payload: {
       id: smartGroupId,
       bounds,
-      transform: { ...IDENTITY_SMART_TRANSFORM },
-      inkScaleMode: "withBounds",
+      transform,
+      inkScaleMode: "fixedInk",
       captureIds: capturable.map((c) => c.id),
       children: [boundary, ...contentChildren],
     },

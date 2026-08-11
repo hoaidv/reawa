@@ -77,13 +77,15 @@ to 2. Recorded in [epaper REQ-03](../.docs/modules/epaper/prd.md#tool-modes) and
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
-| TRACK-003 | planned | **active** | **`/qa`→`/dev` W4** (IN-015); EP design done | [track](./tracks/TRACK-003-smart-group-pilot.md) |
+| TRACK-003 | planned | **active** | **verify FAILED** — fix EP-006 ∥ IN-019 → human re-verify | [track](./tracks/TRACK-003-smart-group-pilot.md) |
 
 ### Open challenges / blocked
 
 - None open — CHL-0001 / CHL-0002 / CHL-0003 **adopted** 2026-08-11 (PM).
   CHL-0002 residual: ADLC `data-platform` allowlist +`epaper` awaits human approval.
 - IN-006 remains cancelled (historical).
+- **Human verify failed 2026-08-11** — toolbar touch + late RM connection; expedite EP-006 + IN-019.
+  Smart Group create paths untested (blocked, not yet a defect).
 
 ### Design packages in flight
 
@@ -92,7 +94,7 @@ to 2. Recorded in [epaper REQ-03](../.docs/modules/epaper/prd.md#tool-modes) and
 
 ### Execution board(s)
 
-- [iter-003 execution-board](./iter-003/execution-board.md) — **W3 NOW**
+- [iter-003 execution-board](./iter-003/execution-board.md) — **W7 verify-fix NOW**
 - [iter-002 board (final)](./iter-002/execution-board.md) — frozen
 
 ### Freeze notes
@@ -104,5 +106,5 @@ to 2. Recorded in [epaper REQ-03](../.docs/modules/epaper/prd.md#tool-modes) and
 
 ## Forward
 
-- Now: `/designer` (IN-013) ∥ `/qa`→`/dev` (IN-012, EP-004) → undo → selection → enclose → epaper
+- Now: `/dev` EP-006 ∥ IN-019 → human re-verify → close-iter
 - Backlog: [backlog.md](./backlog.md)

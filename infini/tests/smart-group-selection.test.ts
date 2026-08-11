@@ -12,6 +12,8 @@ import {
   pickSmartGroupAt,
   handleSelectionPointer,
   createSelectionSession,
+  resizeWorldAabbFromHandle,
+  smartTransformFromWorldAabb,
 } from "../src/document";
 import { TILE_LOD_SCALE } from "../src/canvas/TileCache";
 import type { InkNode, SmartGroupNode } from "../src/document/types";
@@ -273,6 +275,21 @@ describe("STORY-IN-015 / SRS-IN-11 selection + fixedInk UV", () => {
     }
   });
 
+  it("resize sw pins opposite ne corner in world space", () => {
+    const origin = { minX: 50, minY: 40, maxX: 150, maxY: 120 };
+    const newWorld = resizeWorldAabbFromHandle(origin, "sw", { x: 30, y: 140 });
+    expect(newWorld.maxX).toBeCloseTo(150);
+    expect(newWorld.minY).toBeCloseTo(40);
+    expect(newWorld.minX).toBeCloseTo(30);
+    expect(newWorld.maxY).toBeCloseTo(140);
+
+    const local = { x: 0, y: 0, width: 100, height: 80 };
+    const base = { x: 50, y: 40, rotation: 0, scaleX: 1, scaleY: 1 };
+    const mapped = smartTransformFromWorldAabb(newWorld, local, base, "withBounds");
+    expect(mapped.transform.x + local.width * mapped.transform.scaleX).toBeCloseTo(150);
+    expect(mapped.transform.y).toBeCloseTo(40);
+  });
+
   it("below LOD pan wins — selection pointer not consumed for pick", () => {
     const doc = new VectorDocument();
     doc.applyOp({
@@ -303,6 +320,20 @@ describe("STORY-IN-015 / SRS-IN-11 selection + fixedInk UV", () => {
     expect(r.panDelta).toEqual({ x: 20, y: 10 });
   });
 
+  it("create_smart_group defaults inkScaleMode to fixedInk", () => {
+    const doc = new VectorDocument();
+    doc.applyOp({
+      opId: "sg",
+      type: "create_smart_group",
+      payload: {
+        id: "sg_1",
+        bounds: { x: 0, y: 0, width: 10, height: 10 },
+        children: [],
+      },
+    });
+    expect((doc.indexById().get("sg_1") as SmartGroupNode).inkScaleMode).toBe("fixedInk");
+  });
+
   it("set_ink_scale_mode op toggles mode", () => {
     const doc = new VectorDocument();
     doc.applyOp({
@@ -311,6 +342,7 @@ describe("STORY-IN-015 / SRS-IN-11 selection + fixedInk UV", () => {
       payload: {
         id: "sg_1",
         bounds: { x: 0, y: 0, width: 10, height: 10 },
+        inkScaleMode: "withBounds",
         children: [],
       },
     });

@@ -5,8 +5,8 @@ track: TRACK-003
 owner: sm
 date: 2026-08-11
 lock: vertical · verified · 2 features · WIP 2
-verdict: "READY — W3 NOW: designer IN-013 ∥ qa→dev IN-012 + EP-004"
-wave: W3
+verdict: "EXPEDITE — verify failed; EP-006 ∥ IN-019 NOW → human re-verify"
+wave: W7
 ---
 
 # Execution board — iter-003
@@ -17,10 +17,9 @@ wave: W3
 
 | Band | Count | Meaning |
 |---|---|---|
-| W0–W2 | **done** | PM thicken + arch confirm + SM slice |
-| **W3 NOW** | 3 | IN-013 design ∥ IN-012 ingest ∥ EP-004 spike |
-| Design front | 0/2 done | IN-013 ready; EP-003 draft (spike-gated) |
-| Later implement | 7 draft/ready | undo ready; UI stories draft |
+| W0–W6 | **done** | All 11 committed pilot stories shipped |
+| **W7 NOW** | 2 | Verify-fix expedite (parallel) |
+| W8 | blocked | Human re-verify checklist |
 
 ## Lock
 
@@ -32,56 +31,43 @@ out_of_scope: backlog
 wip: 2
 modules: infini, epaper
 features: (2) infini/vector-document; epaper/tool-modes
-personas: /designer NOW (IN-013); /qa → /dev NOW (IN-012, EP-004); then undo→selection→enclose
-forbidden: /dev UI stories before design done; epaper design before EP-004 spike; DocChrome; silent Must
-NOW: /designer + /qa (then /dev) in parallel
-cursor: /designer ∥ /qa
+personas: /dev NOW (EP-006 ∥ IN-019); then human re-verify
+forbidden: iter close before checklist passes; Smart Group logic changes without verify signal
+NOW: /qa → /dev parallel lanes A+B
+cursor: verify-fix expedite
 ```
 
 ## Waves
 
 | Wave | Status | Parallel? | What |
 |---|---|---|---|
-| W0–W1 | **done** | — | PM + arch confirm |
-| W2 | **done** | — | SM slice (this board) |
-| **W3** | **NOW** | **∥ yes** | A: IN-013 design · B: IN-012 ingest · C: EP-004 spike |
-| W4 | next | serial after W3a+c | IN-014 undo → IN-015 selection → IN-010 enclose → IN-016/017 |
-| W5 | after spike | serial | EP-003 design → IN-018 transport → EP-005 tools |
+| W0–W6 | **done** | — | Pilot slice (11 stories) |
+| **W7** | **NOW** | **∥ yes** | A: EP-006 ToolChip touch · B: IN-019 connection eager sync |
+| W8 | next | — | Human re-verify (4-row checklist in handoff) |
 
-### Parallelism rules (W3)
+### Parallelism rules (W7)
 
 | Lane | Story | Writes | Conflicts |
 |---|---|---|---|
-| **A** | STORY-IN-013 | `design/ink-box-ui/` | none vs B/C |
-| **B** | STORY-IN-012 | `infini/src/` ink path | do not parallel-edit same files as later W4 without stitch |
-| **C** | STORY-EP-004 | `epaper/` spike notes | none vs A/B |
+| **A** | STORY-EP-006 | `Epaper/` touch routing | none vs B |
+| **B** | STORY-IN-019 | `infini/electron/`, `CanvasStage.tsx` | none vs A |
 
-## Full task table
+## Full task table (verify-fix)
 
 | Id | Feature / chore | Pri | Status | Wave | Next owner | ∥ |
 |---|---|---|---|---|---|---|
-| STORY-IN-012 | Tree-backed ink ingestion | P0 | **ready** | W3 | `/qa`→`/dev` | B |
-| STORY-EP-004 | RM2 touch spike | P0 | **ready** | W3 | `/qa`→`/dev` | C |
-| STORY-IN-013 | Design Infini ink-box | P0 | **ready** | W3 | `/designer` | A |
-| STORY-IN-014 | Undo ring | P0 | ready | W4 | `/qa`→`/dev` | after B |
-| STORY-IN-015 | Selection + fixedInk UV | P0 | draft | W4 | `/qa`→`/dev` | after A+B |
-| STORY-IN-010 | Tool-armed enclose | P0 | draft | W4 | `/qa`→`/dev` | after 015 |
-| STORY-IN-016 | Draw-into membership | P0 | draft | W4 | `/qa`→`/dev` | after 010 |
-| STORY-IN-017 | Surround selection create | P0 | draft | W4 | `/qa`→`/dev` | after A+B |
-| STORY-EP-003 | Design epaper strip | P0 | draft | W5 | `/designer` | after C |
-| STORY-IN-018 | Tool intent transport | P1 | draft | W5 | `/qa`→`/dev` | after 010/015 |
-| STORY-EP-005 | Epaper tool modes | P1 | draft | W6 | `/qa`→`/dev` | after EP-003+018 |
+| STORY-EP-006 | ToolChip capacitive touch | P0 | **ready** | W7 | `/qa`→`/dev` | A |
+| STORY-IN-019 | RM connection eager sync | P0 | **ready** | W7 | `/qa`→`/dev` | B |
 
-## Parking lot
+## Human re-verify checklist (W8)
 
-| Item | Sink |
-|---|---|
-| `doc_op` migration | backlog |
-| Rotation + connectors on Smart Group | backlog |
-| Mouse ink on Infini | backlog |
-| In-box alignment | backlog |
-| DocChrome (IN-006) | cancelled |
+| # | Path | Blocked by |
+|---|---|---|
+| 1 | Enclose create (Epaper Ink-box stroke) | EP-006 + IN-019 |
+| 2 | Surround create (Infini selection) | IN-019 (Infini UI) |
+| 3 | Connection on cold-start | IN-019 |
+| 4 | Finger tool switch on RM2 | EP-006 |
 
 ## Verdict
 
-Slice complete. **Next: `/designer`** on IN-013 **and** **`/qa`** (then `/dev`) on IN-012 + EP-004 — no pause between QA BDD and Dev.
+Pilot code complete but **verify failed**. Fix touch + sync, then human runs checklist before iter close.

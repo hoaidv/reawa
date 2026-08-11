@@ -99,9 +99,13 @@ body,
 }
 
 .c-handle-nw { left: 0; top: 0; }
+.c-handle-n  { left: 50%; top: 0; }
 .c-handle-ne { left: 100%; top: 0; }
+.c-handle-e  { left: 100%; top: 50%; }
 .c-handle-se { left: 100%; top: 100%; }
+.c-handle-s  { left: 50%; top: 100%; }
 .c-handle-sw { left: 0; top: 100%; }
+.c-handle-w  { left: 0; top: 50%; }
 
 /* Tablet drawing-region marker — visible only while pan/zoom (@SRS-IN-07) */
 .c-tablet-region-marker {

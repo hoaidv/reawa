@@ -55,12 +55,19 @@ Round 19 map, and the paint are byte-identical, so ink latency cannot regress by
 |---|---|
 | Pickable source | `pickables[]` from the most recent `doc_snapshot` (id, kind, world bounds) |
 | Hit-test | Local: `panelToWorld(pen)` inside a pickable's bounds; topmost (last in array) wins |
-| Select | Draw selection affordance locally; emit `tool_intent { action: "select", nodeId }` |
-| Move | Drag renders a **local ghost** of the bounds; on pen-up emit `tool_intent { action: "move", nodeId, delta }` |
+| Select | Draw selection affordance locally (bounds + 8 handles); emit `tool_intent { action: "select", nodeId }` |
+| Move | Drag renders a **local ghost** of the bounds (dashed, composited chrome ≥20 Hz dirty-rect); on pen-up emit `tool_intent { action: "move", nodeId, delta }` |
 | Resize | Drag on a handle band; on pen-up emit `tool_intent { action: "resize", nodeId, bounds }` |
 | Authority | The ghost is advisory. The next `doc_snapshot` is truth, even if geometry jumps |
 | No pickables | Selection tool is inert — pen does nothing on canvas; must be visible in the UI |
 | Miss | Press outside every pickable clears selection |
+
+### Tool independence
+
+Device tool mode is **never synced**. Infini may be on Selection / Ink-box while Epaper is on
+Ink-box — enclose recognition is driven solely by `stroke_begin.intent` from the drawing device
+([SRS-IN-10](../../../infini/features/vector-document/srs-logic.md)). The peer tool does not
+gate ingest or create.
 
 ### Errors / partial failure
 

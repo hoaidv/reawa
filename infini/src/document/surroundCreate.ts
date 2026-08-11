@@ -159,7 +159,7 @@ export function createSmartGroupFromSelection(
       id: smartGroupId,
       bounds,
       transform: { ...IDENTITY_SMART_TRANSFORM },
-      inkScaleMode: "withBounds",
+      inkScaleMode: "fixedInk",
       captureIds: orderedInks.map((i) => i.id),
       children: [boundary, ...contentNodes],
     },

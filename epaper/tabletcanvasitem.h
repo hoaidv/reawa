@@ -102,6 +102,9 @@ private:
     void beginSelectionGesture(const QPointF &canvasPos);
     void updateSelectionGesture(const QPointF &canvasPos);
     void endSelectionGesture();
+    /** @implements [SRS-EP-04] local selection bounds + move ghost (not baked into ink) */
+    void paintSelectionChrome(QPainter *painter) const;
+    QRectF pickablePanelRect(const QString &id, double dxWorld = 0, double dyWorld = 0) const;
     void scheduleVectorRasterize(bool sharp);
     void rasterizeVectors(bool sharp);
     QPointF worldToPanel(double wx, double wy) const;
@@ -147,7 +150,11 @@ private:
     QPointF m_gestureStartWorld;
     QPointF m_gestureLastWorld;
     bool m_selectionGesture = false;
+    /** Last panel-space chrome rect — dirty region for soft update during drag. */
+    QRectF m_selectionChromeDirty;
     int m_toolIntentSeq = 0;
+    QElapsedTimer m_selectionGhostClock;
+    static constexpr qint64 kSelectionGhostMinIntervalMs = 50;
     bool m_rasterizePending = false;
     bool m_rasterizeSharp = false;
     /** Deferred sharp refresh queued while a stroke was in flight. */

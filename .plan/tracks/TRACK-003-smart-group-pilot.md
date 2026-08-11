@@ -4,7 +4,7 @@ slug: smart-group-pilot
 kind: planned
 status: active
 iter: iter-003
-cursor: "TRACK-003 UI+tools shipped — await human verify / next track"
+cursor: "verify FAILED — fix EP-006 + IN-019 (parallel) → human re-verify checklist"
 goal: "Ink-box pilot: infini REQ-04 + epaper REQ-03 tool modes"
 owner: sm
 ---
@@ -34,6 +34,8 @@ Deliver the ink-box pilot across both ends: Infini
 | [STORY-EP-003](../iter-003/stories/STORY-EP-003.md) | design | **done** | epaper strip |
 | [STORY-IN-018](../iter-003/stories/STORY-IN-018.md) | implement | **done** | transport |
 | [STORY-EP-005](../iter-003/stories/STORY-EP-005.md) | implement | **done** | device ToolChip + intent |
+| [STORY-EP-006](../iter-003/stories/STORY-EP-006.md) | implement | **ready** | verify fix — ToolChip touch |
+| [STORY-IN-019](../iter-003/stories/STORY-IN-019.md) | implement | **ready** | verify fix — connection eager sync |
 
 ## Board
 
@@ -48,3 +50,4 @@ Deliver the ink-box pilot across both ends: Infini
 | 2026-08-11 | Architect ADR-0013 + SRS; then confirm IN-15/16 + UV |
 | 2026-08-11 | SM sliced 11 stories; cursor → designer ∥ qa→dev |
 | 2026-08-11 | PM adopted CHL-0001/2/3 (create_refused, epaper platform, floating ToolChip) |
+| 2026-08-11 | Human verify FAILED — toolbar touch + late connection; sliced EP-006 + IN-019 |
