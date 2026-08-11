@@ -7,9 +7,20 @@ lifecycle: active
 
 # SRS — Vector document (Logic)
 
-Architect-owned wire + tree rules for [REQ-02](../../prd.md#vector-document).
+Architect-owned tree rules for [REQ-02](../../prd.md#vector-document).
 Structural decision: [ADR-0010](../../../../adr/ADR-0010-tree-of-vectors.md).
 Session sync: [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md).
+
+**Implementation status (code SoT, 2026-08-11)**
+
+| Layer | Status |
+|---|---|
+| `infini/src/document/VectorDocument.ts` | Tree + `applyOp` + SVG serialize/parse — **unit-tested** |
+| Live canvas paint | `InfiniDocument` WorldLayer primitives — **not** tree-driven yet |
+| Live RM ink | Appended as WorldLayer `path`s — does **not** `append_ink` into the tree |
+| Doc open/save chrome | Not shipped |
+| Smart Group UI / enclose | Ops apply in library; no CanvasStage UX |
+| Live `doc_op` wire | Not shipped (see tablet-sync interim) |
 
 ## [SRS-IN-04] Tree model and three representations
 
@@ -75,11 +86,12 @@ Anchor = {
    children in v0.
 ### Three representations
 
-| Representation | Role | Mapping |
-|---|---|---|
-| **In-memory tree** | Session SoT | Above |
-| **Persistence** | Disk SVG profile | Serialize/deserialize tree ([srs-data](./srs-data.md)) |
-| **Transmit** | Op-log on wire | Append-only ops that mutate the tree; peers apply in order |
+| Representation | Role | Mapping | Shipped? |
+|---|---|---|---|
+| **In-memory tree** | Target session SoT | Above | Library yes; live paint no |
+| **Persistence** | Disk SVG profile | Serialize/deserialize tree ([srs-data](./srs-data.md)) | Library yes; UI chrome no |
+| **Transmit** | Op-log on wire | Append-only ops | Unit/session helpers only |
+| **WorldLayer snapshot** | Interim tablet picture | `doc_snapshot` nodes | **Live** Infini→Epaper |
 
 ### Response fields that drive UI
 

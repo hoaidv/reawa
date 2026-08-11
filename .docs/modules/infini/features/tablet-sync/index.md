@@ -7,7 +7,7 @@ module: infini
 
 # Feature — Tablet sync (Infini side)
 
-Session with Epaper: receive strokes; publish viewport / drawing region.
+Session with Epaper: ingest `stroke_*`; publish `viewport` + `doc_snapshot`.
 
 - Product: [PRD REQ-03](../../prd.md#tablet-sync)
 - Logic: [srs-logic.md](./srs-logic.md) — [SRS-IN-07]
@@ -15,4 +15,5 @@ Session with Epaper: receive strokes; publish viewport / drawing region.
 - BDD: [bdd/session-channels.feature](./bdd/session-channels.feature)
 - Document model: [vector-document](../vector-document/index.md)
 - Sibling: [epaper/region-sync](../../../epaper/features/region-sync/index.md)
+- Protocol: [epaper/protocol/viewport-sync.md](../../../../epaper/protocol/viewport-sync.md)
 - Decision: [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md) · [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md)

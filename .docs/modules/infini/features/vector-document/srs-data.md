@@ -169,7 +169,7 @@ Exact attribute grammar may tighten in an appendix without changing ADR-0010.
 | `remove_node` | `{ id }` |
 | `set_text` | `{ id, runs }` |
 | `create_connector` | `{ id, from, to }` |
-| `create_smart_group` | `{ id, bounds, transform?, inkScaleMode?, childIds }` |
+| `create_smart_group` | `{ id, bounds, transform?, inkScaleMode?, children: InkNode[] }` (code) — older fixtures may use `childIds` |
 | `set_smart_transform` | `{ id, transform }` |
 | `set_ink_scale_mode` | `{ id, inkScaleMode }` |
 

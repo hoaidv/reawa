@@ -58,7 +58,27 @@ ops; refresh raster when the device can.
 
 | Approach | Latency | Consistency | Cost | Notes |
 |---|---|---|---|---|
-| **Shared op-log + viewport channel** | + | + | 0 | Chosen |
+| **Shared op-log + viewport channel** | + | + | 0 | Chosen (target) |
 | Dual independent docs + periodic full resync | − | − | + cheap until desync | Rejected — violates “never render differently” |
 | Infini-authoritative bitmap push to RM | − | + pixels | − bandwidth | Rejected — kills local ink feel |
 | CRDT full generality | 0 | + | − complexity | Deferred until multi-editor needs appear |
+
+## Amendments
+
+### 2026-08-11 — Interim wire matches shipped code
+
+Production Infini↔Epaper today uses:
+
+| Channel | Shipped messages |
+|---|---|
+| Viewport | `viewport` (+ `orientation`, `settle`, `drawingRegion`) |
+| Document picture | one-shot / rare `doc_snapshot` (WorldLayer nodes) |
+| Ink stream | Epaper→Infini `stroke_begin|point|end` (panel coords; world brush width) |
+
+Bitmap `region_refresh` is **rejected** on device. Live bidirectional `doc_op` /
+`append_ink` remains the **target** shape of this ADR and is exercised in unit tests /
+`regionsync/` headers, but is **not** the Qt/Electron live path yet.
+
+Same-picture rule still holds: Epaper paints from its local vector node list ∩ current
+`drawingRegion` after applying viewport; Infini shows the same WorldLayer content for
+that AABB. Migration to a pure op-log does not change the rule — only the encoding.

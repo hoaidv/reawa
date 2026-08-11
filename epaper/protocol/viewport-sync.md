@@ -1,51 +1,78 @@
-# Viewport + stroke sync protocol (spike → product draft)
+# Viewport + stroke sync protocol (shipped)
 
-Bidirectional sync between a macOS infinity canvas viewer and the on-device
-Epaper drawing app over TCP (USB `10.11.99.1` or Wi‑Fi).
+Bidirectional JSON-lines over TCP between Infini (Electron, listen `:9877`) and
+Epaper (`RM_SYNC_HOST`, typically `10.11.99.12`).
 
-Status: draft from [EXP-0001](../../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md).
-Local ink ([SRS-EP-01](../../.docs/modules/epaper/features/local-pen-ink/srs-logic.md)) does not depend on this file.
+Status: **code-truth** 2026-08-11. Local ink does not depend on Infini
+([SRS-EP-01](../../.docs/modules/epaper/features/local-pen-ink/srs-logic.md)).
+
+Product SRS: [SRS-IN-07](../../.docs/modules/infini/features/tablet-sync/srs-logic.md) ·
+[SRS-EP-02](../../.docs/modules/epaper/features/region-sync/srs-logic.md).
 
 ## Coordinate spaces
 
-| Space | Origin | Notes |
-|---|---|---|
-| **Canvas world** | Top-left, Y down | Infinite 2D; all strokes stored here |
-| **Visible frame** | Sub-rect of canvas world | macOS window content rect after pan/zoom |
-| **Drawing frame** | Fixed center of visible frame (UI coords) | Maps 1:1 to RM screen pixels; only this region syncs to RM |
-| **RM device** | Digitizer / mapped scene | Pen samples; Epaper maps to panel scene per SRS-EP-01 |
+| Space | Notes |
+|---|---|
+| **World** | Infini canvas; Y down; stroke widths in world units |
+| **Tablet CSS frame** | Max-fit centered rect in Infini window (gut aspect) |
+| **drawingRegion** | World AABB of that frame |
+| **Panel** | RM2 framebuffer after Round 19 digitizer map |
+| **Frame UV** | Panel → [0,1]² via gut orientation |
 
-Transform on macOS pan/zoom: update `visible_origin` + `zoom`; drawing frame stays centered in window; world rect under drawing frame changes → sent to RM as new viewport.
+## Messages
 
-## Messages (JSON lines, newline-delimited)
-
-### `viewport` (macOS → RM)
+### `viewport` (Infini → Epaper)
 
 ```json
 {
   "type": "viewport",
   "seq": 42,
-  "world": { "x": -1200, "y": -800, "w": 2400, "h": 1600 },
-  "drawing_frame": { "cx": 1200, "cy": 800, "w": 1404, "h": 1052 },
-  "zoom": 1.25,
-  "brush_scale": 1.25
+  "translate": { "x": -120, "y": 40 },
+  "scale": 1.5,
+  "drawingRegion": { "minX": 0, "minY": 0, "maxX": 800, "maxY": 1066 },
+  "orientation": "gutToLeft",
+  "settle": true
 }
 ```
 
-### `stroke_begin` / `stroke_point` / `stroke_end` (RM → macOS)
+`settle` is set on flush / gesture end. Orientation: `gutOnTop` | `gutToLeft` |
+`gutAtBottom` | `gutToRight`.
+
+### `doc_snapshot` (Infini → Epaper)
 
 ```json
-{"type":"stroke_begin","id":"s-1","brush":{"width":2.0,"opacity":1.0}}
-{"type":"stroke_point","id":"s-1","x":10234,"y":5678,"p":0.82,"t":1710000000123}
+{
+  "type": "doc_snapshot",
+  "nodes": [
+    { "kind": "path", "id": "p1", "strokeWidth": 2.5, "points": [{ "x": 1, "y": 2 }] },
+    { "kind": "ellipse", "id": "e1", "strokeWidth": 2.5, "cx": 0, "cy": 0, "rx": 40, "ry": 40 }
+  ]
+}
+```
+
+One-shot / rare. Not a full tree-of-vectors dump.
+
+### `stroke_*` (Epaper → Infini)
+
+```json
+{"type":"stroke_begin","id":"s-1","brush":{"width":2.5},"cw":1404,"ch":1872}
+{"type":"stroke_point","id":"s-1","x":702,"y":936,"p":0.82}
 {"type":"stroke_end","id":"s-1"}
 ```
 
-### `stroke_batch` (macOS → RM, on viewport change)
+`brush.width` = **world** units. `x,y` = **panel** pixels after digitizer map.
 
-After pan/zoom, macOS sends clipped stroke segments for the new drawing-frame world rect so RM can full-frame e-paper refresh.
+### Ignored / not sent
+
+| Type | Status |
+|---|---|
+| `region_refresh` | Legacy PNG — Epaper ignores; Infini must not send |
+| `doc_op` / `append_ink` | Library / future ADR-0009 path |
+| `stroke_batch` | Removed — replaced by `doc_snapshot` + local rasterize |
 
 ## Re-render rules
 
-1. **Pan/zoom on macOS** — recompute world rect under drawing frame; send `viewport`; RM clears and repaints from `stroke_batch`.
-2. **Draw on RM** — local ink immediately; stream points to macOS; macOS appends to world model.
-3. **Brush size** — store strokes in world units at zoom=1; scale at render time via `brush_scale`.
+1. **Pan/zoom Infini** — coalesce `viewport` ≤30 Hz; settle flush with `settle:true`.
+2. **Draw on RM** — local ink immediately; stream `stroke_*`; Infini appends WorldLayer paths.
+3. **Brush size** — world units; panel/CSS thickness = world × current scale (ADR-0012).
+4. **Picture on RM** — rasterize `doc_snapshot` nodes ∩ `drawingRegion` locally; soft coalesce ≥250 ms; sharp on settle.

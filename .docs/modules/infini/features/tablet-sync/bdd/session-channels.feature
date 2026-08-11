@@ -1,55 +1,33 @@
 @SRS-IN-07
 Feature: Infini tablet session viewport and document channel
-  As Infini in an ADR-0009 session
-  I publish viewport and apply Epaper document ops
-  So that drawing region and tree stay in sync
+  As Infini in an ADR-0009 session (interim wire)
+  I publish viewport and doc_snapshot and ingest Epaper strokes
+  So that drawing region and region picture stay in sync
 
-  # STORY-IN-009 — SRS-IN-07 (+ SRS-IN-08 quality where cited)
+  # Shipped wire — STORY-IN-009 / IN-011
 
   @SRS-IN-07
   Scenario: Pan zoom emits viewport message
     Given a live session between Infini and Epaper
     When Infini pans to translate (-120, 40) and zooms to uniform scale 1.5
-    Then a viewport message is emitted on the viewport channel toward Epaper
-    And the message includes type "viewport", translate, scale, drawingRegion AABB, and monotonic seq
+    Then a viewport message is emitted toward Epaper
+    And the message includes type "viewport", translate, scale, drawingRegion AABB, orientation, and monotonic seq
 
   @SRS-IN-07
-  Scenario: append_ink from Epaper updates tree and WorldLayer
-    Given a live session and an empty or open Infini document
-    When Epaper sends doc_op append_ink with opId "ink_1" and world-space samples
-    And Infini applies that op
-    Then the materialised tree contains the new Ink node
-    And WorldLayer reflects the new ink on the next paint
-    When the same opId "ink_1" is applied again
-    Then the tree is unchanged (idempotent)
+  Scenario: Epaper stroke stream becomes WorldLayer path
+    Given a live session and Infini WorldLayer
+    When Epaper sends stroke_begin with world brush width then stroke_point panel samples then stroke_end
+    Then Infini maps panel coords through gut UV into drawingRegion world space
+    And a path primitive appears on WorldLayer with that world stroke width
 
   @SRS-IN-07
-  Scenario: Infini structure emit respects in-flight Epaper stroke
-    Given the v0 emit matrix allows Infini to emit structure and Smart Group ops
-    And an Epaper stroke is in flight (samples still arriving for the current stroke)
-    When Infini would emit a structure or create_smart_group op
-    Then Infini does not race the in-flight stroke (pause or queue per product rule)
-    When no Epaper stroke is in flight
-    And Infini edits structure
-    Then those ops may be emitted on the document channel
-
-  @SRS-IN-07
-  Scenario: Duplicate opId ignored and unknown type logged
-    Given a live Infini document channel consumer
-    When a doc_op with a previously applied opId arrives
-    Then the duplicate is ignored and the tree is unchanged
-    When a doc_op with an unknown type arrives
-    Then the event is logged
-    And the process does not crash
-    And the prior tree is retained
-
-  @SRS-IN-08
-  Scenario: Viewport map apply meets latency budget
-    Given a live session
-    When Infini emits a viewport change
-    Then Epaper map apply completes within p95 100 ms (panel refresh may trail)
-
-  # STORY-IN-011 — marker + coalesce + tablet-frame drawingRegion (+ SRS-IN-08 parity)
+  Scenario: Initial sync pushes vector doc_snapshot not bitmap
+    Given a live session and Infini has world primitives under the tablet frame
+    When the Epaper client connects or Infini first publishes viewport
+    Then Infini sends a doc_snapshot with vector nodes (line rect ellipse path)
+    And Infini does not push a region_refresh PNG for that content
+    When Infini later pans or zooms
+    Then only viewport messages are required for Epaper to re-rasterize locally
 
   @SRS-IN-07
   Scenario: Drawing-region marker hidden when idle
@@ -85,7 +63,21 @@ Feature: Infini tablet session viewport and document channel
     Then outbound viewport messages are at most 30
     And the last emitted message carries the latest translate scale and drawingRegion
     When the gesture ends
-    Then a final viewport flush is emitted with the settle pose
+    Then a final viewport flush is emitted with settle true
+
+  @SRS-IN-07
+  Scenario: Gut orientation cycles four poses
+    Given Infini Sync orientation control
+    When the user cycles orientation
+    Then orientation is one of gutToLeft gutOnTop gutAtBottom gutToRight
+    And the tablet frame aspect is tall for gutToLeft and gutToRight
+    And the tablet frame aspect is wide for gutOnTop and gutAtBottom
+
+  @SRS-IN-08
+  Scenario: Viewport map apply meets latency budget
+    Given a live session
+    When Infini emits a viewport change
+    Then Epaper map apply completes within p95 100 ms (panel refresh may trail)
 
   @SRS-IN-08
   Scenario: World stroke width scales with viewport on Infini
@@ -94,11 +86,19 @@ Feature: Infini tablet session viewport and document channel
     Then CSS line width halves when scale halves
     And relative thickness lineWidth_css / F_css stays consistent with ADR-0012
 
-  @SRS-IN-07
-  Scenario: Initial sync pushes vector doc_snapshot not bitmap
-    Given a live session and Infini has world primitives under the tablet frame
-    When the Epaper client connects or Infini first publishes viewport
-    Then Infini sends a doc_snapshot with vector nodes (line rect ellipse path)
-    And Infini does not push a region_refresh PNG for that content
-    When Infini later pans or zooms
-    Then only viewport messages are required for Epaper to re-rasterize locally
+  # Library / future op-log — not live CanvasStage wire
+
+  @SRS-IN-07 @future
+  Scenario: append_ink from Epaper updates tree and WorldLayer
+    Given VectorDocument session helpers under unit test
+    When Epaper-shaped doc_op append_ink with opId "ink_1" is applied
+    Then the materialised tree contains the new Ink node
+    When the same opId "ink_1" is applied again
+    Then the tree is unchanged (idempotent)
+
+  @SRS-IN-07 @future
+  Scenario: Infini structure emit respects in-flight Epaper stroke
+    Given session queue helpers for structure ops
+    And an Epaper stroke is in flight
+    When Infini would emit a structure or create_smart_group op
+    Then Infini does not race the in-flight stroke (pause or queue)

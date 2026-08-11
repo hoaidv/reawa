@@ -1,16 +1,20 @@
 ---
 feature: tablet-sync
 parent_req: [REQ-03]
-version: 0.3.0
+version: 0.4.0
 lifecycle: active
 ---
 
 # SRS — Tablet sync Infini (Logic)
 
 Binds Infini to the shared session in [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md)
-and stroke paint parity in [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md).
-Document tree + ops: [vector-document SRS-IN-04/09](../vector-document/srs-logic.md) ·
-[ADR-0010](../../../../adr/ADR-0010-tree-of-vectors.md) · [ADR-0011](../../../../adr/ADR-0011-smart-group.md).
+(interim wire: see ADR amendments) and stroke paint parity in
+[ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md).
+Tree library: [vector-document](../vector-document/srs-logic.md).
+
+**Code SoT (2026-08-11):** `infini/src/session/TabletSession.ts`,
+`infini/src/canvas/CanvasStage.tsx`, `infini/src/canvas/Viewport.ts`,
+`infini/electron/main.cjs` (TCP `:9877`).
 
 ## [SRS-IN-07] Session roles and channel binding
 
@@ -18,136 +22,136 @@ Parent REQ: [REQ-03](../../prd.md#tablet-sync).
 
 ### Endpoint(s)
 
-Local network session to RM2 (USB Ethernet). Framing baseline: **JSON-lines** messages
-(EXP-0001 spike). Auth: none in v0 (trusted local link).
+Local network session to RM2 (USB Ethernet). Framing: **JSON-lines** over TCP.
+Auth: none in v0 (trusted local link). Default listen: `0.0.0.0:9877`.
 
-### Channels
+### Channels (shipped)
 
 | Channel | Owner (writer) | Consumer | Priority |
 |---|---|---|---|
 | **Viewport** | Infini | Epaper | High — apply before next pen sample |
-| **Document** | Both (see emit matrix) | Both | Normal — ordered op-log |
+| **Document snapshot** | Infini | Epaper | One-shot / rare — WorldLayer vectors |
+| **Stroke stream** | Epaper | Infini | Normal — panel samples → world paths |
+
+Target ADR-0009 **op-log** (`doc_op` / `append_ink`) exists in session types +
+`VectorDocument` unit tests; **not** on the live CanvasStage ↔ RM path.
 
 ### Tablet drawing frame (CSS) and `drawingRegion` (world)
 
-Infini maintains a **tablet drawing frame**: an axis-aligned rectangle in **CSS window
-pixels** with the Epaper panel aspect ratio (RM2 portrait/landscape as product configures).
-Default placement: **centered** in the canvas host (resize keeps aspect; may letterbox).
-
 | Concept | Space | Meaning |
 |---|---|---|
-| Tablet drawing frame | CSS px | What the marker outlines; maps 1:1 to Epaper panel |
-| `drawingRegion` | World AABB | Inverse-map of that frame under current viewport |
+| Tablet drawing frame | CSS px | Max-fit centered rect matching panel aspect for current gut pose |
+| `drawingRegion` | World AABB | `frameWorldAabb(frame, viewport)` |
 
-```text
-drawingRegion = screenToWorld(frame.min) … screenToWorld(frame.max)
-  where screenToWorld(p) = p / scale - translate   // [SRS-IN-01]
-```
+Panel aspect: RM2 native `1404×1872`. Tall guts → portrait aspect; wide guts → landscape aspect.
 
-`drawingRegion` in the viewport message **must** be this frame’s world AABB — **not**
-necessarily the full CSS window. Full-window AABB is only correct if the frame fills the
-host (tests may use that).
+### Orientation (four gut poses)
 
-### Drawing-region marker (gesture affordance)
+| Id | Frame | invertX | invertY | Notes |
+|---|---|---|---|---|
+| `gutToLeft` | tall | false | false | **Default** — verified vertical |
+| `gutOnTop` | wide | false | false | Landscape unwrap + L/R u-flip |
+| `gutAtBottom` | wide | true | true | |
+| `gutToRight` | tall | true | true | |
+
+Legacy aliases on Epaper ingest: `portrait`→`gutToLeft`, `landscape`→`gutOnTop`.
+
+`panelToFrameUv` maps post-digitizer **panel** coords → frame UV for RM→Infini strokes.
+
+### Drawing-region marker
 
 | State | Marker |
 |---|---|
-| Idle (`ui.gesturing = false`) | **Not visible** (no permanent chrome frame) |
-| Pan/zoom active (`ui.gesturing = true`) | **Visible** outline of the tablet drawing frame |
-| Gesture end | Hide after settle (≤ 150 ms fade allowed; must not remain as chrome) |
-
-Marker is a **sync affordance** only (REQ-03 Needs design: no). It tracks the CSS frame
-rect; it does not invent a second region.
+| Idle | Not visible |
+| Pan/zoom active | Visible outline of CSS frame |
+| Gesture end | Hide after **100 ms** settle debounce (no fade required) |
 
 ### Viewport message (Infini → Epaper)
 
 | Field | Required | Meaning |
 |---|---|---|
 | `type` | yes | `viewport` |
-| `translate` | yes | `{ x, y }` world — Infini canvas translate |
-| `scale` | yes | uniform > 0 — Infini canvas scale |
-| `drawingRegion` | yes | World AABB of tablet drawing frame |
+| `translate` | yes | `{ x, y }` |
+| `scale` | yes | uniform > 0 |
+| `drawingRegion` | yes | World AABB of tablet frame |
 | `seq` | yes | monotonic |
+| `orientation` | yes (shipped) | gut id string |
+| `settle` | on flush | `true` when gesture settle / force flush |
 
 ### Viewport publish coalesce
 
 | Rule | Value |
 |---|---|
-| During continuous pan/zoom | Coalesce outbound viewport to **≤ 30 Hz** (or one emit per animation frame, whichever is lower); **latest** translate/scale/region wins |
-| On gesture end | **Flush** the final viewport within 1 frame (must not drop the settle pose) |
-| Map freshness | Coalesce must not prevent Epaper from meeting [SRS-IN-08](./srs-quality.md) map-apply budget once a message is sent |
+| Continuous pan/zoom | ≤ **30 Hz**; latest wins |
+| Gesture end / force | `flushViewport` — bypass rate limit; `settle: true` |
+| Wheel settle | ~100 ms debounce then flush |
 
-Infini still owns translate + scale; Epaper never pans/zooms the session viewport.
-
-### Document op envelope (either direction)
-
-Matches [SRS-IN-09](../vector-document/srs-data.md):
+### Document snapshot (Infini → Epaper)
 
 ```text
-{ opId, type, payload, ts?, source: "epaper"|"infini" }
+{ "type": "doc_snapshot", "nodes": [ WorldLayerNode, ... ] }
 ```
 
-Apply is **idempotent** on `opId`. Peers maintain the same materialised tree.
+Node kinds from live WorldLayer: `line` | `rect` | `ellipse` | `path` + `id` +
+`strokeWidth` (world) + geometry fields. **Not** a full ADR-0010 tree dump.
 
-### Emit matrix (v0 sync wave)
+Sent on: RM connect, first viewport publish, orientation change (and whenever product
+forces a resync). Pan/zoom after that is viewport-only; Epaper re-rasterizes locally.
 
-| Op `type` | Epaper may emit | Infini may emit | Notes |
-|---|---|---|---|
-| `append_ink` | **yes** (primary) | later (desktop ink) | Samples in **world** space after current viewport map; width in world units ([ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md)) |
-| `insert_node` / `create_*` structure | no (v0) | yes (when desktop edits) | Groups, frames, text, primitives, connectors |
-| `create_smart_group` / enclose | no (v0) | **yes** (Infini-first pilot) | Epaper keeps emitting raw ink; Infini may promote |
-| `set_smart_transform` / `set_ink_scale_mode` | no | yes | |
-| `reparent` / `remove_node` | no | yes | |
-| Snapshot / hello | optional | optional | Reconnect catch-up TBD |
+### Stroke stream (Epaper → Infini)
 
-**v0 editing rule:** While Epaper is the active pen editor, Infini is **viewer + viewport
-owner** for ink capture — it applies incoming `append_ink` and does not fight Epaper on the
-same stroke. Smart Group / structure edits on Infini are allowed when not racing an in-flight
-stroke (product: pause or queue).
+| Message | Fields |
+|---|---|
+| `stroke_begin` | `id`, `brush.width` (**world** units), optional `cw`/`ch` panel size |
+| `stroke_point` | `id`, `x`, `y` (**panel** after Round 19 map), optional `p` |
+| `stroke_end` | `id` |
+
+Infini maps panel→UV→`drawingRegion` world and appends WorldLayer `path` primitives.
+Does **not** call `VectorDocument.append_ink` on the live path today.
 
 ### Stroke paint (Infini)
 
 Per [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md):
 
-- Ink `strokeWidth` is **world units**.
-- Canvas paint: `lineWidth_css = strokeWidth_world * viewport.scale` (pressure curve applied in world space first).
-- Zoom in → thicker CSS strokes; zoom out → thinner. Synced ink must not use screen-constant width.
+- Ink / path `strokeWidth` is **world units**.
+- Canvas: CSS thickness ≈ `strokeWidth_world * viewport.scale`.
+- Zoom in → thicker; zoom out → thinner.
 
-### Response fields that drive UI
-
-| Field | Required | Drives UI |
-|---|---|---|
-| `session.connected` | yes | optional status (chrome later) |
-| `doc` tree | yes | WorldLayer projection ([SRS-IN-01](../infinity-canvas/srs-logic.md)) |
-| `viewport` | yes | canvas transform |
-| `ui.gesturing` | yes | marker visibility |
-| `tabletFrame` CSS rect | yes when session active | marker geometry |
-
-### Closed ids (message types)
+### Closed ids (message types) — shipped
 
 | id | Channel | Direction |
 |---|---|---|
 | `viewport` | viewport | Infini → Epaper |
-| `doc_op` | document | bidirectional |
-| `doc_ack` | document | optional ack of `opId` |
-| `hello` / `snapshot` | document | optional reconnect |
+| `doc_snapshot` | document picture | Infini → Epaper |
+| `stroke_begin` / `stroke_point` / `stroke_end` | stroke | Epaper → Infini |
+
+### Closed ids — library / future (not live wire)
+
+| id | Notes |
+|---|---|
+| `doc_op` | Typed + unit-tested; UI does not emit |
+| `doc_ack` / `hello` | TBD reconnect protocol |
+| `region_refresh` | Legacy PNG — **do not send**; Epaper ignores |
 
 ### Errors / partial failure
 
 | Case | Behavior |
 |---|---|
-| Duplicate `opId` | Ignore (idempotent) |
-| Unknown op type | Log; do not crash; optional NACK |
-| Gap in seq / missing op | Request snapshot or mark session degraded (CHL if product needs hard fail) |
-| Apply fails validation (e.g. bad parentId) | Reject op; keep prior tree; surface debug |
+| No native bridge | Browser-only; no RM sync |
+| Bad JSON line | Log; continue |
+| Unknown host→RM type | Epaper ignores |
+| RM disconnect | Status update; resend snapshot on reconnect |
 
 ### Other logic
 
-- Render path: apply doc ops → flatten tree (incl. SmartGroup transforms) → spatial cull → paint with world-width × scale.
-- Live path uses ADR-0009 session (`TabletSession`); legacy EXP StrokeSync must not define the drawing-region map once the session is connected.
+- Live paint SoT: `InfiniDocument` WorldLayer (demo primitives + RM paths).
+- `TabletSession` may hold a `VectorDocument` for future op sync; structure ops are not
+  on the RM wire yet.
 
 ---
 
 ## Superseded
 
-_None._ W5 thicken 2026-08-11: marker, tablet frame / `drawingRegion`, publish coalesce, ADR-0012 paint.
+W5 wording that required live `doc_op` / `append_ink` / PNG `region_refresh` as the
+production path is **superseded** by this 0.4.0 code-truth rewrite (2026-08-11). Target
+op-log remains ADR-0009 long-term.
