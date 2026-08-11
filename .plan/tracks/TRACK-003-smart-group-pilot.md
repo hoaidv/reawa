@@ -2,9 +2,10 @@
 id: TRACK-003
 slug: smart-group-pilot
 kind: planned
-status: active
+status: paused
+paused_reason: "CHL-0008 — human restored code to HEAD; total architecture rework (not more patch waves)"
 iter: iter-003
-cursor: "verify FAILED — fix EP-006 + IN-019 (parallel) → human re-verify checklist"
+cursor: "PAUSED — CHL-0008 architecture rework; await PM adopt + /architect"
 goal: "Ink-box pilot: infini REQ-04 + epaper REQ-03 tool modes"
 owner: sm
 ---
@@ -41,6 +42,14 @@ Deliver the ink-box pilot across both ends: Infini
 
 [execution-board](../iter-003/execution-board.md)
 
+## Freeze note (2026-08-11)
+
+- **Trigger:** Human restored `Epaper/` + `infini/` to latest commit; directed **total architecture rework**.
+- **In-flight abandoned:** CHL-0007 hotfixes (not in tree); W7 verify-fix (EP-006 / IN-019) and any CHL-0004…0006 code paths beyond HEAD.
+- **Plan residue (uncommitted):** challenges CHL-0004…0007, stories EP-008…011 / IN-023…026, related handoffs — keep as evidence; do not schedule until PM/architect.
+- **Risks if resumed blindly:** patch stack on ADR-0013 selection/ghost/snapshot model already failed human verify repeatedly (residue, snap-back, enclose desync, GUI freeze from mid-drag rasterize).
+- **Resume checklist:** PM resolves CHL-0008 → Architect redesign/ADR → SM re-slice → QA → Dev. Re-run gates on both modules before calling pilot verified.
+
 ## Log
 
 | Date | Note |
@@ -51,3 +60,4 @@ Deliver the ink-box pilot across both ends: Infini
 | 2026-08-11 | SM sliced 11 stories; cursor → designer ∥ qa→dev |
 | 2026-08-11 | PM adopted CHL-0001/2/3 (create_refused, epaper platform, floating ToolChip) |
 | 2026-08-11 | Human verify FAILED — toolbar touch + late connection; sliced EP-006 + IN-019 |
+| 2026-08-11 | **Paused** — CHL-0008 architecture rework; code at HEAD |

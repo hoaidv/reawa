@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-11T09:40:51+00:00
+generated_at: 2026-08-11T13:05:08+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -14,6 +14,10 @@ generated_at: 2026-08-11T09:40:51+00:00
 | [STORY-EP-005](./iter-003/stories/STORY-EP-005.md) | Epaper device tool modes and intent emission | implement | dev | epaper | [SRS-EP-04], [SRS-EP-06] | done | iter-003 | 5 |
 | [STORY-EP-006](./iter-003/stories/STORY-EP-006.md) | ToolChip capacitive touch routing | implement | dev | epaper | [SRS-EP-04] | done | iter-003 | 3 |
 | [STORY-EP-007](./iter-003/stories/STORY-EP-007.md) | Selection mode must not draw ink | implement | dev | epaper | [SRS-EP-04] | in-review | iter-003 | 1 |
+| [STORY-EP-008](./iter-003/stories/STORY-EP-008.md) | Tablet handle resize tool_intent | implement | dev | epaper | [SRS-EP-04] | in-review | iter-003 | 3 |
+| [STORY-EP-009](./iter-003/stories/STORY-EP-009.md) | Tablet move/resize ghost with ink preview | implement | dev | epaper | [SRS-EP-04] | in-review | iter-003 | 2 |
+| [STORY-EP-010](./iter-003/stories/STORY-EP-010.md) | fixedInk mode-correct resize ghost | implement | dev | epaper | [SRS-EP-04] | in-review | iter-003 | 3 |
+| [STORY-EP-011](./iter-003/stories/STORY-EP-011.md) | Live direct resize — drop ghost | implement | dev | epaper | [SRS-EP-04] | in-review | iter-003 | 5 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |
@@ -36,6 +40,10 @@ generated_at: 2026-08-11T09:40:51+00:00
 | [STORY-IN-020](./iter-003/stories/STORY-IN-020.md) | Push doc_snapshot after Smart Group mutations | implement | dev | infini | [SRS-IN-11] | in-review | iter-003 | 2 |
 | [STORY-IN-021](./iter-003/stories/STORY-IN-021.md) | Fixed-corner Smart Group resize | implement | dev | infini | [SRS-IN-11] | in-review | iter-003 | 3 |
 | [STORY-IN-022](./iter-003/stories/STORY-IN-022.md) | Default fixedInk and side resize handles | implement | dev | infini | [SRS-IN-09] | in-review | iter-003 | 2 |
+| [STORY-IN-023](./iter-003/stories/STORY-IN-023.md) | fixedInk resize via scale+translate | implement | dev | infini | [SRS-IN-11] | in-review | iter-003 | 3 |
+| [STORY-IN-024](./iter-003/stories/STORY-IN-024.md) | Ink-scale mode toggle on desktop | implement | dev | infini | [SRS-IN-11] | in-review | iter-003 | 2 |
+| [STORY-IN-025](./iter-003/stories/STORY-IN-025.md) | Pickables inkScaleMode + members | implement | dev | infini | [SRS-IN-13] | in-review | iter-003 | 2 |
+| [STORY-IN-026](./iter-003/stories/STORY-IN-026.md) | Live resize tool_intent + undo origin | implement | dev | infini | [SRS-IN-13] | in-review | iter-003 | 3 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |
 | [STORY-RW-003](./iter-000/stories/STORY-RW-003.md) | Accessibility permission gate | implement | dev | reawa | [SRS-RW-03] | done | iter-000 | 1 |

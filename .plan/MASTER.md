@@ -77,15 +77,13 @@ to 2. Recorded in [epaper REQ-03](../.docs/modules/epaper/prd.md#tool-modes) and
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
-| TRACK-003 | planned | **active** | **verify FAILED** — fix EP-006 ∥ IN-019 → human re-verify | [track](./tracks/TRACK-003-smart-group-pilot.md) |
+| TRACK-003 | planned | **paused** | **CHL-0008** — architecture rework; await PM + `/architect` | [track](./tracks/TRACK-003-smart-group-pilot.md) |
 
 ### Open challenges / blocked
 
-- None open — CHL-0001 / CHL-0002 / CHL-0003 **adopted** 2026-08-11 (PM).
-  CHL-0002 residual: ADLC `data-platform` allowlist +`epaper` awaits human approval.
+- **CHL-0008 open (high)** — human restored code to HEAD; total architecture rework. Interrupts TRACK-003.
+- CHL-0001…0003 adopted earlier; CHL-0004…0007 are plan residue (resolved on paper) but **code hotfixes discarded** by restore — do not treat as shipped.
 - IN-006 remains cancelled (historical).
-- **Human verify failed 2026-08-11** — toolbar touch + late RM connection; expedite EP-006 + IN-019.
-  Smart Group create paths untested (blocked, not yet a defect).
 
 ### Design packages in flight
 
@@ -94,17 +92,15 @@ to 2. Recorded in [epaper REQ-03](../.docs/modules/epaper/prd.md#tool-modes) and
 
 ### Execution board(s)
 
-- [iter-003 execution-board](./iter-003/execution-board.md) — **W7 verify-fix NOW**
+- [iter-003 execution-board](./iter-003/execution-board.md) — **PAUSED (CHL-0008)**
 - [iter-002 board (final)](./iter-002/execution-board.md) — frozen
 
 ### Freeze notes
 
-- **No `/dev`** on UI implement stories until design deps done.
-- Architect confirmed IN-15/16 + UV → [confirm handoff](./iter-003/handoffs/2026-08-11-architect-to-sm-confirm-in-15-16.md).
-- **Do not start EP-003** before EP-004 spike.
+- **TRACK-003 paused** — see track freeze note. No `/dev` on verify-fix or CHL-0007 paths.
 - Retro-gate: [pm-retro-gate-pass](./iter-002/handoffs/2026-08-11-pm-retro-gate-pass.md)
 
 ## Forward
 
-- Now: `/dev` EP-006 ∥ IN-019 → human re-verify → close-iter
+- **Now:** `/pm` triage CHL-0008 → re-lock execution → `/architect` redesign → `/sm` re-slice
 - Backlog: [backlog.md](./backlog.md)
