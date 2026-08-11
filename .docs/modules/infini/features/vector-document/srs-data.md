@@ -117,7 +117,7 @@ Kinds: `ink` | `text` | `primitive` | `group` | `smart_group` | `frame` | `conne
 | `transform` | Local→world: translate, rotation (rad), scaleX/Y |
 | `inkScaleMode` | `withBounds` \| `fixedInk` — applies to **content** ink only; boundary ink always transforms |
 | `children[].role` | `content` (handwriting inside) \| `boundary` (preserved enclose / surround stroke) |
-| `children[].layoutOffset` | **Content only (pilot).** Relative UV `(u,v)` of that ink’s centroid in the SmartGroup bounds — used under `fixedInk` so each ink tracks the box independently. Seeded at create/membership; ignored for `boundary`. Architect may store an equivalent local offset vector instead of UV — one representation, round-trip stable. |
+| `children[].layoutOffset` | **Content only (pilot) — locked as UV.** `{ u, v }` in unit interval relative to `SmartGroup.bounds`: `u = (cx − bounds.x) / bounds.width`, `v = (cy − bounds.y) / bounds.height`, where `(cx, cy)` is that ink’s AABB centroid in **group-local** space at seed time. Required on every `role: content` child; **omit / ignore** on `boundary`. Round-trip in JSON + SVG `data-infini-layout-offset="u,v"`. Do **not** store a local offset vector instead — UV is the single representation. |
 
 ### InkSample schema
 
@@ -154,7 +154,7 @@ Exactly one of `port` | `boundary`. World position is **derived**, not stored as
 | Primitive line/rect/ellipse | matching SVG element + id attrs |
 | Group | `<g data-infini-kind="group" data-infini-id="…">` |
 | Frame | `<g data-infini-kind="frame" data-infini-id="…" data-infini-bounds="minX,minY,maxX,maxY">` |
-| SmartGroup | `<g data-infini-kind="smart-group" … data-infini-bounds data-infini-transform data-infini-ink-scale-mode>` |
+| SmartGroup | `<g data-infini-kind="smart-group" … data-infini-bounds data-infini-transform data-infini-ink-scale-mode>`; content ink children carry `data-infini-role="content"` + `data-infini-layout-offset="u,v"`; boundary ink carries `data-infini-role="boundary"` |
 | Connector | `<path data-infini-kind="connector" data-infini-from="id" data-infini-to="id" data-infini-from-port="east" data-infini-to-boundary="…">` |
 
 Root `<svg>` documents Infini profile version: `data-infini-doc-version="1"`.

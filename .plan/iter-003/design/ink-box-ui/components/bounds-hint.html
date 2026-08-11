@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="desktop">
+<head>
+  <meta charset="utf-8" />
+  <title>BoundsHint — self-contained</title>
+  <style>
+    body { margin: 2rem; background: #f2f4f7; font-family: system-ui, sans-serif; }
+    .demo { position: relative; width: 240px; height: 120px; background: #e8ebf0; }
+    .c-bounds-hint {
+      position: absolute; left: 30px; top: 20px; width: 160px; height: 70px;
+      border: 1px dashed rgba(91, 101, 115, 0.45); pointer-events: none;
+    }
+    .note { font-size: 12px; color: #5b6573; max-width: 20rem; }
+  </style>
+</head>
+<body>
+  <div class="demo">
+    <div class="c-bounds-hint" id="hint.smart_group_bounds" data-region="BoundsHint"></div>
+  </div>
+  <p class="note">Subtle dashed chrome only — never mistaken for boundary ink.</p>
+</body>
+</html>

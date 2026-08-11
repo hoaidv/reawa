@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="desktop">
+<head>
+  <meta charset="utf-8" />
+  <title>CreateSmartGroupCta — self-contained</title>
+  <style>
+    :root { --color-primary: #0f766e; --color-on-primary: #fff; --color-chrome: #fff; --color-border: #d0d5dd; --color-ink-muted: #5b6573; --radius-control: 6px; }
+    body { margin: 2rem; font-family: system-ui, sans-serif; display: grid; gap: 1rem; }
+    .c-create-cta {
+      display: inline-flex; padding: 6px 10px; border: 1px solid var(--color-primary); border-radius: var(--radius-control);
+      background: var(--color-primary); color: var(--color-on-primary); font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .c-create-cta:hover { filter: brightness(1.05); }
+    .c-create-cta:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-primary); }
+    .c-create-cta:active { filter: brightness(0.95); }
+    .c-create-cta:disabled {
+      background: var(--color-chrome); border-color: var(--color-border); color: var(--color-ink-muted); cursor: not-allowed; filter: none;
+    }
+    .c-refuse-hint {
+      margin: 0; padding: 4px 8px; font-size: 12px; max-width: 14rem;
+      background: var(--color-chrome); border: 1px solid var(--color-border); border-radius: var(--radius-control);
+    }
+  </style>
+</head>
+<body>
+  <button type="button" class="c-create-cta" id="cta.create_smart_group">Create Smart Group</button>
+  <div>
+    <button type="button" class="c-create-cta" id="cta.create_smart_group" disabled>Create Smart Group</button>
+    <p class="c-refuse-hint" id="ind.create_refused_no_surround" role="status">
+      No surround stroke — select a stroke that encloses the others.
+    </p>
+  </div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-11T06:42:35+00:00
+generated_at: 2026-08-11T07:44:57+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -9,6 +9,9 @@ generated_at: 2026-08-11T06:42:35+00:00
 |---|---|---|---|---|---|---|---|---|
 | [STORY-EP-001](./iter-002/stories/STORY-EP-001.md) | Epaper region sync map append_ink and refresh | implement | dev | epaper | [SRS-EP-02] | done | iter-002 | 5 |
 | [STORY-EP-002](./iter-002/stories/STORY-EP-002.md) | Viewport apply + e-ink coalesced region refresh | implement | dev | epaper | [SRS-EP-02] | done | iter-002 | 3 |
+| [STORY-EP-003](./iter-003/stories/STORY-EP-003.md) | Design Epaper three-tool strip | design | designer | epaper | [SRS-EP-05] | done | iter-003 | 3 |
+| [STORY-EP-004](./iter-003/stories/STORY-EP-004.md) | RM2 capacitive touch reachability spike | implement | dev | epaper | [SRS-EP-04] | done | iter-003 | 2 |
+| [STORY-EP-005](./iter-003/stories/STORY-EP-005.md) | Epaper device tool modes and intent emission | implement | dev | epaper | [SRS-EP-04], [SRS-EP-06] | draft | iter-003 | 5 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |
@@ -18,8 +21,15 @@ generated_at: 2026-08-11T06:42:35+00:00
 | [STORY-IN-007](./iter-002/stories/STORY-IN-007.md) | In-memory document tree and idempotent op apply | implement | dev | infini | [SRS-IN-04] | done | iter-002 | 5 |
 | [STORY-IN-008](./iter-002/stories/STORY-IN-008.md) | SVG persistence and shared op JSON fixtures | implement | dev | infini | [SRS-IN-09] | done | iter-002 | 3 |
 | [STORY-IN-009](./iter-002/stories/STORY-IN-009.md) | Infini tablet session viewport and document channel | implement | dev | infini | [SRS-IN-07] | done | iter-002 | 5 |
-| [STORY-IN-010](./iter-003/stories/STORY-IN-010.md) | Smart Group enclose recognition pilot | implement | dev | infini | [SRS-IN-10] | draft | iter-003 | 3 |
+| [STORY-IN-010](./iter-003/stories/STORY-IN-010.md) | Tool-armed enclose recognition (immediate Smart Group) | implement | dev | infini | [SRS-IN-10] | draft | iter-003 | 5 |
 | [STORY-IN-011](./iter-002/stories/STORY-IN-011.md) | Drawing-region marker + coalesced viewport publish | implement | dev | infini | [SRS-IN-07] | done | iter-002 | 3 |
+| [STORY-IN-012](./iter-003/stories/STORY-IN-012.md) | Tree-backed live ink ingestion (append_ink path) | implement | dev | infini | [SRS-IN-04] | done | iter-003 | 5 |
+| [STORY-IN-013](./iter-003/stories/STORY-IN-013.md) | Design Infini ink-box tools and selection overlay | design | designer | infini | [SRS-IN-14] | done | iter-003 | 5 |
+| [STORY-IN-014](./iter-003/stories/STORY-IN-014.md) | Snapshot undo ring for vector document | implement | dev | infini | [SRS-IN-12] | done | iter-003 | 3 |
+| [STORY-IN-015](./iter-003/stories/STORY-IN-015.md) | Smart Group selection hit-test move resize and fixedInk UV | implement | dev | infini | [SRS-IN-11] | draft | iter-003 | 5 |
+| [STORY-IN-016](./iter-003/stories/STORY-IN-016.md) | Draw-into membership for existing Smart Groups | implement | dev | infini | [SRS-IN-15] | draft | iter-003 | 3 |
+| [STORY-IN-017](./iter-003/stories/STORY-IN-017.md) | Selection create requires surround stroke | implement | dev | infini | [SRS-IN-16] | draft | iter-003 | 3 |
+| [STORY-IN-018](./iter-003/stories/STORY-IN-018.md) | Tool intent transport (stroke intent, pickables, tool_intent) | implement | dev | infini | [SRS-IN-13] | draft | iter-003 | 5 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |
 | [STORY-RW-003](./iter-000/stories/STORY-RW-003.md) | Accessibility permission gate | implement | dev | reawa | [SRS-RW-03] | done | iter-000 | 1 |

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ink-box-ui — scene navigator</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    body { margin: 0; font-family: var(--font-sans); background: #f4f4f5; height: auto; min-height: 100vh; }
+    .nav-shell { display: flex; min-height: 100vh; }
+    .nav-side {
+      width: 16rem; flex-shrink: 0; padding: 1rem;
+      border-right: 1px solid #d4d4d8; background: #fff;
+    }
+    .nav-side strong { display: block; margin-bottom: 0.75rem; }
+    .nav-side a {
+      display: block; padding: 0.45rem 0.5rem; margin: 0.15rem 0;
+      border-radius: 0.35rem; color: inherit; text-decoration: none; font-size: 13px;
+    }
+    .nav-side a:hover, .nav-side a:focus-visible { background: #e4e4e7; outline: none; }
+    .nav-side a[aria-current="page"] { background: #e4e4e7; font-weight: 600; }
+    .nav-main {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; padding: 1rem; min-width: 0;
+    }
+    .nav-main .hint { align-self: stretch; margin: 0 0 0.75rem; font-size: 0.875rem; color: #52525b; }
+    .preview-stage { display: flex; justify-content: center; width: 100%; }
+    .preview-scale { transform-origin: top center; background: #fff; box-shadow: 0 1px 8px rgb(0 0 0 / 12%); }
+    .preview-scale iframe { display: block; border: 0; width: 100%; height: 100%; background: #fff; }
+    .preview-stage[data-preview-scale="desktop"] .preview-scale {
+      width: min(1280px, 100%); height: calc(100vh - 4rem);
+      transform: scale(1); border: 1px solid #d4d4d8;
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-shell" data-platform="desktop">
+    <nav class="nav-side" aria-label="Scenes">
+      <strong>ink-box-ui scenes</strong>
+      <a href="./ink-box-ui-selection-idle.html" target="scene-preview" aria-current="page">selection.idle (primary)</a>
+      <a href="./ink-box-ui-selection-selected.html" target="scene-preview">selection.selected</a>
+      <a href="./ink-box-ui-selection-dragging.html" target="scene-preview">selection.dragging</a>
+      <a href="./ink-box-ui-ink-box-armed.html" target="scene-preview">ink_box.armed</a>
+      <a href="./ink-box-ui-manipulation-unavailable.html" target="scene-preview">manipulation.unavailable</a>
+      <a href="./ink-box-ui-create-refused.html" target="scene-preview">create_refused</a>
+      <a href="./ink-box-ui-states.html" target="scene-preview">States showcase</a>
+    </nav>
+    <main class="nav-main">
+      <p class="hint">
+        Validation entry — keep this page open. Desktop preview at 100%.
+        Package: STORY-IN-013 · UI-IN-02 · SRS-IN-14
+      </p>
+      <div class="preview-stage" data-preview-scale="desktop">
+        <div class="preview-scale">
+          <iframe
+            name="scene-preview"
+            title="Scene preview"
+            src="./ink-box-ui-selection-idle.html"
+          ></iframe>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    const links = document.querySelectorAll('.nav-side a[target="scene-preview"]');
+    links.forEach((a) => {
+      a.addEventListener("click", () => {
+        links.forEach((l) => l.removeAttribute("aria-current"));
+        a.setAttribute("aria-current", "page");
+      });
+    });
+  </script>
+</body>
+</html>

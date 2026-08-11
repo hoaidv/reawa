@@ -1,40 +1,50 @@
 ---
 iter: iter-003
-goal: "Smart Group pilot + follow-ons (await PM requirements from human)"
+goal: "Ink-box pilot — Infini REQ-04 + Epaper REQ-03 tool modes"
 start: 2026-08-11
 end: 2026-08-25
 capacity: 15
-committed_points: 3
+committed_points: 47
 status: active
 ---
 
-# Iter 003 — Smart Group pilot (requirements TBD)
+# Iter 003 — Smart Group / ink-box pilot
 
-Await human → **`/pm`** for Smart Group requirements. Until then: carry IN-010 only; no other Must committed.
+Architect confirmed IN-15/16 + UV. Stories sliced. **NOW:** `/designer` (IN-013) ∥ `/qa`→`/dev` (IN-012 + EP-004).
 
 ## Committed
 
-### Carry — Smart Group Could
+### W3a ∥ W3b — prerequisites (ready)
 
-- [STORY-IN-010](./stories/STORY-IN-010.md) — implement — dev — 3 pts — **draft** — parked until PM thickens REQ-04 / design story
+- [STORY-IN-012](./stories/STORY-IN-012.md) — implement — 5 pts — **ready** — tree-backed ink ingestion
+- [STORY-EP-004](./stories/STORY-EP-004.md) — implement — 2 pts — **ready** — RM2 touch spike
 
-## Carry-over candidates
+### W3c — design Infini (ready)
 
-- `doc_op` / `regionsync/` migration (backlog — not auto-committed)
-- Dual SoT WorldLayer ↔ VectorDocument (architect when PM opens wave)
-- Reconnect hello/snapshot protocol
+- [STORY-IN-013](./stories/STORY-IN-013.md) — design — 5 pts — **ready** — ink-box-ui package
+
+### W4 — Infini implement (draft until deps)
+
+- [STORY-IN-014](./stories/STORY-IN-014.md) — implement — 3 pts — **ready** — undo (depends IN-012)
+- [STORY-IN-015](./stories/STORY-IN-015.md) — implement — 5 pts — **draft** — selection + fixedInk UV
+- [STORY-IN-010](./stories/STORY-IN-010.md) — implement — 5 pts — **draft** — tool-armed enclose (rewritten)
+- [STORY-IN-016](./stories/STORY-IN-016.md) — implement — 3 pts — **draft** — draw-into membership
+- [STORY-IN-017](./stories/STORY-IN-017.md) — implement — 3 pts — **draft** — selection surround create
+
+### W5–W6 — epaper + transport
+
+- [STORY-EP-003](./stories/STORY-EP-003.md) — design — 3 pts — **draft** — blocked on EP-004 spike
+- [STORY-IN-018](./stories/STORY-IN-018.md) — implement — 5 pts — **draft** — tool intent transport
+- [STORY-EP-005](./stories/STORY-EP-005.md) — implement — 5 pts — **draft** — device tool modes
 
 ## Risks
 
-- REQ-04 Needs design: yes — do not `/dev` IN-010 until design story exists (or PM explicitly waives)
-- Opening implement before PM requirements → thrash
+- Epaper design blocked on RM2 touch spike
+- Three code prerequisites (ingestion, selection, undo) — order matters
+- IN-010 AC rewritten; old propose/accept BDD must be replaced
 
-## Links to product docs
+## Links
 
-- [Infini PRD REQ-04](../../.docs/modules/infini/prd.md#smart-group)
-- [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md)
-- [vector-document SRS-IN-10](../../.docs/modules/infini/features/vector-document/srs-logic.md)
-
-## Execution board
-
-- [execution-board.md](./execution-board.md)
+- [REQ-04](../../.docs/modules/infini/prd.md#smart-group) · [REQ-03](../../.docs/modules/epaper/prd.md#tool-modes)
+- [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md) · [ADR-0013](../../.docs/adr/ADR-0013-ink-box-tool-modes.md)
+- [execution-board](./execution-board.md)

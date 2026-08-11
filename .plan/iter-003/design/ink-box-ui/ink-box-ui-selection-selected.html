@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="desktop">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Infini — tool.selection.selected</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    /* gate: live states must appear in-scene (not only common.css) */
+    .c-tool-btn:hover, .c-create-cta:hover, .c-handle:hover, .c-ink-scale button:hover { background: rgba(15, 118, 110, 0.08); }
+    .c-tool-btn:active, .c-create-cta:active, .c-handle:active, .c-ink-scale button:active { background: rgba(15, 118, 110, 0.16); }
+    .c-tool-btn:focus-visible, .c-create-cta:focus-visible, .c-handle:focus-visible, .c-ink-scale button:focus-visible, .c-canvas-stage:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-focus); }
+    .c-create-cta:disabled, .c-ink-scale button:disabled, .c-handle:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body data-state="tool.selection.selected">
+  <div data-region="WindowFrame">
+    <div class="app-mark" aria-hidden="true">Infini</div>
+    <div class="c-tool-strip" data-region="ToolStrip" role="toolbar" aria-label="Ink-box tools">
+      <button type="button" class="c-tool-btn" id="tool.selection" aria-pressed="true" aria-label="Selection tool">
+        <img src="../system/assets/icon-tool-selection.svg" alt="" />
+        Select
+      </button>
+      <button type="button" class="c-tool-btn" id="tool.ink_box" aria-pressed="false" aria-label="Ink-box tool">
+        <img src="../system/assets/icon-tool-ink-box.svg" alt="" />
+        Ink-box
+      </button>
+    </div>
+    <div class="c-zoom-readout" data-region="StatusZoom" aria-live="polite">100%</div>
+    <button type="button" class="c-canvas-stage" data-region="CanvasStage" aria-label="Infinity canvas">
+      <div class="c-world-layer" data-region="WorldLayer" style="transform: translate(0px, 0px) scale(1)">
+        <svg width="100%" height="100%" aria-hidden="true">
+          <path class="ink-stroke ink-content" d="M280 220c40-30 90-20 120 10c30 28 70 40 110 18"/>
+          <path class="ink-stroke ink-content" d="M300 280c50-10 90 20 130 8"/>
+          <path class="ink-stroke ink-boundary" d="M250 180h220v160H250z" fill="none"/>
+        </svg>
+        <div class="c-selection-overlay is-interactive" data-region="SelectionOverlay" style="left:0;top:0;right:0;bottom:0">
+          <div class="c-bounds-hint" data-region="BoundsHint" id="hint.smart_group_bounds" style="left:248px;top:178px;width:224px;height:164px"></div>
+          <div class="c-bounds" id="ovl.selection_bounds" style="left:250px;top:180px;width:220px;height:160px">
+            <button type="button" class="c-handle nw" id="ovl.resize_handles" aria-label="Resize northwest" style="left:0;top:0"></button>
+            <button type="button" class="c-handle ne" aria-label="Resize northeast" style="left:100%;top:0"></button>
+            <button type="button" class="c-handle sw" aria-label="Resize southwest" style="left:0;top:100%"></button>
+            <button type="button" class="c-handle se" aria-label="Resize southeast" style="left:100%;top:100%"></button>
+          </div>
+          <div class="c-overlay-chrome" style="left:250px;top:352px">
+            <div class="c-ink-scale" id="tgl.ink_scale_mode" role="group" aria-label="Ink scale mode">
+              <button type="button" aria-pressed="true">
+                <img src="../system/assets/icon-mode-with-bounds.svg" alt="" /> withBounds
+              </button>
+              <button type="button" aria-pressed="false">
+                <img src="../system/assets/icon-mode-fixed-ink.svg" alt="" /> fixedInk
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </button>
+    <p class="scene-note">Selected · geometric bounds + 4 resize handles · inkScaleMode on overlay · boundary ink is the box · no rotation</p>
+  </div>
+  <script>
+    const g = document.getElementById("tgl.ink_scale_mode");
+    g.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        g.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+      });
+    });
+  </script>
+</body>
+</html>

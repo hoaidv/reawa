@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>ToolButton — self-contained</title>
+  <style>
+    body { margin: 1rem; display: flex; gap: 8px; font-family: system-ui, sans-serif; }
+    .c-tool-btn {
+      box-sizing: border-box;
+      width: 32px; height: 32px; aspect-ratio: 1;
+      border: 1px solid #000; border-radius: 0; background: #fff;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+    }
+    .c-tool-btn img { width: 16px; height: 16px; }
+    .c-tool-btn[aria-pressed="true"] { background: #000; color: #fff; }
+    .c-tool-btn[aria-pressed="true"] img { filter: invert(1); }
+    .c-tool-btn:active { background: #000; color: #fff; }
+    .c-tool-btn:active img { filter: invert(1); }
+    .c-tool-btn:disabled {
+      background: repeating-linear-gradient(-45deg, #fff, #fff 2px, #000 2px, #000 3px);
+    }
+  </style>
+</head>
+<body>
+  <button type="button" class="c-tool-btn" aria-label="default" aria-pressed="false"><span aria-hidden="true">·</span></button>
+  <button type="button" class="c-tool-btn" aria-label="active" aria-pressed="true"><span aria-hidden="true">·</span></button>
+  <button type="button" class="c-tool-btn" aria-label="unavailable" disabled><span aria-hidden="true">·</span></button>
+</body>
+</html>

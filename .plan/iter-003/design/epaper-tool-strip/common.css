@@ -1,0 +1,165 @@
+/* epaper-tool-strip — 32px floating chip · RM2 landscape preview */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: #52525b;
+}
+[data-region="DeviceScreen"] {
+  position: relative;
+  /* Fills landscape tablet iframe (1872×1404) */
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: var(--color-paper);
+  overflow: hidden;
+  border: 1px solid #000;
+}
+/* Full-bleed ink — chip floats; does not shrink this region */
+[data-region="InkSurface"] {
+  position: absolute;
+  inset: 0;
+  background: var(--color-paper);
+}
+/* Floating chip — squared 32px anchor, hug width, not a full band */
+[data-region="ToolStrip"],
+.c-tool-chip {
+  position: absolute;
+  z-index: 5;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--chip-gap);
+  height: auto;
+  width: auto;
+  max-width: calc(100% - 2 * var(--chip-inset));
+  padding: var(--chip-pad);
+  background: var(--color-paper);
+  border: 1px solid var(--color-ink);
+  border-radius: var(--chip-radius);
+  box-shadow: none;
+  overflow: hidden;
+}
+/* Orientation-top placement */
+[data-orientation="gutToLeft"] .c-tool-chip,
+[data-orientation="gutToRight"] .c-tool-chip,
+[data-orientation="gutAtBottom"] .c-tool-chip {
+  top: var(--chip-inset);
+  left: 50%;
+  transform: translateX(-50%);
+}
+[data-orientation="gutOnTop"] .c-tool-chip {
+  bottom: var(--chip-inset);
+  top: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.c-tool-btn {
+  box-sizing: border-box;
+  width: var(--chip-btn);
+  height: var(--chip-btn);
+  min-width: var(--chip-btn);
+  min-height: var(--chip-btn);
+  aspect-ratio: 1;
+  flex: 0 0 var(--chip-btn);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-right: 1px solid var(--color-ink);
+  border-radius: var(--chip-radius);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: 0;
+  line-height: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.c-tool-btn:last-child {
+  border-right: 0;
+}
+.c-tool-btn img { width: 16px; height: 16px; pointer-events: none; }
+.c-tool-btn[aria-pressed="true"] {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.c-tool-btn[aria-pressed="true"] img { filter: invert(1); }
+.c-tool-btn:active {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.c-tool-btn:active img { filter: invert(1); }
+.c-tool-btn:disabled,
+.c-tool-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  background: repeating-linear-gradient(
+    -45deg,
+    #fff,
+    #fff 2px,
+    #000 2px,
+    #000 3px
+  );
+}
+[data-region="StatusLine"] {
+  position: absolute;
+  z-index: 4;
+  top: calc(var(--chip-btn) + var(--chip-inset) + 4px);
+  left: var(--chip-inset);
+  right: var(--chip-inset);
+  font-size: var(--font-caption);
+  pointer-events: none;
+}
+[data-orientation="gutOnTop"] [data-region="StatusLine"] {
+  top: var(--chip-inset);
+}
+.ink-demo {
+  position: absolute;
+  inset: 14% 10% 10%;
+}
+.ink-stroke { fill: none; stroke: #000; stroke-width: 3; stroke-linecap: round; }
+.c-bounds {
+  position: absolute;
+  border: 2px solid #000;
+  background: transparent;
+}
+.c-ghost {
+  position: absolute;
+  border: 2px dashed #000;
+}
+.c-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  background: #fff;
+  border: 2px solid #000;
+}
+.c-handle:active { background: #000; }
+.scene-caption {
+  position: absolute;
+  z-index: 3;
+  left: var(--chip-inset);
+  right: var(--chip-inset);
+  bottom: var(--chip-inset);
+  font-size: var(--font-caption);
+  pointer-events: none;
+}
+.orient-tag {
+  position: absolute;
+  z-index: 3;
+  right: var(--chip-inset);
+  bottom: calc(var(--chip-inset) + 1.2em);
+  font-size: 10px;
+  border: 1px solid #000;
+  padding: 2px 6px;
+  background: #fff;
+  pointer-events: none;
+}

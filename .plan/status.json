@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-11T06:42:35+00:00",
+  "generated_at": "2026-08-11T07:44:57+00:00",
   "current_iter": "iter-003",
   "by_status": {
-    "draft": 1,
+    "draft": 6,
     "ready": 0,
     "in-progress": 0,
     "in-review": 0,
-    "done": 77,
+    "done": 82,
     "blocked": 1
   },
   "by_module": {
@@ -17,19 +17,19 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 2,
-      "done": 2,
+      "total": 5,
+      "done": 4,
       "in_review": 0
     },
     "infini": {
-      "total": 11,
-      "done": 9,
+      "total": 18,
+      "done": 12,
       "in_review": 0
     }
   },
-  "open_challenges": 0,
+  "open_challenges": 3,
   "resolved_challenges_this_iter": 0,
-  "sync_orphans": 11,
+  "sync_orphans": 12,
   "master_plan": true,
   "tracks": [
     {
@@ -50,7 +50,7 @@
       "id": "TRACK-003",
       "kind": "planned",
       "status": "active",
-      "cursor": "/sm \u2014 slice ink-box waves per architect handoff",
+      "cursor": "/qa\u2192/dev W4 (IN-015) \u00b7 EP-005 waits on IN-018",
       "iter": "iter-003"
     }
   ]

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>ToolChip — self-contained</title>
+  <style>
+    body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; }
+    .c-tool-chip {
+      display: inline-flex; gap: 0; height: auto; padding: 0;
+      border: 1px solid #000; border-radius: 0; background: #fff; overflow: hidden;
+    }
+    .c-tool-btn {
+      box-sizing: border-box;
+      width: 32px; height: 32px; aspect-ratio: 1;
+      border: 0; border-right: 1px solid #000; border-radius: 0; background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0; cursor: pointer; padding: 0; margin: 0;
+    }
+    .c-tool-btn:last-child { border-right: 0; }
+    .c-tool-btn img { width: 16px; height: 16px; }
+    .c-tool-btn[aria-pressed="true"] { background: #000; color: #fff; }
+    .c-tool-btn[aria-pressed="true"] img { filter: invert(1); }
+    .c-tool-btn:active { background: #000; color: #fff; }
+    .c-tool-btn:active img { filter: invert(1); }
+  </style>
+</head>
+<body>
+  <div class="c-tool-chip" data-region="ToolStrip" role="toolbar">
+    <button type="button" class="c-tool-btn" aria-label="Selection" aria-pressed="false"><img src="../../system/assets/icon-epaper-selection.svg" alt="" /></button>
+    <button type="button" class="c-tool-btn" aria-label="Pen" aria-pressed="true"><img src="../../system/assets/icon-epaper-pen.svg" alt="" /></button>
+    <button type="button" class="c-tool-btn" aria-label="Ink box" aria-pressed="false"><img src="../../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+  </div>
+  <p>32×32 squared tiles · radius 0 · floating hug</p>
+  <script>
+    document.querySelectorAll(".c-tool-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".c-tool-btn").forEach((b) => b.setAttribute("aria-pressed", "false"));
+        btn.setAttribute("aria-pressed", "true");
+      });
+    });
+  </script>
+</body>
+</html>

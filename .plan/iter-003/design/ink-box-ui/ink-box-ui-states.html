@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="desktop">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Infini — ink-box-ui states showcase</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    /* gate: live states must appear in-scene (not only common.css) */
+    .c-tool-btn:hover, .c-create-cta:hover, .c-handle:hover, .c-ink-scale button:hover { background: rgba(15, 118, 110, 0.08); }
+    .c-tool-btn:active, .c-create-cta:active, .c-handle:active, .c-ink-scale button:active { background: rgba(15, 118, 110, 0.16); }
+    .c-tool-btn:focus-visible, .c-create-cta:focus-visible, .c-handle:focus-visible, .c-ink-scale button:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-focus); }
+  </style>
+  <style>
+    body { height: auto; min-height: 100%; padding: var(--space-lg); background: var(--color-surface); }
+    h1 { font-family: var(--font-display-face); font-size: var(--font-display); font-weight: 500; margin: 0 0 var(--space-md); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-md); }
+    .card { padding: var(--space-md); background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: var(--radius-control); }
+    .card h2 { margin: 0 0 var(--space-sm); font-size: var(--font-body); font-weight: 600; }
+    .row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin-top: var(--space-sm); }
+    .label { font-size: var(--font-caption); color: var(--color-ink-muted); width: 100%; }
+  </style>
+</head>
+<body data-state="states">
+  <h1>ink-box-ui — control states</h1>
+  <div class="grid">
+    <section class="card">
+      <h2>tool.selection / tool.ink_box</h2>
+      <p class="label">default · hover · focus · active (armed)</p>
+      <div class="c-tool-strip" style="position:static;transform:none">
+        <button type="button" class="c-tool-btn" aria-pressed="false">
+          <img src="../system/assets/icon-tool-selection.svg" alt="" /> Select
+        </button>
+        <button type="button" class="c-tool-btn" aria-pressed="true">
+          <img src="../system/assets/icon-tool-ink-box.svg" alt="" /> Ink-box
+        </button>
+      </div>
+    </section>
+    <section class="card">
+      <h2>ovl.resize_handles</h2>
+      <p class="label">hover · focus · active · disabled below LOD</p>
+      <div class="row" style="position:relative;height:48px;width:48px;border:1px solid var(--color-primary)">
+        <button type="button" class="c-handle se" aria-label="Handle" style="left:100%;top:100%"></button>
+      </div>
+      <div class="row">
+        <button type="button" class="c-handle se" disabled aria-label="Disabled" style="position:static;margin:0;opacity:.4"></button>
+        <span class="label" style="width:auto">disabled</span>
+      </div>
+    </section>
+    <section class="card">
+      <h2>tgl.ink_scale_mode</h2>
+      <p class="label">modes + disabled when nothing selected</p>
+      <div class="c-ink-scale" role="group">
+        <button type="button" aria-pressed="true">
+          <img src="../system/assets/icon-mode-with-bounds.svg" alt="" /> withBounds
+        </button>
+        <button type="button" aria-pressed="false">
+          <img src="../system/assets/icon-mode-fixed-ink.svg" alt="" /> fixedInk
+        </button>
+      </div>
+      <div class="row">
+        <div class="c-ink-scale">
+          <button type="button" disabled aria-pressed="true">withBounds</button>
+          <button type="button" disabled>fixedInk</button>
+        </div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>cta.create_smart_group</h2>
+      <p class="label">enabled · disabled + refuse hint</p>
+      <div class="row">
+        <button type="button" class="c-create-cta">Create Smart Group</button>
+      </div>
+      <div class="row" style="flex-direction:column;align-items:flex-start">
+        <button type="button" class="c-create-cta" disabled>Create Smart Group</button>
+        <p class="c-refuse-hint" role="status">No surround stroke — select a stroke that encloses the others.</p>
+      </div>
+    </section>
+    <section class="card">
+      <h2>ind.manipulation_unavailable</h2>
+      <p class="c-lod-banner" style="position:static;transform:none">Zoom in to move or resize boxes (below 35%)</p>
+    </section>
+  </div>
+</body>
+</html>

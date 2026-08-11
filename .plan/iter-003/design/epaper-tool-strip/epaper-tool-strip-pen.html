@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Epaper — tool.pen</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    .c-tool-btn:active, .c-handle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img { filter: invert(1); }
+    .c-tool-btn:disabled, .c-tool-btn[aria-disabled="true"] { opacity: 1; }
+  </style>
+</head>
+<body data-state="tool.pen">
+  <div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <svg class="ink-demo" viewBox="0 0 400 300" aria-hidden="true"><path class="ink-stroke" d="M40 80c40-30 90-20 120 20s80 40 140 10"/><path class="ink-stroke" d="M60 160c50 10 90-20 140 0"/></svg>
+
+      <p class="scene-caption">32px chip · RM2 landscape · orientation-top · full-bleed ink</p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolStrip" role="toolbar" aria-label="Tools">
+      <button type="button" class="c-tool-btn" id="tool.selection" aria-pressed="false"  aria-label="Selection"><img src="../system/assets/icon-epaper-selection.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" id="tool.pen" aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" id="tool.ink_box" aria-pressed="false"  aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+    </div>
+    <p data-region="StatusLine">tool: pen · chip 32px float</p>
+  </div>
+</body>
+</html>

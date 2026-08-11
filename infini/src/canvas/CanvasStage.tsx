@@ -3,6 +3,7 @@
  * @implements [SRS-IN-01] paint host
  * @implements [SRS-IN-03] optional rAF frame counter
  * @implements [SRS-IN-07] tablet drawing-region marker + viewport + region refresh
+ * @implements [SRS-IN-04] tree-backed live ink ingestion on stroke_end
  *
  * Perf: coalesce paints to one rAF; no React setState on the gesture hot path.
  */
@@ -28,7 +29,7 @@ import {
 import { allowIndividualInteraction } from "./TileCache";
 import type { RmStrokeMsg } from "../native";
 import { IpcRmTransport, MemoryTransport, TabletSession } from "../session";
-import { VectorDocument } from "../document";
+import { VectorDocument, commitLiveStrokeToTree } from "../document";
 import type { Primitive } from "./primitives";
 
 export interface CanvasStageProps {
@@ -90,12 +91,10 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const orientationRef = useRef<TabletOrientation>("gutToLeft");
   const snapshotSentRef = useRef(false);
+  /** In-flight RM strokes only — committed ink lives in VectorDocument (STORY-IN-012). */
   const rmStrokesRef = useRef(
     new Map<string, { points: { x: number; y: number }[]; width: number }>(),
   );
-  const rmDoneRef = useRef<
-    { id: string; points: { x: number; y: number }[]; width: number }[]
-  >([]);
   const rmPanelRef = useRef({ w: 1404, h: 1872 });
 
   const [emptyHint, setEmptyHint] = useState(!populated);
@@ -158,27 +157,30 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     else session.publishViewport(vpRef.current);
   };
 
+  /**
+   * Paint WorldLayer from VectorDocument + optional in-flight live strokes.
+   * @implements [SRS-IN-04] tree-backed live ink — syncFromVectorDoc is SoT for committed ink
+   */
   const rebuildWithRmInk = () => {
     const base = populated ? demoPrimitives() : [];
+    docRef.current.syncFromVectorDoc(treeRef.current);
+    const fromTree = [...docRef.current.all()];
     const inkStyle = { stroke: "#1C2430", strokeWidth: 2.5 };
-    const rm = [
-      ...rmDoneRef.current.map((s) =>
-        makePath(`rm-done-${s.id}`, s.points, {
+    const live = [...rmStrokesRef.current.entries()]
+      .filter(([, s]) => s.points.length >= 2)
+      .map(([id, s]) =>
+        makePath(`rm-live-${id}`, s.points, {
           ...inkStyle,
           strokeWidth: s.width,
         }),
-      ),
-      ...[...rmStrokesRef.current.entries()]
-        .filter(([, s]) => s.points.length >= 2)
-        .map(([id, s]) =>
-          makePath(`rm-live-${id}`, s.points, {
-            ...inkStyle,
-            strokeWidth: s.width,
-          }),
-        ),
-    ];
-    docRef.current.setPrimitives([...base, ...rm]);
-    if (rm.length) setEmptyHint(false);
+      );
+    // Demo primitives only when tree empty and populated demo mode — avoid wiping tree ink.
+    const merged =
+      fromTree.length > 0
+        ? [...fromTree, ...live]
+        : [...base, ...live];
+    docRef.current.setPrimitives(merged);
+    if (merged.length) setEmptyHint(false);
     rendererRef.current.invalidateTiles();
     schedulePaint();
   };
@@ -369,7 +371,12 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       if (msg.type === "stroke_end") {
         const stroke = rmStrokesRef.current.get(msg.id);
         if (stroke && stroke.points.length >= 2) {
-          rmDoneRef.current.push({ id: msg.id, ...stroke });
+          commitLiveStrokeToTree(treeRef.current, {
+            id: msg.id,
+            points: stroke.points,
+            width: stroke.width,
+            source: "epaper",
+          });
         }
         rmStrokesRef.current.delete(msg.id);
         rebuildWithRmInk();

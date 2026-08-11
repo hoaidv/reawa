@@ -68,9 +68,8 @@ to 2. Recorded in [epaper REQ-03](../.docs/modules/epaper/prd.md#tool-modes) and
 
 - Goal: ink-box pilot across both ends — tool-armed enclose + explicit selection, move/resize,
   `inkScaleMode`; tablet gets a 3-tool toolbar.
-- Capacity: IN-010 still draft; architect must decide the tool-intent wire before SM slices.
-- Risks: **three prerequisites do not exist in code** (tree-backed ink ingestion, selection /
-  hit-testing, undo); RM2 touch availability from Qt is unverified; two features in flight.
+- Capacity: 11 stories sliced (~47 pts committed vs 15 capacity — sequence W3→W6; pull by wave).
+- Risks: **three prerequisites** (ink ingestion, selection/hit-testing, undo); RM2 touch unverified; two features in flight.
 
 ### Tracks
 
@@ -78,7 +77,7 @@ to 2. Recorded in [epaper REQ-03](../.docs/modules/epaper/prd.md#tool-modes) and
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
-| TRACK-003 | planned | **active** | **`/sm`** — slice waves per architect handoff | [track](./tracks/TRACK-003-smart-group-pilot.md) |
+| TRACK-003 | planned | **active** | **`/qa`→`/dev` W4** (IN-015); EP design done | [track](./tracks/TRACK-003-smart-group-pilot.md) |
 
 ### Open challenges / blocked
 
@@ -86,22 +85,22 @@ to 2. Recorded in [epaper REQ-03](../.docs/modules/epaper/prd.md#tool-modes) and
 
 ### Design packages in flight
 
-- _none yet_ — plan after PM
+- [ink-box-ui](./iter-003/design/ink-box-ui/) — STORY-IN-013 **ready**
+- [epaper-tool-strip](./iter-003/design/epaper-tool-strip/) — STORY-EP-003 draft (spike-gated)
 
 ### Execution board(s)
 
-- [iter-003 execution-board](./iter-003/execution-board.md) — W0 await `/pm`
+- [iter-003 execution-board](./iter-003/execution-board.md) — **W3 NOW**
 - [iter-002 board (final)](./iter-002/execution-board.md) — frozen
 
 ### Freeze notes
 
-- **No `/dev`** on IN-010 until design story or PM waiver.
-- Smart Group requirements **received and adopted** 2026-08-11 → [PM → architect handoff](./iter-003/handoffs/2026-08-11-pm-to-architect-ink-box-ux.md).
-- Architect decomposed 2026-08-11 → [ADR-0013](../.docs/adr/ADR-0013-ink-box-tool-modes.md) + 7 SRS sections → [architect → SM handoff](./iter-003/handoffs/2026-08-11-architect-to-sm-ink-box.md).
-- **Do not start the epaper design story** before the RM2 touch spike resolves.
+- **No `/dev`** on UI implement stories until design deps done.
+- Architect confirmed IN-15/16 + UV → [confirm handoff](./iter-003/handoffs/2026-08-11-architect-to-sm-confirm-in-15-16.md).
+- **Do not start EP-003** before EP-004 spike.
 - Retro-gate: [pm-retro-gate-pass](./iter-002/handoffs/2026-08-11-pm-retro-gate-pass.md)
 
 ## Forward
 
-- Now: `/architect` (amend ADR-0011, decide tool-intent wire, thicken SRS) → `/sm` design+implement slices → `/designer` → `/qa` → `/dev`
+- Now: `/designer` (IN-013) ∥ `/qa`→`/dev` (IN-012, EP-004) → undo → selection → enclose → epaper
 - Backlog: [backlog.md](./backlog.md)

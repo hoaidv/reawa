@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="desktop">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Infini — tool.selection.create_refused</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    /* gate: live states must appear in-scene (not only common.css) */
+    .c-tool-btn:hover, .c-create-cta:hover, .c-handle:hover, .c-ink-scale button:hover { background: rgba(15, 118, 110, 0.08); }
+    .c-tool-btn:active, .c-create-cta:active, .c-handle:active, .c-ink-scale button:active { background: rgba(15, 118, 110, 0.16); }
+    .c-tool-btn:focus-visible, .c-create-cta:focus-visible, .c-handle:focus-visible, .c-ink-scale button:focus-visible, .c-canvas-stage:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-focus); }
+    .c-create-cta:disabled, .c-ink-scale button:disabled, .c-handle:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body data-state="tool.selection.create_refused">
+  <div data-region="WindowFrame">
+    <div class="app-mark" aria-hidden="true">Infini</div>
+    <div class="c-tool-strip" data-region="ToolStrip" role="toolbar" aria-label="Ink-box tools">
+      <button type="button" class="c-tool-btn" id="tool.selection" aria-pressed="true" aria-label="Selection tool">
+        <img src="../system/assets/icon-tool-selection.svg" alt="" />
+        Select
+      </button>
+      <button type="button" class="c-tool-btn" id="tool.ink_box" aria-pressed="false" aria-label="Ink-box tool">
+        <img src="../system/assets/icon-tool-ink-box.svg" alt="" />
+        Ink-box
+      </button>
+    </div>
+    <div class="c-zoom-readout" data-region="StatusZoom" aria-live="polite">100%</div>
+    <button type="button" class="c-canvas-stage" data-region="CanvasStage" aria-label="Infinity canvas">
+      <div class="c-world-layer" data-region="WorldLayer" style="transform: translate(0px, 0px) scale(1)">
+        <svg width="100%" height="100%" aria-hidden="true">
+          <path class="ink-stroke ink-content" d="M260 240c30-20 70-10 100 20"/>
+          <path class="ink-stroke ink-content" d="M400 250c40 10 70-20 100 5"/>
+          <path class="ink-stroke ink-content" d="M320 320c50 0 80 30 120 10"/>
+          <path class="sel-ink" d="M250 220h80v40H250z"/>
+          <path class="sel-ink" d="M390 230h90v50H390z"/>
+          <path class="sel-ink" d="M310 300h110v50H310z"/>
+        </svg>
+        <div class="c-selection-overlay is-interactive" data-region="SelectionOverlay">
+          <div class="c-overlay-chrome" style="left:250px;top:370px;flex-direction:column;align-items:flex-start">
+            <button type="button" class="c-create-cta" id="cta.create_smart_group" disabled>
+              Create Smart Group
+            </button>
+            <p class="c-refuse-hint" id="ind.create_refused_no_surround" role="status">
+              No surround stroke — select a stroke that encloses almost all of the others.
+            </p>
+          </div>
+        </div>
+      </div>
+    </button>
+    <p class="scene-note">Multi-ink selected · none surrounds the others · CTA disabled + reason · selection unchanged · no AABB-only box</p>
+  </div>
+</body>
+</html>

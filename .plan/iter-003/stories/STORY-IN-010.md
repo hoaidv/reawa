@@ -1,35 +1,34 @@
 ---
 id: STORY-IN-010
-title: "Smart Group enclose recognition pilot"
+title: "Tool-armed enclose recognition (immediate Smart Group)"
 kind: implement
 parent_srs: [SRS-IN-10]
 parent_req: [REQ-04]
 status: draft
-priority: P2
+priority: P0
 iter: iter-003
-estimate: 3
+estimate: 5
 owner: dev
-depends_on: [STORY-IN-007, STORY-IN-009]
+depends_on: [STORY-IN-012, STORY-IN-013, STORY-IN-014, STORY-IN-015]
 acceptance_criteria:
-  - "Given a near-closed roughly 4-sided stroke enclosing ≥80% of samples of ≥1 ink, When recognize_enclose runs on Infini, Then a transient SmartGroup preview is proposed."
-  - "Given user accept, When create_smart_group applies, Then enclose stroke is role:boundary, content ink reparented, geometric bounds set, and the op is undoable."
-  - "Given user reject or undo, When applied, Then the prior tree is restored and ink is untouched."
-  - "Given Epaper v0, When enclose runs, Then recognition is Infini-first only (Epaper keeps emitting raw append_ink)."
-design_package: ""
-ui_spec: ""
-scenes: []
-hifi: ""
+  - "Given a stroke with intent enclose that fits an axis-aligned rect with shorter side ≥ 48 world units and ≥1 ink ≥80% inside, When stroke_end runs on Infini, Then create_smart_group commits immediately (no propose/accept): enclose → role boundary, content reparented, bounds fitted, each content layoutOffset UV seeded."
+  - "Given a non-enclose stroke (intent ink/absent), When stroke_end runs, Then enclose recognition does not run."
+  - "Given guards fail (too small / no content / already grouped only), When enclose ends, Then the stroke stays ordinary ink (no-op, no banner)."
+  - "Given a successful create, When undo runs, Then the pre-op snapshot is restored."
+design_package: ".plan/iter-003/design/ink-box-ui/"
+ui_spec: ".plan/iter-003/design/ink-box-ui/ui-spec.md"
+scenes:
+  - ".plan/iter-003/design/ink-box-ui/ink-box-ui-ink-box-armed.html"
+  - ".plan/iter-003/design/ink-box-ui/ink-box-ui-selection-selected.html"
+hifi: ".plan/iter-003/design/ink-box-ui/ink-box-ui-ink-box-armed.html"
 wireframe: ""
 ---
 
-# STORY-IN-010 — Smart Group enclose recognition pilot
+# STORY-IN-010 — Tool-armed enclose recognition
 
-Implements [SRS-IN-10](../../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-10-enclose-recognition-smart-group-pilot)
-per [ADR-0011](../../../.docs/adr/ADR-0011-smart-group.md) (**Could** / pilot).
-
-**Carried from iter-002.** Stays `draft` until human briefs **`/pm`** with Smart Group
-requirements and a `kind: design` story exists (REQ-04 Needs design: yes) — or PM
-explicitly waives design for a library-only slice.
+Implements revised [SRS-IN-10](../../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-10-enclose-recognition-smart-group-pilot)
+per ADR-0013. **Rewritten 2026-08-11** — propose/accept AC withdrawn.
+UI arming chrome: [STORY-IN-013](./STORY-IN-013.md) / [UI-IN-02](../design/ink-box-ui/ui-spec.md).
 
 ## Kind
 
@@ -37,9 +36,9 @@ explicitly waives design for a library-only slice.
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Depends on | STORY-IN-007, STORY-IN-009 (done in iter-002) |
+| Depends on | IN-012, IN-013, IN-014, IN-015 |
 
 ## Done when
 
-- AC green under BDD `@SRS-IN-10`
-- Design dependency satisfied or waived in writing by PM
+- AC green `@SRS-IN-10`
+- Old propose/accept BDD scenarios removed or replaced

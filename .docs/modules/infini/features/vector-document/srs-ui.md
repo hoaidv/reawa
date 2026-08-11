@@ -232,13 +232,15 @@ chrome pinned to the window.
 | `ovl.resize_handles` | Resize handles (**no rotation handle**) | SelectionOverlay |
 | `tgl.ink_scale_mode` | `withBounds` ↔ `fixedInk` | SelectionOverlay |
 | `hint.smart_group_bounds` | Optional chrome extent (handles / hit-test) | BoundsHint |
+| `cta.create_smart_group` | Promote selection → Smart Group | SelectionOverlay / context |
+| `ind.create_refused_no_surround` | Why create failed (no surround stroke) | Inline near CTA |
 
 ### Box appearance (binding — BR-09d)
 
 | Origin | Unselected appearance | Rule |
 |---|---|---|
 | Enclosure or selection-with-surround | The creator's own **boundary** ink | Add **no** synthetic ink rectangle; the drawn surround is the box |
-| Create refused (no surround) | N/A — no Smart Group | CTA disabled or inline reason; selection unchanged |
+| Create refused (no surround) | N/A — no Smart Group | `cta.create_smart_group` disabled **or** shows `ind.create_refused_no_surround`; selection unchanged |
 
 ### Interaction map
 
@@ -246,6 +248,8 @@ chrome pinned to the window.
 |---|---|---|---|
 | `tool.selection` | Click | Arm Selection | Active state; cursor affordance changes |
 | `tool.ink_box` | Click | Arm Ink-box | Active state |
+| `cta.create_smart_group` | Click (≥2 inks selected, surround qualifies) | `create_smart_group` (SRS-IN-16) | Overlay → Smart Group selected |
+| `cta.create_smart_group` | Click (no surround) | Refuse | `ind.create_refused_no_surround`; selection unchanged |
 | Canvas press inside bounds | Press + drag | Move node | Node follows pointer; canvas does not pan |
 | Canvas press inside bounds | Press, no drag | Select | Bounds + handles appear |
 | `ovl.resize_handles` | Drag | Resize bounds | Live bounds; content ink per mode |

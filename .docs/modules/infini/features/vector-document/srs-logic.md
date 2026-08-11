@@ -249,7 +249,7 @@ A stroke drawn in any other mode is ordinary ink and is never evaluated.
 | Guard — size | Shorter side of the fitted rect ≥ `MIN_ENCLOSE_WORLD` (**48 world units**, ADR-0013 §6) |
 | Guard — content | ≥1 ink with ≥80% of its samples inside the fitted rect |
 | Guard — already grouped | Ink whose parent is already a `SmartGroup` is **skipped**; remaining ink still captures |
-| Commit | `create_smart_group` immediately — no proposal, no accept step: enclose stroke becomes `role: boundary` ink, captured ink becomes `role: content` in group-local coordinates, `bounds` = fitted rect, doc dirty |
+| Commit | `create_smart_group` immediately — no proposal, no accept step: enclose stroke becomes `role: boundary` ink, captured ink becomes `role: content` in group-local coordinates, `bounds` = fitted rect, **each content ink seeded with `layoutOffset` UV** (SRS-IN-09), doc dirty |
 | Guard fails | **No-op** — the stroke stays ordinary ink; no error state, no banner |
 | Undo | One undo restores the pre-op snapshot exactly ([SRS-IN-12](#srs-in-12-undo-history)) |
 
@@ -267,14 +267,15 @@ Explicit Smart Group from a multi-ink selection (Solution 3 / `Selection` tool).
 | Step | Rule |
 |---|---|
 | Input | ≥2 selected Ink nodes (or ≥1 content + 1 candidate surround) |
-| Surround candidate | For each selected stroke `S`, build an **artificial closed path** from `S` if open (close first→last for the test only — **do not** mutate stored samples). Test whether ≥80% of samples of **every other** selected ink lie inside that closed region |
+| Surround candidate | For each selected stroke `S`, build an **artificial closed path** from `S` if open (append edge first→last for the test only — **do not** mutate stored samples). Point-in-polygon uses the **even-odd** fill rule. A candidate qualifies when ≥80% of samples of **every other** selected ink lie inside that region |
 | Winner | Prefer the candidate that qualifies; if several qualify, highest paint/z order (later sibling) |
-| Commit | Winner → `role: boundary`; others → `role: content` in group-local coords; `bounds` = fitted AABB of the winner stroke; each content ink gets its own `fixedInk` UV/offset seed |
-| Refuse | **No** qualifying surround → do not create; selection unchanged; UI shows why (see srs-ui) |
+| Commit | Winner → `role: boundary`; others → `role: content` in group-local coords; `bounds` = fitted AABB of the winner stroke; **each content ink seeded with `layoutOffset` UV** (SRS-IN-09) |
+| Refuse | **No** qualifying surround → do not create; selection unchanged; UI shows why ([srs-ui](./srs-ui.md) — create refused state) |
 | Undo | One undo restores the pre-op snapshot ([SRS-IN-12](#srs-in-12-undo-history)) |
 
 This path always produces boundary ink when it succeeds — there is no AABB-only / hint-only Smart
-Group from selection.
+Group from selection. Self-intersecting surrounds are accepted as-is under even-odd (pilot —
+no geometry clean-up).
 
 ---
 
@@ -290,14 +291,26 @@ on `intent: enclose` (that path is [SRS-IN-10](#srs-in-10)).
 | Trigger | `stroke_end` for a new Ink node after samples are committed in world space |
 | Candidates | Every SmartGroup whose **world** geometric `bounds` contain ≥80% of the stroke’s samples |
 | None | Leave ink under its ordinary parent (document root in v0) — no membership |
-| One | Reparent as `role: content` under that SmartGroup (samples → group-local); **seed that ink’s own** `fixedInk` UV/offset from its centroid in the current bounds; dirty doc |
+| One | Reparent as `role: content` under that SmartGroup (samples → group-local); **seed that ink’s `layoutOffset` UV** from its AABB centroid in the current bounds; dirty doc |
 | Several (incl. nested) | Reparent under the candidate with the **highest paint/z order** — tree sibling order, later siblings win; **no dual parent**; no separate z-index field |
-| Layout | Do **not** translate, scale, or reflow any **existing** content ink; new ink stays as drawn |
+| Layout | Do **not** translate, scale, or reflow any **existing** content ink (their `layoutOffset` values stay); new ink stays as drawn |
 | Bounds | SmartGroup `bounds` are **not** expanded by membership in the pilot |
 | Undo | One undo restores the pre-membership snapshot ([SRS-IN-12](#srs-in-12-undo-history)) |
 
 Paint order = document tree sibling order (SRS-IN-04 invariant 5). Nested Smart Groups that each
-contain 100% of a stroke resolve by that order (topmost / later sibling).
+contain 100% of a stroke resolve by that order (topmost / later sibling) — **implementable as
+written**; no z-index field required.
+
+### `layoutOffset` + `fixedInk` draw rule (locked)
+
+Canonical field: [SRS-IN-09](./srs-data.md) `{ u, v }`.
+
+| Mode | Draw / resize |
+|---|---|
+| `withBounds` | Scale samples by `scaleX`/`scaleY`, then rotate, then translate (today’s boundary path). `layoutOffset` is still stored but unused for placement |
+| `fixedInk` | Do **not** scale content samples. Target local centroid = `(bounds.x + u·width, bounds.y + v·height)`. Translate samples so their AABB centroid matches that target, then apply rotation + group translate only |
+
+`smartLocalToWorld` today is `local + translate` under `fixedInk` with **no** UV — implement stories for SRS-IN-11 must close that gap; do not ship `fixedInk` resize against the current helper as-is.
 
 ---
 
@@ -330,7 +343,7 @@ Tool state is **device-local UI state** — not in the document, not on the wire
 |---|---|---|
 | Press inside bounds + drag | scale ≥0.35 | Move — `set_smart_transform` translate; canvas does **not** pan |
 | Press (no drag) | scale ≥0.35 | Select — handles appear on geometric `bounds` |
-| Drag a handle | node selected | Resize — `bounds` follow the handle; under `withBounds` content scales; under `fixedInk` each content ink’s own UV/offset preserved (ADR-0011 §3) |
+| Drag a handle | node selected | Resize — `bounds` follow the handle; under `withBounds` content scales; under `fixedInk` each content ink’s `layoutOffset` UV is preserved (draw rule above) |
 | Toggle `inkScaleMode` | node selected | `set_ink_scale_mode` — `withBounds` \| `fixedInk` |
 | Press empty canvas | — | Deselect; press continues as pan |
 | Press another pickable | — | Selection moves to that node |

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>SelectionOverlay — self-contained</title>
+  <style>
+    body { margin: 1rem; font-family: system-ui, sans-serif; }
+    .demo { position: relative; width: 240px; height: 160px; border: 1px solid #000; }
+    .c-bounds { position: absolute; left: 40px; top: 30px; width: 140px; height: 80px; border: 2px solid #000; }
+    .c-handle {
+      position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px;
+      background: #fff; border: 2px solid #000;
+    }
+    .c-handle:active { background: #000; }
+    .nw { left: 0; top: 0; } .se { left: 100%; top: 100%; }
+  </style>
+</head>
+<body>
+  <div class="demo" data-region="SelectionOverlay">
+    <div class="c-bounds" id="ovl.selection_bounds">
+      <button type="button" class="c-handle nw" id="ovl.resize_handles" aria-label="Resize"></button>
+      <button type="button" class="c-handle se" aria-label="Resize"></button>
+    </div>
+  </div>
+</body>
+</html>

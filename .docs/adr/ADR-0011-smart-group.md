@@ -15,10 +15,13 @@ amended_by: ADR-0013
 > is an internal Infini step rather than a wire op. §1–§3 (node shape, local transform,
 > `inkScaleMode`), §4B, §5, and §6 otherwise stand. See the amendment table in ADR-0013.
 >
-> **Clarified 2026-08-11 (same day, PM UX):** §3 `fixedInk` uses **per-content-ink** UV/offset
-> (not a single shared centroid) so new ink never moves older content; §4B selection create
-> **requires** a surround stroke among the selection (open OK — artificial closed path for the
-> containment test); §7 covers draw-into membership and free layout.
+> **Clarified 2026-08-11 (same day, PM UX):** §3 `fixedInk` uses **per-content-ink**
+> `layoutOffset: {u,v}` (UV locked — not a local offset vector); §4B selection create
+> **requires** a surround stroke among the selection (open OK — artificial closed path,
+> even-odd PIP); §7 covers draw-into membership and free layout.
+>
+> **Confirmed 2026-08-11 (architect):** SRS-IN-15 / SRS-IN-16 + UV field shape are
+> implementable as written; SM may slice.
 
 ## Context
 
@@ -61,23 +64,22 @@ Parent: [REQ-04](../modules/infini/prd.md#smart-group) (pilot) · tree model [RE
    | `withBounds` (default) | Object scale | **Content** ink scales/rotates with the SmartGroup transform |
    | `fixedInk` | Text-box chrome | Geometric bounds + **boundary ink** still transform; **each** content ink keeps sample size fixed and tracks the box via **its own** relative offset / UV |
 
-   Exact `fixedInk` layout rule (pilot) — **per content ink**:
+   Exact `fixedInk` layout rule (pilot) — **per content ink**, field locked:
 
-   - Each `role: content` ink stores (or derives at membership time) its own anchor in the box,
-     e.g. UV `(u, v)` of that ink’s AABB centroid relative to the SmartGroup bounds top-left,
-     and/or an explicit `layoutOffset` / local origin used for `fixedInk` placement.
-   - On bounds or `scaleX`/`scaleY` change: **do not scale** that ink’s sample geometry; translate
-     it so its UV (or offset) in the new bounds matches the stored value.
-   - Newly appended content ink receives **its own** offset at membership time and never adjusts
-     siblings — this is how free draw-into coexists with `fixedInk` resize.
+   - Store `layoutOffset: { u, v }` on each `role: content` ink (SRS-IN-09).  
+     `u = (cx − bounds.x) / width`, `v = (cy − bounds.y) / height` of that ink’s AABB centroid
+     in group-local space at seed (create / membership / selection-create).
+   - On bounds or `scaleX`/`scaleY` change under `fixedInk`: **do not scale** content samples;
+     place so the centroid sits at `(bounds.x + u·width, bounds.y + v·height)`, then apply
+     rotation + group translate only.
+   - Newly appended content ink receives **its own** `{u,v}` and never adjusts siblings.
    - Do **not** OCR, reflow glyphs, or auto-align content. In-box alignment is a later feature.
+   - **Rejected alternatives:** local offset vector (second representation); shared group
+     centroid; freeze-at-top-left with no UV.
 
-   Example: ink A’s center at `(50, 100)` from the box top-left; box scales 2× → A’s center at
-   `(100, 200)`; ink B drawn later keeps its own UV and is untouched when A’s offset is updated.
-
-   **Preferred implementation (architect/dev):** track per-content-ink offset inside the Smart
-   Group; on `fixedInk` resize, adjust each ink’s offset independently. Avoid a single shared
-   “content centroid” for the whole group — that would move older ink when new ink is added.
+   Example: ink A’s center at `(50, 100)` from the box top-left → `{u:0.25,v:0.5}` in a
+   200×200 box; box width×2 → A’s center at `(100, 100)` in local UV space; ink B drawn later
+   keeps its own UV and is untouched when A’s placement updates.
 
    **Boundary ink always transforms** with the SmartGroup (same as the geometric frame). It is
    **not** gated by `inkScaleMode`. Only `role: content` ink respects the mode.
@@ -125,9 +127,9 @@ Parent: [REQ-04](../modules/infini/prd.md#smart-group) (pilot) · tree model [RE
 - Viewport remains translate + uniform scale only; **node** rotation lives on SmartGroup.  
 - Epaper may only draw ink; recognition/create/membership run on Infini after sync.  
 - Connector glue uses SmartGroup world bounds after transform.  
-- `fixedInk` tracks the box via **per-content-ink** UV/offset (not a shared group centroid).
-  Current library `smartLocalToWorld` omits that offset — implement stories must close the gap
-  when landing [SRS-IN-11](../modules/infini/features/vector-document/srs-logic.md#srs-in-11-selection-manipulation).  
+- `fixedInk` tracks the box via **per-content-ink** `layoutOffset: {u,v}` (UV locked in
+  SRS-IN-09). Current library `smartLocalToWorld` omits that UV — implement stories must close
+  the gap when landing [SRS-IN-11](../modules/infini/features/vector-document/srs-logic.md#srs-in-11-selection-manipulation).  
 - Selection create without a surround stroke is refused — no hint-only Smart Group.  
 - Follow-up: promote local transforms to ordinary Group; richer enclose shapes; **in-box
   alignment**.
@@ -142,6 +144,7 @@ Parent: [REQ-04](../modules/infini/prd.md#smart-group) (pilot) · tree model [RE
 | Always scale ink with bounds only | + | − fixedInk | + | Rejected — loses text-box padding feel |
 | `fixedInk` freeze samples (no offset) | + | − (content sticks to TL as box grows) | + | Rejected — PM: content must track box |
 | `fixedInk` shared content centroid | + | − (new ink shifts older UV) | + | Rejected — PM: per-ink offset |
+| `layoutOffset` as local (dx,dy) vector | + | + | 0 | Rejected — second representation; UV alone is enough and zoom-stable in bounds space |
 | Selection → AABB Smart Group (no surround) | − frame | − | + | Rejected — need surround stroke among selection |
 | Treat enclosure rect as Frame | 0 | − | 0 | Frames are root-only artboards — wrong metaphor |
 | Auto-align / reflow on append | − freehand | + typed feel | 0 | Deferred — free layout in pilot |

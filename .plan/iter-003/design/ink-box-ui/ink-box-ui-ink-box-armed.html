@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="desktop">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Infini — tool.ink_box.armed</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    /* gate: live states must appear in-scene (not only common.css) */
+    .c-tool-btn:hover, .c-create-cta:hover, .c-handle:hover, .c-ink-scale button:hover { background: rgba(15, 118, 110, 0.08); }
+    .c-tool-btn:active, .c-create-cta:active, .c-handle:active, .c-ink-scale button:active { background: rgba(15, 118, 110, 0.16); }
+    .c-tool-btn:focus-visible, .c-create-cta:focus-visible, .c-handle:focus-visible, .c-ink-scale button:focus-visible, .c-canvas-stage:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-focus); }
+    .c-create-cta:disabled, .c-ink-scale button:disabled, .c-handle:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+  <style>
+    .c-canvas-stage { cursor: crosshair; }
+    .ghost-enclose {
+      fill: none;
+      stroke: var(--color-primary);
+      stroke-width: 1.5;
+      stroke-dasharray: 6 4;
+      opacity: 0.75;
+    }
+  </style>
+</head>
+<body data-state="tool.ink_box.armed">
+  <div data-region="WindowFrame">
+    <div class="app-mark" aria-hidden="true">Infini</div>
+    <div class="c-tool-strip" data-region="ToolStrip" role="toolbar" aria-label="Ink-box tools">
+      <button type="button" class="c-tool-btn" id="tool.selection" aria-pressed="false" aria-label="Selection tool">
+        <img src="../system/assets/icon-tool-selection.svg" alt="" />
+        Select
+      </button>
+      <button type="button" class="c-tool-btn" id="tool.ink_box" aria-pressed="true" aria-label="Ink-box tool">
+        <img src="../system/assets/icon-tool-ink-box.svg" alt="" />
+        Ink-box
+      </button>
+    </div>
+    <div class="c-zoom-readout" data-region="StatusZoom" aria-live="polite">100%</div>
+    <button type="button" class="c-canvas-stage" data-region="CanvasStage" aria-label="Infinity canvas">
+      <div class="c-world-layer" data-region="WorldLayer" style="transform: translate(0px, 0px) scale(1)">
+        <svg width="100%" height="100%" aria-hidden="true">
+          <path class="ink-stroke ink-content" d="M280 220c40-30 90-20 120 10c30 28 70 40 110 18"/>
+          <path class="ink-stroke ink-content" d="M300 280c50-10 90 20 130 8"/>
+          <path class="ghost-enclose" d="M255 195h200v120"/>
+        </svg>
+      </div>
+    </button>
+    <p class="scene-note">Ink-box armed · draw enclose stroke (intent:enclose) · no proposal step — stroke end commits if guards pass</p>
+  </div>
+</body>
+</html>
