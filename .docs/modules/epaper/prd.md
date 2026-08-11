@@ -91,13 +91,13 @@ drawing-region sync with Infini.
 - Given the `Ink-box` tool, When the creator draws an enclosing stroke, Then Infini receives the
   samples marked as an enclose request, and the resulting Smart Group appears on the panel after
   settle with p95 ≤500 ms after the op.
-- Given any tool, When the pen passes over the toolbar strip, Then no ink is drawn there
-  (0 stray strokes on the chrome region).
+- Given any tool, When the pen passes over the floating ToolChip, Then no ink is drawn there
+  (0 stray strokes inside the chip exclusion rect; InkSurface stays full-bleed).
 - Given a full-panel refresh is in flight, When the creator switches tools, Then the active-tool
-  indicator is still legible (partial refresh of the strip, no dependence on the settled frame).
+  indicator is still legible (partial refresh of the chip, no dependence on the settled frame).
 - **UI states / journeys to design:** default `Pen`; switching tools; `Selection` with nothing
   selected; `Selection` with a Smart Group selected (handles); `Ink-box` armed; enclose rejected
-  (too small / no ink inside); toolbar during a trailing panel refresh.
+  (too small / no ink inside); ToolChip during a trailing panel refresh; orientation-top placement.
 
 ---
 

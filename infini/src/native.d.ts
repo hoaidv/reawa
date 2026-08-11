@@ -1,10 +1,28 @@
 export type RmStrokeMsg =
-  | { type: "stroke_begin"; id: string; brush?: { width?: number }; cw?: number; ch?: number }
+  | {
+      type: "stroke_begin";
+      id: string;
+      brush?: { width?: number };
+      cw?: number;
+      ch?: number;
+      /** ADR-0013 / SRS-IN-13 — enclose when Ink-box armed. */
+      intent?: "ink" | "enclose";
+    }
   | { type: "stroke_point"; id: string; x: number; y: number; p?: number }
   | { type: "stroke_end"; id: string };
 
+export type RmToolIntentMsg = {
+  type: "tool_intent";
+  action: "select" | "move" | "resize";
+  nodeId: string;
+  delta?: { dx: number; dy: number };
+  bounds?: { x: number; y: number; width: number; height: number };
+  seq?: number;
+};
+
 export interface InfiniNative {
   onRmStroke: (cb: (msg: RmStrokeMsg) => void) => () => void;
+  onRmToolIntent?: (cb: (msg: RmToolIntentMsg) => void) => () => void;
   strokeIngestPort: () => Promise<number>;
   sendToRm?: (obj: unknown) => Promise<number>;
   rmClientCount?: () => Promise<number>;

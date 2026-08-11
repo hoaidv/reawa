@@ -4,7 +4,7 @@ title: "Draw-into membership for existing Smart Groups"
 kind: implement
 parent_srs: [SRS-IN-15]
 parent_req: [REQ-04]
-status: draft
+status: done
 priority: P0
 iter: iter-003
 estimate: 3

@@ -4,7 +4,7 @@ title: "Selection create requires surround stroke"
 kind: implement
 parent_srs: [SRS-IN-16]
 parent_req: [REQ-04]
-status: draft
+status: done
 priority: P0
 iter: iter-003
 estimate: 3

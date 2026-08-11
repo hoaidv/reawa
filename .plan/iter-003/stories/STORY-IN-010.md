@@ -4,7 +4,7 @@ title: "Tool-armed enclose recognition (immediate Smart Group)"
 kind: implement
 parent_srs: [SRS-IN-10]
 parent_req: [REQ-04]
-status: draft
+status: done
 priority: P0
 iter: iter-003
 estimate: 5

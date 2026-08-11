@@ -81,7 +81,9 @@ to 2. Recorded in [epaper REQ-03](../.docs/modules/epaper/prd.md#tool-modes) and
 
 ### Open challenges / blocked
 
-- None open. IN-006 remains cancelled (historical).
+- None open — CHL-0001 / CHL-0002 / CHL-0003 **adopted** 2026-08-11 (PM).
+  CHL-0002 residual: ADLC `data-platform` allowlist +`epaper` awaits human approval.
+- IN-006 remains cancelled (historical).
 
 ### Design packages in flight
 

@@ -1,10 +1,13 @@
 ---
 id: CHL-0001
 title: Add create_refused to SRS-IN-14 states matrix
-status: open
+status: resolved
+resolution: adopted
 iter: iter-003
 raised_by: designer
 date: 2026-08-11
+resolved_by: pm
+resolved: 2026-08-11
 ---
 
 # CHL-0001 — create_refused state missing from SRS-IN-14 matrix
@@ -25,3 +28,15 @@ Adopt a states-matrix row, e.g. `tool.selection.create_refused` | Selection arme
 ## Product doc updates (on adopt)
 
 - `srs-ui.md` SRS-IN-14 states matrix + control-states for `cta.create_smart_group`
+
+## Resolution
+
+**Adopted** — 2026-08-11 (PM).
+
+Docs already had inventory + interaction for refuse; the matrix gap was the bug. Added:
+
+- States matrix row `tool.selection.create_refused`
+- Control-states row for `cta.create_smart_group` (disabled when refuse)
+
+No lifecycle retire; same SRS-IN-14 section thickened. Scene `ink-box-ui-create-refused.html` remains valid.
+Notify `/sm` — no story replan; IN-013 design already covers the scene.

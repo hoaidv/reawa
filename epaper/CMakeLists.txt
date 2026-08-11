@@ -20,6 +20,18 @@ qt_add_qml_module(epaper_bin
     QML_FILES Main.qml
 )
 
+# Designer icons (rasterized from .plan/.../system/assets/icon-epaper-*.svg)
+qt_add_resources(epaper_bin "epaper_tool_icons"
+    PREFIX "/icons"
+    FILES
+        icons/icon-epaper-selection.png
+        icons/icon-epaper-selection-inv.png
+        icons/icon-epaper-pen.png
+        icons/icon-epaper-pen-inv.png
+        icons/icon-epaper-ink-box.png
+        icons/icon-epaper-ink-box-inv.png
+)
+
 target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network ${CMAKE_DL_LIBS})
 set_target_properties(epaper_bin PROPERTIES
     OUTPUT_NAME epaper

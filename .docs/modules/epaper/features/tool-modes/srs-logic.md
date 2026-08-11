@@ -11,9 +11,9 @@ Device-side rules for [REQ-03](../../prd.md#tool-modes).
 Decision: [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md).
 Wire peer: [SRS-IN-13](../../../infini/features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport).
 
-**Implementation status (code SoT, 2026-08-11):** none of this exists. `epaper/Main.qml` is a
-canvas plus a debug status line; `tabletappfilter.cpp` forwards **pen events only**. Touch
-handling, tool state, and the toolbar are all new.
+**Implementation status (code SoT, 2026-08-11):** ToolChip + `toolMode` + `stroke_begin.intent`
++ `pickables` ingest + `tool_intent` emit in `tabletcanvasitem` / `Main.qml` (STORY-EP-005).
+Touch-on-chip uses MouseArea; pen-on-chip press is ignored for ink (fallback path).
 
 ## [SRS-EP-04] Tool state and intent emission
 
@@ -25,11 +25,11 @@ handling, tool state, and the toolbar are all new.
 | Default on launch | `pen` — the device must still be a notebook if nothing else works |
 | Ownership | **Device-local UI state.** Never sent to Infini, never set by Infini (ADR-0013 §1) |
 | Persistence | Not persisted across restarts in v0 |
-| Input | Finger touch on the toolbar strip. Pen events are never consumed by the toolbar |
+| Input | Finger touch on the ToolChip (pen-on-chip fallback). Pen events on the chip are not ink |
 
 ### Input routing
 
-| Tool | Pen down on canvas | Finger on toolbar | Finger on canvas |
+| Tool | Pen down on canvas | Finger / pen on ToolChip | Finger on canvas |
 |---|---|---|---|
 | `pen` | Local ink + `stroke_*` with `intent: ink` | Switch tool | Ignored (no on-device pan — PRD Non-Goal) |
 | `ink_box` | Local ink + `stroke_*` with `intent: enclose` | Switch tool | Ignored |
@@ -69,10 +69,12 @@ Round 19 map, and the paint are byte-identical, so ink latency cannot regress by
 | Touch layer unavailable at runtime | Fall back to `pen` permanently; surface it in the status line; never trap the creator in a non-drawing tool |
 | Session down | `pen` still inks locally (REQ-01 is offline-capable); `selection` / `ink_box` show as unavailable |
 | Snapshot older than the creator's edits | Ghost discarded on next snapshot; last write wins (no locking, ADR-0013 §4) |
-| Pen-down starts on the toolbar strip | Ignored entirely — not ink, not a tool switch |
+| Pen-down starts on the ToolChip bounds | Not ink; may arm a tool when pen-on-chip fallback is active |
 
 ### Other logic
 
-- The toolbar strip is excluded from the ink drawing region so a stroke can never start under it.
-- Tool switching must not invalidate the full panel — partial refresh of the strip only
+- **Exclusion rect = ToolChip bounds** (floating chip), not a full edge band. A stroke must never
+  begin inside that rect; `InkSurface` stays full-bleed ([SRS-EP-05](./srs-ui.md), CHL-0003).
+- Tool switching must not invalidate the full panel — partial refresh of the **chip** only
   (the ink area keeps its content, [SRS-EP-06](./srs-quality.md)).
+- Chip anchor follows **gut orientation top** (see SRS-EP-05); exclusion rect moves with it.

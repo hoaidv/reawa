@@ -58,6 +58,8 @@ export interface InkNode {
   samples: InkSample[];
   style: Style;
   role?: "content" | "boundary";
+  /** Content-only UV in SmartGroup.bounds (SRS-IN-09). */
+  layoutOffset?: { u: number; v: number };
 }
 
 export interface TextRun {

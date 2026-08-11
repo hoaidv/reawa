@@ -4,6 +4,7 @@
  * @implements [SRS-IN-03] optional rAF frame counter
  * @implements [SRS-IN-07] tablet drawing-region marker + viewport + region refresh
  * @implements [SRS-IN-04] tree-backed live ink ingestion on stroke_end
+ * @implements [SRS-IN-10] enclose recognition when intent enclose
  *
  * Perf: coalesce paints to one rAF; no React setState on the gesture hot path.
  */
@@ -29,7 +30,25 @@ import {
 import { allowIndividualInteraction } from "./TileCache";
 import type { RmStrokeMsg } from "../native";
 import { IpcRmTransport, MemoryTransport, TabletSession } from "../session";
-import { VectorDocument, commitLiveStrokeToTree } from "../document";
+import { ToolStrip } from "./ToolStrip";
+import {
+  createSelectionSession,
+  handleSelectionPointer,
+  pickFreeInkAt,
+  selectionOverlayScreenRect,
+  type SelectionSession,
+} from "../document/selection";
+import { screenToWorld } from "./Viewport";
+import {
+  VectorDocument,
+  commitStrokeWithEncloseRecognition,
+  createSmartGroupFromSelection,
+  buildPickables,
+  applyToolIntent,
+  normalizeStrokeIntent,
+  UndoRing,
+} from "../document";
+import type { SmartGroupNode } from "../document/types";
 import type { Primitive } from "./primitives";
 
 export interface CanvasStageProps {
@@ -84,6 +103,9 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const sizeRef = useRef({ w: 0, h: 0 });
   const centeredRef = useRef(false);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
+  const selectionRef = useRef<SelectionSession>(createSelectionSession());
+  const undoRef = useRef(new UndoRing());
+  const overlayRef = useRef<HTMLDivElement>(null);
   const rafPaintRef = useRef(0);
   const rafStats = useRef({ frames: 0, drops: 0, last: 0, painted: 0 });
   const gestureEndTimer = useRef(0);
@@ -93,13 +115,23 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const snapshotSentRef = useRef(false);
   /** In-flight RM strokes only — committed ink lives in VectorDocument (STORY-IN-012). */
   const rmStrokesRef = useRef(
-    new Map<string, { points: { x: number; y: number }[]; width: number }>(),
+    new Map<
+      string,
+      {
+        points: { x: number; y: number }[];
+        width: number;
+        intent?: "ink" | "enclose";
+      }
+    >(),
   );
   const rmPanelRef = useRef({ w: 1404, h: 1872 });
 
   const [emptyHint, setEmptyHint] = useState(!populated);
   const [syncHint, setSyncHint] = useState("");
   const [orientation, setOrientation] = useState<TabletOrientation>("gutToLeft");
+  const [tool, setTool] = useState<"selection" | "ink_box">("selection");
+  const [refuseReason, setRefuseReason] = useState<string | null>(null);
+  const [inkSelCount, setInkSelCount] = useState(0);
 
   if (!sessionRef.current) {
     // Prefer IPC when preload already exposed sendToRm (Electron).
@@ -142,8 +174,9 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const sendDocSnapshot = () => {
     const api = window.infiniNative;
     if (!api?.sendToRm) return;
-    const nodes = primitivesToSnapshotNodes(docRef.current.all());
-    void api.sendToRm({ type: "doc_snapshot", nodes });
+    const nodes = primitivesToSnapshotNodes([...docRef.current.all()]);
+    const pickables = buildPickables(treeRef.current);
+    void api.sendToRm({ type: "doc_snapshot", nodes, pickables });
     snapshotSentRef.current = true;
   };
 
@@ -155,6 +188,39 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     if (!snapshotSentRef.current) sendDocSnapshot();
     if (force) session.flushViewport(vpRef.current);
     else session.publishViewport(vpRef.current);
+  };
+
+  const syncSelectionOverlay = () => {
+    const el = overlayRef.current;
+    if (!el) return;
+    const sel = selectionRef.current;
+    const id = sel.selectedId;
+    if (!id || !allowIndividualInteraction(vpRef.current)) {
+      el.hidden = true;
+      return;
+    }
+    let node = treeRef.current.indexById().get(id);
+    if (!node || node.kind !== "smart_group") {
+      el.hidden = true;
+      return;
+    }
+    const sg = node as SmartGroupNode;
+    if (sel.preview && sel.preview.id === sg.id) {
+      node = {
+        ...sg,
+        transform: sel.preview.liveTransform,
+        bounds: sel.preview.liveBounds,
+      };
+    }
+    const rect = selectionOverlayScreenRect(node as SmartGroupNode, vpRef.current);
+    el.hidden = false;
+    el.style.left = `${rect.left}px`;
+    el.style.top = `${rect.top}px`;
+    el.style.width = `${rect.width}px`;
+    el.style.height = `${rect.height}px`;
+    el.dataset.state = sel.preview?.moved
+      ? "tool.selection.dragging"
+      : "tool.selection.selected";
   };
 
   /**
@@ -226,6 +292,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     );
     rafStats.current.painted++;
     syncMarkerDom();
+    syncSelectionOverlay();
 
     const pct = Math.round(vpRef.current.scale * 100);
     if (zoomElRef.current) zoomElRef.current.textContent = `${pct}%`;
@@ -332,10 +399,19 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         sendDocSnapshot();
         publishViewportCoalesced(true);
         setSyncHint(`RM connected (n=${ev.n})`);
+      } else if (ev.type === "closed") {
+        setSyncHint(ev.n > 0 ? `RM connected (n=${ev.n})` : "RM disconnected — waiting");
       }
     });
 
-    const unsub = api.onRmStroke((msg: RmStrokeMsg) => {
+    const unsub = api.onRmStroke((msg: RmStrokeMsg | import("../native").RmToolIntentMsg) => {
+      if (msg.type === "tool_intent") {
+        applyToolIntent(treeRef.current, undoRef.current, msg);
+        rebuildWithRmInk();
+        snapshotSentRef.current = false;
+        sendDocSnapshot();
+        return;
+      }
       const cssW = sizeRef.current.w || 800;
       const cssH = sizeRef.current.h || 600;
       const orient = currentOrientation();
@@ -346,7 +422,11 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         if (msg.cw && msg.ch) rmPanelRef.current = { w: msg.cw, h: msg.ch };
         // brush.width is world units (ADR-0012); legacy panel-px ignored.
         const widthWorld = msg.brush?.width ?? 2.5;
-        rmStrokesRef.current.set(msg.id, { points: [], width: widthWorld });
+        rmStrokesRef.current.set(msg.id, {
+          points: [],
+          width: widthWorld,
+          intent: msg.intent === "enclose" ? "enclose" : "ink",
+        });
         return;
       }
       if (msg.type === "stroke_point") {
@@ -371,10 +451,11 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       if (msg.type === "stroke_end") {
         const stroke = rmStrokesRef.current.get(msg.id);
         if (stroke && stroke.points.length >= 2) {
-          commitLiveStrokeToTree(treeRef.current, {
+          commitStrokeWithEncloseRecognition(treeRef.current, undoRef.current, {
             id: msg.id,
             points: stroke.points,
             width: stroke.width,
+            intent: normalizeStrokeIntent(stroke.intent),
             source: "epaper",
           });
         }
@@ -382,6 +463,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         rebuildWithRmInk();
       }
     });
+
     return () => {
       unsub();
       unsubClient?.();
@@ -483,25 +565,131 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    const host = hostRef.current;
+    if (!host) return;
+    const rect = host.getBoundingClientRect();
+    const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     dragRef.current = { x: e.clientX, y: e.clientY };
+    const result = handleSelectionPointer(
+      treeRef.current,
+      selectionRef.current,
+      "down",
+      screen,
+      vpRef.current,
+    );
+    selectionRef.current = result.session;
+    if (!result.consumed && result.session.tool === "selection") {
+      const world = screenToWorld(screen, vpRef.current);
+      const ink = pickFreeInkAt(treeRef.current, world);
+      if (ink) {
+        const ids = new Set(selectionRef.current.selectedInkIds);
+        if (ids.has(ink.id)) ids.delete(ink.id);
+        else ids.add(ink.id);
+        selectionRef.current = {
+          ...selectionRef.current,
+          selectedInkIds: [...ids],
+          selectedId: null,
+        };
+        setInkSelCount(ids.size);
+        setRefuseReason(null);
+      }
+    }
+    applyPreviewToTree();
     markGesturing(true);
+    schedulePaint();
+  };
+
+  const applyPreviewToTree = () => {
+    const prev = selectionRef.current.preview;
+    if (!prev) return;
+    const node = treeRef.current.indexById().get(prev.id);
+    if (!node || node.kind !== "smart_group") return;
+    node.transform = { ...prev.liveTransform };
+    node.bounds = { ...prev.liveBounds };
+    rebuildWithRmInk();
+  };
+
+  const restorePreviewOrigin = () => {
+    const prev = selectionRef.current.preview;
+    if (!prev) return;
+    const node = treeRef.current.indexById().get(prev.id);
+    if (!node || node.kind !== "smart_group") return;
+    node.transform = { ...prev.originTransform };
+    node.bounds = { ...prev.originBounds };
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     const drag = dragRef.current;
     if (!drag) return;
-    const dx = e.clientX - drag.x;
-    const dy = e.clientY - drag.y;
+    const host = hostRef.current;
+    if (!host) return;
+    const rect = host.getBoundingClientRect();
+    const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const lastScreen = {
+      x: drag.x - rect.left,
+      y: drag.y - rect.top,
+    };
+    const clientDx = e.clientX - drag.x;
+    const clientDy = e.clientY - drag.y;
+    const result = handleSelectionPointer(
+      treeRef.current,
+      selectionRef.current,
+      "move",
+      screen,
+      vpRef.current,
+      lastScreen,
+    );
+    selectionRef.current = result.session;
     dragRef.current = { x: e.clientX, y: e.clientY };
-    vpRef.current = panByScreenDelta(vpRef.current, dx, dy);
-    publishViewportCoalesced(false);
+
+    if (result.consumed && result.session.preview) {
+      applyPreviewToTree();
+      schedulePaint();
+      return;
+    }
+
+    if (!result.consumed) {
+      vpRef.current = panByScreenDelta(vpRef.current, clientDx, clientDy);
+      publishViewportCoalesced(false);
+    }
     schedulePaint();
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e: React.PointerEvent) => {
+    const host = hostRef.current;
+    const screen = host
+      ? {
+          x: e.clientX - host.getBoundingClientRect().left,
+          y: e.clientY - host.getBoundingClientRect().top,
+        }
+      : { x: 0, y: 0 };
+    if (selectionRef.current.preview) {
+      restorePreviewOrigin();
+    }
+    const result = handleSelectionPointer(
+      treeRef.current,
+      selectionRef.current,
+      "up",
+      screen,
+      vpRef.current,
+    );
+    selectionRef.current = result.session;
+    if (result.commit) {
+      undoRef.current.applyWithUndo(treeRef.current, {
+        opId: `sg_xf_${Date.now()}_${result.commit.id}`,
+        type: "set_smart_transform",
+        payload: {
+          id: result.commit.id,
+          transform: result.commit.transform,
+          ...(result.commit.bounds ? { bounds: result.commit.bounds } : {}),
+        },
+      });
+      rebuildWithRmInk();
+    }
     dragRef.current = null;
     publishViewportCoalesced(true);
     markGesturing(false);
+    schedulePaint();
   };
 
   return (
@@ -518,7 +706,51 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
+      <ToolStrip
+        tool={tool}
+        onToolChange={(t) => {
+          setTool(t);
+          selectionRef.current = { ...selectionRef.current, tool: t };
+          setRefuseReason(null);
+        }}
+        onCreateSmartGroup={() => {
+          const ids = selectionRef.current.selectedInkIds;
+          const result = createSmartGroupFromSelection(
+            treeRef.current,
+            undoRef.current,
+            ids,
+          );
+          if (result.kind === "refused") {
+            setRefuseReason(result.reason);
+            return;
+          }
+          setRefuseReason(null);
+          selectionRef.current = {
+            ...selectionRef.current,
+            selectedInkIds: [],
+            selectedId: result.smartGroupId,
+          };
+          setInkSelCount(0);
+          rebuildWithRmInk();
+          schedulePaint();
+        }}
+        createDisabled={inkSelCount < 2}
+        refuseReason={refuseReason}
+      />
       <canvas ref={canvasRef} data-region="WorldLayer" />
+      <div
+        ref={overlayRef}
+        className="c-selection-overlay"
+        data-region="SelectionOverlay"
+        data-state="tool.selection.idle"
+        hidden
+        aria-hidden="true"
+      >
+        <span className="c-handle c-handle-nw" data-handle="nw" />
+        <span className="c-handle c-handle-ne" data-handle="ne" />
+        <span className="c-handle c-handle-se" data-handle="se" />
+        <span className="c-handle c-handle-sw" data-handle="sw" />
+      </div>
       <div
         ref={markerRef}
         className="c-tablet-region-marker"

@@ -16,7 +16,7 @@ lifecycle: active
 | Tool switch latency | Finger taps a tool | Active indicator updated **p95 ≤300 ms**; partial refresh only |
 | **Ink latency non-regression** | Draw with `pen` after the toolbar ships | p95 ≤30 ms pen-down → pixel — **equal to the pre-toolbar baseline within measurement error** ([SRS-EP-01](../local-pen-ink/srs-logic.md)) |
 | Tool-independent ink path | Draw the same stroke in `pen` and in `ink_box` | Identical local raster and identical `stroke_point` payloads; only `stroke_begin.intent` differs |
-| Chrome exclusion | Pen stroke started on the ToolStrip | **0** ink pixels drawn there; 0 strokes emitted |
+| Chrome exclusion | Pen stroke started on the ToolChip bounds | **0** ink pixels drawn there; 0 strokes emitted |
 | Refresh isolation | Switch tools repeatedly | 0 full-panel refreshes attributable to tool switching |
 | Ghosted state legibility | Switch tools while a full refresh trails | Active tool identifiable from shape/fill alone on the un-settled frame |
 | Enclose round trip | Draw an armed enclose over ink | Smart Group visible on panel **p95 ≤500 ms** after the Infini op ([REQ-03](../../prd.md#tool-modes)) |
@@ -36,7 +36,8 @@ lifecycle: active
 
 ### A11y / resilience
 
-- Tool targets ≥120 px on the shorter axis (finger, no hover, no cursor).
+- ToolChip targets are **32×32** (pilot, CHL-0003) with pen-on-chip fallback when finger miss
+  rate is unacceptable; do not re-expand to a full-band ≥120 px strip without a new challenge.
 - Active state distinguishable without color **and** without motion — 1-bit panel.
 - `pen` is always reachable in ≤1 tap from any state; the creator can never be trapped in a
   non-drawing tool.
@@ -54,3 +55,4 @@ lifecycle: active
 | `tool.selection.empty` | tool-modes package | unavailable, stated |
 | `session.down` | tool-modes package | pen still inks |
 | `touch.unavailable` | tool-modes package | fallback to pen; reason visible |
+| `orient.gutOnTop` | tool-modes package | chip on oriented top; exclusion rect follows |

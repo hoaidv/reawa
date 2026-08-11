@@ -94,9 +94,13 @@ function serializeNode(node: DocNode, indent: string): string {
     }
     case "ink": {
       const role = node.role ? ` data-infini-role="${node.role}"` : "";
+      const uv =
+        node.layoutOffset != null
+          ? ` data-infini-layout-offset="${node.layoutOffset.u},${node.layoutOffset.v}"`
+          : "";
       const samples = escAttr(JSON.stringify(node.samples));
       return (
-        `${indent}<polyline data-infini-kind="ink" ${id}${role} ` +
+        `${indent}<polyline data-infini-kind="ink" ${id}${role}${uv} ` +
         `points="${escAttr(pointsAttr(node.samples))}" ` +
         `data-infini-samples="${samples}" ${styleAttrs(node.style)} />`
       );
@@ -352,6 +356,13 @@ function decodeNode(el: XmlEl, warnings: string[]): DocNode | null {
         style: styleFromAttrs(el.attrs),
         role: el.attrs["data-infini-role"] as InkNode["role"] | undefined,
       };
+      const lo = el.attrs["data-infini-layout-offset"];
+      if (lo) {
+        const [u, v] = lo.split(",").map(Number);
+        if (u !== undefined && v !== undefined && Number.isFinite(u) && Number.isFinite(v)) {
+          node.layoutOffset = { u, v };
+        }
+      }
       return node;
     }
     case "text": {

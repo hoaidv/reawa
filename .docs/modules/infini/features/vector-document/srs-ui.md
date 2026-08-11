@@ -264,6 +264,7 @@ chrome pinned to the window.
 | `tool.ink_box` | yes | yes | when armed | never |
 | `ovl.resize_handles` | yes | yes | while dragging | **below 0.35 scale** |
 | `tgl.ink_scale_mode` | yes | yes | reflects current mode | when nothing selected |
+| `cta.create_smart_group` | yes | yes | while promoting | when fewer than 2 inks selected **or** no qualifying surround (`create_refused`) |
 
 ### States matrix
 
@@ -271,6 +272,7 @@ chrome pinned to the window.
 |---|---|---|---|
 | `tool.selection.idle` | Selection armed | Tree | hidden |
 | `tool.selection.selected` | Selection armed | Tree | bounds + handles + mode toggle |
+| `tool.selection.create_refused` | Selection armed | multi-ink selection unchanged | `cta.create_smart_group` disabled + `ind.create_refused_no_surround` |
 | `tool.selection.dragging` | Selection armed | Node follows pointer | bounds only |
 | `tool.ink_box.armed` | Ink-box armed | Tree | hidden |
 | `manipulation.unavailable` | `ind.manipulation_unavailable` visible | Tile-LOD paint | hidden |

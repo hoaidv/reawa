@@ -3,7 +3,7 @@
  * @implements [SRS-IN-04] flattenDrawables projection
  */
 
-import { nodeWorldAabb, resolveAnchor, smartLocalToWorld } from "./anchors";
+import { inkSamplesCentroid, nodeWorldAabb, resolveAnchor, smartLocalToWorld } from "./anchors";
 import type {
   Aabb,
   ConnectorDrawable,
@@ -117,8 +117,18 @@ function walk(
 function flattenSmartGroup(sg: SmartGroupNode): InkDrawable[] {
   return sg.children.map((ink) => {
     const role = ink.role ?? "content";
+    const centroid =
+      role === "content" && sg.inkScaleMode === "fixedInk"
+        ? inkSamplesCentroid(ink.samples)
+        : undefined;
     const samples = ink.samples.map((s) => {
-      const w = smartLocalToWorld({ x: s.x, y: s.y }, sg, role);
+      const w = smartLocalToWorld(
+        { x: s.x, y: s.y },
+        sg,
+        role,
+        ink.layoutOffset,
+        centroid,
+      );
       return { ...s, x: w.x, y: w.y };
     });
     return inkDrawable({ ...ink, samples });

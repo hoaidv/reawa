@@ -3,7 +3,7 @@
  * @implements [SRS-IN-04] tree model and op-log apply
  */
 
-import { resolveAnchor } from "./anchors";
+import { resolveAnchor, seedLayoutOffset } from "./anchors";
 import { flattenDrawables } from "./flatten";
 import type {
   Anchor,
@@ -125,8 +125,14 @@ export class VectorDocument {
         case "create_smart_group":
           this.opCreateSmartGroup(op.payload);
           break;
+        case "join_smart_group":
+          this.opJoinSmartGroup(op.payload);
+          break;
         case "set_smart_transform":
           this.opSetSmartTransform(op.payload);
+          break;
+        case "set_ink_scale_mode":
+          this.opSetInkScaleMode(op.payload);
           break;
         case "translate_node":
           this.opTranslateNode(op.payload);
@@ -253,10 +259,18 @@ export class VectorDocument {
   private opCreateSmartGroup(p: Record<string, unknown>): void {
     const id = String(p.id);
     this.assertUniqueId(id);
+    const captureIds = (p.captureIds as string[] | undefined) ?? [];
+    for (const cid of captureIds) {
+      const detached = this.detachInk(cid);
+      if (!detached) throw new Error(`capture_missing:${cid}`);
+    }
     const children = cloneJson((p.children as InkNode[]) ?? []);
     for (const c of children) {
-      this.assertUniqueId(c.id);
       if (c.kind !== "ink") throw new Error("smart_group_ink_only");
+      // Ids may be new (boundary) or previously detached (content).
+      if (this.indexById().has(c.id)) {
+        throw new Error(`duplicate_id:${c.id}`);
+      }
     }
     const node: SmartGroupNode = {
       id,
@@ -271,11 +285,70 @@ export class VectorDocument {
     this.insertUnder(p.parentId as string | undefined, node);
   }
 
+  /**
+   * Remove an ink node from the tree (root / frame / group only — not inside SmartGroup).
+   * @implements [SRS-IN-10] reparent capture into Smart Group
+   */
+  detachInk(id: Id): InkNode | null {
+    const removeFrom = (nodes: DocNode[]): InkNode | null => {
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (n.kind === "ink" && n.id === id) {
+          nodes.splice(i, 1);
+          return n;
+        }
+        if (n.kind === "frame" || n.kind === "group") {
+          const found = removeFrom(n.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return removeFrom(this.rootChildren);
+  }
+
+  /**
+   * Reparent free ink into an existing Smart Group as content.
+   * @implements [SRS-IN-15] join membership
+   */
+  private opJoinSmartGroup(p: Record<string, unknown>): void {
+    const inkId = String(p.inkId);
+    const smartGroupId = String(p.smartGroupId);
+    const sg = this.indexById().get(smartGroupId);
+    if (!sg || sg.kind !== "smart_group") {
+      throw new Error(`not_smart_group:${smartGroupId}`);
+    }
+    const detached = this.detachInk(inkId);
+    if (!detached) throw new Error(`join_missing:${inkId}`);
+    const content: InkNode = cloneJson(detached);
+    content.role = "content";
+    // UV vs current bounds — do not expand bounds (SRS-IN-15)
+    content.layoutOffset = seedLayoutOffset(content.samples, sg.bounds);
+    sg.children.push(content);
+  }
+
   private opSetSmartTransform(p: Record<string, unknown>): void {
     const id = String(p.id);
     const node = this.indexById().get(id);
     if (!node || node.kind !== "smart_group") throw new Error(`not_smart_group:${id}`);
-    node.transform = cloneJson(p.transform as SmartTransform);
+    if (p.transform) {
+      node.transform = cloneJson(p.transform as SmartTransform);
+    }
+    // Optional bounds update for resize gestures (SRS-IN-11 handles).
+    if (p.bounds) {
+      node.bounds = cloneJson(p.bounds as SmartBounds);
+    }
+  }
+
+  private opSetInkScaleMode(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    const node = this.indexById().get(id);
+    if (!node || node.kind !== "smart_group") throw new Error(`not_smart_group:${id}`);
+    const mode = p.inkScaleMode;
+    if (mode !== "withBounds" && mode !== "fixedInk") {
+      throw new Error(`bad_ink_scale_mode:${String(mode)}`);
+    }
+    node.inkScaleMode = mode;
   }
 
   private opTranslateNode(p: Record<string, unknown>): void {

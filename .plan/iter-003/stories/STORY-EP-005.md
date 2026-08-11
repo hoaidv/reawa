@@ -4,7 +4,7 @@ title: "Epaper device tool modes and intent emission"
 kind: implement
 parent_srs: [SRS-EP-04, SRS-EP-06]
 parent_req: [REQ-03]
-status: draft
+status: done
 priority: P1
 iter: iter-003
 estimate: 5

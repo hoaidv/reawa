@@ -22,6 +22,22 @@ export interface ViewportMessage {
 export interface DocSnapshotMessage {
   type: "doc_snapshot";
   nodes: Array<Record<string, unknown>>;
+  /** @implements [SRS-IN-13] pickables for device local hit-test */
+  pickables?: Array<{
+    id: string;
+    kind: "smart_group";
+    bounds: { minX: number; minY: number; maxX: number; maxY: number };
+  }>;
+}
+
+/** Epaper → Infini manipulation intent (pilot). */
+export interface ToolIntentWireMessage {
+  type: "tool_intent";
+  action: "select" | "move" | "resize";
+  nodeId: string;
+  delta?: { dx: number; dy: number };
+  bounds?: { x: number; y: number; width: number; height: number };
+  seq?: number;
 }
 
 export interface DocOpMessage {

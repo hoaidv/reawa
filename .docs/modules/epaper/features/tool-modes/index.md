@@ -13,7 +13,7 @@ recognition.
 
 - Product: [PRD REQ-03](../../prd.md#tool-modes)
 - Logic: [srs-logic.md](./srs-logic.md) — [SRS-EP-04]
-- UI: [srs-ui.md](./srs-ui.md) — [SRS-EP-05] · **needs design**
+- UI: [srs-ui.md](./srs-ui.md) — [SRS-EP-05] floating ToolChip · **needs design**
 - Quality: [srs-quality.md](./srs-quality.md) — [SRS-EP-06]
 - Runtime (to build): `epaper/Main.qml`, `epaper/tabletcanvasitem.cpp`, `epaper/tabletappfilter.cpp`
 - Peer: [infini SRS-IN-13 tool intent transport](../../../infini/features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport)

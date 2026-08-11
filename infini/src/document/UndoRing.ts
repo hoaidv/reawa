@@ -18,6 +18,7 @@ const STRUCTURAL_TYPES = new Set([
   "create_smart_group",
   "set_smart_transform",
   "set_ink_scale_mode",
+  "join_smart_group",
   "reparent",
   "remove_node",
   "translate_node",
@@ -73,8 +74,14 @@ export class UndoRing {
   undo(tree: VectorDocument): { restored: boolean } {
     const snap = this.ring.pop();
     if (!snap) return { restored: false };
-    const parsed = JSON.parse(snap) as { rootChildren: DocNode[] };
+    const parsed = JSON.parse(snap) as {
+      rootChildren: DocNode[];
+      status?: string;
+    };
     tree.replaceTree(parsed.rootChildren);
+    if (parsed.status === "none" || parsed.status === "open" || parsed.status === "dirty" || parsed.status === "error") {
+      tree.status = parsed.status;
+    }
     return { restored: true };
   }
 }

@@ -7,14 +7,15 @@ parent_req: [REQ-03]
 story: STORY-EP-003
 fidelity: hifi
 platform: epaper
-version: 0.3.0
+version: 0.4.0
 amends: CHL-0003
 ---
 
 # UI Spec — Epaper floating tool chip `[UI-EP-01]`
 
+**v0.4 (human verify 2026-08-11):** chip height **64px** (doubled from v0.3 32px — touch targets too small on device); icons = designer `icon-epaper-*.svg` (raster in app).
 **v0.3 (human 2026-08-11):** chip height **32px**; navigator preview = **RM2 landscape tablet** (1872×1404), not mobile.
-Pending PM adopt: [CHL-0003](../../challenges/CHL-0003-epaper-floating-toolchip.md).
+**PM adopted** [CHL-0003](../../challenges/CHL-0003-epaper-floating-toolchip.md) 2026-08-11 — Spec aligns with SRS-EP-05.
 
 ## Platform profile
 
@@ -33,7 +34,7 @@ Pending PM adopt: [CHL-0003](../../challenges/CHL-0003-epaper-floating-toolchip.
 |---|---|---|
 | DeviceScreen | panel | Landscape preview frame; `data-orientation` = active gut pose |
 | InkSurface | DeviceScreen | **Full-bleed** (not shrunk) |
-| ToolStrip | DeviceScreen | Floating **squared** chip — hug width, height **32px**, 32×32 icon tiles, radius 0 |
+| ToolStrip | DeviceScreen | Floating **squared** chip — hug width, height **64px**, 64×64 icon tiles, radius 0 |
 | SelectionOverlay | InkSurface | Bounds / handles / ghost |
 | StatusLine | DeviceScreen | Existing status |
 
@@ -41,7 +42,7 @@ Pending PM adopt: [CHL-0003](../../challenges/CHL-0003-epaper-floating-toolchip.
 
 | Rule | Value |
 |---|---|
-| Size | Height **32px**; each tool **32×32** square; chip + buttons `border-radius: 0` |
+| Size | Height **64px**; each tool **64×64** square; chip + buttons `border-radius: 0` |
 | Anchor | **Top of the activated orientation** — centered on that edge, inset ~8 px |
 | gutToLeft / gutToRight / gutAtBottom | Chip on oriented **top** |
 | gutOnTop | Oriented “top” is the opposite short edge → chip near **bottom** |
@@ -83,5 +84,5 @@ Pending PM adopt: [CHL-0003](../../challenges/CHL-0003-epaper-floating-toolchip.
 | Full-band strip | required | **retired** → floating chip | CHL-0003 |
 | InkSurface shrink | required | **full-bleed** | CHL-0003 |
 | No float | anti-pattern | **float allowed** for chip | CHL-0003 |
-| ≥120 px targets | binding | **32px** chip (icon-only) | CHL-0003 |
+| ≥120 px targets | binding | **64px** chip (icon-only; human verify doubled from 32) | CHL-0003 + verify |
 | Orientation-top | not stated | **binding** | CHL-0003 |

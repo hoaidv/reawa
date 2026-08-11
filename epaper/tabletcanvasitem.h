@@ -26,6 +26,10 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(bool paintsInk READ paintsInk CONSTANT)
     Q_PROPERTY(QPointF lastPoint READ lastPoint NOTIFY debugChanged)
     Q_PROPERTY(QString debugInfo READ debugInfo NOTIFY debugChanged)
+    /** Device-local tool: pen | ink_box | selection — never synced (SRS-EP-04). */
+    Q_PROPERTY(QString toolMode READ toolMode WRITE setToolMode NOTIFY toolModeChanged)
+    Q_PROPERTY(QRectF toolChipRect READ toolChipRect NOTIFY toolChipRectChanged)
+    Q_PROPERTY(int pickableCount READ pickableCount NOTIFY pickablesChanged)
 
 public:
     explicit TabletCanvasItem(QQuickItem *parent = nullptr);
@@ -34,14 +38,22 @@ public:
     bool paintsInk() const { return m_paintsInk; }
     QPointF lastPoint() const { return m_lastPoint; }
     QString debugInfo() const { return m_debugInfo; }
+    QString toolMode() const { return m_toolMode; }
+    void setToolMode(const QString &mode);
+    QRectF toolChipRect() const { return m_toolChipRect; }
+    int pickableCount() const { return m_pickables.size(); }
 
     Q_INVOKABLE void ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure);
+    Q_INVOKABLE void armTool(const QString &mode);
 
     void paint(QPainter *painter) override;
 
 signals:
     void strokeCountChanged();
     void debugChanged();
+    void toolModeChanged();
+    void toolChipRectChanged();
+    void pickablesChanged();
     void segmentDrawn(qreal x1, qreal y1, qreal x2, qreal y2, qreal lineWidth);
 
 protected:
@@ -77,9 +89,16 @@ private:
     void syncBegin();
     void syncPoint(const Point &pt);
     void syncEnd();
+    void syncToolIntent(const QJsonObject &obj);
     void onHostMessage(const QJsonObject &obj);
     void applyViewport(const QJsonObject &obj);
     void applyDocSnapshot(const QJsonObject &obj);
+    void updateToolChipRect();
+    bool pointInToolChip(const QPointF &canvasPos) const;
+    QString hitPickable(const QPointF &world) const;
+    void beginSelectionGesture(const QPointF &canvasPos);
+    void updateSelectionGesture(const QPointF &canvasPos);
+    void endSelectionGesture();
     void scheduleVectorRasterize(bool sharp);
     void rasterizeVectors(bool sharp);
     QPointF worldToPanel(double wx, double wy) const;
@@ -117,6 +136,15 @@ private:
     int m_viewportSeq = 0;
     WorldAabb m_drawingRegion;
     QJsonArray m_vectorNodes;
+    QJsonArray m_pickables;
+    QString m_toolMode = QStringLiteral("pen");
+    QRectF m_toolChipRect;
+    QString m_selectedPickableId;
+    QString m_gesturePickableId;
+    QPointF m_gestureStartWorld;
+    QPointF m_gestureLastWorld;
+    bool m_selectionGesture = false;
+    int m_toolIntentSeq = 0;
     bool m_rasterizePending = false;
     bool m_rasterizeSharp = false;
     QPointF m_lastRaw;

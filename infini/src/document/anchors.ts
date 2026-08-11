@@ -219,15 +219,44 @@ export function resolveAnchor(
   }
 }
 
-/** Local ink sample → world under SmartGroup transform (v0: translate + uniform-ish scale; rotation for content). */
+/** Local ink sample → world under SmartGroup transform.
+ * @implements [SRS-IN-11] fixedInk UV placement (not translate-only)
+ */
 export function smartLocalToWorld(
   local: Vec2,
   sg: SmartGroupNode,
   role: "content" | "boundary",
+  layoutOffset?: { u: number; v: number },
+  contentCentroid?: Vec2,
 ): Vec2 {
   const t = sg.transform;
   let x = local.x;
   let y = local.y;
+
+  if (role === "content" && sg.inkScaleMode === "fixedInk") {
+    const u = layoutOffset?.u ?? 0.5;
+    const v = layoutOffset?.v ?? 0.5;
+    const { bounds } = sg;
+    const target = {
+      x: bounds.x + u * bounds.width,
+      y: bounds.y + v * bounds.height,
+    };
+    const c = contentCentroid ?? local;
+    // Keep sample size: shift so AABB centroid sits at UV target (local).
+    x = local.x + (target.x - c.x);
+    y = local.y + (target.y - c.y);
+    // ADR-0011: rotation + group translate only (no scale on content).
+    if (t.rotation !== 0) {
+      const cos = Math.cos(t.rotation);
+      const sin = Math.sin(t.rotation);
+      const rx = x * cos - y * sin;
+      const ry = x * sin + y * cos;
+      x = rx;
+      y = ry;
+    }
+    return { x: x + t.x, y: y + t.y };
+  }
+
   if (role === "boundary" || sg.inkScaleMode === "withBounds") {
     x *= t.scaleX;
     y *= t.scaleY;
@@ -241,4 +270,36 @@ export function smartLocalToWorld(
     y = ry;
   }
   return { x: x + t.x, y: y + t.y };
+}
+
+/** AABB centroid of ink samples in local space. */
+export function inkSamplesCentroid(samples: readonly { x: number; y: number }[]): Vec2 {
+  if (samples.length === 0) return { x: 0, y: 0 };
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+  for (const s of samples) {
+    minX = Math.min(minX, s.x);
+    minY = Math.min(minY, s.y);
+    maxX = Math.max(maxX, s.x);
+    maxY = Math.max(maxY, s.y);
+  }
+  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+}
+
+/** Seed content UV from local AABB centroid vs SmartGroup.bounds.
+ * @implements [SRS-IN-09] layoutOffset UV
+ */
+export function seedLayoutOffset(
+  samples: readonly { x: number; y: number }[],
+  bounds: { x: number; y: number; width: number; height: number },
+): { u: number; v: number } {
+  const c = inkSamplesCentroid(samples);
+  const w = bounds.width || 1;
+  const h = bounds.height || 1;
+  return {
+    u: (c.x - bounds.x) / w,
+    v: (c.y - bounds.y) / h,
+  };
 }

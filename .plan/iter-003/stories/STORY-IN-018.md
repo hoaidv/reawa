@@ -4,7 +4,7 @@ title: "Tool intent transport (stroke intent, pickables, tool_intent)"
 kind: implement
 parent_srs: [SRS-IN-13]
 parent_req: [REQ-04]
-status: draft
+status: done
 priority: P1
 iter: iter-003
 estimate: 5

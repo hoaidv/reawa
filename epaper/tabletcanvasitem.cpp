@@ -60,6 +60,7 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     m_refreshClock.start();
     connect(m_sync, &StrokeSync::hostMessage, this, &TabletCanvasItem::onHostMessage);
     m_sync->connectToMac();
+    updateToolChipRect();
 }
 
 void TabletCanvasItem::componentComplete()
@@ -81,6 +82,7 @@ void TabletCanvasItem::geometryChange(const QRectF &newGeometry, const QRectF &o
     if (newGeometry.size() != oldGeometry.size()
         && newGeometry.width() > 1.0 && newGeometry.height() > 1.0) {
         ensureImage();
+        updateToolChipRect();
         EpaperBridge::instance()->attachPenModeRegion(this);
         update();
     }
@@ -175,18 +177,33 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal 
     m_lastPoint = canvasPos;
     m_lastRaw = pos;
 
+    // Pen on ToolChip — not ink; may arm (pen-on-chip fallback). Handled in QML taps primarily.
+    if (pointInToolChip(canvasPos)
+        && (type == QEvent::TabletPress || type == QEvent::MouseButtonPress)) {
+        return;
+    }
+
     switch (type) {
     case QEvent::TabletPress:
     case QEvent::MouseButtonPress:
-        beginStroke(canvasPos, p);
+        if (m_toolMode == QLatin1String("selection"))
+            beginSelectionGesture(canvasPos);
+        else
+            beginStroke(canvasPos, p);
         break;
     case QEvent::TabletMove:
     case QEvent::MouseMove:
-        appendPoint(canvasPos, p);
+        if (m_selectionGesture)
+            updateSelectionGesture(canvasPos);
+        else
+            appendPoint(canvasPos, p);
         break;
     case QEvent::TabletRelease:
     case QEvent::MouseButtonRelease:
-        endStroke();
+        if (m_selectionGesture)
+            endSelectionGesture();
+        else
+            endStroke();
         break;
     default:
         break;
@@ -352,6 +369,11 @@ void TabletCanvasItem::syncBegin()
         {"cw", width()},
         {"ch", height()},
     };
+    // SRS-EP-04 / SRS-IN-13 — intent only; tool mode stays device-local.
+    if (m_toolMode == QLatin1String("ink_box"))
+        obj.insert(QStringLiteral("intent"), QStringLiteral("enclose"));
+    else
+        obj.insert(QStringLiteral("intent"), QStringLiteral("ink"));
     m_sync->sendLine(QJsonDocument(obj).toJson(QJsonDocument::Compact));
 }
 
@@ -400,8 +422,10 @@ void TabletCanvasItem::applyViewport(const QJsonObject &obj)
 {
     m_viewportSeq = obj.value(QStringLiteral("seq")).toInt(m_viewportSeq);
     const QString orient = obj.value(QStringLiteral("orientation")).toString();
-    if (!orient.isEmpty())
+    if (!orient.isEmpty()) {
         m_orientation = normalizeOrientation(orient);
+        updateToolChipRect();
+    }
 
     const QJsonObject dr = obj.value(QStringLiteral("drawingRegion")).toObject();
     if (!dr.isEmpty()) {
@@ -422,8 +446,127 @@ void TabletCanvasItem::applyViewport(const QJsonObject &obj)
 void TabletCanvasItem::applyDocSnapshot(const QJsonObject &obj)
 {
     m_vectorNodes = obj.value(QStringLiteral("nodes")).toArray();
-    qInfo() << "[sync] doc_snapshot nodes" << m_vectorNodes.size();
+    m_pickables = obj.value(QStringLiteral("pickables")).toArray();
+    // Ghost discarded — authoritative geometry (SRS-EP-04 / SRS-IN-13).
+    m_selectionGesture = false;
+    m_gesturePickableId.clear();
+    qInfo() << "[sync] doc_snapshot nodes" << m_vectorNodes.size()
+            << "pickables" << m_pickables.size();
+    emit pickablesChanged();
     scheduleVectorRasterize(true);
+}
+
+void TabletCanvasItem::setToolMode(const QString &mode)
+{
+    QString next = mode;
+    if (next != QLatin1String("pen") && next != QLatin1String("ink_box")
+        && next != QLatin1String("selection")) {
+        next = QStringLiteral("pen");
+    }
+    if (m_toolMode == next)
+        return;
+    m_toolMode = next;
+    // Selection inert without pickables — still allow arming; UI shows count.
+    emit toolModeChanged();
+    m_debugInfo = QStringLiteral("tool=%1 pickables=%2")
+                      .arg(m_toolMode)
+                      .arg(m_pickables.size());
+    emit debugChanged();
+}
+
+void TabletCanvasItem::armTool(const QString &mode)
+{
+    setToolMode(mode);
+}
+
+void TabletCanvasItem::updateToolChipRect()
+{
+    // UI-EP-01 amended (human verify 2026-08-11): ≥64px tiles (was 32).
+    // @implements [SRS-EP-05] floating ToolChip hit bounds
+    const qreal chipH = 64.0;
+    const qreal chipW = 64.0 * 3.0;
+    const qreal inset = 8.0;
+    qreal top = inset;
+    // gutOnTop → oriented top is opposite short edge (bottom of panel coords).
+    if (m_orientation == QLatin1String("gutOnTop"))
+        top = height() - inset - chipH;
+    const qreal left = (width() - chipW) * 0.5;
+    const QRectF next(left, top, chipW, chipH);
+    if (next == m_toolChipRect)
+        return;
+    m_toolChipRect = next;
+    emit toolChipRectChanged();
+}
+
+bool TabletCanvasItem::pointInToolChip(const QPointF &canvasPos) const
+{
+    return m_toolChipRect.contains(canvasPos);
+}
+
+QString TabletCanvasItem::hitPickable(const QPointF &world) const
+{
+    // Topmost = last in array (SRS-EP-04).
+    for (int i = m_pickables.size() - 1; i >= 0; --i) {
+        const QJsonObject p = m_pickables.at(i).toObject();
+        const QJsonObject b = p.value(QStringLiteral("bounds")).toObject();
+        const double minX = b.value(QStringLiteral("minX")).toDouble();
+        const double minY = b.value(QStringLiteral("minY")).toDouble();
+        const double maxX = b.value(QStringLiteral("maxX")).toDouble();
+        const double maxY = b.value(QStringLiteral("maxY")).toDouble();
+        if (world.x() >= minX && world.x() <= maxX && world.y() >= minY && world.y() <= maxY)
+            return p.value(QStringLiteral("id")).toString();
+    }
+    return {};
+}
+
+void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
+{
+    if (m_pickables.isEmpty())
+        return;
+    const QPointF world = panelToWorld(canvasPos);
+    const QString id = hitPickable(world);
+    if (id.isEmpty()) {
+        m_selectedPickableId.clear();
+        return;
+    }
+    m_selectedPickableId = id;
+    m_gesturePickableId = id;
+    m_gestureStartWorld = world;
+    m_gestureLastWorld = world;
+    m_selectionGesture = true;
+}
+
+void TabletCanvasItem::updateSelectionGesture(const QPointF &canvasPos)
+{
+    if (!m_selectionGesture)
+        return;
+    m_gestureLastWorld = panelToWorld(canvasPos);
+}
+
+void TabletCanvasItem::endSelectionGesture()
+{
+    if (!m_selectionGesture)
+        return;
+    m_selectionGesture = false;
+    const double dx = m_gestureLastWorld.x() - m_gestureStartWorld.x();
+    const double dy = m_gestureLastWorld.y() - m_gestureStartWorld.y();
+    ++m_toolIntentSeq;
+    QJsonObject obj{{"type", "tool_intent"},
+                    {"nodeId", m_gesturePickableId},
+                    {"seq", m_toolIntentSeq}};
+    if (qHypot(dx, dy) < 2.0) {
+        obj.insert(QStringLiteral("action"), QStringLiteral("select"));
+    } else {
+        obj.insert(QStringLiteral("action"), QStringLiteral("move"));
+        obj.insert(QStringLiteral("delta"), QJsonObject{{"dx", dx}, {"dy", dy}});
+    }
+    syncToolIntent(obj);
+    m_gesturePickableId.clear();
+}
+
+void TabletCanvasItem::syncToolIntent(const QJsonObject &obj)
+{
+    m_sync->sendLine(QJsonDocument(obj).toJson(QJsonDocument::Compact));
 }
 
 void TabletCanvasItem::scheduleVectorRasterize(bool sharp)

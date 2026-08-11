@@ -1,10 +1,11 @@
 import QtQuick
 import epaper 1.0
 
-// Ink is rasterised by TabletCanvas (QQuickPaintedItem). RM_INK_MODE=pool falls
-// back to the Rectangle pool below, which is slower but proven visible on this
-// backend. Pen-mode tags the region; direct swapBuffers is opt-in via RM_EP_SWAP.
+// Ink is rasterised by TabletCanvas (QQuickPaintedItem).
+// ToolChip: floating 64px orientation-top + designer icons (UI-EP-01 human verify).
 // @implements [SRS-EP-01]
+// @implements [SRS-EP-04]
+// @implements [SRS-EP-05]
 TabletWindow {
     id: root
     width: Screen.width
@@ -35,14 +36,63 @@ TabletWindow {
 
     TabletCanvas {
         id: drawCanvas
-        // Bound to the window, not anchored: inside this QQuickWindow subclass
-        // `parent` never resolves, which left the item 0x0 and unpainted.
         x: 0
         y: 0
         width: root.width
         height: root.height
         z: 0
         onSegmentDrawn: (x1, y1, x2, y2, w) => addSeg(x1, y1, x2, y2, w)
+    }
+
+    // Floating tool chip — hug width, 64px tiles, orientation-top (human verify ≥2× prior 32px)
+    Rectangle {
+        id: toolChip
+        z: 20
+        x: drawCanvas.toolChipRect.x
+        y: drawCanvas.toolChipRect.y
+        width: drawCanvas.toolChipRect.width
+        height: drawCanvas.toolChipRect.height
+        color: "white"
+        border.color: "black"
+        border.width: 1
+
+        Row {
+            anchors.fill: parent
+            spacing: 0
+
+            Repeater {
+                model: [
+                    { id: "selection", icon: "icon-epaper-selection" },
+                    { id: "pen", icon: "icon-epaper-pen" },
+                    { id: "ink_box", icon: "icon-epaper-ink-box" }
+                ]
+                delegate: Rectangle {
+                    width: parent.height
+                    height: parent.height
+                    color: drawCanvas.toolMode === modelData.id ? "black" : "white"
+                    border.color: "black"
+                    border.width: 1
+
+                    readonly property bool armed: drawCanvas.toolMode === modelData.id
+
+                    Image {
+                        anchors.centerIn: parent
+                        width: parent.width * 0.62
+                        height: parent.height * 0.62
+                        fillMode: Image.PreserveAspectFit
+                        smooth: false
+                        source: armed
+                               ? ("qrc:/icons/icons/" + modelData.icon + "-inv.png")
+                               : ("qrc:/icons/icons/" + modelData.icon + ".png")
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: drawCanvas.armTool(modelData.id)
+                    }
+                }
+            }
+        }
     }
 
     Repeater {
@@ -62,11 +112,16 @@ TabletWindow {
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.margins: 8
+        anchors.topMargin: drawCanvas.toolChipRect.y < height / 2
+                           ? drawCanvas.toolChipRect.y + drawCanvas.toolChipRect.height + 6
+                           : 8
         font.pixelSize: 14
         color: "black"
         text: EpaperBridge.status
               + (EpaperBridge.penModeAttached ? " | pen" : "")
               + (drawCanvas.paintsInk ? " | painted" : " | pool " + root.inkNext)
+              + " | " + drawCanvas.toolMode
+              + " | pick " + drawCanvas.pickableCount
               + " | strokes " + drawCanvas.strokeCount
               + "  " + drawCanvas.debugInfo
     }

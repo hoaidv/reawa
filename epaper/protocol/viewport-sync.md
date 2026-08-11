@@ -44,23 +44,33 @@ Product SRS: [SRS-IN-07](../../.docs/modules/infini/features/tablet-sync/srs-log
 {
   "type": "doc_snapshot",
   "nodes": [
-    { "kind": "path", "id": "p1", "strokeWidth": 2.5, "points": [{ "x": 1, "y": 2 }] },
-    { "kind": "ellipse", "id": "e1", "strokeWidth": 2.5, "cx": 0, "cy": 0, "rx": 40, "ry": 40 }
+    { "kind": "path", "id": "p1", "strokeWidth": 2.5, "points": [{ "x": 1, "y": 2 }] }
+  ],
+  "pickables": [
+    { "id": "sg_1", "kind": "smart_group", "bounds": { "minX": 0, "minY": 0, "maxX": 100, "maxY": 80 } }
   ]
 }
 ```
 
-One-shot / rare. Not a full tree-of-vectors dump.
+`pickables` is additive ([SRS-IN-13](../../.docs/modules/infini/features/tablet-sync/srs-logic.md)); older devices ignore it.
 
 ### `stroke_*` (Epaper → Infini)
 
 ```json
-{"type":"stroke_begin","id":"s-1","brush":{"width":2.5},"cw":1404,"ch":1872}
+{"type":"stroke_begin","id":"s-1","brush":{"width":2.5},"cw":1404,"ch":1872,"intent":"ink"}
 {"type":"stroke_point","id":"s-1","x":702,"y":936,"p":0.82}
 {"type":"stroke_end","id":"s-1"}
 ```
 
-`brush.width` = **world** units. `x,y` = **panel** pixels after digitizer map.
+`intent` is `ink` (default) or `enclose` when Ink-box is armed. Tool mode itself is never sent.
+
+### `tool_intent` (Epaper → Infini)
+
+```json
+{"type":"tool_intent","action":"move","nodeId":"sg_1","delta":{"dx":10,"dy":-4},"seq":3}
+```
+
+One message per completed Selection gesture.
 
 ### Ignored / not sent
 

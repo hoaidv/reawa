@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-11T07:17:11+00:00
+generated_at: 2026-08-11T08:02:08+00:00
 ---
 
 # Sync Report
@@ -19,9 +19,6 @@ _None._
 | [SRS-EP-06] | epaper |
 | [SRS-IN-05] | infini |
 | [SRS-IN-06] | infini |
-| [SRS-IN-10] | infini |
-| [SRS-IN-11] | infini |
-| [SRS-IN-12] | infini |
 | [SRS-IN-13] | infini |
 | [SRS-IN-14] | infini |
 | [SRS-IN-15] | infini |
@@ -33,21 +30,21 @@ _None._
 | [SRS-EP-01] | 0 | missing |
 | [SRS-EP-02] | 12 | covered |
 | [SRS-EP-03] | 5 | covered |
-| [SRS-EP-04] | 0 | missing |
+| [SRS-EP-04] | 3 | covered |
 | [SRS-EP-05] | 0 | missing |
 | [SRS-EP-06] | 0 | missing |
 | [SRS-IN-01] | 6 | covered |
 | [SRS-IN-02] | 4 | covered |
 | [SRS-IN-03] | 3 | covered |
-| [SRS-IN-04] | 4 | covered |
+| [SRS-IN-04] | 8 | covered |
 | [SRS-IN-05] | 0 | missing |
 | [SRS-IN-06] | 0 | missing |
 | [SRS-IN-07] | 13 | covered |
 | [SRS-IN-08] | 2 | covered |
 | [SRS-IN-09] | 3 | covered |
-| [SRS-IN-10] | 0 | missing |
-| [SRS-IN-11] | 0 | missing |
-| [SRS-IN-12] | 0 | missing |
+| [SRS-IN-10] | 4 | covered |
+| [SRS-IN-11] | 5 | covered |
+| [SRS-IN-12] | 4 | covered |
 | [SRS-IN-13] | 0 | missing |
 | [SRS-IN-14] | 0 | missing |
 | [SRS-IN-15] | 0 | missing |

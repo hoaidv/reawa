@@ -111,12 +111,25 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  // Keep stroke ingest listening on macOS even when the last window closes —
+  // otherwise RM_SYNC reconnects against a dead :9877 while Electron stays in the dock
+  // (stale "connected" UI / silent tablet link).
+  if (process.platform !== "darwin") {
+    if (strokeServer) {
+      strokeServer.close();
+      strokeServer = null;
+    }
+    rmClients.clear();
+    app.quit();
+  }
+});
+
+app.on("before-quit", () => {
   if (strokeServer) {
     strokeServer.close();
     strokeServer = null;
   }
   rmClients.clear();
-  if (process.platform !== "darwin") app.quit();
 });
 
 ipcMain.handle("stroke-ingest-port", () => STROKE_PORT);

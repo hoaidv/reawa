@@ -4,7 +4,7 @@ slug: smart-group-pilot
 kind: planned
 status: active
 iter: iter-003
-cursor: "/qa→/dev W4 (IN-015) · EP-005 waits on IN-018"
+cursor: "TRACK-003 UI+tools shipped — await human verify / next track"
 goal: "Ink-box pilot: infini REQ-04 + epaper REQ-03 tool modes"
 owner: sm
 ---
@@ -23,17 +23,17 @@ Deliver the ink-box pilot across both ends: Infini
 
 | Id | Kind | Status | Notes |
 |---|---|---|---|
-| [STORY-IN-012](../iter-003/stories/STORY-IN-012.md) | implement | **ready** | ink ingestion prerequisite |
-| [STORY-EP-004](../iter-003/stories/STORY-EP-004.md) | implement | **ready** | RM2 touch spike |
-| [STORY-IN-013](../iter-003/stories/STORY-IN-013.md) | design | **ready** | ink-box-ui |
-| [STORY-IN-014](../iter-003/stories/STORY-IN-014.md) | implement | ready | undo |
-| [STORY-IN-015](../iter-003/stories/STORY-IN-015.md) | implement | draft | selection + UV |
-| [STORY-IN-010](../iter-003/stories/STORY-IN-010.md) | implement | draft | enclose (rewritten) |
-| [STORY-IN-016](../iter-003/stories/STORY-IN-016.md) | implement | draft | membership |
-| [STORY-IN-017](../iter-003/stories/STORY-IN-017.md) | implement | draft | surround create |
-| [STORY-EP-003](../iter-003/stories/STORY-EP-003.md) | design | draft | epaper strip (spike-gated) |
-| [STORY-IN-018](../iter-003/stories/STORY-IN-018.md) | implement | draft | transport |
-| [STORY-EP-005](../iter-003/stories/STORY-EP-005.md) | implement | draft | device tools |
+| [STORY-IN-015](../iter-003/stories/STORY-IN-015.md) | implement | **done** | selection + UV |
+| [STORY-IN-012](../iter-003/stories/STORY-IN-012.md) | implement | **done** | ink ingestion prerequisite |
+| [STORY-EP-004](../iter-003/stories/STORY-EP-004.md) | implement | **done** | RM2 touch spike |
+| [STORY-IN-013](../iter-003/stories/STORY-IN-013.md) | design | **done** | ink-box-ui |
+| [STORY-IN-014](../iter-003/stories/STORY-IN-014.md) | implement | **done** | undo |
+| [STORY-IN-010](../iter-003/stories/STORY-IN-010.md) | implement | **done** | enclose (rewritten) |
+| [STORY-IN-016](../iter-003/stories/STORY-IN-016.md) | implement | **done** | membership |
+| [STORY-IN-017](../iter-003/stories/STORY-IN-017.md) | implement | **done** | surround create + ToolStrip |
+| [STORY-EP-003](../iter-003/stories/STORY-EP-003.md) | design | **done** | epaper strip |
+| [STORY-IN-018](../iter-003/stories/STORY-IN-018.md) | implement | **done** | transport |
+| [STORY-EP-005](../iter-003/stories/STORY-EP-005.md) | implement | **done** | device ToolChip + intent |
 
 ## Board
 
@@ -47,3 +47,4 @@ Deliver the ink-box pilot across both ends: Infini
 | 2026-08-11 | PM ink-box UX; scope + epaper; WIP 2 |
 | 2026-08-11 | Architect ADR-0013 + SRS; then confirm IN-15/16 + UV |
 | 2026-08-11 | SM sliced 11 stories; cursor → designer ∥ qa→dev |
+| 2026-08-11 | PM adopted CHL-0001/2/3 (create_refused, epaper platform, floating ToolChip) |
