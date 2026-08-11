@@ -4,7 +4,7 @@ title: Drawing-region marker + coalesced viewport publish
 kind: implement
 parent_srs: [SRS-IN-07]
 parent_req: [REQ-03]
-status: in-review
+status: done
 priority: P1
 iter: iter-002
 estimate: 3

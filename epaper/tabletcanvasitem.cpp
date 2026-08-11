@@ -32,6 +32,17 @@ constexpr int kFlushBeaconX = 200;
 constexpr int kFlushBeaconY = 60;
 constexpr int kFlushBeaconSize = 60;
 
+QString normalizeOrientation(const QString &raw)
+{
+    if (raw == QLatin1String("portrait") || raw == QLatin1String("gutToLeft"))
+        return QStringLiteral("gutToLeft");
+    if (raw == QLatin1String("landscape") || raw == QLatin1String("gutOnTop"))
+        return QStringLiteral("gutOnTop");
+    if (raw == QLatin1String("gutAtBottom") || raw == QLatin1String("gutToRight"))
+        return raw;
+    return QStringLiteral("gutToLeft");
+}
+
 } // namespace
 
 TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
@@ -213,7 +224,9 @@ void TabletCanvasItem::paintSegment(const Point &from, const Point &to, qreal li
 
 void TabletCanvasItem::emitSegment(const Point &from, const Point &to)
 {
-    const qreal lineW = qMax<qreal>(4.0, 1.0 + from.pressure * 4.0);
+    // ADR-0012: live ink uses world width × current panel scale (matches zoomed vectors).
+    const qreal worldW = worldStrokeWidth(from.pressure);
+    const qreal lineW = qMax<qreal>(1.0, worldW * panelScale());
 
     if (m_paintsInk)
         paintSegment(from, to, lineW);
@@ -259,6 +272,7 @@ void TabletCanvasItem::beginStroke(const QPointF &canvasPos, qreal pressure)
 {
     m_current.clear();
     m_activeStrokeId = QStringLiteral("s-%1").arg(++m_strokeSeq);
+    m_activeWorldStrokeWidth = worldStrokeWidth(pressure);
     m_current.append({canvasPos, pressure, m_lastRaw});
     m_lastEmitted = m_current.last();
     m_hasEmitted = false;
@@ -333,7 +347,8 @@ void TabletCanvasItem::syncBegin()
     QJsonObject obj{
         {"type", "stroke_begin"},
         {"id", m_activeStrokeId},
-        {"brush", QJsonObject{{"width", 2.0}}},
+        // World units — Infini stores as-is (ADR-0012).
+        {"brush", QJsonObject{{"width", m_activeWorldStrokeWidth}}},
         {"cw", width()},
         {"ch", height()},
     };
@@ -386,7 +401,7 @@ void TabletCanvasItem::applyViewport(const QJsonObject &obj)
     m_viewportSeq = obj.value(QStringLiteral("seq")).toInt(m_viewportSeq);
     const QString orient = obj.value(QStringLiteral("orientation")).toString();
     if (!orient.isEmpty())
-        m_orientation = orient;
+        m_orientation = normalizeOrientation(orient);
 
     const QJsonObject dr = obj.value(QStringLiteral("drawingRegion")).toObject();
     if (!dr.isEmpty()) {
@@ -437,6 +452,82 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
     });
 }
 
+bool TabletCanvasItem::orientationLandscape() const
+{
+    return m_orientation == QLatin1String("gutOnTop")
+        || m_orientation == QLatin1String("gutAtBottom")
+        || m_orientation == QLatin1String("landscape");
+}
+
+bool TabletCanvasItem::orientationInvertX() const
+{
+    return m_orientation == QLatin1String("gutAtBottom")
+        || m_orientation == QLatin1String("gutToRight");
+}
+
+bool TabletCanvasItem::orientationInvertY() const
+{
+    return m_orientation == QLatin1String("gutAtBottom")
+        || m_orientation == QLatin1String("gutToRight");
+}
+
+double TabletCanvasItem::panelScale() const
+{
+    if (!m_drawingRegion.valid)
+        return 1.0;
+    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
+    if (rw <= 0.0)
+        return 1.0;
+    return width() / rw;
+}
+
+qreal TabletCanvasItem::worldStrokeWidth(qreal pressure) const
+{
+    const qreal p = qBound<qreal>(0.0, pressure, 1.0);
+    // Match Infini demo ink (~2.5 world) with light pressure modulation.
+    return kBaseWorldStroke * (0.7 + 0.3 * p);
+}
+
+void TabletCanvasItem::panelToFrameUv(double localX, double localY, double *u, double *v) const
+{
+    const qreal pw = qMax<qreal>(1.0, width());
+    const qreal ph = qMax<qreal>(1.0, height());
+    double nx = 0;
+    double ny = 0;
+    if (orientationLandscape()) {
+        nx = 1.0 - localY / ph;
+        ny = localX / pw;
+    } else {
+        nx = localX / pw;
+        ny = localY / ph;
+    }
+    if (orientationInvertX())
+        nx = 1.0 - nx;
+    if (orientationInvertY())
+        ny = 1.0 - ny;
+    *u = nx;
+    *v = ny;
+}
+
+void TabletCanvasItem::frameUvToPanel(double u, double v, double *x, double *y) const
+{
+    const qreal pw = qMax<qreal>(1.0, width());
+    const qreal ph = qMax<qreal>(1.0, height());
+    double nx = u;
+    double ny = v;
+    if (orientationInvertX())
+        nx = 1.0 - nx;
+    if (orientationInvertY())
+        ny = 1.0 - ny;
+    if (orientationLandscape()) {
+        *x = ny * pw;
+        *y = (1.0 - nx) * ph;
+    } else {
+        *x = nx * pw;
+        *y = ny * ph;
+    }
+}
+
 QPointF TabletCanvasItem::worldToPanel(double wx, double wy) const
 {
     if (!m_drawingRegion.valid)
@@ -447,33 +538,19 @@ QPointF TabletCanvasItem::worldToPanel(double wx, double wy) const
         return QPointF();
     const double u = (wx - m_drawingRegion.minX) / rw;
     const double v = (wy - m_drawingRegion.minY) / rh;
-    const qreal pw = qMax<qreal>(1.0, width());
-    const qreal ph = qMax<qreal>(1.0, height());
-    if (m_orientation == QLatin1String("landscape")) {
-        const double logX = u * ph;
-        const double logY = v * pw;
-        return QPointF(pw - logY, logX);
-    }
-    return QPointF(u * pw, v * ph);
+    double x = 0;
+    double y = 0;
+    frameUvToPanel(u, v, &x, &y);
+    return QPointF(x, y);
 }
 
 QPointF TabletCanvasItem::panelToWorld(const QPointF &panel) const
 {
     if (!m_drawingRegion.valid)
         return panel;
-    const qreal pw = qMax<qreal>(1.0, width());
-    const qreal ph = qMax<qreal>(1.0, height());
     double u = 0;
     double v = 0;
-    if (m_orientation == QLatin1String("landscape")) {
-        const double logX = panel.y();
-        const double logY = pw - panel.x();
-        u = logX / ph;
-        v = logY / pw;
-    } else {
-        u = panel.x() / pw;
-        v = panel.y() / ph;
-    }
+    panelToFrameUv(panel.x(), panel.y(), &u, &v);
     const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
     const double rh = m_drawingRegion.maxY - m_drawingRegion.minY;
     return QPointF(m_drawingRegion.minX + u * rw, m_drawingRegion.minY + v * rh);
@@ -488,15 +565,11 @@ void TabletCanvasItem::appendLocalStrokeAsWorldPath()
         const QPointF w = panelToWorld(pt.pos);
         pts.append(QJsonObject{{"x", w.x()}, {"y", w.y()}});
     }
-    // World stroke width from panel brush (~2–6 px) via region scale.
-    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
-    const double sPanel = width() / qMax(1e-6, rw);
-    const double worldW = 2.5 / qMax(1e-6, sPanel);
     m_vectorNodes.append(QJsonObject{
         {"kind", "path"},
         {"id", m_activeStrokeId},
         {"points", pts},
-        {"strokeWidth", worldW},
+        {"strokeWidth", m_activeWorldStrokeWidth},
     });
 }
 

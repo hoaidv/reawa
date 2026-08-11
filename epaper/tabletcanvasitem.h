@@ -86,6 +86,13 @@ private:
     QPointF panelToWorld(const QPointF &panel) const;
     void appendLocalStrokeAsWorldPath();
     void drawVectorNode(QPainter &p, const QJsonObject &node);
+    double panelScale() const;
+    qreal worldStrokeWidth(qreal pressure) const;
+    void panelToFrameUv(double localX, double localY, double *u, double *v) const;
+    void frameUvToPanel(double u, double v, double *x, double *y) const;
+    bool orientationLandscape() const;
+    bool orientationInvertX() const;
+    bool orientationInvertY() const;
 
     StrokeSync *m_sync = nullptr;
     QImage m_image;
@@ -104,7 +111,9 @@ private:
     bool m_beacons = true;
     bool m_hasEmitted = false;
     bool m_strokeActive = false;
-    QString m_orientation = QStringLiteral("portrait");
+    /** Reawa-style gut pose; legacy "portrait"/"landscape" normalized on ingest. */
+    QString m_orientation = QStringLiteral("gutToLeft");
+    qreal m_activeWorldStrokeWidth = 2.5;
     int m_viewportSeq = 0;
     WorldAabb m_drawingRegion;
     QJsonArray m_vectorNodes;
@@ -116,4 +125,5 @@ private:
     QRectF m_pendingDirty;
     static constexpr qint64 kFlushIntervalMs = 8;
     static constexpr qint64 kRefreshMinIntervalMs = 250;
+    static constexpr qreal kBaseWorldStroke = 2.5;
 };

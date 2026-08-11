@@ -69,8 +69,8 @@ cursor: /dev
 
 | Order | Story | SRS | Status | Depends |
 |---|---|---|---|---|
-| 1 | [STORY-IN-011](./stories/STORY-IN-011.md) | SRS-IN-07 | **ready** | IN-009 |
-| 2 | [STORY-EP-002](./stories/STORY-EP-002.md) | SRS-EP-02 | **ready** | EP-001, IN-011 |
+| 1 | [STORY-IN-011](./stories/STORY-IN-011.md) | SRS-IN-07 | **done** | IN-009 |
+| 2 | [STORY-EP-002](./stories/STORY-EP-002.md) | SRS-EP-02 | **done** | EP-001, IN-011 |
 | — | [STORY-IN-010](./stories/STORY-IN-010.md) | SRS-IN-10 | draft Could | parked |
 
 ### Sub-agent roster (W5)
@@ -78,9 +78,10 @@ cursor: /dev
 | Agent | Done-when |
 |---|---|
 | Architect | done (READY-WITH-CONCERNS) |
-| QA | BDD authored; verify after Dev `in-review` |
-| Dev | **NOW** IN-011 → EP-002 |
+| QA | **done** — PASS-WITH-CONCERNS; human hardware confirm |
+| Dev | done IN-011 → EP-002 (+ vector/digitizer follow-ups) |
 
 ## Verdict
 
-**W5 in flight.** BDD ready. Next: **`/dev`** IN-011 then EP-002 → `/qa` verify.
+**W5 stories done.** Next: **`/pm`** gate (confirm live pen axes + sharp vector settle on hardware).
+

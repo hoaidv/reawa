@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-11T04:44:06+00:00
+generated_at: 2026-08-11T05:06:52+00:00
 ---
 
 # Sync Report
@@ -22,7 +22,7 @@ _None._
 | SRS | Scenarios | Status |
 |---|---|---|
 | [SRS-EP-01] | 0 | missing |
-| [SRS-EP-02] | 10 | covered |
+| [SRS-EP-02] | 11 | covered |
 | [SRS-EP-03] | 4 | covered |
 | [SRS-IN-01] | 6 | covered |
 | [SRS-IN-02] | 4 | covered |
@@ -30,7 +30,7 @@ _None._
 | [SRS-IN-04] | 4 | covered |
 | [SRS-IN-05] | 0 | missing |
 | [SRS-IN-06] | 0 | missing |
-| [SRS-IN-07] | 11 | covered |
+| [SRS-IN-07] | 12 | covered |
 | [SRS-IN-08] | 2 | covered |
 | [SRS-IN-09] | 3 | covered |
 | [SRS-IN-10] | 0 | missing |

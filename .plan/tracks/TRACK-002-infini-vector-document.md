@@ -4,8 +4,8 @@ slug: infini-vector-document
 kind: planned
 status: active
 iter: iter-002
-cursor: "/qa verify W5 IN-011+EP-002 in-review → /pm gate"
-goal: "W5 live viewport path in-review; W4 Must done; IN-010 Could parked"
+cursor: "/pm W5 gate — IN-011+EP-002 done (PASS-WITH-CONCERNS; human hardware confirm)"
+goal: "W5 live viewport path done (vector settle); W4 Must done; IN-010 Could parked"
 owner: sm
 ---
 

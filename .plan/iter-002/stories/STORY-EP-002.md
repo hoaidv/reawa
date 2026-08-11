@@ -4,7 +4,7 @@ title: Viewport apply + e-ink coalesced region refresh
 kind: implement
 parent_srs: [SRS-EP-02]
 parent_req: [REQ-02]
-status: in-review
+status: done
 priority: P1
 iter: iter-002
 estimate: 3

@@ -127,7 +127,53 @@ export function aabbContains(outer: Aabb, inner: Aabb): boolean {
   );
 }
 
-export type TabletOrientation = "portrait" | "landscape";
+/**
+ * Sync-frame orientation — same 4 “gut” poses as Reawa.
+ * Landscape guts → wide Infini frame; portrait guts → tall frame.
+ */
+export type TabletOrientation =
+  | "gutOnTop"
+  | "gutToLeft"
+  | "gutAtBottom"
+  | "gutToRight";
+
+export const TABLET_ORIENTATIONS: TabletOrientation[] = [
+  "gutOnTop",
+  "gutToLeft",
+  "gutAtBottom",
+  "gutToRight",
+];
+
+export function tabletOrientationLabel(o: TabletOrientation): string {
+  switch (o) {
+    case "gutOnTop":
+      return "Gut on top";
+    case "gutToLeft":
+      return "Gut to the left";
+    case "gutAtBottom":
+      return "Gut at bottom";
+    case "gutToRight":
+      return "Gut to the right";
+  }
+}
+
+/** Reawa axis flags + whether the Infini sync frame is landscape (wide). */
+export function tabletOrientationMeta(o: TabletOrientation): {
+  landscape: boolean;
+  invertX: boolean;
+  invertY: boolean;
+} {
+  switch (o) {
+    case "gutOnTop":
+      return { landscape: true, invertX: false, invertY: false };
+    case "gutToLeft":
+      return { landscape: false, invertX: false, invertY: false };
+    case "gutAtBottom":
+      return { landscape: true, invertX: true, invertY: true };
+    case "gutToRight":
+      return { landscape: false, invertX: true, invertY: true };
+  }
+}
 
 /** CSS pixel rect for the tablet drawing frame (marker geometry). */
 export interface CssRect {
@@ -142,21 +188,21 @@ export const TABLET_PANEL_W = 1404;
 export const TABLET_PANEL_H = 1872;
 
 /** Aspect width/height for the sync frame. */
-export function tabletAspect(orientation: TabletOrientation = "portrait"): number {
-  return orientation === "landscape"
+export function tabletAspect(orientation: TabletOrientation = "gutToLeft"): number {
+  return tabletOrientationMeta(orientation).landscape
     ? TABLET_PANEL_H / TABLET_PANEL_W
     : TABLET_PANEL_W / TABLET_PANEL_H;
 }
 
 /**
  * Largest centered CSS frame matching tablet aspect — maximize width or height
- * to the host viewport; center the other axis (no margin letterbox pad).
+ * to the host viewport; center the other axis.
  * @implements [SRS-IN-07] tablet drawing frame (CSS)
  */
 export function tabletDrawingFrameCss(
   cssW: number,
   cssH: number,
-  orientation: TabletOrientation = "portrait",
+  orientation: TabletOrientation = "gutToLeft",
 ): CssRect {
   const aspect = tabletAspect(orientation);
   let w = cssW;
@@ -170,7 +216,8 @@ export function tabletDrawingFrameCss(
 
 /**
  * Map panel-framebuffer coords (after digitizer→panel map) → sync-frame UV.
- * Portrait: 1:1 with panel. Landscape: 90° so wide Infini frame matches rotated use.
+ * Portrait guts: panel 1:1 (gutToLeft verified). Landscape: long edge = panel Y;
+ * u is flipped so desktop content is not mirrored L/R on the tablet.
  * @implements [SRS-IN-07] orientation
  */
 export function panelToFrameUv(
@@ -180,15 +227,23 @@ export function panelToFrameUv(
   panelH: number,
   orientation: TabletOrientation,
 ): { u: number; v: number } {
-  if (orientation === "landscape") {
-    const logX = localY;
-    const logY = panelW - localX;
-    return { u: logX / panelH, v: logY / panelW };
+  const m = tabletOrientationMeta(orientation);
+  let nx: number;
+  let ny: number;
+  if (m.landscape) {
+    // Panel portrait → landscape sync frame; flip u (L/R) to match desktop.
+    nx = 1 - localY / panelH;
+    ny = localX / panelW;
+  } else {
+    nx = localX / panelW;
+    ny = localY / panelH;
   }
-  return { u: localX / panelW, v: localY / panelH };
+  if (m.invertX) nx = 1 - nx;
+  if (m.invertY) ny = 1 - ny;
+  return { u: nx, v: ny };
 }
 
-/** Inverse of panelToFrameUv for Epaper vector paint (world UV → panel px). */
+/** Inverse of panelToFrameUv for Epaper vector paint. */
 export function frameUvToPanel(
   u: number,
   v: number,
@@ -196,12 +251,15 @@ export function frameUvToPanel(
   panelH: number,
   orientation: TabletOrientation,
 ): { x: number; y: number } {
-  if (orientation === "landscape") {
-    const logX = u * panelH;
-    const logY = v * panelW;
-    return { x: panelW - logY, y: logX };
+  const m = tabletOrientationMeta(orientation);
+  let nx = u;
+  let ny = v;
+  if (m.invertX) nx = 1 - nx;
+  if (m.invertY) ny = 1 - ny;
+  if (m.landscape) {
+    return { x: ny * panelW, y: (1 - nx) * panelH };
   }
-  return { x: u * panelW, y: v * panelH };
+  return { x: nx * panelW, y: ny * panelH };
 }
 
 /**

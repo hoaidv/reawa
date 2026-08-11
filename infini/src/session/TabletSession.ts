@@ -70,7 +70,7 @@ export class TabletSession {
     this.transport = opts.transport;
     this.cssWidth = opts.cssWidth ?? 800;
     this.cssHeight = opts.cssHeight ?? 600;
-    this.orientation = opts.orientation ?? "portrait";
+    this.orientation = opts.orientation ?? "gutToLeft";
     this.log = opts.log ?? ((m, d) => console.warn(m, d));
     this.nowMs = opts.nowMs ?? (() => performance.now());
   }

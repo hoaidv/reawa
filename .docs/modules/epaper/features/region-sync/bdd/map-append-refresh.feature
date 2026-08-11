@@ -65,6 +65,13 @@ Feature: Epaper region sync map append_ink and refresh
     When Infini gesture settles and Epaper runs settle refresh within 100 ms
     Then one coherent paint runs even if the 250 ms floor has not elapsed
 
+  @SRS-EP-02
+  Scenario: Viewport settle rasterizes vectors sharply from local doc
+    Given Epaper holds a doc_snapshot of vector nodes and a valid drawingRegion
+    When Infini sends viewport with settle true
+    Then Epaper clears and paints document intersect drawingRegion from vectors
+    And the paint is a sharp full redraw not a downscaled bitmap blit
+
   @SRS-EP-03
   Scenario: Stroke panel width follows world width and region scale
     Given world strokeWidth 2.0 and drawingRegion width 40 mapped to panel width 200

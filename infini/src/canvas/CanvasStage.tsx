@@ -17,8 +17,10 @@ import {
   panelToFrameUv,
   panByScreenDelta,
   preserveCenterOnResize,
-  strokeWorldWidthFromPanel,
+  TABLET_ORIENTATIONS,
   tabletDrawingFrameCss,
+  tabletOrientationLabel,
+  tabletOrientationMeta,
   zoomAtScreenPoint,
   type TabletOrientation,
   type Viewport,
@@ -86,7 +88,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const gestureEndTimer = useRef(0);
   const gesturingRef = useRef(false);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const orientationRef = useRef<TabletOrientation>("portrait");
+  const orientationRef = useRef<TabletOrientation>("gutToLeft");
   const snapshotSentRef = useRef(false);
   const rmStrokesRef = useRef(
     new Map<string, { points: { x: number; y: number }[]; width: number }>(),
@@ -98,7 +100,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
 
   const [emptyHint, setEmptyHint] = useState(!populated);
   const [syncHint, setSyncHint] = useState("");
-  const [orientation, setOrientation] = useState<TabletOrientation>("portrait");
+  const [orientation, setOrientation] = useState<TabletOrientation>("gutToLeft");
 
   if (!sessionRef.current) {
     // Prefer IPC when preload already exposed sendToRm (Electron).
@@ -111,7 +113,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       transport: transportRef.current,
       cssWidth: 800,
       cssHeight: 600,
-      orientation: "portrait",
+      orientation: "gutToLeft",
     });
     sessionRef.current.connect();
   }
@@ -265,9 +267,9 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     }, 100);
   };
 
-  const toggleOrientation = () => {
-    const next: TabletOrientation =
-      orientationRef.current === "portrait" ? "landscape" : "portrait";
+  const cycleOrientation = () => {
+    const i = TABLET_ORIENTATIONS.indexOf(orientationRef.current);
+    const next = TABLET_ORIENTATIONS[(i + 1) % TABLET_ORIENTATIONS.length];
     orientationRef.current = next;
     setOrientation(next);
     sessionRef.current?.setOrientation(next);
@@ -340,12 +342,8 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
 
       if (msg.type === "stroke_begin") {
         if (msg.cw && msg.ch) rmPanelRef.current = { w: msg.cw, h: msg.ch };
-        const brushPx = msg.brush?.width ?? 2.5;
-        const widthWorld = strokeWorldWidthFromPanel(
-          brushPx,
-          region,
-          orient === "landscape" ? rmPanelRef.current.h : rmPanelRef.current.w,
-        );
+        // brush.width is world units (ADR-0012); legacy panel-px ignored.
+        const widthWorld = msg.brush?.width ?? 2.5;
         rmStrokesRef.current.set(msg.id, { points: [], width: widthWorld });
         return;
       }
@@ -537,11 +535,12 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         data-region="TabletOrientationToggle"
         onClick={(e) => {
           e.stopPropagation();
-          toggleOrientation();
+          cycleOrientation();
         }}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        Sync: {orientation === "portrait" ? "Portrait" : "Landscape"}
+        Sync: {tabletOrientationLabel(orientation)}
+        {tabletOrientationMeta(orientation).landscape ? " · wide" : " · tall"}
       </button>
       {emptyHint && (
         <p className="empty-hint">Pan and zoom — trackpad, drag, or wheel</p>

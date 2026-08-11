@@ -93,3 +93,12 @@ Feature: Infini tablet session viewport and document channel
     When Infini paints at scale 1.0 then at scale 0.5
     Then CSS line width halves when scale halves
     And relative thickness lineWidth_css / F_css stays consistent with ADR-0012
+
+  @SRS-IN-07
+  Scenario: Initial sync pushes vector doc_snapshot not bitmap
+    Given a live session and Infini has world primitives under the tablet frame
+    When the Epaper client connects or Infini first publishes viewport
+    Then Infini sends a doc_snapshot with vector nodes (line rect ellipse path)
+    And Infini does not push a region_refresh PNG for that content
+    When Infini later pans or zooms
+    Then only viewport messages are required for Epaper to re-rasterize locally

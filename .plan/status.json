@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-11T04:44:07+00:00",
+  "generated_at": "2026-08-11T05:06:52+00:00",
   "current_iter": "iter-002",
   "by_status": {
     "draft": 1,
     "ready": 0,
     "in-progress": 0,
-    "in-review": 2,
-    "done": 75,
+    "in-review": 0,
+    "done": 77,
     "blocked": 1
   },
   "by_module": {
@@ -18,13 +18,13 @@
     },
     "epaper": {
       "total": 2,
-      "done": 1,
-      "in_review": 1
+      "done": 2,
+      "in_review": 0
     },
     "infini": {
       "total": 11,
-      "done": 8,
-      "in_review": 1
+      "done": 9,
+      "in_review": 0
     }
   },
   "open_challenges": 0,
@@ -43,7 +43,7 @@
       "id": "TRACK-002",
       "kind": "planned",
       "status": "active",
-      "cursor": "/qa verify W5 IN-011+EP-002 in-review \u2192 /pm gate",
+      "cursor": "/pm W5 gate \u2014 IN-011+EP-002 done (PASS-WITH-CONCERNS; human hardware confirm)",
       "iter": "iter-002"
     }
   ]

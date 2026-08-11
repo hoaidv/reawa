@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  frameUvToPanel,
   frameWorldAabb,
   identityViewport,
+  panelToFrameUv,
   panByScreenDelta,
   preserveCenterOnResize,
   screenToWorld,
+  TABLET_ORIENTATIONS,
   tabletDrawingFrameCss,
   worldToScreen,
   zoomAtScreenPoint,
@@ -76,10 +79,34 @@ describe("SRS-IN-07 tablet drawing frame", () => {
   });
 
   it("maximizes one axis to the host viewport", () => {
-    const frame = tabletDrawingFrameCss(800, 600, "portrait");
+    const frame = tabletDrawingFrameCss(800, 600, "gutToLeft");
     expect(frame.w === 800 || frame.h === 600).toBe(true);
     expect(frame.x + frame.w).toBeLessThanOrEqual(800 + 1e-6);
     expect(frame.y + frame.h).toBeLessThanOrEqual(600 + 1e-6);
+  });
+
+  it("panelToFrameUv round-trips for each gut orientation", () => {
+    const pw = 1404;
+    const ph = 1872;
+    for (const o of TABLET_ORIENTATIONS) {
+      const samples = [
+        { x: 100, y: 200 },
+        { x: 700, y: 900 },
+        { x: 1300, y: 1800 },
+      ];
+      for (const s of samples) {
+        const { u, v } = panelToFrameUv(s.x, s.y, pw, ph, o);
+        const back = frameUvToPanel(u, v, pw, ph, o);
+        expect(back.x).toBeCloseTo(s.x, 5);
+        expect(back.y).toBeCloseTo(s.y, 5);
+      }
+    }
+  });
+
+  it("gutToLeft keeps panel axes (verified vertical)", () => {
+    const { u, v } = panelToFrameUv(702, 936, 1404, 1872, "gutToLeft");
+    expect(u).toBeCloseTo(0.5);
+    expect(v).toBeCloseTo(0.5);
   });
 });
 
