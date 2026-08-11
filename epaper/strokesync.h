@@ -7,6 +7,8 @@
 
 /**
  * Optional RM→macOS stroke sync. Inert unless RM_SYNC_HOST is set.
+ * When ADR-0009 RegionSession is active, do not use this for the document channel
+ * (migrate/disable — SRS-EP-02).
  * @implements [SRS-EP-01]
  */
 class StrokeSync : public QObject

@@ -1,0 +1,29 @@
+{
+  "opId": "op_append_ink_001",
+  "type": "append_ink",
+  "source": "epaper",
+  "payload": {
+    "id": "ink_1",
+    "parentId": "frm_1",
+    "samples": [
+      {
+        "x": 10,
+        "y": 20,
+        "pressure": 0.42,
+        "tiltX": 0.1,
+        "tiltY": -0.05,
+        "t": 0
+      },
+      {
+        "x": 12,
+        "y": 24,
+        "pressure": 0.55,
+        "tiltX": 0.12,
+        "tiltY": -0.04,
+        "t": 16,
+        "extras": { "distance": 0 }
+      }
+    ],
+    "style": { "stroke": "#1C2430", "strokeWidth": 2 }
+  }
+}

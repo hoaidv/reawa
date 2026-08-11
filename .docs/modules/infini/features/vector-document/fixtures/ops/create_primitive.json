@@ -1,0 +1,10 @@
+{
+  "opId": "op_create_primitive_001",
+  "type": "create_primitive",
+  "source": "infini",
+  "payload": {
+    "id": "rect_1",
+    "geom": { "kind": "rect", "x": 0, "y": 0, "w": 100, "h": 40 },
+    "style": { "stroke": "#1C2430", "strokeWidth": 2 }
+  }
+}

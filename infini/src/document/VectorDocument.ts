@@ -1,0 +1,379 @@
+/**
+ * Materialised vector document + idempotent op apply.
+ * @implements [SRS-IN-04] tree model and op-log apply
+ */
+
+import { resolveAnchor } from "./anchors";
+import { flattenDrawables } from "./flatten";
+import type {
+  Anchor,
+  ConnectorNode,
+  DocNode,
+  DocOp,
+  DocStatus,
+  Drawable,
+  FrameNode,
+  GroupNode,
+  Id,
+  InkNode,
+  InkSample,
+  PrimitiveGeom,
+  PrimitiveNode,
+  SmartBounds,
+  SmartGroupNode,
+  SmartTransform,
+  Style,
+  TextNode,
+  TextRun,
+  VectorDocSnapshot,
+} from "./types";
+import { DEFAULT_STYLE, IDENTITY_SMART_TRANSFORM } from "./types";
+
+function cloneJson<T>(v: T): T {
+  return JSON.parse(JSON.stringify(v)) as T;
+}
+
+function isContainer(n: DocNode): n is FrameNode | GroupNode {
+  return n.kind === "frame" || n.kind === "group";
+}
+
+export class VectorDocument {
+  status: DocStatus = "open";
+  title?: string;
+  path?: string;
+  errorMessage?: string;
+  rootChildren: DocNode[] = [];
+
+  private appliedOpIds = new Set<string>();
+
+  /** Deep snapshot for idempotency / tests. */
+  toJSON(): VectorDocSnapshot {
+    return {
+      version: 1,
+      status: this.status,
+      title: this.title,
+      path: this.path,
+      errorMessage: this.errorMessage,
+      rootChildren: cloneJson(this.rootChildren),
+    };
+  }
+
+  snapshotString(): string {
+    return JSON.stringify(this.toJSON());
+  }
+
+  indexById(): Map<string, DocNode> {
+    const map = new Map<string, DocNode>();
+    const visit = (nodes: DocNode[]) => {
+      for (const n of nodes) {
+        map.set(n.id, n);
+        if (n.kind === "frame" || n.kind === "group") visit(n.children);
+        if (n.kind === "smart_group") {
+          for (const c of n.children) map.set(c.id, c);
+        }
+      }
+    };
+    visit(this.rootChildren);
+    return map;
+  }
+
+  allIds(): string[] {
+    return [...this.indexById().keys()];
+  }
+
+  /**
+   * Replace materialised tree (e.g. after SVG load). Clears applied opIds.
+   * @implements [SRS-IN-09] load materialised tree
+   */
+  replaceTree(nodes: DocNode[]): void {
+    this.rootChildren = nodes;
+    this.appliedOpIds.clear();
+    this.status = "open";
+    this.errorMessage = undefined;
+    this.refreshConnectors();
+  }
+
+  /**
+   * Apply a document op. Idempotent on opId.
+   * @implements [SRS-IN-04] idempotent op apply by opId
+   */
+  applyOp(op: DocOp): { applied: boolean; reason?: string } {
+    if (this.appliedOpIds.has(op.opId)) {
+      return { applied: false, reason: "duplicate_opId" };
+    }
+
+    try {
+      switch (op.type) {
+        case "create_frame":
+          this.opCreateFrame(op.payload);
+          break;
+        case "create_group":
+          this.opCreateGroup(op.payload);
+          break;
+        case "create_text":
+          this.opCreateText(op.payload);
+          break;
+        case "create_primitive":
+          this.opCreatePrimitive(op.payload);
+          break;
+        case "append_ink":
+          this.opAppendInk(op.payload);
+          break;
+        case "create_connector":
+          this.opCreateConnector(op.payload);
+          break;
+        case "create_smart_group":
+          this.opCreateSmartGroup(op.payload);
+          break;
+        case "set_smart_transform":
+          this.opSetSmartTransform(op.payload);
+          break;
+        case "translate_node":
+          this.opTranslateNode(op.payload);
+          break;
+        default:
+          return { applied: false, reason: `unknown_type:${op.type}` };
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { applied: false, reason: msg };
+    }
+
+    this.appliedOpIds.add(op.opId);
+    this.status = "dirty";
+    this.refreshConnectors();
+    return { applied: true };
+  }
+
+  flatten(): Drawable[] {
+    return flattenDrawables(this);
+  }
+
+  private assertUniqueId(id: Id): void {
+    if (this.indexById().has(id)) {
+      throw new Error(`duplicate_id:${id}`);
+    }
+  }
+
+  private insertRoot(node: DocNode): void {
+    this.rootChildren.push(node);
+  }
+
+  private insertUnder(parentId: Id | undefined, node: DocNode): void {
+    if (!parentId) {
+      this.insertRoot(node);
+      return;
+    }
+    const parent = this.indexById().get(parentId);
+    if (!parent || !isContainer(parent)) {
+      throw new Error(`bad_parent:${parentId}`);
+    }
+    if (node.kind === "frame") {
+      throw new Error("frame_not_under_container");
+    }
+    parent.children.push(node);
+  }
+
+  private opCreateFrame(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    this.assertUniqueId(id);
+    const bounds = p.bounds as FrameNode["bounds"];
+    const frame: FrameNode = {
+      id,
+      kind: "frame",
+      bounds: cloneJson(bounds),
+      children: [],
+    };
+    // Frames only at root
+    this.insertRoot(frame);
+  }
+
+  private opCreateGroup(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    this.assertUniqueId(id);
+    const group: GroupNode = { id, kind: "group", children: [] };
+    this.insertUnder(p.parentId as string | undefined, group);
+  }
+
+  private opCreateText(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    this.assertUniqueId(id);
+    const node: TextNode = {
+      id,
+      kind: "text",
+      box: cloneJson(p.box as TextNode["box"]),
+      runs: cloneJson((p.runs as TextRun[]) ?? [{ text: "" }]),
+      style: cloneJson((p.style as Style) ?? DEFAULT_STYLE),
+    };
+    this.insertUnder(p.parentId as string | undefined, node);
+  }
+
+  private opCreatePrimitive(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    this.assertUniqueId(id);
+    const node: PrimitiveNode = {
+      id,
+      kind: "primitive",
+      geom: cloneJson(p.geom as PrimitiveGeom),
+      style: cloneJson((p.style as Style) ?? DEFAULT_STYLE),
+    };
+    this.insertUnder(p.parentId as string | undefined, node);
+  }
+
+  private opAppendInk(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    this.assertUniqueId(id);
+    const node: InkNode = {
+      id,
+      kind: "ink",
+      samples: cloneJson(p.samples as InkSample[]),
+      style: cloneJson((p.style as Style) ?? DEFAULT_STYLE),
+      role: p.role as InkNode["role"],
+    };
+    this.insertUnder(p.parentId as string | undefined, node);
+  }
+
+  private opCreateConnector(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    this.assertUniqueId(id);
+    const from = cloneJson(p.from as Anchor);
+    const to = cloneJson(p.to as Anchor);
+    const byId = this.indexById();
+    const invalid = !byId.has(from.nodeId) || !byId.has(to.nodeId);
+    const node: ConnectorNode = {
+      id,
+      kind: "connector",
+      from,
+      to,
+      invalid,
+    };
+    this.insertUnder(p.parentId as string | undefined, node);
+  }
+
+  private opCreateSmartGroup(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    this.assertUniqueId(id);
+    const children = cloneJson((p.children as InkNode[]) ?? []);
+    for (const c of children) {
+      this.assertUniqueId(c.id);
+      if (c.kind !== "ink") throw new Error("smart_group_ink_only");
+    }
+    const node: SmartGroupNode = {
+      id,
+      kind: "smart_group",
+      bounds: cloneJson(p.bounds as SmartBounds),
+      transform: cloneJson(
+        (p.transform as SmartTransform) ?? IDENTITY_SMART_TRANSFORM,
+      ),
+      inkScaleMode: (p.inkScaleMode as SmartGroupNode["inkScaleMode"]) ?? "withBounds",
+      children,
+    };
+    this.insertUnder(p.parentId as string | undefined, node);
+  }
+
+  private opSetSmartTransform(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    const node = this.indexById().get(id);
+    if (!node || node.kind !== "smart_group") throw new Error(`not_smart_group:${id}`);
+    node.transform = cloneJson(p.transform as SmartTransform);
+  }
+
+  private opTranslateNode(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    const dx = Number(p.dx);
+    const dy = Number(p.dy);
+    const node = this.indexById().get(id);
+    if (!node) throw new Error(`missing:${id}`);
+    switch (node.kind) {
+      case "primitive":
+        if (node.geom.kind === "rect") {
+          node.geom.x += dx;
+          node.geom.y += dy;
+        } else if (node.geom.kind === "ellipse") {
+          node.geom.cx += dx;
+          node.geom.cy += dy;
+        } else if (node.geom.kind === "line") {
+          node.geom.x1 += dx;
+          node.geom.y1 += dy;
+          node.geom.x2 += dx;
+          node.geom.y2 += dy;
+        }
+        break;
+      case "text":
+        node.box.minX += dx;
+        node.box.maxX += dx;
+        node.box.minY += dy;
+        node.box.maxY += dy;
+        break;
+      case "frame":
+        node.bounds.minX += dx;
+        node.bounds.maxX += dx;
+        node.bounds.minY += dy;
+        node.bounds.maxY += dy;
+        break;
+      case "smart_group":
+        node.transform.x += dx;
+        node.transform.y += dy;
+        break;
+      case "ink":
+        for (const s of node.samples) {
+          s.x += dx;
+          s.y += dy;
+        }
+        break;
+      default:
+        throw new Error(`cannot_translate:${node.kind}`);
+    }
+  }
+
+  /** Re-resolve connector validity + cached straight path after moves. */
+  private refreshConnectors(): void {
+    const byId = this.indexById();
+    const visit = (nodes: DocNode[]) => {
+      for (const n of nodes) {
+        if (n.kind === "connector") {
+          const from = resolveAnchor(n.from, byId);
+          const to = resolveAnchor(n.to, byId);
+          n.invalid = !from || !to;
+          n.path = from && to ? [from, to] : undefined;
+        } else if (n.kind === "frame" || n.kind === "group") {
+          visit(n.children);
+        }
+      }
+    };
+    visit(this.rootChildren);
+  }
+
+  /** Frames only at root — for invariant checks. */
+  framesOnlyAtRoot(): boolean {
+    const nested: string[] = [];
+    const walk = (nodes: DocNode[], underRoot: boolean) => {
+      for (const n of nodes) {
+        if (n.kind === "frame" && !underRoot) nested.push(n.id);
+        if (n.kind === "frame" || n.kind === "group") {
+          walk(n.children, false);
+        }
+      }
+    };
+    walk(this.rootChildren, true);
+    return nested.length === 0;
+  }
+
+  groupsExcludeFrame(): boolean {
+    const bad: string[] = [];
+    const walk = (nodes: DocNode[]) => {
+      for (const n of nodes) {
+        if (n.kind === "group") {
+          for (const c of n.children) {
+            if (c.kind === "frame") bad.push(c.id);
+          }
+          walk(n.children);
+        } else if (n.kind === "frame") {
+          walk(n.children);
+        }
+      }
+    };
+    walk(this.rootChildren);
+    return bad.length === 0;
+  }
+}

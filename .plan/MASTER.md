@@ -43,7 +43,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | 2026-08-10 | Epaper on-device pan/zoom | backlog |
 | 2026-08-10 | `reawa/*` | backlog |
 | 2026-08-11 | STORY-IN-006 design wave | **cancelled** — no DocChrome design |
-| 2026-08-11 | vector-document `/dev` before sync | deferred → W4 with tablet/region sync |
+| 2026-08-11 | vector-document `/dev` before sync | superseded — W4 opened with sync |
 
 ## History spine
 
@@ -51,26 +51,26 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 |---|---|---|---|---|
 | iter-000 | Traceability backfill | closed; retro-gate passed | BDD optional | [iter](./iter-000/iter.md) |
 | iter-001 | EXP-0001 + epaper promote | closed; S1 proven | → Infini REQs | [EXP-0001](./iter-001/explorations/EXP-0001-remarkable-canvas-sync.md) |
-| iter-002 | Infini + sync | **active** — F1 verified; F2 arch | design cancelled | [iter](./iter-002/iter.md) |
+| iter-002 | Infini + sync | **active** — F1 verified; **W4** implement | IN-006 cancelled | [iter](./iter-002/iter.md) |
 
 ## Now — iter-002
 
 ### Goal & capacity
 
-- Goal: Architect prepares vector-document model for **epaper↔Infini sync**; no designer/dev on F2 chrome yet.
-- Capacity: architecture only (W3-arch).
-- Risks: SRS orphans until W4 implement; Smart Group Could rides with sync.
+- Goal: Implement document tree + SVG/ops **together with** Infini tablet-sync and Epaper region-sync.
+- Capacity: W4 Must chain (IN-007…009 + EP-001); Smart Group Could (IN-010) after.
+- Risks: reconnect snapshot/hello TBD; dual fixtures in IN-008.
 
 ### Tracks
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
-| TRACK-002 | planned | **active** | **`/architect` sync readiness** | [track](./tracks/TRACK-002-infini-vector-document.md) |
+| TRACK-002 | planned | **active** | **`/qa` BDD → `/dev` IN-007** | [track](./tracks/TRACK-002-infini-vector-document.md) |
 
 ### Open challenges / blocked
 
-- STORY-IN-006 **blocked** (design cancelled by human).
+- STORY-IN-006 **blocked** (design cancelled by human) — do not revive.
 
 ### Design packages in flight
 
@@ -79,14 +79,14 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [execution-board](./iter-002/execution-board.md) — wave **W3-arch**
+- [execution-board](./iter-002/execution-board.md) — wave **W4**
 
 ### Freeze notes
 
-- **No `/dev`** on vector-document / Smart Group until sync wave (W4).
 - **No `/designer`** on STORY-IN-006.
+- `/dev` starts only after `/qa` BDD for the story in flight (order: IN-007 → …).
 
 ## Forward
 
-- W4: implement document tree + SVG/ops + Smart Group **together with** tablet-sync / region-sync.
+- Finish W4 Must → IN-010 Could → hardware `validated_by`.
 - Backlog: [backlog.md](./backlog.md)

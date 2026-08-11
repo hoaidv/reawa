@@ -24,14 +24,11 @@ wireframe: ""
 ## Status: blocked (cancelled)
 
 **Human decision (2026-08-11):** STORY-IN-006 needs **no design**. Do **not** run `/designer`.
-Implement of document chrome / tree / Smart Group is **deferred** until building **epaper ↔
-desktop sync** (tablet-sync / region-sync wave) — **no `/dev` yet**.
 
-SRS + ADRs remain the contract:
+W3-arch closed; implement lives on W4 stories (no DocChrome design dependency):
 
-- [REQ-02](../../../.docs/modules/infini/prd.md#vector-document) · [REQ-04](../../../.docs/modules/infini/prd.md#smart-group)
-- [ADR-0010](../../../.docs/adr/ADR-0010-tree-of-vectors.md) · [ADR-0011](../../../.docs/adr/ADR-0011-smart-group.md)
-- Feature SRS under `.docs/modules/infini/features/vector-document/`
+- [STORY-IN-007](./STORY-IN-007.md) … [STORY-IN-010](./STORY-IN-010.md), [STORY-EP-001](./STORY-EP-001.md)
 
-**Next persona:** `/architect` (sync readiness / bind document ops to tablet channel) — then
-SM will slice implement stories when sync wave opens.
+SRS + ADRs remain the contract for chrome later if revived:
+
+- [REQ-02](../../../.docs/modules/infini/prd.md#vector-document) · [SRS-IN-05](../../../.docs/modules/infini/features/vector-document/srs-ui.md)

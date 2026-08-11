@@ -10,7 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CanvasRenderer } from "./CanvasRenderer";
 import { InfiniDocument } from "./Document";
-import { demoPrimitives } from "./primitives";
+import { demoPrimitives, makePath } from "./primitives";
 import {
   identityViewport,
   panByScreenDelta,
@@ -19,6 +19,7 @@ import {
   type Viewport,
 } from "./Viewport";
 import { allowIndividualInteraction } from "./TileCache";
+import type { RmStrokeMsg } from "../native";
 
 export interface CanvasStageProps {
   populated?: boolean;
@@ -52,8 +53,41 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const rafStats = useRef({ frames: 0, drops: 0, last: 0, painted: 0 });
   const gestureEndTimer = useRef(0);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  /** Active RM stroke polylines (canvas panel coords → world). */
+  const rmStrokesRef = useRef(
+    new Map<string, { points: { x: number; y: number }[]; width: number }>(),
+  );
+  const rmDoneRef = useRef<
+    { id: string; points: { x: number; y: number }[]; width: number }[]
+  >([]);
 
   const [emptyHint, setEmptyHint] = useState(!populated);
+  const [syncHint, setSyncHint] = useState("");
+
+  const rebuildWithRmInk = () => {
+    const base = populated ? demoPrimitives() : [];
+    const inkStyle = { stroke: "#1C2430", strokeWidth: 2.5 };
+    const rm = [
+      ...rmDoneRef.current.map((s) =>
+        makePath(`rm-done-${s.id}`, s.points, {
+          ...inkStyle,
+          strokeWidth: s.width,
+        }),
+      ),
+      ...[...rmStrokesRef.current.entries()]
+        .filter(([, s]) => s.points.length >= 2)
+        .map(([id, s]) =>
+          makePath(`rm-live-${id}`, s.points, {
+            ...inkStyle,
+            strokeWidth: s.width,
+          }),
+        ),
+    ];
+    docRef.current.setPrimitives([...base, ...rm]);
+    if (rm.length) setEmptyHint(false);
+    rendererRef.current.invalidateTiles();
+    schedulePaint();
+  };
 
   const paintNow = () => {
     const canvas = canvasRef.current;
@@ -145,6 +179,47 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     }
     rendererRef.current.invalidateTiles();
     schedulePaint();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [populated]);
+
+  // Epaper StrokeSync ingest (EXP path → :9877)
+  useEffect(() => {
+    const api = window.infiniNative;
+    if (!api?.onRmStroke) {
+      setSyncHint("no native bridge (browser-only?)");
+      return;
+    }
+    void api.strokeIngestPort?.().then((p) => {
+      setSyncHint(`listening :${p} for RM strokes`);
+    });
+
+    const unsub = api.onRmStroke((msg: RmStrokeMsg) => {
+      if (msg.type === "stroke_begin") {
+        rmStrokesRef.current.set(msg.id, {
+          points: [],
+          width: msg.brush?.width ?? 2.5,
+        });
+        return;
+      }
+      if (msg.type === "stroke_point") {
+        const stroke = rmStrokesRef.current.get(msg.id);
+        if (!stroke) return;
+        stroke.points.push({ x: msg.x - 700, y: msg.y - 500 });
+        if (stroke.points.length === 2 || stroke.points.length % 3 === 0) {
+          rebuildWithRmInk();
+        }
+        return;
+      }
+      if (msg.type === "stroke_end") {
+        const stroke = rmStrokesRef.current.get(msg.id);
+        if (stroke && stroke.points.length >= 2) {
+          rmDoneRef.current.push({ id: msg.id, ...stroke });
+        }
+        rmStrokesRef.current.delete(msg.id);
+        rebuildWithRmInk();
+      }
+    });
+    return unsub;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [populated]);
 
@@ -299,6 +374,12 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         Trackpad pan · Mouse drag pan · Wheel pan · ⌘/Ctrl+wheel zoom · Pinch
         <br />
         <span ref={statsElRef} />
+        {syncHint ? (
+          <>
+            <br />
+            <span data-region="SyncStatus">{syncHint}</span>
+          </>
+        ) : null}
       </p>
     </div>
   );

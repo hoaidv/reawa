@@ -1,10 +1,13 @@
 /**
  * @implements [SRS-IN-01] In-memory document + spatial index
+ * @implements [SRS-IN-04] sync flattened tree into WorldLayer index
  */
 
 import { SpatialIndex } from "./SpatialIndex";
 import type { Primitive } from "./primitives";
 import type { Aabb } from "./Viewport";
+import type { VectorDocument } from "../document/VectorDocument";
+import { drawablesToPrimitives } from "../document/toPrimitives";
 
 export class InfiniDocument {
   private items: Primitive[] = [];
@@ -33,6 +36,14 @@ export class InfiniDocument {
     this.items = items.slice();
     this.index.rebuild(this.items);
     this.version++;
+  }
+
+  /**
+   * Project vector tree → spatial index for cull/paint.
+   * @implements [SRS-IN-04] WorldLayer from flattenDrawables
+   */
+  syncFromVectorDoc(tree: VectorDocument): void {
+    this.setPrimitives(drawablesToPrimitives(tree.flatten()));
   }
 
   add(p: Primitive): void {

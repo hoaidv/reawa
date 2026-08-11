@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-11T03:33:34+00:00",
+  "generated_at": "2026-08-11T04:16:14+00:00",
   "current_iter": "iter-002",
   "by_status": {
-    "draft": 0,
+    "draft": 1,
     "ready": 0,
     "in-progress": 0,
-    "in-review": 0,
-    "done": 71,
+    "in-review": 1,
+    "done": 74,
     "blocked": 1
   },
   "by_module": {
@@ -16,15 +16,20 @@
       "done": 66,
       "in_review": 0
     },
+    "epaper": {
+      "total": 1,
+      "done": 0,
+      "in_review": 1
+    },
     "infini": {
-      "total": 6,
-      "done": 5,
+      "total": 10,
+      "done": 8,
       "in_review": 0
     }
   },
   "open_challenges": 0,
   "resolved_challenges_this_iter": 0,
-  "sync_orphans": 10,
+  "sync_orphans": 4,
   "master_plan": true,
   "tracks": [
     {
@@ -38,7 +43,7 @@
       "id": "TRACK-002",
       "kind": "planned",
       "status": "active",
-      "cursor": "vector-document SRS /architect (sync readiness) \u2014 no designer; no dev yet",
+      "cursor": "/qa BDD for W4 Must \u2192 /dev STORY-IN-007 (tree/ops)",
       "iter": "iter-002"
     }
   ]
