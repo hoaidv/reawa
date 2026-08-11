@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-10
+updated: 2026-08-11
 current_iter: iter-002
 owner: sm
 
@@ -42,7 +42,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 |---|---|---|
 | 2026-08-10 | Epaper on-device pan/zoom | backlog |
 | 2026-08-10 | `reawa/*` | backlog |
-| 2026-08-10 | STORY-IN-006 early parallel | blocked by wip — keep draft |
+| 2026-08-11 | F1 complete — STORY-IN-006 released from wip hold | — |
 
 ## History spine
 
@@ -50,34 +50,35 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 |---|---|---|---|---|
 | iter-000 | Traceability backfill | closed; retro-gate passed | BDD optional | [iter](./iter-000/iter.md) |
 | iter-001 | EXP-0001 + epaper promote | closed; S1 proven | → Infini REQs | [EXP-0001](./iter-001/explorations/EXP-0001-remarkable-canvas-sync.md) |
-| iter-002 | Infini + sync | **active** — F1 in flight | — | [iter](./iter-002/iter.md) |
+| iter-002 | Infini + sync | **active** — F2 in flight | F1 verified | [iter](./iter-002/iter.md) |
 
 ## Now — iter-002
 
 ### Goal & capacity
 
-- Goal: Vertical F1 — Infini infinity canvas (REQ-01).
-- Capacity / committed: **20 pts** (15 F1 + 2 queued design + buffer).
-- Risks: Electron gesture budget; design gate before implement `ready`.
+- Goal: Vertical F2 — Infini vector document (REQ-02); F1 REQ-01 **verified**.
+- Capacity / committed: design IN-006 (2 pts) + implement buffer after design.
+- Risks: thin SRS-IN-05 (state table); SVG profile still open question for implement.
 
 ### Tracks
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
-| TRACK-001 | planned | active | **STORY-IN-002 /qa** (verify) | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
+| TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
+| TRACK-002 | planned | **active** | **STORY-IN-006 /designer** | [track](./tracks/TRACK-002-infini-vector-document.md) |
 
 ### Open challenges / blocked
 
-- None. Implement UI stories draft until STORY-IN-001 `done`.
+- None. Optional: `/pm` thicken SRS-IN-05 if Designer cannot invent chrome composition from state table alone.
 
 ### Design packages in flight
 
 - [infinity-canvas](./iter-002/design/infinity-canvas/) — STORY-IN-001 **done** `[UI-IN-01]`
-- [vector-document](./iter-002/design/vector-document/) — STORY-IN-006 queued (draft)
+- [vector-document](./iter-002/design/vector-document/) — STORY-IN-006 **ready**
 
 ### Execution board(s)
 
-- [execution-board](./iter-002/execution-board.md) — wave **W2-qa-dev**
+- [execution-board](./iter-002/execution-board.md) — wave **W3-design**
 
 ### Freeze notes
 
@@ -85,5 +86,5 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ## Forward
 
-- After F1: F2 vector-document (STORY-IN-006 + implement slices) → tablet/region sync.
+- After F2 design: implement slices (SRS-IN-04/05) → tablet/region sync (W5).
 - Backlog: [backlog.md](./backlog.md)

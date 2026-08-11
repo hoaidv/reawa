@@ -12,7 +12,7 @@ View over [PRD](./prd.md). Specs live in feature `srs-*`; decisions in ADRs.
 
 1. **Gesture smoothness** — continuous pan/pinch without visible stutter on a 60 Hz display ([REQ-01](./prd.md#infinity-canvas)).
 2. **Mapping latency** — Epaper input map tracks Infini viewport before full panel refresh ([REQ-03](./prd.md#tablet-sync), [ADR-0009](../../adr/ADR-0009-shared-document-viewport.md)).
-3. **Document fidelity** — SVG/profile round-trip ±1 px @ 100% zoom ([REQ-02](./prd.md#vector-document)).
+3. **Document fidelity** — SVG/profile round-trip ±1 px @ 100% zoom; tree parenting preserved ([REQ-02](./prd.md#vector-document), [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md)).
 4. **Cross-platform velocity** — one Electron+React shell ([ADR-0008](../../adr/ADR-0008-electron-react-infini.md)).
 
 ## Constraints
@@ -20,21 +20,31 @@ View over [PRD](./prd.md). Specs live in feature `srs-*`; decisions in ADRs.
 - Sibling to Swift Reawa and Qt Epaper — do not merge codebases.
 - RM2 reachable over USB Ethernet; xochitl stopped while Epaper runs.
 - Transform = translate + **uniform** scale only (no rotate/skew in v0).
+- Document is a **composite tree** (not a flat stroke list): Frames root-only; Groups nest;
+  ink is a dense polyline of **tablet samples** (position + pressure/tilt/… when reported)
+  ([ADR-0010](../../adr/ADR-0010-tree-of-vectors.md)).
 
 ## Solution strategy
 
 Electron main process owns window lifecycle + TCP (or Unix) session to Epaper.
 React renderer owns infinity canvas UI and applies `screen = (world + T) * S`.
-A shared TypeScript document model serializes to SVG for disk and to a compact op
-encoding for the wire. Viewport updates are a separate high-priority message type
+A shared TypeScript **tree-of-vectors** model serializes to SVG for disk and to a compact
+op encoding for the wire; painters flatten leaves into the spatial index.
+Viewport updates are a separate high-priority message type
 ([ADR-0009](../../adr/ADR-0009-shared-document-viewport.md)).
 
 ## Domain entities (consumed)
 
 | Entity | Notes |
 |---|---|
-| Stroke / Path | Ordered samples or path segments in world space |
-| Document | Op-log + materialised scene |
+| Ink | Dense polyline of **tablet samples** (`x,y` + pressure, tilt, … when reported) — primary handwriting |
+| Text | World AABB + paragraph runs |
+| Primitive | line / rect / ellipse |
+| Group | Nestable composite (no Frame children) |
+| SmartGroup | Ink-box pilot: local TF, bounds, inkScaleMode, connector target ([ADR-0011](../../adr/ADR-0011-smart-group.md)) |
+| Frame | Root-only container with explicit bounds |
+| Connector | Edge between anchors on two node ids |
+| Document | Op-log + materialised tree |
 | Viewport | translate, scale, drawing-region AABB |
 | Session | Connection Epaper ↔ Infini |
 

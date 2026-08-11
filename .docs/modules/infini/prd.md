@@ -57,19 +57,50 @@ tablet cannot act as a true drawing tablet for an infinite desktop canvas.
 ## [REQ-02] Vector document interchange {#vector-document}
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
-- One **persistence** format for vectors (SVG preferred), one **in-memory** object model,
-  and one **transmit** encoding so Epaper and Infini can exchange strokes and scene data.
-  Infini must render the persistence format.
+- One **persistence** format (SVG profile), one **in-memory tree-of-vectors**, and one
+  **transmit** op encoding so Epaper and Infini exchange scene data. The tree holds
+  handwritten **ink** (dense polylines of tablet samples: position, pressure, tilt, and other
+  reported ink channels), **text** paragraphs, **primitive** shapes,
+  nestable **groups**, root-level **frames**, and **connectors** between nodes
+  ([ADR-0010](../../adr/ADR-0010-tree-of-vectors.md)). Infini must render persistence.
 
 **Acceptance**
-- Given a document with paths/primitives saved as the persistence format, When Infini
-  opens it, Then all vectors appear at the same world coordinates and stroke widths
-  (error ≤1 px at 100% zoom).
-- Given the in-memory model, When it is serialized for transmit and deserialized on the
-  peer, Then a round-trip yields an equivalent scene (100% op equality on the fixture set).
+- Given a document with ink, text, primitives, groups, frames, and connectors saved as the
+  persistence format, When Infini opens it, Then nodes reappear with the same ids, parenting,
+  and geometry (error ≤1 px at 100% zoom).
+- Given the in-memory tree, When it is serialized for transmit and deserialized on the peer,
+  Then a round-trip yields equivalent ops/tree (100% op equality on the fixture set).
 - Given Infini has an open document, When the user exports persistence format, Then a
-  standards-readable SVG (or documented profile) is written.
+  standards-readable SVG (Infini profile) is written.
 - **UI states:** doc.none / doc.open / doc.dirty / doc.error (open/save chrome).
+- **Structure:** Groups may nest anywhere; Frames only at document root; handwriting remains
+  polyline ink samples (not Bézier-fitted) in v0; sample channels from the tablet are preserved.
+
+## [REQ-04] Smart Group / ink-box (pilot) {#smart-group}
+- **Priority:** Could · **Traces:** [BRD-07]
+- Needs design: yes
+- **Pilot:** When the user handwriting is enclosed by a hand-drawn rectangle (or any selected
+  ink is promoted), Infini creates a **Smart Group**: ink stays ink (no OCR), an explicit
+  rectangular **boundary** frames it, the unit moves together, scales (independent axes and
+  aspect-lock), rotates, is a **connector target**, and supports **ink scale mode**
+  (`withBounds` vs `fixedInk` text-box feel). Not limited to the enclose gesture — any ink
+  set may become a Smart Group ([ADR-0011](../../adr/ADR-0011-smart-group.md)).
+
+**Acceptance**
+- Given ink strokes on the canvas, When the user completes a rectangular enclose gesture
+  around them (or explicit Smart Group), Then a Smart Group exists whose children include those
+  content Ink nodes (unaltered samples) **and** the enclose stroke as boundary ink, and whose
+  geometric bounds match the recognized (x, y, width, height) within ≤3 CSS px @ 100% zoom on
+  the happy-path fixture set.
+- Given a Smart Group, When the user translates, rotates, or scales the boundary (including
+  non-uniform scale), Then the group moves as one connector-targetable node; **boundary ink
+  always transforms** with the group; with `inkScaleMode=withBounds`, **content** ink
+  transforms with the group; with `fixedInk`, content ink sample geometry stays fixed size
+  while bounds (and boundary ink) change.
+- Given a Smart Group, When a connector is attached to a preferred edge midpoint, Then the
+  anchor tracks the Smart Group boundary after transform.
+- Given enclose recognition false positive/negative, When the user undoes or uses explicit
+  create, Then no data loss of ink samples (100% sample channel preservation).
 
 ## [REQ-03] Tablet drawing-region sync {#tablet-sync}
 - **Priority:** Must · **Traces:** [BRD-07]
@@ -99,6 +130,8 @@ tablet cannot act as a true drawing tablet for an infinite desktop canvas.
 - Multi-user collaborative editing; cloud sync; CRDT productization beyond what Architect
   needs for two-device consistency.
 - Pressure-rich brushes, layers UI, or full illustration suite.
+- **OCR / handwriting-to-Text** as part of Smart Group (ink stays ink).
+- Perfect enclose recognition — pilot is best-effort + undo + explicit fallback.
 
 ## Assumptions & Dependencies
 
@@ -109,9 +142,10 @@ tablet cannot act as a true drawing tablet for an infinite desktop canvas.
 
 ## Open Questions
 
-- Exact SVG profile subset (which elements/attributes) — **owner:** architect — **needed by:** 2026-08-17
+- Exact SVG attribute grammar for Infini profile v1 (tighten [SRS-IN-09](./features/vector-document/srs-data.md)) — **owner:** architect — **needed by:** 2026-08-17
 - Transport (reuse EXP TCP JSON-lines vs other) — **owner:** architect — **needed by:** 2026-08-17
 - Whether Infini ships macOS-first only in v0 while Electron enables later Windows/Linux — **owner:** pm — **needed by:** 2026-08-24
+- Local transforms for ordinary Groups/Frames — still deferred; **SmartGroup** has local TF per [ADR-0011](../../adr/ADR-0011-smart-group.md) — **owner:** architect
 
 ## Linked Modules
 

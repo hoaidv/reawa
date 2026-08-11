@@ -4,7 +4,7 @@ title: "Wire pan zoom pinch gesture inputs"
 kind: implement
 parent_srs: [SRS-IN-02]
 parent_req: [REQ-01]
-status: in-review
+status: done
 priority: P1
 iter: iter-002
 estimate: 5

@@ -4,7 +4,7 @@ title: "Scaffold Electron React Infini shell and canvas host"
 kind: implement
 parent_srs: [SRS-IN-01]
 parent_req: [REQ-01]
-status: in-review
+status: done
 priority: P1
 iter: iter-002
 estimate: 3

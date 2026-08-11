@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-11T01:20:37+00:00
+generated_at: 2026-08-11T02:57:05+00:00
 ---
 
 # Sync Report
@@ -21,6 +21,8 @@ _None._
 | [SRS-IN-06] | infini |
 | [SRS-IN-07] | infini |
 | [SRS-IN-08] | infini |
+| [SRS-IN-09] | infini |
+| [SRS-IN-10] | infini |
 
 ## BDD coverage by SRS
 | SRS | Scenarios | Status |
@@ -36,6 +38,8 @@ _None._
 | [SRS-IN-06] | 0 | missing |
 | [SRS-IN-07] | 0 | missing |
 | [SRS-IN-08] | 0 | missing |
+| [SRS-IN-09] | 0 | missing |
+| [SRS-IN-10] | 0 | missing |
 | [SRS-RW-01] | 0 | missing |
 | [SRS-RW-02] | 0 | missing |
 | [SRS-RW-03] | 0 | missing |

@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-11T01:20:49+00:00
+generated_at: 2026-08-11T02:33:39+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -8,11 +8,11 @@ generated_at: 2026-08-11T01:20:49+00:00
 | ID | Title | Kind | Owner | Module | Parent SRS | Status | Iter | Pts |
 |---|---|---|---|---|---|---|---|---|
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
-| [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | in-review | iter-002 | 3 |
-| [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | in-review | iter-002 | 5 |
-| [STORY-IN-004](./iter-002/stories/STORY-IN-004.md) | Wire pan zoom pinch gesture inputs | implement | dev | infini | [SRS-IN-02] | in-review | iter-002 | 5 |
-| [STORY-IN-005](./iter-002/stories/STORY-IN-005.md) | Verify gesture frame budget on 60Hz display | implement | dev | infini | [SRS-IN-03] | in-review | iter-002 | 2 |
-| [STORY-IN-006](./iter-002/stories/STORY-IN-006.md) | Design Infini document open save chrome | design | designer | infini | [SRS-IN-05] | draft | iter-002 | 2 |
+| [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
+| [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |
+| [STORY-IN-004](./iter-002/stories/STORY-IN-004.md) | Wire pan zoom pinch gesture inputs | implement | dev | infini | [SRS-IN-02] | done | iter-002 | 5 |
+| [STORY-IN-005](./iter-002/stories/STORY-IN-005.md) | Verify gesture frame budget on 60Hz display | implement | dev | infini | [SRS-IN-03] | done | iter-002 | 2 |
+| [STORY-IN-006](./iter-002/stories/STORY-IN-006.md) | Design Infini document open save chrome | design | designer | infini | [SRS-IN-05] | ready | iter-002 | 2 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |
 | [STORY-RW-003](./iter-000/stories/STORY-RW-003.md) | Accessibility permission gate | implement | dev | reawa | [SRS-RW-03] | done | iter-000 | 1 |

@@ -4,7 +4,7 @@ title: "Verify gesture frame budget on 60Hz display"
 kind: implement
 parent_srs: [SRS-IN-03]
 parent_req: [REQ-01]
-status: in-review
+status: done
 priority: P1
 iter: iter-002
 estimate: 2
@@ -29,3 +29,14 @@ wireframe: ""
 
 Implements quality scenario [SRS-IN-03](../../../.docs/modules/infini/features/infinity-canvas/srs-quality.md).
 Depends on [STORY-IN-004](./STORY-IN-004.md).
+
+## QA evidence (2026-08-11)
+
+Probe: `infini/scripts/qa-frame-budget.cjs` against `http://127.0.0.1:5173/?trace=1` (synthetic wheel pan + ctrl+wheel zoom ≥5 s each).
+
+| Gesture | elapsed | drops | drops/s | Budget ≤2/s |
+|---|---|---|---|---|
+| pan | 5.51 s | 1 | **0.18** | pass |
+| zoom | 5.51 s | 6 | **1.09** | pass |
+
+Regions present: WindowFrame, CanvasStage, WorldLayer, StatusZoom. No CHL filed (budget met; Electron shell retained). Circle aspect covered by vitest uniform-scale case + live demo ellipse under zoom.

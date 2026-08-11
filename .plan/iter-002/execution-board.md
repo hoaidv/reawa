@@ -1,23 +1,24 @@
 ---
 title: Execution board — Infini campaign
 iter: iter-002
-track: TRACK-001
+track: TRACK-002
 owner: sm
-date: 2026-08-10
+date: 2026-08-11
 lock: vertical · verified · 4 features · wip 1
 verdict: ""
-wave: W2-qa-dev
+wave: W3-design
 ---
 
 # Execution board — Infini ↔ Epaper
 
-## Summary (as of 2026-08-10)
+## Summary (as of 2026-08-11)
 
 | Band | Count | Meaning |
 |---|---|---|
-| Design **done** | 1 | STORY-IN-001 / `[UI-IN-01]` |
-| Wave **NOW** | W2 | `/qa` BDD → `/dev` STORY-IN-002…005 |
-| Implement freeze | no | design done |
+| Design **done** | 1 | STORY-IN-001 / `[UI-IN-01]` (F1) |
+| Feature **verified** | 1 | F1 infinity-canvas (PM gate READY-WITH-CONCERNS) |
+| Wave **NOW** | W3 | `/designer` STORY-IN-006 |
+| Implement freeze | n/a | design wave |
 
 ## Lock (copy into every sub-agent brief)
 
@@ -29,10 +30,10 @@ out_of_scope: backlog
 wip: 1
 modules: infini, epaper
 features: (4) infini/infinity-canvas; infini/vector-document; infini/tablet-sync; epaper/region-sync
-personas: /qa (NOW) → /dev; /sm maintains board
+personas: /designer (NOW) → /qa → /dev; /sm maintains board
 forbidden: reawa/*; epaper on-device pan/zoom; second feature in-progress
-NOW feature: infini/infinity-canvas
-cursor: STORY-IN-002 /dev
+NOW feature: infini/vector-document
+cursor: STORY-IN-006 /designer
 ```
 
 ## Execution map
@@ -43,32 +44,32 @@ cursor: STORY-IN-002 /dev
 |---|---|---|---|
 | W0 | done | — | PRD + ADR |
 | W1 | done | — | `/designer` STORY-IN-001 |
-| **W2** | **NOW** | serial | `/dev` 002→003→004→005 (BDD authored) |
-| W3 | queued | — | STORY-IN-006 |
-| W4 | later | — | tablet-sync + region-sync |
+| W2 | done | — | `/dev`+`/qa` STORY-IN-002…005 |
+| **W3** | **NOW** | serial | `/designer` STORY-IN-006 |
+| W4 | queued | — | implement vector-document (after design) |
+| W5 | later | — | tablet-sync + region-sync |
 
 ### Parallelism rules (current wave)
 
 | Lane | Story | Writes | Conflicts |
 |---|---|---|---|
-| **A** | STORY-IN-002…005 | `infini/` + bdd | serial by depends_on |
+| **A** | STORY-IN-006 | `.plan/iter-002/design/vector-document/` | serial only |
 
 ### Full task table
 
 | Id | Feature / chore | Pri | Docs | Design story | Status | Wave | Next owner | Parallel group |
 |---|---|---|---|---|---|---|---|---|
-| F1 | infini/infinity-canvas | Must | ok | STORY-IN-001 **done** | **NOW** | W2 | **dev** | A |
-| F2 | infini/vector-document | Must | ok | STORY-IN-006 | queued | W3 | — | — |
-| F3 | infini/tablet-sync | Must | ok | n/a | queued | W4 | — | — |
-| F4 | epaper/region-sync | Must | ok | n/a | queued | W4 | — | — |
+| F1 | infini/infinity-canvas | Must | ok | STORY-IN-001 **done** | **done** (verified) | W2 | — | — |
+| F2 | infini/vector-document | Must | thin UI | STORY-IN-006 **ready** | **NOW** | W3 | **designer** | A |
+| F3 | infini/tablet-sync | Must | ok | n/a | queued | W5 | — | — |
+| F4 | epaper/region-sync | Must | ok | n/a | queued | W5 | — | — |
 
-### Sub-agent roster (W2)
+### Sub-agent roster (W3)
 
 | Agent | Story | Done-when |
 |---|---|---|
-| Dev | IN-002…005 | AC green vs BDD; Electron shell + canvas |
-| QA | verify after in-review | scenarios pass → story `done` |
+| Designer | IN-006 | Package `[UI-IN-02]` with scenes for doc.none/open/dirty/error + ui-spec |
 
 ## Verdict
 
-BDD ready. **Next: `/dev`** on STORY-IN-002.
+F1 gated. **Next: `/designer`** on STORY-IN-006 (vector-document chrome). Note: `srs-ui` SRS-IN-05 is state-table thin — Designer drafts composition; escalate to `/pm` thicken if blocked.
