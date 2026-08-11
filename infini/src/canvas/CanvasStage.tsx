@@ -1,13 +1,13 @@
 /**
  * @implements [SRS-IN-02] CanvasStage — gestures + host surface
  * @implements [SRS-IN-01] paint host
- * @implements [SRS-IN-03] optional rAF frame counter (RM_INK_TRACE-style)
+ * @implements [SRS-IN-03] optional rAF frame counter
  *
- * Gestures learned from ml-mindmap WheelLayer (wheel pan, ctrl/meta+wheel zoom)
- * plus mouse-drag pan and center-preserving resize from Infini SRS.
+ * Perf: coalesce paints to one rAF; no React setState on the gesture hot path
+ * (ml-mindmap-style — we previously re-rendered React every wheel tick → &lt;30 fps).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CanvasRenderer } from "./CanvasRenderer";
 import { InfiniDocument } from "./Document";
 import { demoPrimitives } from "./primitives";
@@ -21,43 +21,74 @@ import {
 import { allowIndividualInteraction } from "./TileCache";
 
 export interface CanvasStageProps {
-  /** When false, empty canvas (canvas.empty). */
   populated?: boolean;
+}
+
+/** Place world (0,0) at the window center. */
+function viewportCentered(cssW: number, cssH: number, scale = 1): Viewport {
+  return {
+    scale,
+    translate: { x: cssW / (2 * scale), y: cssH / (2 * scale) },
+  };
+}
+
+function get2dContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
+  return (
+    canvas.getContext("2d", { alpha: false, desynchronized: true }) ??
+    canvas.getContext("2d", { alpha: false }) ??
+    canvas.getContext("2d")
+  );
 }
 
 export function CanvasStage({ populated = true }: CanvasStageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
+  const zoomElRef = useRef<HTMLDivElement>(null);
+  const statsElRef = useRef<HTMLSpanElement>(null);
   const docRef = useRef(new InfiniDocument());
   const rendererRef = useRef(new CanvasRenderer());
   const vpRef = useRef<Viewport>(identityViewport());
   const sizeRef = useRef({ w: 0, h: 0 });
-  const gesturingRef = useRef(false);
+  const centeredRef = useRef(false);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
-  const rafStats = useRef({ frames: 0, drops: 0, last: 0 });
+  const rafPaintRef = useRef(0);
+  const rafStats = useRef({ frames: 0, drops: 0, last: 0, painted: 0 });
+  const gestureEndTimer = useRef(0);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
-  const [zoomPct, setZoomPct] = useState(100);
-  const [gesturing, setGesturing] = useState(false);
   const [emptyHint, setEmptyHint] = useState(!populated);
-  const [statsLabel, setStatsLabel] = useState("");
 
-  const paint = useCallback(() => {
+  const paintNow = () => {
     const canvas = canvasRef.current;
     const host = hostRef.current;
     if (!canvas || !host) return;
-    const rect = host.getBoundingClientRect();
-    const cssW = Math.max(1, Math.floor(rect.width));
-    const cssH = Math.max(1, Math.floor(rect.height));
-    const dpr = window.devicePixelRatio || 1;
-    if (canvas.width !== Math.floor(cssW * dpr) || canvas.height !== Math.floor(cssH * dpr)) {
-      canvas.width = Math.floor(cssW * dpr);
-      canvas.height = Math.floor(cssH * dpr);
+
+    const cssW = Math.max(1, sizeRef.current.w || Math.floor(host.clientWidth));
+    const cssH = Math.max(1, sizeRef.current.h || Math.floor(host.clientHeight));
+    if (!centeredRef.current && cssW > 1 && cssH > 1) {
+      vpRef.current = viewportCentered(cssW, cssH, 1);
+      centeredRef.current = true;
+    }
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const bw = Math.floor(cssW * dpr);
+    const bh = Math.floor(cssH * dpr);
+    if (canvas.width !== bw || canvas.height !== bh) {
+      canvas.width = bw;
+      canvas.height = bh;
       canvas.style.width = `${cssW}px`;
       canvas.style.height = `${cssH}px`;
+      ctxRef.current = null;
     }
-    sizeRef.current = { w: cssW, h: cssH };
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctxRef.current) {
+      ctxRef.current = get2dContext(canvas);
+    }
+    const ctx = ctxRef.current;
+    if (!ctx) {
+      if (statsElRef.current) statsElRef.current.textContent = "canvas context unavailable";
+      return;
+    }
+
     const stats = rendererRef.current.paint(
       ctx,
       cssW,
@@ -66,13 +97,37 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       vpRef.current,
       docRef.current,
     );
-    setZoomPct(Math.round(vpRef.current.scale * 100));
-    setStatsLabel(
-      `${stats.indexMode} · ${stats.candidates} visible` +
+    rafStats.current.painted++;
+
+    const pct = Math.round(vpRef.current.scale * 100);
+    if (zoomElRef.current) zoomElRef.current.textContent = `${pct}%`;
+    if (statsElRef.current) {
+      statsElRef.current.textContent =
+        `${stats.indexMode} · ${stats.candidates} visible` +
         (stats.usedTileLod ? " · tile-LOD" : "") +
-        (allowIndividualInteraction(vpRef.current) ? "" : " · no pick"),
-    );
-  }, []);
+        (allowIndividualInteraction(vpRef.current) ? "" : " · no pick");
+    }
+  };
+
+  const schedulePaint = () => {
+    if (rafPaintRef.current) return;
+    rafPaintRef.current = requestAnimationFrame(() => {
+      rafPaintRef.current = 0;
+      paintNow();
+    });
+  };
+
+  const markGesturing = (on: boolean) => {
+    const host = hostRef.current;
+    if (!host) return;
+    host.classList.toggle("is-gesturing", on);
+  };
+
+  const bumpGestureEnd = () => {
+    markGesturing(true);
+    window.clearTimeout(gestureEndTimer.current);
+    gestureEndTimer.current = window.setTimeout(() => markGesturing(false), 100);
+  };
 
   // Document seed
   useEffect(() => {
@@ -84,38 +139,69 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       setEmptyHint(true);
     }
     rendererRef.current.invalidateTiles();
-    paint();
-  }, [populated, paint]);
+    schedulePaint();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [populated]);
 
-  // ResizeObserver — preserve world under center
+  // Size + resize
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-    const ro = new ResizeObserver(() => {
+    const syncSize = () => {
+      const nw = Math.max(1, Math.floor(host.clientWidth));
+      const nh = Math.max(1, Math.floor(host.clientHeight));
       const { w: ow, h: oh } = sizeRef.current;
-      const rect = host.getBoundingClientRect();
-      const nw = Math.max(1, Math.floor(rect.width));
-      const nh = Math.max(1, Math.floor(rect.height));
       if (ow > 0 && oh > 0 && (ow !== nw || oh !== nh)) {
         vpRef.current = preserveCenterOnResize(vpRef.current, ow, oh, nw, nh);
       }
-      paint();
-    });
+      sizeRef.current = { w: nw, h: nh };
+      schedulePaint();
+    };
+    syncSize();
+    const ro = new ResizeObserver(syncSize);
     ro.observe(host);
-    paint();
     return () => ro.disconnect();
-  }, [paint]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Non-passive wheel — stop browser page zoom (ml-mindmap WheelLayer lesson).
+  // Native wheel (non-passive) — single handler for pan/zoom + preventDefault
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
-    const block = (e: WheelEvent) => e.preventDefault();
-    host.addEventListener("wheel", block, { passive: false });
-    return () => host.removeEventListener("wheel", block);
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = host.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      bumpGestureEnd();
+
+      if (e.ctrlKey || e.metaKey) {
+        // Continuous zoom from pixel deltas (smoother than stepped bins).
+        const factor = Math.exp(-e.deltaY * 0.0015);
+        vpRef.current = zoomAtScreenPoint(
+          vpRef.current,
+          { x: sx, y: sy },
+          vpRef.current.scale * factor,
+        );
+      } else {
+        // deltaMode: 0=pixel, 1=line, 2=page
+        const mul = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 32 : 1;
+        vpRef.current = panByScreenDelta(
+          vpRef.current,
+          -e.deltaX * mul,
+          -e.deltaY * mul,
+        );
+      }
+      schedulePaint();
+    };
+
+    host.addEventListener("wheel", onWheel, { passive: false });
+    return () => host.removeEventListener("wheel", onWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Frame counter for STORY-IN-005 evidence (enable with ?trace=1).
+  // Frame counter (?trace=1)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("trace") !== "1") return;
@@ -132,9 +218,8 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     };
     id = requestAnimationFrame(loop);
     const dump = () => {
-      const { frames, drops } = rafStats.current;
-      // eslint-disable-next-line no-console
-      console.info(`[infini] frame-trace frames=${frames} drops≈${drops}`);
+      const { frames, drops, painted } = rafStats.current;
+      console.info(`[infini] frames=${frames} drops≈${drops} paints=${painted}`);
     };
     window.addEventListener("beforeunload", dump);
     return () => {
@@ -144,41 +229,18 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     };
   }, []);
 
-  const setGesturingBoth = (v: boolean) => {
-    gesturingRef.current = v;
-    setGesturing(v);
-  };
-
-  const onWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const host = hostRef.current;
-    if (!host) return;
-    const rect = host.getBoundingClientRect();
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
-    setGesturingBoth(true);
-    if (e.ctrlKey || e.metaKey) {
-      // Trackpad pinch arrives as ctrl+wheel on Chromium (ml-mindmap lesson).
-      const delta =
-        Math.abs(e.deltaY) > 10 ? 0.1 : Math.abs(e.deltaY) > 5 ? 0.05 : 0.01;
-      const factor = e.deltaY > 0 ? 1 - delta : 1 + delta;
-      vpRef.current = zoomAtScreenPoint(
-        vpRef.current,
-        { x: sx, y: sy },
-        vpRef.current.scale * factor,
-      );
-    } else {
-      vpRef.current = panByScreenDelta(vpRef.current, -e.deltaX, -e.deltaY);
-    }
-    paint();
-    window.setTimeout(() => setGesturingBoth(false), 120);
-  };
+  useEffect(() => {
+    return () => {
+      if (rafPaintRef.current) cancelAnimationFrame(rafPaintRef.current);
+      window.clearTimeout(gestureEndTimer.current);
+    };
+  }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     dragRef.current = { x: e.clientX, y: e.clientY };
-    setGesturingBoth(true);
+    markGesturing(true);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -188,12 +250,12 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     const dy = e.clientY - drag.y;
     dragRef.current = { x: e.clientX, y: e.clientY };
     vpRef.current = panByScreenDelta(vpRef.current, dx, dy);
-    paint();
+    schedulePaint();
   };
 
   const onPointerUp = () => {
     dragRef.current = null;
-    setGesturingBoth(false);
+    markGesturing(false);
   };
 
   return (
@@ -201,19 +263,23 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       ref={hostRef}
       data-region="CanvasStage"
       data-platform="desktop"
-      className={`c-canvas-stage${gesturing ? " is-gesturing" : ""}`}
+      className="c-canvas-stage"
       tabIndex={0}
       role="application"
       aria-label="Infinity canvas"
-      onWheel={onWheel}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
       <canvas ref={canvasRef} data-region="WorldLayer" />
-      <div className="c-zoom-readout" data-region="StatusZoom" aria-live="polite">
-        {zoomPct}%
+      <div
+        ref={zoomElRef}
+        className="c-zoom-readout"
+        data-region="StatusZoom"
+        aria-live="polite"
+      >
+        100%
       </div>
       <div className="app-mark" aria-hidden="true">
         Infini
@@ -223,9 +289,9 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       )}
       <p className="gesture-legend">
         <strong>Gestures</strong>
-        Trackpad pan · Mouse drag pan · Wheel pan · ⌘/Ctrl+wheel zoom · Pinch (ctrl+wheel)
+        Trackpad pan · Mouse drag pan · Wheel pan · ⌘/Ctrl+wheel zoom · Pinch
         <br />
-        {statsLabel}
+        <span ref={statsElRef} />
       </p>
     </div>
   );

@@ -99,8 +99,12 @@ export class CanvasRenderer {
     cssH: number,
     vp: Viewport,
   ): void {
-    const step = 48 * vp.scale;
-    if (step < 4) return;
+    // Keep line count bounded — dense grids dominate fill-rate when zoomed in.
+    let step = 48 * vp.scale;
+    while (step < 12) step *= 2;
+    while (step > 96) step /= 2;
+    if (step < 8) return;
+
     const origin = worldToScreen({ x: 0, y: 0 }, vp);
     ctx.strokeStyle = "#C5CCD6";
     ctx.lineWidth = 1;
@@ -108,12 +112,12 @@ export class CanvasRenderer {
     const ox = ((origin.x % step) + step) % step;
     const oy = ((origin.y % step) + step) % step;
     for (let x = ox; x <= cssW; x += step) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, cssH);
+      ctx.moveTo(x + 0.5, 0);
+      ctx.lineTo(x + 0.5, cssH);
     }
     for (let y = oy; y <= cssH; y += step) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(cssW, y);
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(cssW, y + 0.5);
     }
     ctx.stroke();
   }
