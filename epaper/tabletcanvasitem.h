@@ -147,11 +147,16 @@ private:
     int m_toolIntentSeq = 0;
     bool m_rasterizePending = false;
     bool m_rasterizeSharp = false;
+    /** Deferred sharp refresh queued while a stroke was in flight. */
+    bool m_rasterizeDeferredSharp = false;
+    int m_settleFollowUpToken = 0;
     QPointF m_lastRaw;
     QElapsedTimer m_flushClock;
     QElapsedTimer m_refreshClock;
     QRectF m_pendingDirty;
     static constexpr qint64 kFlushIntervalMs = 8;
     static constexpr qint64 kRefreshMinIntervalMs = 250;
+    /** Single deferred settle pass — keep light; avoid swap storms. */
+    static constexpr qint64 kSettleFollowUpMs = 180;
     static constexpr qreal kBaseWorldStroke = 2.5;
 };

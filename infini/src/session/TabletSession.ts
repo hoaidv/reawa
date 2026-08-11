@@ -121,11 +121,18 @@ export class TabletSession {
   }
 
   /**
-   * Flush settle pose after gesture end (always emit latest).
+   * Flush settle pose after gesture end (always emit latest with settle:true).
    * @implements [SRS-IN-07] settle flush
+   * @fix [BUG] soft coalesced refreshes leave tablet ghosts without settle
    */
   flushViewport(vp?: Viewport): ViewportMessage | null {
-    const next = vp ?? this.pendingVp;
+    let next: Viewport | null = vp ?? this.pendingVp;
+    if (!next && this.lastViewportMessage) {
+      next = {
+        translate: { ...this.lastViewportMessage.translate },
+        scale: this.lastViewportMessage.scale,
+      };
+    }
     this.pendingVp = null;
     if (!next || !this.connected) return null;
     return this.emitViewport(next, this.nowMs(), true);

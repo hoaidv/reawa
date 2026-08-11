@@ -287,6 +287,9 @@ void TabletCanvasItem::flushPending()
 
 void TabletCanvasItem::beginStroke(const QPointF &canvasPos, qreal pressure)
 {
+    // Cancel pending settle follow-up so it cannot white-clear mid-stroke.
+    ++m_settleFollowUpToken;
+
     m_current.clear();
     m_activeStrokeId = QStringLiteral("s-%1").arg(++m_strokeSeq);
     m_activeWorldStrokeWidth = worldStrokeWidth(pressure);
@@ -346,6 +349,15 @@ void TabletCanvasItem::endStroke()
     m_current.clear();
     m_hasEmitted = false;
     m_strokeActive = false;
+
+    // Run any viewport/snapshot refresh that was deferred while the pen was down.
+    if (m_rasterizeDeferredSharp) {
+        m_rasterizeDeferredSharp = false;
+        scheduleVectorRasterize(true);
+    } else if (m_rasterizePending) {
+        m_rasterizePending = false;
+        scheduleVectorRasterize(false);
+    }
 
     // Status text is refreshed between strokes only: during a stroke it would
     // add a second damage region per flush.
@@ -571,27 +583,46 @@ void TabletCanvasItem::syncToolIntent(const QJsonObject &obj)
 
 void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
 {
+    // Never full-redraw while the pen is down — white clear would erase live ink
+    // and stall the GUI thread so later strokes miss the panel.
+    if (m_strokeActive) {
+        if (sharp)
+            m_rasterizeDeferredSharp = true;
+        else if (!m_rasterizeDeferredSharp)
+            m_rasterizePending = true; // soft after stroke ends
+        return;
+    }
+
     if (sharp)
         m_rasterizeSharp = true;
     if (m_rasterizePending && !sharp) {
-        // Already scheduled; keep pending soft refresh.
+        // Already scheduled; keep pending soft refresh (region already updated).
         return;
     }
     if (sharp) {
-        // Settle: paint now for sharp GC / full redraw.
+        // Settle: one sharp redraw now. Optional light follow-up cancels if another
+        // settle/stroke arrives — no per-frame swapPen (that starved ink).
         m_rasterizePending = false;
+        m_rasterizeDeferredSharp = false;
         rasterizeVectors(true);
         m_rasterizeSharp = false;
+        const int token = ++m_settleFollowUpToken;
+        QTimer::singleShot(int(kSettleFollowUpMs), this, [this, token]() {
+            if (token != m_settleFollowUpToken || m_strokeActive)
+                return;
+            rasterizeVectors(true);
+        });
         return;
     }
     m_rasterizePending = true;
     QTimer::singleShot(int(kRefreshMinIntervalMs), this, [this]() {
-        if (!m_rasterizePending)
+        if (!m_rasterizePending || m_strokeActive)
             return;
         m_rasterizePending = false;
-        const bool sharp = m_rasterizeSharp;
+        const bool doSharp = m_rasterizeSharp || m_rasterizeDeferredSharp;
         m_rasterizeSharp = false;
-        rasterizeVectors(sharp);
+        m_rasterizeDeferredSharp = false;
+        rasterizeVectors(doSharp);
     });
 }
 
@@ -797,8 +828,8 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
 
     stampStaticBeacon();
     m_refreshClock.restart();
-    // Full-rect update for settle sharpness; soft path still full redraw but may
-    // look faded on e-ink until a later settle refresh.
+    // Full-rect update. Pen-mode swap only when explicitly requested (RM_EP_SWAP) —
+    // unconditional swap after every settle starved the stroke path on device.
     update(m_image.rect());
     if (sharp && qEnvironmentVariableIsSet("RM_EP_SWAP")) {
         if (auto *win = window()) {

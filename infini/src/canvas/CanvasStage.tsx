@@ -224,8 +224,10 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   };
 
   /**
-   * Paint WorldLayer from VectorDocument + optional in-flight live strokes.
+   * Paint WorldLayer from demo figures + VectorDocument + optional in-flight live strokes.
+   * Demo figures are WorldLayer SoT ([SRS-IN-07]); tree ink must not replace them.
    * @implements [SRS-IN-04] tree-backed live ink — syncFromVectorDoc is SoT for committed ink
+   * @fix [BUG] tablet ink must not wipe desktop demo figures
    */
   const rebuildWithRmInk = () => {
     const base = populated ? demoPrimitives() : [];
@@ -240,11 +242,8 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
           strokeWidth: s.width,
         }),
       );
-    // Demo primitives only when tree empty and populated demo mode — avoid wiping tree ink.
-    const merged =
-      fromTree.length > 0
-        ? [...fromTree, ...live]
-        : [...base, ...live];
+    // Always keep demo figures under tree ink + live (SRS-IN-07 WorldLayer SoT).
+    const merged = [...base, ...fromTree, ...live];
     docRef.current.setPrimitives(merged);
     if (merged.length) setEmptyHint(false);
     rendererRef.current.invalidateTiles();
@@ -331,9 +330,10 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     publishViewportCoalesced(false);
     window.clearTimeout(gestureEndTimer.current);
     gestureEndTimer.current = window.setTimeout(() => {
+      // Final settle flush — clears soft-refresh ghosting on the tablet.
       publishViewportCoalesced(true);
       markGesturing(false);
-    }, 100);
+    }, 120);
   };
 
   const cycleOrientation = () => {
@@ -461,6 +461,9 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         }
         rmStrokesRef.current.delete(msg.id);
         rebuildWithRmInk();
+        // Do NOT push doc_snapshot here — device already appends the path locally.
+        // A full snapshot white-clears + redraws the panel and races the next stroke
+        // (later ink missing on tablet while desktop still receives stroke_*).
       }
     });
 
@@ -687,6 +690,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       rebuildWithRmInk();
     }
     dragRef.current = null;
+    // Settle flush after pan/selection drag — tablet must sharp-rasterize once more.
     publishViewportCoalesced(true);
     markGesturing(false);
     schedulePaint();
