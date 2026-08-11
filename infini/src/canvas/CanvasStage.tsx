@@ -33,11 +33,8 @@ function viewportCentered(cssW: number, cssH: number, scale = 1): Viewport {
 }
 
 function get2dContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
-  return (
-    canvas.getContext("2d", { alpha: false, desynchronized: true }) ??
-    canvas.getContext("2d", { alpha: false }) ??
-    canvas.getContext("2d")
-  );
+  // Avoid desynchronized: it can fail to present on some Electron/macOS GPUs.
+  return canvas.getContext("2d", { alpha: false }) ?? canvas.getContext("2d");
 }
 
 export function CanvasStage({ populated = true }: CanvasStageProps) {
@@ -117,6 +114,14 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     });
   };
 
+  const cancelScheduledPaint = () => {
+    if (!rafPaintRef.current) return;
+    cancelAnimationFrame(rafPaintRef.current);
+    // Must clear: React Strict Mode cancels the first rAF on remount; if the
+    // id is left truthy, schedulePaint() no-ops forever (blank canvas).
+    rafPaintRef.current = 0;
+  };
+
   const markGesturing = (on: boolean) => {
     const host = hostRef.current;
     if (!host) return;
@@ -177,8 +182,10 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       bumpGestureEnd();
 
       if (e.ctrlKey || e.metaKey) {
-        // Continuous zoom from pixel deltas (smoother than stepped bins).
-        const factor = Math.exp(-e.deltaY * 0.0015);
+        // Stepped factors (ml-mindmap WheelLayer) — continuous 0.0015 felt too slow.
+        const zoomFactorDelta =
+          Math.abs(e.deltaY) > 10 ? 0.1 : Math.abs(e.deltaY) > 5 ? 0.05 : 0.01;
+        const factor = e.deltaY > 0 ? 1 - zoomFactorDelta : 1 + zoomFactorDelta;
         vpRef.current = zoomAtScreenPoint(
           vpRef.current,
           { x: sx, y: sy },
@@ -231,7 +238,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
 
   useEffect(() => {
     return () => {
-      if (rafPaintRef.current) cancelAnimationFrame(rafPaintRef.current);
+      cancelScheduledPaint();
       window.clearTimeout(gestureEndTimer.current);
     };
   }, []);
