@@ -3,10 +3,16 @@
 #include "epaperbridge.h"
 
 #include <QPainter>
+#include <QPainterPath>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QQuickWindow>
 #include <QtMath>
+#include <QByteArray>
+#include <QTransform>
+#include <QTimer>
+#include <QPen>
 
 namespace {
 
@@ -40,6 +46,8 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     setOpaquePainting(m_paintsInk);
     setFillColor(m_paintsInk ? QColor(Qt::white) : QColor(Qt::transparent));
     m_flushClock.start();
+    m_refreshClock.start();
+    connect(m_sync, &StrokeSync::hostMessage, this, &TabletCanvasItem::onHostMessage);
     m_sync->connectToMac();
 }
 
@@ -130,7 +138,9 @@ void TabletCanvasItem::stampFlushBeacon()
 
 QPointF TabletCanvasItem::mapInputToCanvas(const QPointF &raw) const
 {
-    // [SRS-EP-01] Panel is portrait (w x h); device is used in landscape.
+    // Verified Round 19 (RENDERING.md): panel framebuffer is portrait; digitizer
+    // reports landscape-oriented raw coords. Always apply this for local ink —
+    // Infini orientation only changes the sync-frame aspect / world UV, not this.
     qreal w = width();
     qreal h = height();
     if (w < 2.0 && window())
@@ -152,6 +162,7 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal 
     const qreal p = qBound<qreal>(0.0, pressure, 1.0);
     const QPointF canvasPos = mapInputToCanvas(pos);
     m_lastPoint = canvasPos;
+    m_lastRaw = pos;
 
     switch (type) {
     case QEvent::TabletPress:
@@ -248,7 +259,7 @@ void TabletCanvasItem::beginStroke(const QPointF &canvasPos, qreal pressure)
 {
     m_current.clear();
     m_activeStrokeId = QStringLiteral("s-%1").arg(++m_strokeSeq);
-    m_current.append({canvasPos, pressure});
+    m_current.append({canvasPos, pressure, m_lastRaw});
     m_lastEmitted = m_current.last();
     m_hasEmitted = false;
     m_strokeActive = true;
@@ -270,7 +281,7 @@ void TabletCanvasItem::appendPoint(const QPointF &canvasPos, qreal pressure)
         return;
     }
 
-    Point next{canvasPos, pressure};
+    Point next{canvasPos, pressure, m_lastRaw};
     m_current.append(next);
     syncPoint(next);
 
@@ -298,6 +309,8 @@ void TabletCanvasItem::endStroke()
     }
 
     flushPending();
+
+    appendLocalStrokeAsWorldPath();
 
     m_current.clear();
     m_hasEmitted = false;
@@ -329,6 +342,8 @@ void TabletCanvasItem::syncBegin()
 
 void TabletCanvasItem::syncPoint(const Point &pt)
 {
+    // Wire uses panel-framebuffer coords (after digitizer map). Infini UV is then
+    // orientation-aware against the sync frame — do not send pre-map raw (double-rotate).
     QJsonObject obj{
         {"type", "stroke_point"},
         {"id", m_activeStrokeId},
@@ -346,4 +361,241 @@ void TabletCanvasItem::syncEnd()
         {"id", m_activeStrokeId},
     };
     m_sync->sendLine(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+}
+
+void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
+{
+    const QString type = obj.value(QStringLiteral("type")).toString();
+    if (type == QLatin1String("viewport")) {
+        applyViewport(obj);
+        return;
+    }
+    if (type == QLatin1String("doc_snapshot")) {
+        applyDocSnapshot(obj);
+        return;
+    }
+    // Legacy PNG path ignored — vectors only (ADR-0009 / human: no bitmap sync).
+    if (type == QLatin1String("region_refresh")) {
+        qInfo() << "[sync] ignoring region_refresh bitmap; use doc_snapshot";
+        return;
+    }
+}
+
+void TabletCanvasItem::applyViewport(const QJsonObject &obj)
+{
+    m_viewportSeq = obj.value(QStringLiteral("seq")).toInt(m_viewportSeq);
+    const QString orient = obj.value(QStringLiteral("orientation")).toString();
+    if (!orient.isEmpty())
+        m_orientation = orient;
+
+    const QJsonObject dr = obj.value(QStringLiteral("drawingRegion")).toObject();
+    if (!dr.isEmpty()) {
+        m_drawingRegion.minX = dr.value(QStringLiteral("minX")).toDouble();
+        m_drawingRegion.minY = dr.value(QStringLiteral("minY")).toDouble();
+        m_drawingRegion.maxX = dr.value(QStringLiteral("maxX")).toDouble();
+        m_drawingRegion.maxY = dr.value(QStringLiteral("maxY")).toDouble();
+        m_drawingRegion.valid = m_drawingRegion.maxX > m_drawingRegion.minX
+            && m_drawingRegion.maxY > m_drawingRegion.minY;
+    }
+
+    const bool settle = obj.value(QStringLiteral("settle")).toBool(false);
+    qInfo() << "[sync] viewport seq" << m_viewportSeq << "orientation" << m_orientation
+            << "settle" << settle << "nodes" << m_vectorNodes.size();
+    scheduleVectorRasterize(settle);
+}
+
+void TabletCanvasItem::applyDocSnapshot(const QJsonObject &obj)
+{
+    m_vectorNodes = obj.value(QStringLiteral("nodes")).toArray();
+    qInfo() << "[sync] doc_snapshot nodes" << m_vectorNodes.size();
+    scheduleVectorRasterize(true);
+}
+
+void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
+{
+    if (sharp)
+        m_rasterizeSharp = true;
+    if (m_rasterizePending && !sharp) {
+        // Already scheduled; keep pending soft refresh.
+        return;
+    }
+    if (sharp) {
+        // Settle: paint now for sharp GC / full redraw.
+        m_rasterizePending = false;
+        rasterizeVectors(true);
+        m_rasterizeSharp = false;
+        return;
+    }
+    m_rasterizePending = true;
+    QTimer::singleShot(int(kRefreshMinIntervalMs), this, [this]() {
+        if (!m_rasterizePending)
+            return;
+        m_rasterizePending = false;
+        const bool sharp = m_rasterizeSharp;
+        m_rasterizeSharp = false;
+        rasterizeVectors(sharp);
+    });
+}
+
+QPointF TabletCanvasItem::worldToPanel(double wx, double wy) const
+{
+    if (!m_drawingRegion.valid)
+        return QPointF(wx, wy);
+    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
+    const double rh = m_drawingRegion.maxY - m_drawingRegion.minY;
+    if (rw <= 0 || rh <= 0)
+        return QPointF();
+    const double u = (wx - m_drawingRegion.minX) / rw;
+    const double v = (wy - m_drawingRegion.minY) / rh;
+    const qreal pw = qMax<qreal>(1.0, width());
+    const qreal ph = qMax<qreal>(1.0, height());
+    if (m_orientation == QLatin1String("landscape")) {
+        const double logX = u * ph;
+        const double logY = v * pw;
+        return QPointF(pw - logY, logX);
+    }
+    return QPointF(u * pw, v * ph);
+}
+
+QPointF TabletCanvasItem::panelToWorld(const QPointF &panel) const
+{
+    if (!m_drawingRegion.valid)
+        return panel;
+    const qreal pw = qMax<qreal>(1.0, width());
+    const qreal ph = qMax<qreal>(1.0, height());
+    double u = 0;
+    double v = 0;
+    if (m_orientation == QLatin1String("landscape")) {
+        const double logX = panel.y();
+        const double logY = pw - panel.x();
+        u = logX / ph;
+        v = logY / pw;
+    } else {
+        u = panel.x() / pw;
+        v = panel.y() / ph;
+    }
+    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
+    const double rh = m_drawingRegion.maxY - m_drawingRegion.minY;
+    return QPointF(m_drawingRegion.minX + u * rw, m_drawingRegion.minY + v * rh);
+}
+
+void TabletCanvasItem::appendLocalStrokeAsWorldPath()
+{
+    if (m_current.size() < 2 || !m_drawingRegion.valid)
+        return;
+    QJsonArray pts;
+    for (const Point &pt : m_current) {
+        const QPointF w = panelToWorld(pt.pos);
+        pts.append(QJsonObject{{"x", w.x()}, {"y", w.y()}});
+    }
+    // World stroke width from panel brush (~2–6 px) via region scale.
+    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
+    const double sPanel = width() / qMax(1e-6, rw);
+    const double worldW = 2.5 / qMax(1e-6, sPanel);
+    m_vectorNodes.append(QJsonObject{
+        {"kind", "path"},
+        {"id", m_activeStrokeId},
+        {"points", pts},
+        {"strokeWidth", worldW},
+    });
+}
+
+void TabletCanvasItem::drawVectorNode(QPainter &p, const QJsonObject &node)
+{
+    const QString kind = node.value(QStringLiteral("kind")).toString();
+    const qreal worldSw = node.value(QStringLiteral("strokeWidth")).toDouble(2.0);
+    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
+    const double sPanel = width() / qMax(1e-6, rw);
+    const qreal lineW = qMax<qreal>(1.0, worldSw * sPanel);
+
+    QPen pen(Qt::black);
+    pen.setWidthF(lineW);
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    p.setPen(pen);
+    p.setBrush(Qt::NoBrush);
+
+    if (kind == QLatin1String("line")) {
+        const QPointF a = worldToPanel(node.value(QStringLiteral("x1")).toDouble(),
+                                       node.value(QStringLiteral("y1")).toDouble());
+        const QPointF b = worldToPanel(node.value(QStringLiteral("x2")).toDouble(),
+                                       node.value(QStringLiteral("y2")).toDouble());
+        p.drawLine(a, b);
+        return;
+    }
+    if (kind == QLatin1String("rect")) {
+        const QPointF tl = worldToPanel(node.value(QStringLiteral("x")).toDouble(),
+                                        node.value(QStringLiteral("y")).toDouble());
+        const QPointF br = worldToPanel(
+            node.value(QStringLiteral("x")).toDouble() + node.value(QStringLiteral("w")).toDouble(),
+            node.value(QStringLiteral("y")).toDouble() + node.value(QStringLiteral("h")).toDouble());
+        p.drawRect(QRectF(tl, br).normalized());
+        return;
+    }
+    if (kind == QLatin1String("ellipse")) {
+        const double cx = node.value(QStringLiteral("cx")).toDouble();
+        const double cy = node.value(QStringLiteral("cy")).toDouble();
+        const double rx = node.value(QStringLiteral("rx")).toDouble();
+        const double ry = node.value(QStringLiteral("ry")).toDouble();
+        const QPointF c = worldToPanel(cx, cy);
+        const QPointF e = worldToPanel(cx + rx, cy + ry);
+        const qreal prx = qAbs(e.x() - c.x());
+        const qreal pry = qAbs(e.y() - c.y());
+        p.drawEllipse(c, prx, pry);
+        return;
+    }
+    if (kind == QLatin1String("path")) {
+        const QJsonArray pts = node.value(QStringLiteral("points")).toArray();
+        if (pts.size() < 2)
+            return;
+        QPainterPath path;
+        const QJsonObject p0 = pts.at(0).toObject();
+        path.moveTo(worldToPanel(p0.value(QStringLiteral("x")).toDouble(),
+                                 p0.value(QStringLiteral("y")).toDouble()));
+        for (int i = 1; i < pts.size(); ++i) {
+            const QJsonObject pi = pts.at(i).toObject();
+            path.lineTo(worldToPanel(pi.value(QStringLiteral("x")).toDouble(),
+                                     pi.value(QStringLiteral("y")).toDouble()));
+        }
+        p.drawPath(path);
+    }
+}
+
+void TabletCanvasItem::rasterizeVectors(bool sharp)
+{
+    if (!m_paintsInk || !m_drawingRegion.valid)
+        return;
+    ensureImage();
+    if (m_image.isNull())
+        return;
+
+    QPainter p(&m_image);
+    // Full white clear + vector redraw → sharp when settle (sharp=true).
+    p.fillRect(m_image.rect(), Qt::white);
+    p.setRenderHint(QPainter::Antialiasing, sharp);
+    for (const QJsonValue &v : m_vectorNodes) {
+        if (v.isObject())
+            drawVectorNode(p, v.toObject());
+    }
+    p.end();
+
+    stampStaticBeacon();
+    m_refreshClock.restart();
+    // Full-rect update for settle sharpness; soft path still full redraw but may
+    // look faded on e-ink until a later settle refresh.
+    update(m_image.rect());
+    if (sharp && qEnvironmentVariableIsSet("RM_EP_SWAP")) {
+        if (auto *win = window()) {
+            const QRect scene = mapRectToScene(QRectF(m_image.rect())).toAlignedRect();
+            QObject::connect(
+                win,
+                &QQuickWindow::afterRendering,
+                this,
+                [scene]() { EpaperBridge::instance()->swapPen(scene); },
+                static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection));
+            win->update();
+        }
+    }
+    qInfo() << "[sync] vector rasterize nodes" << m_vectorNodes.size() << "sharp" << sharp
+            << "seq" << m_viewportSeq;
 }

@@ -12,8 +12,9 @@ View over [PRD](./prd.md). Specs live in feature `srs-*`; decisions in ADRs.
 
 1. **Gesture smoothness** — continuous pan/pinch without visible stutter on a 60 Hz display ([REQ-01](./prd.md#infinity-canvas)).
 2. **Mapping latency** — Epaper input map tracks Infini viewport before full panel refresh ([REQ-03](./prd.md#tablet-sync), [ADR-0009](../../adr/ADR-0009-shared-document-viewport.md)).
-3. **Document fidelity** — SVG/profile round-trip ±1 px @ 100% zoom; tree parenting preserved ([REQ-02](./prd.md#vector-document), [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md)).
-4. **Cross-platform velocity** — one Electron+React shell ([ADR-0008](../../adr/ADR-0008-electron-react-infini.md)).
+3. **Stroke/region paint parity** — world-unit stroke width × viewport/panel scale on both peers ([ADR-0012](../../adr/ADR-0012-world-stroke-viewport-parity.md)).
+4. **Document fidelity** — SVG/profile round-trip ±1 px @ 100% zoom; tree parenting preserved ([REQ-02](./prd.md#vector-document), [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md)).
+5. **Cross-platform velocity** — one Electron+React shell ([ADR-0008](../../adr/ADR-0008-electron-react-infini.md)).
 
 ## Constraints
 
@@ -45,7 +46,7 @@ Viewport updates are a separate high-priority message type
 | Frame | Root-only container with explicit bounds |
 | Connector | Edge between anchors on two node ids |
 | Document | Op-log + materialised tree |
-| Viewport | translate, scale, drawing-region AABB |
+| Viewport | translate, scale, tablet drawing frame (CSS) → drawing-region AABB (world) |
 | Session | Connection Epaper ↔ Infini |
 
 ## Context view
@@ -84,7 +85,8 @@ flowchart TB
 
 ## Crosscutting concepts
 
-- **Consistency:** op-log + ordered apply; viewport immediately on Epaper map.
+- **Consistency:** op-log + ordered apply; viewport immediately on Epaper map; paint coalesced (e-ink).
+- **Parity:** stroke width world units × scale ([ADR-0012](../../adr/ADR-0012-world-stroke-viewport-parity.md)).
 - **Observability:** optional latency traces (reuse EXP `RM_INK_TRACE` ideas on both ends).
 - **Trust boundary:** local USB network only in v0; no auth productization yet.
 
@@ -94,6 +96,7 @@ flowchart TB
 - [ADR-0009](../../adr/ADR-0009-shared-document-viewport.md) — shared document + viewport channels
 - [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md) — tree-of-vectors document
 - [ADR-0011](../../adr/ADR-0011-smart-group.md) — Smart Group pilot
+- [ADR-0012](../../adr/ADR-0012-world-stroke-viewport-parity.md) — world stroke width + viewport paint parity
 - Sync bind: [tablet-sync SRS-IN-07](./features/tablet-sync/srs-logic.md) emit matrix (Epaper=`append_ink`; Infini=structure/Smart Group)
 
 ## Risks & technical debt
@@ -103,4 +106,6 @@ flowchart TB
 | Chromium trackpad pinch jank | Gesture smoothness | M×H | Spike done F1; revisit only if regresses |
 | Op-log divergence bugs | Consistency | M×H | Snapshot hash of drawing region on refresh; assert in debug builds |
 | Dual stack (TS + Qt) model drift | Maintainability | H×M | Single schema doc + golden fixtures both sides consume |
-| Reconnect without snapshot | Consistency | M×M | `hello`/`snapshot` TBD before W4 ship |
+| Reconnect without snapshot | Consistency | M×M | `hello`/`snapshot` TBD — accepted for W5 Must; not blocking marker/viewport |
+| EXP StrokeSync vs ADR-0009 dual path | Parity | H×H | W5: session owns map; disable legacy map ownership when connected |
+| Prior `panelToWorld` ≈ Infini screen formula | Map correctness | H×H | SRS-EP-02 now: normalize panel → `drawingRegion` (fix in EP-002) |

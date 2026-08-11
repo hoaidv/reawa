@@ -48,3 +48,48 @@ Feature: Infini tablet session viewport and document channel
     Given a live session
     When Infini emits a viewport change
     Then Epaper map apply completes within p95 100 ms (panel refresh may trail)
+
+  # STORY-IN-011 — marker + coalesce + tablet-frame drawingRegion (+ SRS-IN-08 parity)
+
+  @SRS-IN-07
+  Scenario: Drawing-region marker hidden when idle
+    Given Infini canvas is shown with tablet sync session active
+    And the user is not panning or zooming
+    Then the tablet drawing-region marker is not visible
+
+  @SRS-IN-07
+  Scenario: Drawing-region marker visible during pan zoom
+    Given Infini canvas with tablet sync session active
+    When the user starts a pan or zoom gesture
+    Then the tablet drawing-region marker is visible
+    And the marker outline matches the tablet drawing frame in CSS
+    And viewport drawingRegion equals the world AABB of that frame
+
+  @SRS-IN-07
+  Scenario: Drawing-region marker hides after gesture settles
+    Given the tablet drawing-region marker is visible during a gesture
+    When the pan or zoom gesture ends and settles
+    Then the marker is not visible as permanent chrome
+
+  @SRS-IN-07
+  Scenario: Viewport drawingRegion is tablet frame not full window
+    Given a live session and CSS host 800x600 with a centered tablet frame
+    When Infini publishes viewport at translate (0, 0) scale 1
+    Then drawingRegion equals the world AABB of the tablet CSS frame
+    And drawingRegion is strictly inside the full-window world AABB unless the frame fills the host
+
+  @SRS-IN-07
+  Scenario: Rapid pan zoom coalesces viewport publishes
+    Given a live session
+    When Infini receives 60 viewport updates within one second during a gesture
+    Then outbound viewport messages are at most 30
+    And the last emitted message carries the latest translate scale and drawingRegion
+    When the gesture ends
+    Then a final viewport flush is emitted with the settle pose
+
+  @SRS-IN-08
+  Scenario: World stroke width scales with viewport on Infini
+    Given world ink with strokeWidth 2.0 and tablet frame width F_css
+    When Infini paints at scale 1.0 then at scale 0.5
+    Then CSS line width halves when scale halves
+    And relative thickness lineWidth_css / F_css stays consistent with ADR-0012

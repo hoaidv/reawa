@@ -6,6 +6,9 @@ export type RmStrokeMsg =
 export interface InfiniNative {
   onRmStroke: (cb: (msg: RmStrokeMsg) => void) => () => void;
   strokeIngestPort: () => Promise<number>;
+  sendToRm?: (obj: unknown) => Promise<number>;
+  rmClientCount?: () => Promise<number>;
+  onRmClient?: (cb: (ev: { type: "connected" | "closed"; n: number }) => void) => () => void;
 }
 
 declare global {

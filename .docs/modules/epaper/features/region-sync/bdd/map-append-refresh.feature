@@ -41,3 +41,40 @@ Feature: Epaper region sync map append_ink and refresh
     Given pen samples arrive on the input callback
     When each sample is handled
     Then socket I/O is not executed on that callback (queued to net thread)
+
+  # STORY-EP-002 — coalesce refresh + panel→region map + stroke parity
+
+  @SRS-EP-02
+  Scenario: Panel local maps through drawingRegion not Infini screen formula
+    Given Epaper panel size 200x100 and drawingRegion world AABB min (0,0) max (40,20)
+    When a pen sample arrives at local (100, 50)
+    Then world position is (20, 10)
+    And the Infini screen formula local/scale - translate is not used for that sample
+
+  @SRS-EP-03
+  Scenario: Region refresh coalesces under viewport spam
+    Given Epaper has a live map and refresh pending is clear
+    When Infini sends 10 viewport messages within 100 ms
+    Then the map seq equals the latest viewport seq immediately after each message
+    And at most one region refresh paint completes within any 250 ms window
+    And a later run after 250 ms paints the latest pending map and doc pair
+
+  @SRS-EP-03
+  Scenario: Settle flush refreshes promptly after last viewport
+    Given a region refresh is pending after viewport spam
+    When Infini gesture settles and Epaper runs settle refresh within 100 ms
+    Then one coherent paint runs even if the 250 ms floor has not elapsed
+
+  @SRS-EP-03
+  Scenario: Stroke panel width follows world width and region scale
+    Given world strokeWidth 2.0 and drawingRegion width 40 mapped to panel width 200
+    When Epaper computes panel line width
+    Then lineWidth_px equals 10.0
+    When drawingRegion width becomes 80 at the same panel width
+    Then lineWidth_px equals 5.0
+
+  @SRS-EP-02
+  Scenario: ADR-0009 session owns drawing region map over StrokeSync
+    Given ADR-0009 RegionSession is connected and owns the viewport map
+    When legacy StrokeSync would otherwise set the drawing-region map
+    Then RegionSession map remains authoritative for pen→world

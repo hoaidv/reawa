@@ -17,7 +17,7 @@ execution:
   autonomy: bounded
   out_of_scope: backlog
   wip: 1
-  validated_by: ""
+  validated_by: "human / 2026-08-11 — W4 Must draw sync (RM2→Infini) confirmed; READY-WITH-CONCERNS see pm-gate-review-w4"
 ---
 
 # Master Plan
@@ -51,22 +51,22 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 |---|---|---|---|---|
 | iter-000 | Traceability backfill | closed; retro-gate passed | BDD optional | [iter](./iter-000/iter.md) |
 | iter-001 | EXP-0001 + epaper promote | closed; S1 proven | → Infini REQs | [EXP-0001](./iter-001/explorations/EXP-0001-remarkable-canvas-sync.md) |
-| iter-002 | Infini + sync | **active** — F1 verified; **W4** implement | IN-006 cancelled | [iter](./iter-002/iter.md) |
+| iter-002 | Infini + sync | **active** — **W5** pan/zoom→tablet (W4 Must gated) | IN-006 cancelled; IN-010 parked | [iter](./iter-002/iter.md) |
 
 ## Now — iter-002
 
 ### Goal & capacity
 
-- Goal: Implement document tree + SVG/ops **together with** Infini tablet-sync and Epaper region-sync.
-- Capacity: W4 Must chain (IN-007…009 + EP-001); Smart Group Could (IN-010) after.
-- Risks: reconnect snapshot/hello TBD; dual fixtures in IN-008.
+- Goal: **W5** live ADR-0009 viewport (marker + coalesce + stroke scale); draw anywhere via pan/zoom.
+- Capacity: IN-010 Could stays parked; no DocChrome design.
+- Risks: stroke Desktop↔Tablet parity; e-ink refresh budget; reconnect TBD.
 
 ### Tracks
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
-| TRACK-002 | planned | **active** | **`/qa` BDD → `/dev` IN-007** | [track](./tracks/TRACK-002-infini-vector-document.md) |
+| TRACK-002 | planned | **active** | **`/architect` W5 thicken → /qa → /dev IN-011→EP-002** | [track](./tracks/TRACK-002-infini-vector-document.md) |
 
 ### Open challenges / blocked
 
@@ -79,14 +79,16 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [execution-board](./iter-002/execution-board.md) — wave **W4**
+- [execution-board](./iter-002/execution-board.md) — **W5 NOW**; W4 gated
 
 ### Freeze notes
 
-- **No `/designer`** on STORY-IN-006.
-- `/dev` starts only after `/qa` BDD for the story in flight (order: IN-007 → …).
+- **No `/designer`** on STORY-IN-006; no design stories for W5 marker (REQ-03 Needs design: no).
+- Gate W4: [pm-gate-review-w4](./iter-002/handoffs/2026-08-11-pm-gate-review-w4.md)
+- W5 open: [sm-to-architect-w5](./iter-002/handoffs/2026-08-11-sm-to-architect-w5.md)
 
 ## Forward
 
-- Finish W4 Must → IN-010 Could → hardware `validated_by`.
+- Optional: STORY-IN-010 Smart Group Could (Needs design: yes — plan design story if opened).
+- Follow-up: Qt `RegionSession` wire; reconnect snapshot/hello.
 - Backlog: [backlog.md](./backlog.md)

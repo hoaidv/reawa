@@ -15,5 +15,6 @@ Header-only C++17 core for [SRS-EP-02](../../.docs/modules/epaper/features/regio
 ./tests/run_regionsync_test.sh
 ```
 
-Device wiring: construct `RegionSession` beside `StrokeSync`; when ADR-0009 session is active,
-`StrokeSync` / `RM_SYNC_HOST` must not own the document channel (see SRS-EP-02).
+Device wiring: construct `RegionSession` beside `StrokeSync`; when ADR-0009 session is active
+(`ownsDrawingRegionMap()`), `StrokeSync` / `RM_SYNC_HOST` must not own the drawing-region map
+(see SRS-EP-02). Panel size via `setPanelSize`; refresh via `runRegionRefresh(nowMs, forceSettle)`.

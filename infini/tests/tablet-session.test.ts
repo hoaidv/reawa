@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { InfiniDocument } from "../src/canvas/Document";
-import { identityViewport } from "../src/canvas/Viewport";
+import { identityViewport, strokeCssWidthFromWorld } from "../src/canvas/Viewport";
 import { VectorDocument } from "../src/document";
 import {
   MemoryTransport,
@@ -44,8 +44,64 @@ describe("SRS-IN-07 pan zoom emits viewport", () => {
     expect(out.drawingRegion.minX).toBeLessThan(out.drawingRegion.maxX);
     expect(out.seq).toBe(1);
 
-    session.publishViewport(vp);
+    // Force next emit past coalesce window
+    session.publishViewport(vp, { force: true });
     expect(transport.viewports[1].seq).toBe(2);
+  });
+});
+
+describe("SRS-IN-07 tablet frame drawingRegion and coalesce", () => {
+  it("drawingRegion is tablet frame AABB inside full window", () => {
+    const { session } = liveSession();
+    const vp = identityViewport();
+    const msg = session.publishViewport(vp, { force: true })!;
+    const full = session.fullWindowWorldAabb(vp);
+    const region = msg.drawingRegion;
+    expect(region.minX).toBeGreaterThanOrEqual(full.minX - 1e-9);
+    expect(region.maxX).toBeLessThanOrEqual(full.maxX + 1e-9);
+    expect(region.minY).toBeGreaterThanOrEqual(full.minY - 1e-9);
+    expect(region.maxY).toBeLessThanOrEqual(full.maxY + 1e-9);
+    // Frame does not fill host (10% margin) → strictly inside
+    expect(region.maxX - region.minX).toBeLessThan(full.maxX - full.minX);
+  });
+
+  it("coalesces to ≤30 Hz and flushes settle pose", () => {
+    let t = 0;
+    const tree = new VectorDocument();
+    const transport = new MemoryTransport();
+    const session = new TabletSession({
+      tree,
+      transport,
+      cssWidth: 800,
+      cssHeight: 600,
+      nowMs: () => t,
+    });
+    session.connect();
+
+    for (let i = 0; i < 60; i++) {
+      t = i * (1000 / 60); // ~60 updates in 1s
+      session.publishViewport({
+        translate: { x: -i, y: i },
+        scale: 1 + i * 0.001,
+      });
+    }
+    expect(transport.viewports.length).toBeLessThanOrEqual(30);
+    expect(transport.viewports.length).toBeGreaterThan(0);
+
+    t += 50;
+    const settle = { translate: { x: -999, y: 42 }, scale: 2 };
+    const flushed = session.flushViewport(settle);
+    expect(flushed).not.toBeNull();
+    expect(flushed!.translate).toEqual({ x: -999, y: 42 });
+    expect(flushed!.scale).toBe(2);
+    expect(transport.viewports.at(-1)!.translate).toEqual({ x: -999, y: 42 });
+  });
+});
+
+describe("SRS-IN-08 world stroke width scales with viewport", () => {
+  it("CSS line width halves when scale halves", () => {
+    expect(strokeCssWidthFromWorld(2, 1)).toBe(2);
+    expect(strokeCssWidthFromWorld(2, 0.5)).toBe(1);
   });
 });
 

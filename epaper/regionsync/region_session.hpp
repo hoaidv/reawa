@@ -2,7 +2,7 @@
 /**
  * Epaper region-sync session — viewport, local ink emit, remote ops, coherent refresh.
  * @implements [SRS-EP-02] viewport map, document ops, panel refresh
- * @implements [SRS-EP-03] hot path never runs socket I/O on pen callback
+ * @implements [SRS-EP-03] hot path + e-ink coalesce (≥250 ms) + settle flush
  */
 
 #include "doc_store.hpp"
@@ -13,6 +13,9 @@
 #include <vector>
 
 namespace epaper::regionsync {
+
+/** Min interval between region paints (SRS-EP-03). */
+constexpr double kRefreshMinIntervalMs = 250.0;
 
 struct PenSample {
     double localX = 0;
@@ -61,14 +64,20 @@ public:
     bool connected() const { return m_connected; }
     void connect() { m_connected = true; }
 
+    /** When ADR-0009 session owns the map, legacy StrokeSync must not override. */
+    bool ownsDrawingRegionMap() const { return m_connected && m_maps.current().valid; }
+
     const ViewportMap &map() const { return m_maps.current(); }
     const DocStore &doc() const { return m_doc; }
-    int refreshQueueSize() const { return static_cast<int>(m_refreshQueued); }
+    int refreshQueueSize() const { return m_refreshPending ? 1 : 0; }
     int netQueueSize() const { return static_cast<int>(m_netQueue.size()); }
     bool smartGroupRanOnDevice() const { return m_smartGroupRan; }
     const std::vector<std::string> &logs() const { return m_logs; }
+    int paintCount() const { return m_paintCount; }
 
-    /** Infini → Epaper viewport. */
+    void setPanelSize(double w, double h) { m_maps.setPanelSize(w, h); }
+
+    /** Infini → Epaper viewport — map immediate; refresh pending coalesced. */
     bool onViewport(const ViewportMessage &msg)
     {
         std::string err;
@@ -77,7 +86,7 @@ public:
             m_logs.push_back(err);
             return false;
         }
-        m_refreshQueued = true;
+        m_refreshPending = true;
         return true;
     }
 
@@ -89,7 +98,6 @@ public:
     {
         if (m_net)
             m_net->clearPenCallbackFlag();
-        // Detect illegal sync send if a bad NetSink sets the flag during this call.
         if (!m_maps.current().valid)
             return;
         InkSample world;
@@ -111,7 +119,6 @@ public:
      */
     void endStroke(const std::string &inkId, const std::string &opId)
     {
-        // v0: never run Smart Group enclose on Epaper
         m_smartGroupRan = false;
 
         DocOp op;
@@ -122,10 +129,9 @@ public:
         op.samples = m_strokeSamples;
         m_strokeSamples.clear();
 
-        // Apply locally so refresh sees ink even before ack
         m_doc.apply(op);
         m_netQueue.push_back({op, 0});
-        // Do not call m_net->send here — flushNetQueue runs on net thread.
+        m_refreshPending = true;
     }
 
     /** Net thread: attempt sends with retry/backoff counter. */
@@ -150,30 +156,38 @@ public:
         if (!r.applied && r.reason.rfind("unknown_type:", 0) == 0)
             m_logs.push_back(r.reason);
         if (r.applied)
-            m_refreshQueued = true;
+            m_refreshPending = true;
         return r;
     }
 
     /**
-     * Region refresh: snapshot map+doc together (no stale mix).
+     * Region refresh with e-ink coalesce.
+     * @param nowMs monotonic clock
+     * @param forceSettle ignore 250 ms floor (gesture settle ≤100 ms path)
      * @implements [SRS-EP-02] paint document ∩ drawing region coherently
+     * @implements [SRS-EP-03] ≥250 ms between paints unless settle
      */
-    std::optional<PaintPass> runRegionRefresh()
+    std::optional<PaintPass> runRegionRefresh(double nowMs, bool forceSettle = false)
     {
-        if (!m_refreshQueued)
+        if (!m_refreshPending)
             return std::nullopt;
-        m_refreshQueued = false;
+        if (!forceSettle && m_lastPaintAtMs >= 0
+            && (nowMs - m_lastPaintAtMs) < kRefreshMinIntervalMs) {
+            return std::nullopt;
+        }
+        m_refreshPending = false;
         if (!m_maps.current().valid)
             return std::nullopt;
 
         PaintPass pass;
-        // Atomic snapshot of current pair
         pass.mapSeq = m_maps.current().seq;
         pass.docVersion = m_doc.version();
         pass.drawingRegion = m_maps.current().drawingRegion;
         pass.contentHash = m_doc.contentHash(pass.drawingRegion);
         pass.coherent = true;
         m_lastPaint = pass;
+        m_lastPaintAtMs = nowMs;
+        m_paintCount += 1;
         return pass;
     }
 
@@ -184,12 +198,14 @@ private:
     bool m_connected = false;
     ViewportMapStore m_maps;
     DocStore m_doc;
-    bool m_refreshQueued = false;
+    bool m_refreshPending = false;
     bool m_smartGroupRan = false;
     std::vector<InkSample> m_strokeSamples;
     std::vector<OutboundDocOp> m_netQueue;
     std::vector<std::string> m_logs;
     std::optional<PaintPass> m_lastPaint;
+    double m_lastPaintAtMs = -1;
+    int m_paintCount = 0;
 };
 
 } // namespace epaper::regionsync

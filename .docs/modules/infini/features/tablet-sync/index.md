@@ -15,4 +15,4 @@ Session with Epaper: receive strokes; publish viewport / drawing region.
 - BDD: [bdd/session-channels.feature](./bdd/session-channels.feature)
 - Document model: [vector-document](../vector-document/index.md)
 - Sibling: [epaper/region-sync](../../../epaper/features/region-sync/index.md)
-- Decision: [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md)
+- Decision: [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md) · [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md)

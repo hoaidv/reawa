@@ -8,14 +8,16 @@
 #include <QElapsedTimer>
 #include <QImage>
 #include <QRectF>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QString>
 
 class StrokeSync;
 
 /**
- * Pen input plus the ink layer itself: strokes are rasterised into a persistent
- * QImage and blitted from paint(). Set RM_INK_MODE=pool to fall back to the QML
- * Rectangle pool (slower, but proven visible on this backend).
+ * Pen ink + ADR-0009 viewport / vector document rasterize for the sync region.
  * @implements [SRS-EP-01]
+ * @implements [SRS-EP-02] vector ∩ drawingRegion paint (no bitmap push)
  */
 class TabletCanvasItem : public QQuickPaintedItem
 {
@@ -51,6 +53,15 @@ private:
     struct Point {
         QPointF pos;
         qreal pressure;
+        QPointF raw;
+    };
+
+    struct WorldAabb {
+        double minX = 0;
+        double minY = 0;
+        double maxX = 0;
+        double maxY = 0;
+        bool valid = false;
     };
 
     QPointF mapInputToCanvas(const QPointF &raw) const;
@@ -66,10 +77,18 @@ private:
     void syncBegin();
     void syncPoint(const Point &pt);
     void syncEnd();
+    void onHostMessage(const QJsonObject &obj);
+    void applyViewport(const QJsonObject &obj);
+    void applyDocSnapshot(const QJsonObject &obj);
+    void scheduleVectorRasterize(bool sharp);
+    void rasterizeVectors(bool sharp);
+    QPointF worldToPanel(double wx, double wy) const;
+    QPointF panelToWorld(const QPointF &panel) const;
+    void appendLocalStrokeAsWorldPath();
+    void drawVectorNode(QPainter &p, const QJsonObject &node);
 
     StrokeSync *m_sync = nullptr;
     QImage m_image;
-    /** Bumped on the scene-graph thread; read only for the on-screen counter. */
     QAtomicInt m_paintCount{0};
     QVector<Point> m_current;
     int m_strokeCount = 0;
@@ -85,7 +104,16 @@ private:
     bool m_beacons = true;
     bool m_hasEmitted = false;
     bool m_strokeActive = false;
+    QString m_orientation = QStringLiteral("portrait");
+    int m_viewportSeq = 0;
+    WorldAabb m_drawingRegion;
+    QJsonArray m_vectorNodes;
+    bool m_rasterizePending = false;
+    bool m_rasterizeSharp = false;
+    QPointF m_lastRaw;
     QElapsedTimer m_flushClock;
+    QElapsedTimer m_refreshClock;
     QRectF m_pendingDirty;
     static constexpr qint64 kFlushIntervalMs = 8;
+    static constexpr qint64 kRefreshMinIntervalMs = 250;
 };

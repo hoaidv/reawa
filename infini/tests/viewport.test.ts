@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  frameWorldAabb,
   identityViewport,
   panByScreenDelta,
   preserveCenterOnResize,
   screenToWorld,
+  tabletDrawingFrameCss,
   worldToScreen,
   zoomAtScreenPoint,
   visibleWorldAabb,
@@ -57,6 +59,27 @@ describe("Viewport SRS-IN-01 transform", () => {
     const after = screenToWorld({ x: 500, y: 250 }, next);
     expect(after.x).toBeCloseTo(centerWorld.x);
     expect(after.y).toBeCloseTo(centerWorld.y);
+  });
+});
+
+describe("SRS-IN-07 tablet drawing frame", () => {
+  it("frameWorldAabb matches screenToWorld corners", () => {
+    const frame = tabletDrawingFrameCss(800, 600);
+    const vp = identityViewport();
+    const aabb = frameWorldAabb(frame, vp);
+    const tl = screenToWorld({ x: frame.x, y: frame.y }, vp);
+    const br = screenToWorld({ x: frame.x + frame.w, y: frame.y + frame.h }, vp);
+    expect(aabb.minX).toBeCloseTo(Math.min(tl.x, br.x));
+    expect(aabb.maxX).toBeCloseTo(Math.max(tl.x, br.x));
+    expect(aabb.minY).toBeCloseTo(Math.min(tl.y, br.y));
+    expect(aabb.maxY).toBeCloseTo(Math.max(tl.y, br.y));
+  });
+
+  it("maximizes one axis to the host viewport", () => {
+    const frame = tabletDrawingFrameCss(800, 600, "portrait");
+    expect(frame.w === 800 || frame.h === 600).toBe(true);
+    expect(frame.x + frame.w).toBeLessThanOrEqual(800 + 1e-6);
+    expect(frame.y + frame.h).toBeLessThanOrEqual(600 + 1e-6);
   });
 });
 

@@ -142,6 +142,8 @@ Anchor = {
   Primitive and optionally hide/remove source Ink (product later).
 - Render may use only position (+ pressure for width) today; persistence/transmit must
   preserve the full sample set that was captured.
+- Ink `style.strokeWidth` (and pressure→width result) is in **world units**; paint scales by
+  viewport / panel fit ([ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md)).
 #### Text
 
 - `runs[]`: plain strings + optional marks (bold) — rich text minimal.

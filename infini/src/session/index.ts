@@ -14,5 +14,6 @@ export {
   isInfiniStructureOp,
 } from "./types";
 export { MemoryTransport } from "./MemoryTransport";
+export { IpcRmTransport } from "./IpcRmTransport";
 export { TabletSession } from "./TabletSession";
 export type { TabletSessionOptions } from "./TabletSession";

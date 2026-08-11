@@ -6,6 +6,8 @@ const path = require("node:path");
 let mainWindow = null;
 /** @type {import('node:net').Server | null} */
 let strokeServer = null;
+/** @type {Set<import('node:net').Socket>} */
+const rmClients = new Set();
 
 const STROKE_PORT = Number(process.env.INFINI_STROKE_PORT || 9877);
 
@@ -15,15 +17,36 @@ function broadcastStroke(obj) {
   }
 }
 
+/** Infini → Epaper (viewport / region_refresh) over the same TCP clients. */
+function sendToRmClients(obj) {
+  const line = `${JSON.stringify(obj)}\n`;
+  for (const socket of rmClients) {
+    if (socket.destroyed) {
+      rmClients.delete(socket);
+      continue;
+    }
+    try {
+      socket.write(line);
+    } catch (e) {
+      console.warn("[stroke-ingest] write to RM failed", e.message);
+    }
+  }
+  return rmClients.size;
+}
+
 /**
- * Legacy EXP stroke ingest (Epaper StrokeSync → Mac).
- * JSON-lines: stroke_begin | stroke_point | stroke_end
+ * Bidirectional JSON-lines with Epaper StrokeSync.
+ * RM → Mac: stroke_*; Mac → RM: viewport, region_refresh
  */
 function startStrokeIngestServer() {
   if (strokeServer) return;
   strokeServer = net.createServer((socket) => {
     let buf = "";
-    console.log("[stroke-ingest] client connected", socket.remoteAddress);
+    rmClients.add(socket);
+    console.log("[stroke-ingest] client connected", socket.remoteAddress, "n=", rmClients.size);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("rm-client", { type: "connected", n: rmClients.size });
+    }
     socket.on("data", (chunk) => {
       buf += chunk.toString("utf8");
       let nl;
@@ -39,7 +62,13 @@ function startStrokeIngestServer() {
         }
       }
     });
-    socket.on("close", () => console.log("[stroke-ingest] client closed"));
+    socket.on("close", () => {
+      rmClients.delete(socket);
+      console.log("[stroke-ingest] client closed n=", rmClients.size);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("rm-client", { type: "closed", n: rmClients.size });
+      }
+    });
     socket.on("error", (err) => console.warn("[stroke-ingest] socket", err.message));
   });
   strokeServer.listen(STROKE_PORT, "0.0.0.0", () => {
@@ -86,7 +115,10 @@ app.on("window-all-closed", () => {
     strokeServer.close();
     strokeServer = null;
   }
+  rmClients.clear();
   if (process.platform !== "darwin") app.quit();
 });
 
 ipcMain.handle("stroke-ingest-port", () => STROKE_PORT);
+ipcMain.handle("rm-send", (_event, obj) => sendToRmClients(obj));
+ipcMain.handle("rm-client-count", () => rmClients.size);

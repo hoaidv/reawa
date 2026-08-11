@@ -1,13 +1,14 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-11T04:16:14+00:00
+generated_at: 2026-08-11T04:44:07+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
 
 | ID | Title | Kind | Owner | Module | Parent SRS | Status | Iter | Pts |
 |---|---|---|---|---|---|---|---|---|
-| [STORY-EP-001](./iter-002/stories/STORY-EP-001.md) | Epaper region sync map append_ink and refresh | implement | dev | epaper | [SRS-EP-02] | in-review | iter-002 | 5 |
+| [STORY-EP-001](./iter-002/stories/STORY-EP-001.md) | Epaper region sync map append_ink and refresh | implement | dev | epaper | [SRS-EP-02] | done | iter-002 | 5 |
+| [STORY-EP-002](./iter-002/stories/STORY-EP-002.md) | Viewport apply + e-ink coalesced region refresh | implement | dev | epaper | [SRS-EP-02] | in-review | iter-002 | 3 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |
@@ -18,6 +19,7 @@ generated_at: 2026-08-11T04:16:14+00:00
 | [STORY-IN-008](./iter-002/stories/STORY-IN-008.md) | SVG persistence and shared op JSON fixtures | implement | dev | infini | [SRS-IN-09] | done | iter-002 | 3 |
 | [STORY-IN-009](./iter-002/stories/STORY-IN-009.md) | Infini tablet session viewport and document channel | implement | dev | infini | [SRS-IN-07] | done | iter-002 | 5 |
 | [STORY-IN-010](./iter-002/stories/STORY-IN-010.md) | Smart Group enclose recognition pilot | implement | dev | infini | [SRS-IN-10] | draft | iter-002 | 3 |
+| [STORY-IN-011](./iter-002/stories/STORY-IN-011.md) | Drawing-region marker + coalesced viewport publish | implement | dev | infini | [SRS-IN-07] | in-review | iter-002 | 3 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |
 | [STORY-RW-003](./iter-000/stories/STORY-RW-003.md) | Accessibility permission gate | implement | dev | reawa | [SRS-RW-03] | done | iter-000 | 1 |

@@ -2,9 +2,9 @@
  * @implements [SRS-IN-02] CanvasStage — gestures + host surface
  * @implements [SRS-IN-01] paint host
  * @implements [SRS-IN-03] optional rAF frame counter
+ * @implements [SRS-IN-07] tablet drawing-region marker + viewport + region refresh
  *
- * Perf: coalesce paints to one rAF; no React setState on the gesture hot path
- * (ml-mindmap-style — we previously re-rendered React every wheel tick → &lt;30 fps).
+ * Perf: coalesce paints to one rAF; no React setState on the gesture hot path.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -12,14 +12,22 @@ import { CanvasRenderer } from "./CanvasRenderer";
 import { InfiniDocument } from "./Document";
 import { demoPrimitives, makePath } from "./primitives";
 import {
+  frameWorldAabb,
   identityViewport,
+  panelToFrameUv,
   panByScreenDelta,
   preserveCenterOnResize,
+  strokeWorldWidthFromPanel,
+  tabletDrawingFrameCss,
   zoomAtScreenPoint,
+  type TabletOrientation,
   type Viewport,
 } from "./Viewport";
 import { allowIndividualInteraction } from "./TileCache";
 import type { RmStrokeMsg } from "../native";
+import { IpcRmTransport, MemoryTransport, TabletSession } from "../session";
+import { VectorDocument } from "../document";
+import type { Primitive } from "./primitives";
 
 export interface CanvasStageProps {
   populated?: boolean;
@@ -34,8 +42,24 @@ function viewportCentered(cssW: number, cssH: number, scale = 1): Viewport {
 }
 
 function get2dContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
-  // Avoid desynchronized: it can fail to present on some Electron/macOS GPUs.
   return canvas.getContext("2d", { alpha: false }) ?? canvas.getContext("2d");
+}
+
+/** Serialize WorldLayer primitives for Epaper vector rasterize (not a bitmap). */
+function primitivesToSnapshotNodes(prims: Primitive[]): Record<string, unknown>[] {
+  return prims.map((p) => {
+    const base = { id: p.id, strokeWidth: p.style.strokeWidth };
+    switch (p.kind) {
+      case "line":
+        return { ...base, kind: "line", x1: p.x1, y1: p.y1, x2: p.x2, y2: p.y2 };
+      case "rect":
+        return { ...base, kind: "rect", x: p.x, y: p.y, w: p.w, h: p.h };
+      case "ellipse":
+        return { ...base, kind: "ellipse", cx: p.cx, cy: p.cy, rx: p.rx, ry: p.ry };
+      case "path":
+        return { ...base, kind: "path", points: p.points };
+    }
+  });
 }
 
 export function CanvasStage({ populated = true }: CanvasStageProps) {
@@ -43,7 +67,15 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const zoomElRef = useRef<HTMLDivElement>(null);
   const statsElRef = useRef<HTMLSpanElement>(null);
+  const markerRef = useRef<HTMLDivElement>(null);
   const docRef = useRef(new InfiniDocument());
+  const treeRef = useRef(new VectorDocument());
+  const transportRef = useRef(
+    typeof window !== "undefined" && window.infiniNative?.sendToRm
+      ? new IpcRmTransport()
+      : new MemoryTransport(),
+  );
+  const sessionRef = useRef<TabletSession | null>(null);
   const rendererRef = useRef(new CanvasRenderer());
   const vpRef = useRef<Viewport>(identityViewport());
   const sizeRef = useRef({ w: 0, h: 0 });
@@ -52,17 +84,77 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const rafPaintRef = useRef(0);
   const rafStats = useRef({ frames: 0, drops: 0, last: 0, painted: 0 });
   const gestureEndTimer = useRef(0);
+  const gesturingRef = useRef(false);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-  /** Active RM stroke polylines (canvas panel coords → world). */
+  const orientationRef = useRef<TabletOrientation>("portrait");
+  const snapshotSentRef = useRef(false);
   const rmStrokesRef = useRef(
     new Map<string, { points: { x: number; y: number }[]; width: number }>(),
   );
   const rmDoneRef = useRef<
     { id: string; points: { x: number; y: number }[]; width: number }[]
   >([]);
+  const rmPanelRef = useRef({ w: 1404, h: 1872 });
 
   const [emptyHint, setEmptyHint] = useState(!populated);
   const [syncHint, setSyncHint] = useState("");
+  const [orientation, setOrientation] = useState<TabletOrientation>("portrait");
+
+  if (!sessionRef.current) {
+    // Prefer IPC when preload already exposed sendToRm (Electron).
+    if (window.infiniNative?.sendToRm) {
+      transportRef.current = new IpcRmTransport();
+    }
+    sessionRef.current = new TabletSession({
+      tree: treeRef.current,
+      world: docRef.current,
+      transport: transportRef.current,
+      cssWidth: 800,
+      cssHeight: 600,
+      orientation: "portrait",
+    });
+    sessionRef.current.connect();
+  }
+
+  const currentOrientation = (): TabletOrientation =>
+    sessionRef.current?.getOrientation() ?? orientationRef.current;
+
+  const syncMarkerDom = () => {
+    const marker = markerRef.current;
+    const host = hostRef.current;
+    if (!marker || !host) return;
+    const cssW = Math.max(1, sizeRef.current.w || Math.floor(host.clientWidth));
+    const cssH = Math.max(1, sizeRef.current.h || Math.floor(host.clientHeight));
+    const frame = tabletDrawingFrameCss(cssW, cssH, currentOrientation());
+    marker.style.left = `${frame.x}px`;
+    marker.style.top = `${frame.y}px`;
+    marker.style.width = `${frame.w}px`;
+    marker.style.height = `${frame.h}px`;
+    marker.classList.toggle("is-visible", gesturingRef.current);
+    marker.setAttribute("aria-hidden", gesturingRef.current ? "false" : "true");
+  };
+
+  /**
+   * One-shot (or rare) vector document push to Epaper — not a bitmap.
+   * Subsequent pan/zoom only sends viewport; tablet re-rasterizes locally.
+   */
+  const sendDocSnapshot = () => {
+    const api = window.infiniNative;
+    if (!api?.sendToRm) return;
+    const nodes = primitivesToSnapshotNodes(docRef.current.all());
+    void api.sendToRm({ type: "doc_snapshot", nodes });
+    snapshotSentRef.current = true;
+  };
+
+  const publishViewportCoalesced = (force = false) => {
+    const session = sessionRef.current;
+    if (!session) return;
+    session.setCssSize(sizeRef.current.w || 800, sizeRef.current.h || 600);
+    session.setOrientation(orientationRef.current);
+    if (!snapshotSentRef.current) sendDocSnapshot();
+    if (force) session.flushViewport(vpRef.current);
+    else session.publishViewport(vpRef.current);
+  };
 
   const rebuildWithRmInk = () => {
     const base = populated ? demoPrimitives() : [];
@@ -129,6 +221,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       docRef.current,
     );
     rafStats.current.painted++;
+    syncMarkerDom();
 
     const pct = Math.round(vpRef.current.scale * 100);
     if (zoomElRef.current) zoomElRef.current.textContent = `${pct}%`;
@@ -151,24 +244,40 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const cancelScheduledPaint = () => {
     if (!rafPaintRef.current) return;
     cancelAnimationFrame(rafPaintRef.current);
-    // Must clear: React Strict Mode cancels the first rAF on remount; if the
-    // id is left truthy, schedulePaint() no-ops forever (blank canvas).
     rafPaintRef.current = 0;
   };
 
   const markGesturing = (on: boolean) => {
     const host = hostRef.current;
     if (!host) return;
+    gesturingRef.current = on;
     host.classList.toggle("is-gesturing", on);
+    syncMarkerDom();
   };
 
   const bumpGestureEnd = () => {
     markGesturing(true);
+    publishViewportCoalesced(false);
     window.clearTimeout(gestureEndTimer.current);
-    gestureEndTimer.current = window.setTimeout(() => markGesturing(false), 100);
+    gestureEndTimer.current = window.setTimeout(() => {
+      publishViewportCoalesced(true);
+      markGesturing(false);
+    }, 100);
   };
 
-  // Document seed
+  const toggleOrientation = () => {
+    const next: TabletOrientation =
+      orientationRef.current === "portrait" ? "landscape" : "portrait";
+    orientationRef.current = next;
+    setOrientation(next);
+    sessionRef.current?.setOrientation(next);
+    snapshotSentRef.current = false;
+    sendDocSnapshot();
+    syncMarkerDom();
+    publishViewportCoalesced(true);
+    schedulePaint();
+  };
+
   useEffect(() => {
     if (populated) {
       docRef.current.setPrimitives(demoPrimitives());
@@ -182,29 +291,78 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [populated]);
 
-  // Epaper StrokeSync ingest (EXP path → :9877)
   useEffect(() => {
     const api = window.infiniNative;
     if (!api?.onRmStroke) {
       setSyncHint("no native bridge (browser-only?)");
       return;
     }
+    // Upgrade transport if preload arrived after first render
+    if (api.sendToRm && !(transportRef.current instanceof IpcRmTransport)) {
+      transportRef.current = new IpcRmTransport();
+      sessionRef.current = new TabletSession({
+        tree: treeRef.current,
+        world: docRef.current,
+        transport: transportRef.current,
+        cssWidth: sizeRef.current.w || 800,
+        cssHeight: sizeRef.current.h || 600,
+        orientation: orientationRef.current,
+      });
+      sessionRef.current.connect();
+    }
     void api.strokeIngestPort?.().then((p) => {
-      setSyncHint(`listening :${p} for RM strokes`);
+      setSyncHint(`RM sync :${p}`);
+    });
+    void api.rmClientCount?.().then((n) => {
+      if (n > 0) {
+        snapshotSentRef.current = false;
+        sendDocSnapshot();
+        publishViewportCoalesced(true);
+        setSyncHint(`RM connected (n=${n})`);
+      }
+    });
+
+    const unsubClient = api.onRmClient?.((ev) => {
+      if (ev.type === "connected") {
+        snapshotSentRef.current = false;
+        sendDocSnapshot();
+        publishViewportCoalesced(true);
+        setSyncHint(`RM connected (n=${ev.n})`);
+      }
     });
 
     const unsub = api.onRmStroke((msg: RmStrokeMsg) => {
+      const cssW = sizeRef.current.w || 800;
+      const cssH = sizeRef.current.h || 600;
+      const orient = currentOrientation();
+      const frame = tabletDrawingFrameCss(cssW, cssH, orient);
+      const region = frameWorldAabb(frame, vpRef.current);
+
       if (msg.type === "stroke_begin") {
-        rmStrokesRef.current.set(msg.id, {
-          points: [],
-          width: msg.brush?.width ?? 2.5,
-        });
+        if (msg.cw && msg.ch) rmPanelRef.current = { w: msg.cw, h: msg.ch };
+        const brushPx = msg.brush?.width ?? 2.5;
+        const widthWorld = strokeWorldWidthFromPanel(
+          brushPx,
+          region,
+          orient === "landscape" ? rmPanelRef.current.h : rmPanelRef.current.w,
+        );
+        rmStrokesRef.current.set(msg.id, { points: [], width: widthWorld });
         return;
       }
       if (msg.type === "stroke_point") {
         const stroke = rmStrokesRef.current.get(msg.id);
         if (!stroke) return;
-        stroke.points.push({ x: msg.x - 700, y: msg.y - 500 });
+        const { u, v } = panelToFrameUv(
+          msg.x,
+          msg.y,
+          rmPanelRef.current.w,
+          rmPanelRef.current.h,
+          orient,
+        );
+        stroke.points.push({
+          x: region.minX + u * (region.maxX - region.minX),
+          y: region.minY + v * (region.maxY - region.minY),
+        });
         if (stroke.points.length === 2 || stroke.points.length % 3 === 0) {
           rebuildWithRmInk();
         }
@@ -219,11 +377,13 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         rebuildWithRmInk();
       }
     });
-    return unsub;
+    return () => {
+      unsub();
+      unsubClient?.();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [populated]);
 
-  // Size + resize
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -235,6 +395,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
         vpRef.current = preserveCenterOnResize(vpRef.current, ow, oh, nw, nh);
       }
       sizeRef.current = { w: nw, h: nh };
+      sessionRef.current?.setCssSize(nw, nh);
       schedulePaint();
     };
     syncSize();
@@ -244,7 +405,6 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Native wheel (non-passive) — single handler for pan/zoom + preventDefault
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -257,7 +417,6 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       bumpGestureEnd();
 
       if (e.ctrlKey || e.metaKey) {
-        // Stepped factors (ml-mindmap WheelLayer) — continuous 0.0015 felt too slow.
         const zoomFactorDelta =
           Math.abs(e.deltaY) > 10 ? 0.1 : Math.abs(e.deltaY) > 5 ? 0.05 : 0.01;
         const factor = e.deltaY > 0 ? 1 - zoomFactorDelta : 1 + zoomFactorDelta;
@@ -267,7 +426,6 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
           vpRef.current.scale * factor,
         );
       } else {
-        // deltaMode: 0=pixel, 1=line, 2=page
         const mul = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 32 : 1;
         vpRef.current = panByScreenDelta(
           vpRef.current,
@@ -283,7 +441,6 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Frame counter (?trace=1)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("trace") !== "1") return;
@@ -332,11 +489,13 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     const dy = e.clientY - drag.y;
     dragRef.current = { x: e.clientX, y: e.clientY };
     vpRef.current = panByScreenDelta(vpRef.current, dx, dy);
+    publishViewportCoalesced(false);
     schedulePaint();
   };
 
   const onPointerUp = () => {
     dragRef.current = null;
+    publishViewportCoalesced(true);
     markGesturing(false);
   };
 
@@ -356,6 +515,12 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     >
       <canvas ref={canvasRef} data-region="WorldLayer" />
       <div
+        ref={markerRef}
+        className="c-tablet-region-marker"
+        data-region="TabletDrawingRegionMarker"
+        aria-hidden="true"
+      />
+      <div
         ref={zoomElRef}
         className="c-zoom-readout"
         data-region="StatusZoom"
@@ -366,6 +531,18 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       <div className="app-mark" aria-hidden="true">
         Infini
       </div>
+      <button
+        type="button"
+        className="c-orient-toggle"
+        data-region="TabletOrientationToggle"
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleOrientation();
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        Sync: {orientation === "portrait" ? "Portrait" : "Landscape"}
+      </button>
       {emptyHint && (
         <p className="empty-hint">Pan and zoom — trackpad, drag, or wheel</p>
       )}

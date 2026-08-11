@@ -126,3 +126,117 @@ export function aabbContains(outer: Aabb, inner: Aabb): boolean {
     inner.maxY <= outer.maxY
   );
 }
+
+export type TabletOrientation = "portrait" | "landscape";
+
+/** CSS pixel rect for the tablet drawing frame (marker geometry). */
+export interface CssRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** RM2 panel pixels (native portrait). @implements [SRS-IN-07] */
+export const TABLET_PANEL_W = 1404;
+export const TABLET_PANEL_H = 1872;
+
+/** Aspect width/height for the sync frame. */
+export function tabletAspect(orientation: TabletOrientation = "portrait"): number {
+  return orientation === "landscape"
+    ? TABLET_PANEL_H / TABLET_PANEL_W
+    : TABLET_PANEL_W / TABLET_PANEL_H;
+}
+
+/**
+ * Largest centered CSS frame matching tablet aspect — maximize width or height
+ * to the host viewport; center the other axis (no margin letterbox pad).
+ * @implements [SRS-IN-07] tablet drawing frame (CSS)
+ */
+export function tabletDrawingFrameCss(
+  cssW: number,
+  cssH: number,
+  orientation: TabletOrientation = "portrait",
+): CssRect {
+  const aspect = tabletAspect(orientation);
+  let w = cssW;
+  let h = w / aspect;
+  if (h > cssH) {
+    h = cssH;
+    w = h * aspect;
+  }
+  return { x: (cssW - w) / 2, y: (cssH - h) / 2, w, h };
+}
+
+/**
+ * Map panel-framebuffer coords (after digitizer→panel map) → sync-frame UV.
+ * Portrait: 1:1 with panel. Landscape: 90° so wide Infini frame matches rotated use.
+ * @implements [SRS-IN-07] orientation
+ */
+export function panelToFrameUv(
+  localX: number,
+  localY: number,
+  panelW: number,
+  panelH: number,
+  orientation: TabletOrientation,
+): { u: number; v: number } {
+  if (orientation === "landscape") {
+    const logX = localY;
+    const logY = panelW - localX;
+    return { u: logX / panelH, v: logY / panelW };
+  }
+  return { u: localX / panelW, v: localY / panelH };
+}
+
+/** Inverse of panelToFrameUv for Epaper vector paint (world UV → panel px). */
+export function frameUvToPanel(
+  u: number,
+  v: number,
+  panelW: number,
+  panelH: number,
+  orientation: TabletOrientation,
+): { x: number; y: number } {
+  if (orientation === "landscape") {
+    const logX = u * panelH;
+    const logY = v * panelW;
+    return { x: panelW - logY, y: logX };
+  }
+  return { x: u * panelW, y: v * panelH };
+}
+
+/**
+ * World AABB of a CSS tablet frame under the current viewport.
+ * @implements [SRS-IN-07] drawingRegion = screenToWorld(frame)
+ */
+export function frameWorldAabb(frame: CssRect, vp: Viewport): Aabb {
+  const a = screenToWorld({ x: frame.x, y: frame.y }, vp);
+  const b = screenToWorld({ x: frame.x + frame.w, y: frame.y + frame.h }, vp);
+  return {
+    minX: Math.min(a.x, b.x),
+    minY: Math.min(a.y, b.y),
+    maxX: Math.max(a.x, b.x),
+    maxY: Math.max(a.y, b.y),
+  };
+}
+
+/**
+ * CSS line width for world stroke under Infini viewport (CTM path uses world×scale).
+ * @implements [SRS-IN-08] / [ADR-0012] world width × scale
+ */
+export function strokeCssWidthFromWorld(strokeWidthWorld: number, scale: number): number {
+  return strokeWidthWorld * scale;
+}
+
+/**
+ * Convert panel-pixel brush width into world units for a drawing region.
+ * @implements [ADR-0012] panel px → world
+ */
+export function strokeWorldWidthFromPanel(
+  strokeWidthPanelPx: number,
+  drawingRegion: Aabb,
+  panelW: number,
+): number {
+  const worldW = drawingRegion.maxX - drawingRegion.minX;
+  if (panelW <= 0 || worldW <= 0) return strokeWidthPanelPx;
+  return strokeWidthPanelPx * (worldW / panelW);
+}

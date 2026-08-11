@@ -16,4 +16,4 @@ Apply Infini viewport to input map; emit stroke ops; refresh drawing region from
 - Implementation: [epaper/regionsync/](../../../../epaper/regionsync/)
 - Sibling: [infini/tablet-sync](../../../infini/features/tablet-sync/index.md)
 - Local ink: [local-pen-ink](../local-pen-ink/index.md)
-- Decision: [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md)
+- Decision: [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md) · [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md)

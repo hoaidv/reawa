@@ -78,6 +78,40 @@ body,
   pointer-events: none;
 }
 
+/* Tablet drawing-region marker — visible only while pan/zoom (@SRS-IN-07) */
+.c-tablet-region-marker {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  border: 1.5px solid rgba(28, 36, 48, 0.45);
+  background: transparent;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.c-tablet-region-marker.is-visible {
+  opacity: 1;
+}
+
+.c-orient-toggle {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  z-index: 4;
+  border: 1px solid rgba(28, 36, 48, 0.25);
+  background: rgba(255, 255, 255, 0.92);
+  color: #1c2430;
+  font: 600 12px/1.2 "IBM Plex Sans", system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.c-orient-toggle:hover {
+  background: #fff;
+}
+
 .app-mark {
   position: absolute;
   top: var(--space-md);

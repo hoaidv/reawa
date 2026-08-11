@@ -3,7 +3,7 @@
  * @implements [SRS-IN-07] viewport + doc_op envelopes
  */
 
-import type { Aabb } from "../canvas/Viewport";
+import type { Aabb, TabletOrientation } from "../canvas/Viewport";
 import type { DocOp } from "../document/types";
 
 export interface ViewportMessage {
@@ -12,6 +12,16 @@ export interface ViewportMessage {
   scale: number;
   drawingRegion: Aabb;
   seq: number;
+  /** Sync-frame orientation; tablet maps pen + refresh accordingly. */
+  orientation?: TabletOrientation;
+  /** True on gesture settle — Epaper should sharp-rasterize vectors. */
+  settle?: boolean;
+}
+
+/** Infini → Epaper initial / authoritative vector snapshot (not a bitmap). */
+export interface DocSnapshotMessage {
+  type: "doc_snapshot";
+  nodes: Array<Record<string, unknown>>;
 }
 
 export interface DocOpMessage {

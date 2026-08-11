@@ -2,6 +2,9 @@
 
 #include <QTimer>
 #include <QDebug>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 
 StrokeSync::StrokeSync(QObject *parent)
     : QObject(parent)
@@ -10,9 +13,7 @@ StrokeSync::StrokeSync(QObject *parent)
     if (!m_enabled)
         return;
 
-    connect(&m_socket, &QTcpSocket::readyRead, this, [this]() {
-        m_buffer.append(m_socket.readAll());
-    });
+    connect(&m_socket, &QTcpSocket::readyRead, this, &StrokeSync::onReadyRead);
     connect(&m_socket, &QTcpSocket::connected, this, [this]() { flushQueue(); });
 
     auto *retry = new QTimer(this);
@@ -58,7 +59,6 @@ void StrokeSync::scheduleFlush()
     if (m_flushScheduled)
         return;
     m_flushScheduled = true;
-    // Defer socket work off the pen hot path onto the next event-loop turn.
     QTimer::singleShot(0, this, [this]() {
         m_flushScheduled = false;
         if (m_socket.state() != QAbstractSocket::ConnectedState) {
@@ -79,4 +79,27 @@ void StrokeSync::flushQueue()
     for (const QByteArray &line : std::as_const(m_queue))
         m_socket.write(line);
     m_queue.clear();
+}
+
+void StrokeSync::onReadyRead()
+{
+    m_inbound.append(m_socket.readAll());
+    int nl = 0;
+    while ((nl = m_inbound.indexOf('\n')) >= 0) {
+        const QByteArray line = m_inbound.left(nl).trimmed();
+        m_inbound.remove(0, nl + 1);
+        if (!line.isEmpty())
+            handleInboundLine(line);
+    }
+}
+
+void StrokeSync::handleInboundLine(const QByteArray &line)
+{
+    QJsonParseError err;
+    const QJsonDocument doc = QJsonDocument::fromJson(line, &err);
+    if (err.error != QJsonParseError::NoError || !doc.isObject()) {
+        qWarning() << "[sync] bad host line" << line.left(80);
+        return;
+    }
+    emit hostMessage(doc.object());
 }

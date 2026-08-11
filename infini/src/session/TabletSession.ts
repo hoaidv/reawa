@@ -5,7 +5,14 @@
  */
 
 import type { InfiniDocument } from "../canvas/Document";
-import { visibleWorldAabb, type Viewport } from "../canvas/Viewport";
+import {
+  frameWorldAabb,
+  tabletDrawingFrameCss,
+  type CssRect,
+  type TabletOrientation,
+  type Viewport,
+  visibleWorldAabb,
+} from "../canvas/Viewport";
 import type { VectorDocument } from "../document/VectorDocument";
 import type { DocOp } from "../document/types";
 import {
@@ -17,6 +24,10 @@ import {
   type ViewportMessage,
 } from "./types";
 
+/** Max outbound viewport Hz during gesture coalesce. @implements [SRS-IN-07] */
+export const VIEWPORT_PUBLISH_MAX_HZ = 30;
+const MIN_PUBLISH_INTERVAL_MS = 1000 / VIEWPORT_PUBLISH_MAX_HZ;
+
 export interface TabletSessionOptions {
   tree: VectorDocument;
   /** WorldLayer host — synced after successful doc apply. */
@@ -24,8 +35,11 @@ export interface TabletSessionOptions {
   transport: SessionTransport;
   cssWidth?: number;
   cssHeight?: number;
+  orientation?: TabletOrientation;
   /** Logger for unknown ops / degrade (does not throw). */
   log?: (msg: string, detail?: unknown) => void;
+  /** Inject clock for coalesce tests (ms). */
+  nowMs?: () => number;
 }
 
 export class TabletSession {
@@ -38,10 +52,17 @@ export class TabletSession {
   private readonly transport: SessionTransport;
   private cssWidth: number;
   private cssHeight: number;
+  private orientation: TabletOrientation;
   private readonly log: (msg: string, detail?: unknown) => void;
+  private readonly nowMs: () => number;
+  private lastPublishAtMs = -Infinity;
+  private pendingVp: Viewport | null = null;
 
   /** Last viewport emit timestamp (ms, performance.now) for latency tests. */
   lastViewportEmitAtMs = 0;
+
+  /** Last emitted message (tests / debug). */
+  lastViewportMessage: ViewportMessage | null = null;
 
   constructor(opts: TabletSessionOptions) {
     this.tree = opts.tree;
@@ -49,7 +70,9 @@ export class TabletSession {
     this.transport = opts.transport;
     this.cssWidth = opts.cssWidth ?? 800;
     this.cssHeight = opts.cssHeight ?? 600;
+    this.orientation = opts.orientation ?? "portrait";
     this.log = opts.log ?? ((m, d) => console.warn(m, d));
+    this.nowMs = opts.nowMs ?? (() => performance.now());
   }
 
   connect(): void {
@@ -65,23 +88,72 @@ export class TabletSession {
     this.cssHeight = h;
   }
 
+  setOrientation(o: TabletOrientation): void {
+    this.orientation = o;
+  }
+
+  getOrientation(): TabletOrientation {
+    return this.orientation;
+  }
+
+  /** Current tablet CSS frame for marker + drawingRegion. */
+  tabletFrame(): CssRect {
+    return tabletDrawingFrameCss(this.cssWidth, this.cssHeight, this.orientation);
+  }
+
   /**
    * Publish viewport after Infini pan/zoom.
-   * @implements [SRS-IN-07] viewport message emit
+   * Coalesces to ≤30 Hz unless `force` (gesture settle flush).
+   * @implements [SRS-IN-07] viewport message emit + coalesce
    */
-  publishViewport(vp: Viewport): ViewportMessage | null {
+  publishViewport(
+    vp: Viewport,
+    opts?: { force?: boolean; settle?: boolean },
+  ): ViewportMessage | null {
     if (!this.connected) return null;
+    const force = opts?.force === true;
+    const now = this.nowMs();
+    if (!force && now - this.lastPublishAtMs < MIN_PUBLISH_INTERVAL_MS) {
+      this.pendingVp = vp;
+      return null;
+    }
+    return this.emitViewport(vp, now, opts?.settle === true);
+  }
+
+  /**
+   * Flush settle pose after gesture end (always emit latest).
+   * @implements [SRS-IN-07] settle flush
+   */
+  flushViewport(vp?: Viewport): ViewportMessage | null {
+    const next = vp ?? this.pendingVp;
+    this.pendingVp = null;
+    if (!next || !this.connected) return null;
+    return this.emitViewport(next, this.nowMs(), true);
+  }
+
+  private emitViewport(vp: Viewport, now: number, settle = false): ViewportMessage {
     this.viewportSeq += 1;
+    this.pendingVp = null;
+    this.lastPublishAtMs = now;
+    const frame = this.tabletFrame();
     const msg: ViewportMessage = {
       type: "viewport",
       translate: { x: vp.translate.x, y: vp.translate.y },
       scale: vp.scale,
-      drawingRegion: visibleWorldAabb(this.cssWidth, this.cssHeight, vp),
+      drawingRegion: frameWorldAabb(frame, vp),
       seq: this.viewportSeq,
+      orientation: this.orientation,
+      settle: settle || undefined,
     };
-    this.lastViewportEmitAtMs = performance.now();
+    this.lastViewportEmitAtMs = now;
+    this.lastViewportMessage = msg;
     this.transport.sendViewport(msg);
     return msg;
+  }
+
+  /** Full-window world AABB (debug / compare only). */
+  fullWindowWorldAabb(vp: Viewport) {
+    return visibleWorldAabb(this.cssWidth, this.cssHeight, vp);
   }
 
   /** Epaper reports stroke still capturing samples. */
@@ -141,12 +213,10 @@ export class TabletSession {
 
     if (result.reason?.startsWith("unknown_type:")) {
       this.log("unknown doc_op type", { type: op.type, opId: op.opId });
-      // Tree unchanged — applyOp does not mutate on unknown
       return { applied: false, reason: result.reason };
     }
 
     if (!result.applied && result.reason === "duplicate_opId") {
-      // Idempotent — tree must match prior
       if (this.tree.snapshotString() !== before) {
         this.log("idempotent apply mutated tree unexpectedly", op.opId);
       }
