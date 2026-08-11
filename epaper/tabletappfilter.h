@@ -6,8 +6,8 @@
 class TabletCanvasItem;
 
 /**
- * App-wide event filter: pen → canvas; touch counted for STORY-EP-004 spike.
- * @implements [SRS-EP-04] tool input routing prerequisite (touch probe)
+ * App-wide event filter: pen → canvas; touch → ToolChip (STORY-EP-006).
+ * @implements [SRS-EP-04] tool input routing
  */
 class TabletAppFilter : public QObject
 {

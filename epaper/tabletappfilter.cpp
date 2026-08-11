@@ -4,6 +4,7 @@
 #include <QMouseEvent>
 #include <QTabletEvent>
 #include <QTouchEvent>
+#include <QEventPoint>
 #include <QDebug>
 
 TabletAppFilter::TabletAppFilter(QObject *parent)
@@ -15,7 +16,6 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
 {
     Q_UNUSED(watched);
 
-    // @implements [SRS-EP-04] touch reachability spike — count only, do not ink
     switch (event->type()) {
     case QEvent::TouchBegin:
     case QEvent::TouchUpdate:
@@ -32,7 +32,17 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                                                            : "TouchCancel")
                 << " (filter path: TabletAppFilter::eventFilter)";
         }
-        // Do not consume — spike probe only; toolbar will own touch later.
+        // @implements [SRS-EP-04] finger tap on ToolChip → armTool (STORY-EP-006)
+        if (m_canvas && event->type() == QEvent::TouchEnd) {
+            auto *touch = static_cast<QTouchEvent *>(event);
+            for (const QEventPoint &tp : touch->points()) {
+                if (tp.state() != QEventPoint::State::Released)
+                    continue;
+                const QPointF canvasPos = m_canvas->mapFromGlobal(tp.globalPosition());
+                if (m_canvas->tryArmToolAtCanvasPos(canvasPos))
+                    return true;
+            }
+        }
         return false;
     }
     default:

@@ -177,9 +177,10 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal 
     m_lastPoint = canvasPos;
     m_lastRaw = pos;
 
-    // Pen on ToolChip — not ink; may arm (pen-on-chip fallback). Handled in QML taps primarily.
+    // Pen on ToolChip — not ink; arm via tile hit-test (pen-on-chip fallback).
     if (pointInToolChip(canvasPos)
         && (type == QEvent::TabletPress || type == QEvent::MouseButtonPress)) {
+        tryArmToolAtCanvasPos(canvasPos);
         return;
     }
 
@@ -193,16 +194,17 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal 
         break;
     case QEvent::TabletMove:
     case QEvent::MouseMove:
+        // @implements [SRS-EP-04] selection mode never inks (STORY-EP-007)
         if (m_selectionGesture)
             updateSelectionGesture(canvasPos);
-        else
+        else if (m_toolMode != QLatin1String("selection"))
             appendPoint(canvasPos, p);
         break;
     case QEvent::TabletRelease:
     case QEvent::MouseButtonRelease:
         if (m_selectionGesture)
             endSelectionGesture();
-        else
+        else if (m_toolMode != QLatin1String("selection"))
             endStroke();
         break;
     default:
@@ -489,6 +491,28 @@ void TabletCanvasItem::setToolMode(const QString &mode)
 void TabletCanvasItem::armTool(const QString &mode)
 {
     setToolMode(mode);
+}
+
+QString TabletCanvasItem::toolModeAtChipPos(const QPointF &canvasPos) const
+{
+    if (!pointInToolChip(canvasPos))
+        return {};
+    const qreal tileW = m_toolChipRect.height();
+    if (tileW <= 0.0)
+        return {};
+    const qreal relX = canvasPos.x() - m_toolChipRect.x();
+    const int tile = qBound(0, int(relX / tileW), 2);
+    static const char *const kModes[] = {"selection", "pen", "ink_box"};
+    return QString::fromLatin1(kModes[tile]);
+}
+
+bool TabletCanvasItem::tryArmToolAtCanvasPos(const QPointF &canvasPos)
+{
+    const QString mode = toolModeAtChipPos(canvasPos);
+    if (mode.isEmpty())
+        return false;
+    armTool(mode);
+    return true;
 }
 
 void TabletCanvasItem::updateToolChipRect()

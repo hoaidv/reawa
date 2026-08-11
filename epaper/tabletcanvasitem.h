@@ -45,6 +45,8 @@ public:
 
     Q_INVOKABLE void ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure);
     Q_INVOKABLE void armTool(const QString &mode);
+    /** @implements [SRS-EP-04] finger/pen tap on ToolChip tile */
+    bool tryArmToolAtCanvasPos(const QPointF &canvasPos);
 
     void paint(QPainter *painter) override;
 
@@ -95,6 +97,7 @@ private:
     void applyDocSnapshot(const QJsonObject &obj);
     void updateToolChipRect();
     bool pointInToolChip(const QPointF &canvasPos) const;
+    QString toolModeAtChipPos(const QPointF &canvasPos) const;
     QString hitPickable(const QPointF &world) const;
     void beginSelectionGesture(const QPointF &canvasPos);
     void updateSelectionGesture(const QPointF &canvasPos);
