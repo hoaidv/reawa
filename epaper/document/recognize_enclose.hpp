@@ -232,6 +232,7 @@ inline ApplyResult appendOrdinaryInk(DeviceDocument &doc, const EncloseStrokeInp
 
 /**
  * Commit finished stroke. Ink-box latch → enclose; Pen → ordinary ink only (no membership).
+ * Draw-into membership runs on the Pen ingest path (tabletcanvasitem / membership.hpp), not here.
  * @implements [SRS-EP-10] stroke_end enclose path
  */
 inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,

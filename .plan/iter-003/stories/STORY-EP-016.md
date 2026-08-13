@@ -4,7 +4,7 @@ title: "On-device enclose recognition"
 kind: implement
 parent_srs: [SRS-EP-10, SRS-EP-14]
 parent_req: [REQ-05]
-status: in-review
+status: done
 priority: P0
 iter: iter-003
 estimate: 5
@@ -52,3 +52,9 @@ Do not flip EP-017.
 **HOST-PASS / WAIT-HUMAN-DRAW** — story stays **`in-review`**. Do not flip `done`.
 [Handoff](../handoffs/2026-08-13-qa-to-sm-ep-016.md). No `DEF-*` for the pending eye check.
 EP-017 still **`draft`**. Non-synth epaper still running on RM2 (pid **5532**). Do not `--restore` xochitl.
+
+## Human verify (2026-08-13)
+
+**PASS** — creator confirmed ink-box enclose on epaper is correct. SM flips **`done`**.
+W10 continues with [STORY-EP-017](./STORY-EP-017.md) membership. Nested enclose is **out**
+([CHL-0011](../challenges/CHL-0011-nested-smartgroup-enclose.md) future).

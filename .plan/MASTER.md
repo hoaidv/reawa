@@ -92,7 +92,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
-| TRACK-003 | planned | **active** | W10b Device Log IN-029 ∥ EP-021 | [track](./tracks/TRACK-003-smart-group-pilot.md) |
+| TRACK-003 | planned | **active** | W11a EP-022 → /designer | [track](./tracks/TRACK-003-smart-group-pilot.md) |
 
 ### Open challenges / blocked
 
@@ -101,9 +101,15 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 - **CHL-0009 resolved (adopted 2026-08-13)** — `device-document/srs-logic.md` landed
   (`[SRS-EP-07]` / `[SRS-EP-08]`). IN-027 **done**. EP-014 **done**. EP-015 **done**.
   EP-020 stays `draft`. Verdict: READY-WITH-CONCERNS (op-type aliases — use SRS-IN-09 transmit names).
-- **CHL-0010 deferred (2026-08-13)** — no on-panel undo; no selection-create CTA. Enclose-with-Ink-box
-  is the create path. EP-018 frozen at `draft`. EP-015 ring still ships (no chrome). Handle **28/56 du**
-  and LOD **96 du** accepted as EP-019 implement locks.
+- **CHL-0010 deferred (2026-08-13)** — **undo chrome** still deferred. Selection-create invocation
+  **superseded by CHL-0013 Adopt** (ADR-0016 / EP-022).
+- **CHL-0011 adopted → future (2026-08-13)** — nested enclose (capture Smart Groups as content).
+  Not W10–W12. Current enclose stays free-ink only; Enclose CTA refuses if SmartGroup selected.
+- **CHL-0012 adopted → future (2026-08-13)** — ink-box sizing `FREE_FORM` / `WRAP_CONTENT` and
+  `align-content` (TOP|RIGHT|BOTTOM|LEFT). Not W10–W12. Shipping stays `inkScaleMode` +
+  non-expanding membership.
+- **CHL-0013 adopted (2026-08-13)** — rubber-band + 6 anchors + Enclose CTA. Design
+  [STORY-EP-022](./iter-003/stories/STORY-EP-022.md) **ready** → `/designer`.
 - CHL-0001…0003 adopted earlier; CHL-0004…0007 **superseded by CHL-0008**, retained as regression
   evidence (fixedInk resize, mode-correct preview, live direct manipulation, selection/enclose
   desync). Code hotfixes were discarded by the restore — do not treat as shipped.
@@ -120,7 +126,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 
 ### Execution board(s)
 
-- [iter-003 execution-board](./iter-003/execution-board.md) — **W10b** Device Log; EP-016 in-review
+- [iter-003 execution-board](./iter-003/execution-board.md) — **W10** EP-017 membership; EP-016 done
 - [iter-002 board (final)](./iter-002/execution-board.md) — frozen
 
 ### Freeze notes
@@ -133,8 +139,11 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 ## Forward
 
 - **Done 2026-08-13:** `/architect` design + `/sm` re-slice (EP-012…020, IN-027…028)
-- **Now:** W10b in-review — restart Infini for Device Log; WAIT USB (`10.11.99.12` on `en7`) then `EPAPER_DEBUG_LOG=1` deploy. [STORY-EP-016](./iter-003/stories/STORY-EP-016.md) stays **`in-review`**. EP-017 stays `draft`.
+- **Now:** **W11a** — [STORY-EP-022](./iter-003/stories/STORY-EP-022.md) design **ready** → `/designer`.
+  [STORY-EP-018](./iter-003/stories/STORY-EP-018.md) draft until design done. W10 complete.
+  Future: nested enclose (CHL-0011); sizing/align (CHL-0012).
 - **Next campaign:** epaper `[REQ-08]` direct manipulation of any document node — thickened in
   [node-manipulation](../.docs/modules/epaper/features/node-manipulation/), designed and built in a
-  distinct iteration
+  distinct iteration. Also: nested enclose (CHL-0011); ink-box sizing / align-content (CHL-0012);
+  selection-create chrome (CHL-0013) if adopted into this track.
 - Backlog: [backlog.md](./backlog.md)

@@ -4,7 +4,7 @@ title: Ship device console logs on :9878
 kind: implement
 parent_srs: [SRS-EP-15, SRS-EP-16]
 parent_req: [REQ-07]
-status: in-review
+status: done
 priority: P0
 iter: iter-003
 estimate: 3

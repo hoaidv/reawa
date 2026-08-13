@@ -50,18 +50,22 @@ through a drag. It is not pinned chrome.
 
 | id | Control | Region |
 |---|---|---|
-| `ovl.selection_bounds` | Selected box bounds outline | SelectionOverlay |
-| `ovl.resize_handles` | Resize handles — **no rotation handle** | SelectionOverlay |
+| `ovl.selection_bounds` | Selected box bounds outline (SmartGroup) | SelectionOverlay |
+| `ovl.resize_handles` | Resize handles — **no rotation handle** (SmartGroup) | SelectionOverlay |
+| `ovl.marquee` | Thin dotted rubber-band while pen-down+move | SelectionOverlay |
+| `ovl.nodes_bounds` | Thin dotted selection rect = union AABB of selected document nodes | SelectionOverlay |
+| `ovl.select_anchors` | **6** square anchors on `ovl.nodes_bounds` (visual only; events later) | SelectionOverlay |
+| `cta.enclose` | Create Smart Group from selection (Creation B) | SelectionOverlay |
 | `tgl.ink_scale_mode` | `withBounds` ↔ `fixedInk` | SelectionOverlay |
 | `ind.mode_current` | Which mode is active right now | SelectionOverlay |
 | `ind.manipulation_unavailable` | Below the LOD cutoff | SelectionOverlay or ToolChip |
 | `ind.create_refused_no_surround` | Why a selection-create was refused | Transient, near the selection |
 
 No properties panel, no context menu, no handle labels, no z-order controls, no alignment guides.
-`cta.create_smart_group` is **out of scope for v1 chrome** — selection-create exists in logic
-([SRS-EP-10](./srs-logic.md#srs-ep-10-device-recognition)) but has no on-panel invocation this
-campaign ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)
-deferred). Enclose-with-Ink-box remains the create path.
+No fourth ToolChip. `cta.enclose` is **selection-contextual** on SelectionOverlay
+([ADR-0016](../../../../adr/ADR-0016-selection-create-enclose-cta.md) / [CHL-0013](../../../../../.plan/iter-003/challenges/CHL-0013-selection-create-feedback-enclose-cta.md)).
+`cta.create_smart_group` is the logic alias of `cta.enclose`. Enclose-with-Ink-box (Creation A)
+remains a separate path.
 
 ### Box appearance (binding)
 
@@ -80,11 +84,13 @@ them it "failed" would be telling them their ink was a mistake.
 
 | Control | Action | Result | Feedback |
 |---|---|---|---|
-| Box bounds | Pen press, no drag | Select | Bounds + handles appear ≤100 ms |
+| Box bounds | Pen press, no drag | Select SmartGroup | Bounds + handles appear ≤100 ms |
 | Box bounds | Pen press + drag | Move | **The ink moves.** Bounds track the ink at ≥5 Hz |
+| Canvas (selection tool) | Pen-down + move | Marquee | `ovl.marquee` follows tip; on pen-up → `ovl.nodes_bounds` + 6 anchors + `cta.enclose` if selection non-empty |
 | `ovl.resize_handles` | Pen drag on a handle | Resize | Real ink resizes per mode; bounds follow the handle |
 | `tgl.ink_scale_mode` | Pen tap | Swap mode | `ind.mode_current` updates; effect visible on the next resize |
-| Empty canvas | Pen press in `selection` | Deselect | Overlay gone; **0** residual pixels on the next settled frame |
+| `cta.enclose` | Pen or finger tap | Selection-create | Box created, or `sel.create_refused` |
+| Empty canvas | Pen press in `selection` (no drag) | Deselect | Overlay gone; **0** residual pixels on the next settled frame |
 | Another box | Pen press | Move selection | Previous overlay fully cleared before the new one draws |
 | Any | Pen press below the LOD cutoff | Nothing | `ind.manipulation_unavailable` states why |
 
@@ -100,7 +106,11 @@ No hover, no focus, no cursor on this platform — do not design them.
 |---|---|---|---|---|
 | `ovl.selection_bounds` | hidden | drawn on the selected box | — | hidden below the LOD cutoff |
 | `ovl.resize_handles` | hidden | drawn when selected | the dragged handle is distinct | hidden below the LOD cutoff |
-| `tgl.ink_scale_mode` | hidden | drawn when selected; reflects current mode | brief invert | hidden when nothing is selected |
+| `ovl.marquee` | hidden | drawn during pen-down+move marquee | — | — |
+| `ovl.nodes_bounds` | hidden | drawn when ≥1 document node selected via marquee / multi | — | — |
+| `ovl.select_anchors` | hidden | 6 squares on `ovl.nodes_bounds` | — | events deferred — not pressable this campaign |
+| `cta.enclose` | hidden | visible when selection non-empty under Selection tool | brief invert | hidden when selection empty |
+| `tgl.ink_scale_mode` | hidden | drawn when SmartGroup selected; reflects current mode | brief invert | hidden when nothing is selected |
 | `ind.manipulation_unavailable` | hidden | visible below the cutoff | — | — |
 
 ### States matrix
@@ -108,12 +118,14 @@ No hover, no focus, no cursor on this platform — do not design them.
 | State id | InkSurface | SelectionOverlay | Refresh |
 |---|---|---|---|
 | `sel.none` | Document | hidden | — |
-| `sel.selected` | Document | bounds + handles + mode toggle | Partial |
+| `sel.marquee` | Document | `ovl.marquee` follows pen tip | Partial |
+| `sel.nodes_selected` | Document | `ovl.nodes_bounds` + 6 anchors + `cta.enclose` | Partial |
+| `sel.selected` | Document | bounds + handles + mode toggle (SmartGroup) | Partial |
 | `sel.moving` | **Ink following the pen** | bounds tracking the ink | Partial only, ≥5 Hz |
 | `sel.resizing.with_bounds` | **Content scaling with the box** | bounds + active handle | Partial only, ≥5 Hz |
 | `sel.resizing.fixed_ink` | **Content keeping its size, tracking its UV** | bounds + active handle | Partial only, ≥5 Hz |
 | `sel.deselected` | Document | hidden | Settled frame shows **0** residual chrome |
-| `sel.create_refused` | Selection unchanged | `ind.create_refused_no_surround` | Partial |
+| `sel.create_refused` | Selection unchanged | `ind.create_refused_no_surround` (+ selection chrome kept) | Partial |
 | `sel.unavailable` | Document | `ind.manipulation_unavailable` | Partial |
 | `sel.reloaded` | Replaced document | hidden — selection cleared | Sharp |
 
@@ -135,8 +147,10 @@ a creator unable to tell which mode they were resizing in until after they relea
 
 - Drawing chrome so it reads as ink — the creator must never mistake a handle for a stroke, and
   1-bit gives no tint to lean on.
-- A ghost, marquee outline, or any stand-in that moves while the ink stays put. This is the defect
+- A ghost outline that moves while the ink stays put during **move/resize**. This is the defect
   the whole rework removes ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md)).
+  **Exception:** `ovl.marquee` / `ovl.nodes_bounds` are selection chrome, not a stand-in for ink
+  motion ([CHL-0013](../../../../../.plan/iter-003/challenges/CHL-0013-selection-create-feedback-enclose-cta.md)).
 - A rotation handle — the geometry does not support it yet
   ([SRS-EP-11](./srs-logic.md#srs-ep-11-device-manipulation)).
 - A properties panel, or a mode toggle parked on the ToolChip instead of on the selection.
@@ -147,10 +161,13 @@ a creator unable to tell which mode they were resizing in until after they relea
 
 ### Out of scope (UI)
 
-- Multi-select, marquee, enter/exit group, align/distribute, z-order — [REQ-08](../../prd.md#node-manipulation).
+- Align/distribute, enter/exit group, z-order chrome — [REQ-08](../../prd.md#node-manipulation).
+  **Marquee multi-select for Creation B is in scope** ([CHL-0013](../../../../../.plan/iter-003/challenges/CHL-0013-selection-create-feedback-enclose-cta.md)).
 - Rotation affordances of any kind.
 - Connector attachment chrome on a box.
-- Any confirm/accept step for a completed gesture.
+- Any confirm/accept step beyond tapping `cta.enclose`.
+- Drag events on the 6 selection anchors (visual only this campaign).
+- A fourth ToolChip slot.
 
 ### Open (needs design) {#open-needs-design}
 
@@ -159,7 +176,7 @@ a creator unable to tell which mode they were resizing in until after they relea
 | **Handle size and hit tolerance in device units** | **Closed 2026-08-13 (architect).** Visual **28 du**; hit **56 du** (14 du pad beyond visual). 1 du = 1 panel pixel @ 226 dpi. **Not** 8 CSS px. Binding for [STORY-EP-019](../../../../../.plan/iter-003/stories/STORY-EP-019.md). | architect — accepted |
 | **LOD cutoff value on device** | **Closed 2026-08-13 (architect).** Manipulation unavailable when the selected box's **smaller on-panel axis < 96 du**. **Not** `TILE_LOD_SCALE = 0.35`. Binding for EP-019. | architect — accepted |
 | **Undo affordance** | **Deferred this campaign ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)).** No on-panel control; no fourth ToolChip slot; no properties panel. [SRS-EP-07](../device-document/srs-logic.md) ring still ships (EP-015) with no chrome. Hardware / two-finger undo unspecified. | pm + designer — deferred |
-| **Selection-create invocation** | **Deferred this campaign ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)).** `cta.create_smart_group` stays out of v1 chrome. Enclose-with-Ink-box remains the create path. Refuse scene still ships; no invented pen gesture. | pm + designer — deferred |
+| **Selection-create invocation** | **Closed 2026-08-13 ([CHL-0013](../../../../../.plan/iter-003/challenges/CHL-0013-selection-create-feedback-enclose-cta.md) / [ADR-0016](../../../../adr/ADR-0016-selection-create-enclose-cta.md)).** `cta.enclose` on SelectionOverlay; rubber-band + 6 anchors. Design: [STORY-EP-022](../../../../../.plan/iter-003/stories/STORY-EP-022.md). | architect — accepted; designer |
 | **Chrome legibility against dense ink** | 1-bit chrome over handwriting, with no tint or shadow available | designer |
 
 ---

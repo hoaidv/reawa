@@ -11,8 +11,10 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <deque>
+#include <limits>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -156,10 +158,10 @@ struct UndoResult {
  */
 inline bool isStructuralOp(const std::string &type)
 {
-    return type == "append_ink" || type == "create_smart_group" || type == "set_smart_transform"
-        || type == "set_ink_scale_mode" || type == "reparent" || type == "remove_node"
-        || type == "create_frame" || type == "create_group" || type == "create_text"
-        || type == "create_primitive" || type == "create_connector";
+    return type == "append_ink" || type == "create_smart_group" || type == "join_smart_group"
+        || type == "set_smart_transform" || type == "set_ink_scale_mode" || type == "reparent"
+        || type == "remove_node" || type == "create_frame" || type == "create_group"
+        || type == "create_text" || type == "create_primitive" || type == "create_connector";
 }
 
 inline Style defaultStyle()
@@ -288,6 +290,8 @@ public:
                 opCreateConnector(op.payload);
             else if (op.type == "create_smart_group")
                 opCreateSmartGroup(op.payload);
+            else if (op.type == "join_smart_group")
+                opJoinSmartGroup(op.payload);
             else if (op.type == "set_smart_transform")
                 opSetSmartTransform(op.payload);
             else if (op.type == "set_ink_scale_mode")
@@ -838,6 +842,49 @@ private:
         if (mode != "withBounds" && mode != "fixedInk")
             throw std::runtime_error(std::string("bad_ink_scale_mode:") + mode);
         node->inkScaleMode = mode;
+    }
+
+    /**
+     * Reparent free world-space ink into an existing Smart Group as content.
+     * Converts samples to group-local; seeds layoutOffset; does **not** expand bounds.
+     * @implements [SRS-EP-10] join membership
+     */
+    void opJoinSmartGroup(const JsonValue &p)
+    {
+        const std::string inkId = p.getString("inkId");
+        const std::string smartGroupId = p.getString("smartGroupId");
+        DocNode *sg = findMut(smartGroupId);
+        if (!sg || sg->kind != NodeKind::SmartGroup)
+            throw std::runtime_error(std::string("not_smart_group:") + smartGroupId);
+        DocNode detached;
+        if (!detachInk(inkId, &detached))
+            throw std::runtime_error(std::string("join_missing:") + inkId);
+
+        const SmartTransform &t = sg->transform;
+        const double sx = t.scaleX != 0 ? t.scaleX : 1.0;
+        const double sy = t.scaleY != 0 ? t.scaleY : 1.0;
+        for (auto &s : detached.samples) {
+            s.x = (s.x - t.x) / sx;
+            s.y = (s.y - t.y) / sy;
+        }
+        detached.role = "content";
+        // UV vs current local bounds — do not expand bounds (SRS-EP-10)
+        const double w = sg->smartBounds.width != 0 ? sg->smartBounds.width : 1.0;
+        const double h = sg->smartBounds.height != 0 ? sg->smartBounds.height : 1.0;
+        double minX = std::numeric_limits<double>::infinity();
+        double minY = std::numeric_limits<double>::infinity();
+        double maxX = -std::numeric_limits<double>::infinity();
+        double maxY = -std::numeric_limits<double>::infinity();
+        for (const auto &s : detached.samples) {
+            minX = std::min(minX, s.x);
+            minY = std::min(minY, s.y);
+            maxX = std::max(maxX, s.x);
+            maxY = std::max(maxY, s.y);
+        }
+        const double cx = std::isfinite(minX) ? (minX + maxX) / 2.0 : 0.0;
+        const double cy = std::isfinite(minY) ? (minY + maxY) / 2.0 : 0.0;
+        detached.layoutOffset = {(cx - sg->smartBounds.x) / w, (cy - sg->smartBounds.y) / h};
+        sg->children.push_back(std::move(detached));
     }
 
     /** @implements [SRS-EP-07] reparent (device closed set; not shipped as a gesture this story) */

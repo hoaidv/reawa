@@ -5,123 +5,67 @@ track: TRACK-003
 owner: sm
 date: 2026-08-13
 lock: vertical · verified · epaper/{device-document, ink-box, tool-modes} + infini/tablet-sync — re-locked 2026-08-13
-verdict: "W10b Device Log — IN-029 ∥ EP-021 in-review; WAIT USB deploy. EP-016 in-review. No EP-017."
-wave: W10b
+verdict: "W11a NOW — EP-022 design ready (selection-enclose). EP-018 draft until design done. W10 done."
+wave: W11a
 ---
 
 # Execution board — iter-003
 
-**Canonical board** for [TRACK-003](../tracks/TRACK-003-smart-group-pilot.md) — **active, W10b Device Log**.
+**Canonical board** for [TRACK-003](../tracks/TRACK-003-smart-group-pilot.md) — **active, W11a design**.
 
 ## Summary (as of 2026-08-13)
 
 | Band | Count | Meaning |
 |---|---|---|
-| W0–W6 | **done** | Pilot slice at git HEAD — kept as history; its ownership model is withdrawn |
-| W7 verify-fix | **void** | Superseded by CHL-0008 (code restored; no patch wave) |
-| Patch-wave residue | **blocked** | EP-007…011, IN-020…026 — assumed desktop authority |
-| Architecture rework | **done** | ADR-0014, ADR-0015, domain doc, SRS-EP-07…14, BDD, architecture views |
-| W8 | **done** | EP-012 design + EP-013 latency (device pass) |
-| **W9** | **done** | EP-014 tree+ingest (RM2); EP-015 undo ring (host); IN-027 applier |
-| **W10 NOW** | **EP-016 in-review** | enclose host PASS; Device Log W10b so human can inspect |
-| **W10b NOW** | **IN-029 ∥ EP-021 in-review** | Device Log coded; WAIT USB `10.11.99.12` then deploy |
-| CHL-0009 | **resolved** | `srs-logic.md` landed |
-| CHL-0010 | **deferred** | no on-panel undo / no selection-create CTA; EP-018 frozen draft |
+| W0–W9 | **done** | Through undo + tree + applier |
+| **W10** | **done** | EP-016 enclose; EP-017 membership; Device Log |
+| **W11a** | **NOW** | EP-022 design (rubber-band + Enclose CTA) → then EP-018 implement |
+| W11b | planned | EP-019 live manipulation (28/56/96) |
+| W12 | planned | EP-020 ∥ IN-028 |
+| CHL-0013 | **adopted** | selection-create chrome this campaign |
+| CHL-0010 | deferred | undo chrome only (selection-create reopened via 0013) |
+| CHL-0011/0012 | future | nesting; sizing/align |
 
-## Lock (re-locked 2026-08-13, CHL-0008 adopted)
+## Lock
 
 ```
 direction: vertical
 stop_line: verified
 autonomy: bounded
-out_of_scope: backlog
 wip: 2
 modules: epaper, infini
 features: epaper/device-document; epaper/ink-box; epaper/tool-modes; infini/tablet-sync
-personas: /qa then /dev IN-029 ∥ EP-021 (SM auto)
-forbidden: /dev on any story assuming desktop tree authority; mixing debug into :9877;
-           residue EP-007…011 / IN-020…026; EP-017 membership; EP-018; amending ADR-0015
-NOW: Device Log W10b in-review — restart Infini; WAIT USB then deploy EPAPER_DEBUG_LOG=1
-cursor: W10b human inspect via Device Log; EP-016 stays in-review
+personas: /designer EP-022; then /qa→/dev EP-018
+forbidden: /dev EP-018 before EP-022 done; fourth ToolChip; nested enclose; undo chrome invent
+NOW: W11a — STORY-EP-022 ready
+cursor: /designer
 ```
 
 ## Waves
 
 | Wave | Status | Parallel? | What |
 |---|---|---|---|
-| W0–W6 | **done** | — | Shipped at HEAD (pilot model, now withdrawn) |
-| W7 | **void** | — | EP-006 ∥ IN-019 verify-fix — do not pull |
-| Rework design | **done** | — | ADR-0014 + ADR-0015 + domain doc + SRS-EP-07…14 + BDD |
-| **W8** | **done** | — | EP-012 `[UI-EP-02]` + EP-013 latency (RM2 pass) |
-| **W9** | **done** | — | EP-014 **done**; EP-015 **done**; IN-027 **done** |
-| **W10** | **in-review** | serial | Enclose; WAIT human inspect via Device Log |
-| **W10b** | **NOW** | **∥ yes** | IN-029 Infini Device Log ∥ EP-021 Epaper shipper |
-| W11 | planned | serial | EP-019 live manipulation (28/56/96 du locked) + REQ-08 conformance |
-| W12 | planned | **∥ yes** | EP-020 device sync ∥ IN-028 desktop `doc_load` |
-| Frozen | — | — | REQ-08 node-manipulation (next campaign); infini REQ-04 authoring |
+| **W10** | **done** | — | Enclose + membership + Device Log |
+| **W11a** | **NOW** | serial | EP-022 design → EP-018 implement |
+| W11b | planned | after 11a or ∥ if capacity | EP-019 manipulation |
+| W12 | planned | **∥ yes** | EP-020 ∥ IN-028 |
 
-### Parallelism rules (W10b)
+### Parallelism rules (W11a)
 
 | Lane | Story | Package / writes | Conflicts |
 |---|---|---|---|
-| **E** | [STORY-IN-029](./stories/STORY-IN-029.md) | `infini/` Device Log + `:9878` listen | do not edit `epaper/`; do not touch `:9877` decoder |
-| **F** | [STORY-EP-021](./stories/STORY-EP-021.md) | `epaper/` log shipper + `[enclose]` qInfo after ingest | do not edit `recognize_enclose.hpp` guards; do not edit `infini/` |
+| **G** | [STORY-EP-022](./stories/STORY-EP-022.md) | `design/selection-enclose-chrome/` | compose UI-EP-02; no epaper/ code |
+| — | EP-018 | blocked on G | no `/dev` yet |
 
-Lanes E and F may run simultaneously. EP-016 stays `in-review`. Do not flip EP-017.
+## Full task table (delta)
 
-### Current-wave sub-agent roster
-
-| Lane | Agent role | Story | Package / writes | Done when |
+| Id | Feature | Status | Wave | Next owner |
 |---|---|---|---|---|
-| E | qa → dev | [STORY-IN-029](./stories/STORY-IN-029.md) | Device Log overlay + `:9878` | AC green; 0 VectorDocument apply |
-| F | qa → dev | [STORY-EP-021](./stories/STORY-EP-021.md) | worker shipper; `EPAPER_DEBUG_LOG=1` deploy | AC green; 0 I/O on paint/ingestPoint |
-
-## Full task table
-
-| Id | Feature / chore | Pri | Docs | Design story | Status | Wave | Next owner | Parallel group |
-|---|---|---|---|---|---|---|---|---|
-| F-01 | epaper/ink-box chrome | Must | thick | [EP-012](./stories/STORY-EP-012.md) | **done** | W8 | — | A |
-| F-02 | epaper/device-document latency | Must | thick | — | **done** | W8 | — | B |
-| F-03 | epaper/device-document tree | Must | thick | — | **done** | W9 | — | C |
-| F-04 | epaper/device-document undo | Must | thick | — | **done** | W9 | — | C |
-| F-05 | infini/tablet-sync applier | Must | thick | — | **done** | W9 | — | D |
-| F-06 | epaper/ink-box enclose | Must | thick | — | **in-review** | W10 | human inspect via Device Log | C |
-| F-12 | infini Device Log | Must | thick | SRS-IN-18 (no design story) | **in-review** | **W10b** | WAIT USB + human panel check | E |
-| F-13 | epaper log shipper | Must | thick | — | **in-review** | **W10b** | WAIT USB deploy `EPAPER_DEBUG_LOG=1` | F |
-| F-07 | epaper/ink-box membership | Must | thick | — | draft | W10 | `/dev` | — |
-| F-08 | epaper/ink-box selection-create | Must | thick | EP-012 | **frozen draft** | W10 | later campaign (CHL-0010) | — |
-| F-09 | epaper/ink-box manipulation | Must | thick | EP-012 | draft | W11 | `/dev` after EP-016; 28/56/96 locked | — |
-| F-10 | epaper/device-document sync | Must | thick | — | draft | W12 | `/dev` | E |
-| F-11 | infini/tablet-sync `doc_load` | Must | thick | — | draft | W12 | `/dev` | E ∥ |
-| CHL-0008 | architecture rework | — | — | — | resolved / adopted | — | — | — |
-| CHL-0009 | missing srs-logic.md | high | — | — | **resolved / adopted** | W8 | — | — |
-| CHL-0010 | undo vs selection-create chrome | medium | — | — | **deferred** | W8 | — | EP-018 frozen |
-| STORY-EP-006 / IN-019 | verify-fix | — | — | — | done (parked) | W7 void | — | — |
-| EP-007…011, IN-020…026 | residue | — | — | — | blocked | — | — | — |
-
-## Feature matrix
-
-| Feature | Design / pipeline | Next |
-|---|---|---|
-| epaper/ink-box | EP-012 **done**; EP-016 **ready** | `/qa`→`/dev` then **human RM2 draw**; EP-017 stays draft |
-| epaper/device-document | EP-014 **done**; EP-015 **done** (ring, no chrome) | W12 EP-020 |
-| epaper/tool-modes | EP-003/005 done; compose, don't redo | — |
-| infini/tablet-sync | applier **done**; Device Log **in-review** | WAIT USB deploy; then human inspect |
-
-## Residual TBDs (do not block)
-
-| Area | TBD |
-|---|---|
-| Pen miss-rate on 28/56 du handles | EP-019 QA — tune via CHL in du, never 8 CSS px / 0.35 |
-
-## Backlog sink (do not schedule)
-
-- epaper `[REQ-08]` node-manipulation — next campaign
-- Desktop-side ink-box authoring (infini `[REQ-04]`) — until multi-directional sync
-- On-device persistence, CRDT/OT, multi-document
+| F-07 | membership | **done** | W10 | — |
+| F-08 | selection-create | design **ready** / impl draft | **W11a** | `/designer` EP-022 |
+| F-09 | manipulation | draft | W11b | after EP-018 or parallel |
+| CHL-0013 | rubber-band + Enclose | **adopted** | W11a | designer |
 
 ## Verdict
 
-**W10b Device Log in-review.** Host tests PASS. USB `en7` is link-local (no `10.11.99.12`)
-so RM2 deploy did not run. Restart Infini for the Device Log button. EP-016 stays
-**`in-review`**. Do not flip EP-017. Do not mix debug onto `:9877`.
+**Next: `/designer` on EP-022.** After design `done`, SM flips EP-018 → `ready` → `/qa` → `/dev`.

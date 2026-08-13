@@ -4,7 +4,7 @@ title: Device Log panel and :9878 listener
 kind: implement
 parent_srs: [SRS-IN-17, SRS-IN-18, SRS-IN-19]
 parent_req: [REQ-03]
-status: in-review
+status: done
 priority: P0
 iter: iter-003
 estimate: 3

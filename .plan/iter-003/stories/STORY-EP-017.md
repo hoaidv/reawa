@@ -4,7 +4,7 @@ title: "On-device draw-into membership"
 kind: implement
 parent_srs: [SRS-EP-10, SRS-EP-14]
 parent_req: [REQ-05]
-status: draft
+status: done
 priority: P1
 iter: iter-003
 estimate: 3
@@ -38,3 +38,7 @@ BDD: [draw-into-membership.feature](../../../.docs/modules/epaper/features/ink-b
 ## Done when
 
 - `@SRS-EP-10` draw-into scenarios green
+
+**SM 2026-08-13:** W10 auto — host membership fixtures PASS (`membership_test`). Flat join only;
+bounds not expanded; enclose latch never calls membership. Infini `join_smart_group` converts
+world→local for mirror parity. CHL-0011/0012 stay future.

@@ -4,6 +4,7 @@
 #include "latencyprobe/stub_document.hpp"
 #include "document/ingest_stroke.hpp"
 #include "document/recognize_enclose.hpp"
+#include "document/membership.hpp"
 #include "debuglog/debug_log_format.hpp"
 
 #include <QPainter>
@@ -534,12 +535,14 @@ void TabletCanvasItem::ingestCurrentStroke()
         *wy = w.y();
     };
 
-    // Pen (and any non-ink_box latch): ordinary ingest only — never recognize_enclose.
+    // Pen (and any non-ink_box latch): ordinary ingest + draw-into membership.
+    // Never recognize_enclose on this path (SRS-EP-10).
     if (m_strokeArmedTool != QLatin1String("ink_box")) {
         const IngestTiming t = ingestFinishedStrokeTimed(m_document, stroke, map);
         m_ingestNs.push_back(t.ns);
         if (t.result.applied) {
             ++m_ingestApplied;
+            tryDrawIntoMembership(m_document, stroke.id);
             qInfo().noquote() << QString::fromStdString(epaper::debuglog::formatInkLog(stroke.id));
         } else {
             ++m_ingestRejected;

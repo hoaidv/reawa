@@ -58,8 +58,8 @@ stroke means.
 | Candidate shape | Closed or near-closed polyline fitting an axis-aligned rect; **rectangle only** |
 | Fitted bounds | AABB of the enclose stroke samples → `(x, y, width, height)` |
 | Guard — size | Shorter side ≥ `MIN_ENCLOSE_WORLD` = **48 world units** ([ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md) §6, kept by ADR-0014 §7) |
-| Guard — content | ≥1 ink with **≥80%** of its samples inside the fitted rect |
-| Guard — already grouped | Ink whose parent is already a `SmartGroup` is **skipped**; remaining ink still captures |
+| Guard — content | ≥1 **free top-level Ink** with **≥80%** of its samples inside the fitted rect. **Capture inventory this campaign: Ink only.** Smart Group nodes are **not** capturable content ([CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md) — nested enclose is future) |
+| Guard — already grouped | Ink whose parent is already a `SmartGroup` is **skipped**; remaining free ink still captures |
 | Commit | `create_smart_group` immediately — no proposal, no accept step. The enclose stroke becomes `role: boundary` ink; captured ink becomes `role: content` in group-local coordinates; `bounds` = fitted rect; **each content ink seeded with its own `layoutOffset` UV** |
 | Guard fails | **No-op** — the stroke stays ordinary ink. No error state, no banner ([SRS-EP-12](./srs-ui.md)) |
 | Undo | One entry; one undo restores the pre-op tree exactly ([SRS-EP-07](../device-document/srs-logic.md)) |
@@ -70,13 +70,19 @@ outcome — `create_smart_group` — is published.
 
 ### Selection create, surround required — inherited from [SRS-IN-16]
 
+**Invocation (adopted [CHL-0013](../../../../../.plan/iter-003/challenges/CHL-0013-selection-create-feedback-enclose-cta.md) /
+[ADR-0016](../../../../adr/ADR-0016-selection-create-enclose-cta.md)):** runs only when the creator
+activates `cta.enclose` on SelectionOverlay — never from pen-up alone.
+
 | Step | Rule |
 |---|---|
-| Input | ≥2 selected `Ink` nodes (or ≥1 content + 1 candidate surround) |
-| Surround candidate | For each selected stroke `S`, build an **artificial closed path** if `S` is open (append edge first→last **for the test only** — never mutate stored samples). Point-in-polygon uses the **even-odd** fill rule. A candidate qualifies when ≥80% of the samples of **every other** selected ink lie inside |
+| Select (marquee) | `selection` tool armed. Pen-down + move on the canvas draws a **rubber-band** (axis-aligned, thin dotted) that follows the pen tip. On pen-up, every document node whose **world AABB intersects** the rubber-band AABB is added to the selection set (see [SRS-EP-11](./srs-logic.md#srs-ep-11-device-manipulation) pickable set for marquee). |
+| Select (feedback) | Selection chrome: thin dotted **selection rect** = union AABB of selected nodes; **6 square anchors** on that rect (visual only this campaign — no anchor drag events yet). |
+| Input for create | Free top-level `Ink` nodes in the selection (≥2), or ≥1 content-role ink + 1 candidate surround ink. **SmartGroup in selection → refuse** (no nesting — [CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)). Non-ink non-SG selected nodes are ignored by the surround algorithm (not captured). |
+| Surround candidate | For each selected free ink `S`, build an **artificial closed path** if `S` is open (append edge first→last **for the test only** — never mutate stored samples). Point-in-polygon uses the **even-odd** fill rule. A candidate qualifies when ≥80% of the samples of **every other** selected free ink lie inside |
 | Winner | The qualifying candidate; if several qualify, the highest paint/z order (later sibling) |
 | Commit | Winner → `role: boundary`; others → `role: content` in group-local coords; `bounds` = fitted AABB of the winner; each content ink seeded with its `layoutOffset` UV |
-| Refuse | No qualifying surround → **do not create**; selection unchanged; the reason is visible ([SRS-EP-12](./srs-ui.md) refuse state) |
+| Refuse | No qualifying surround, or SmartGroup in selection → **do not create**; selection unchanged; reason visible ([SRS-EP-12](./srs-ui.md) refuse state) |
 | Undo | One entry |
 
 There is no AABB-only Smart Group from a selection: a box always has boundary ink the creator drew.
@@ -94,8 +100,14 @@ Runs at pen-up for ordinary ink (`pen` armed). **Never** runs on an enclose stro
 | One | Reparent as `role: content` (samples → group-local); **seed that ink's `layoutOffset` UV** from its AABB centroid within the current bounds |
 | Several (incl. nested) | Highest paint/z order wins — tree sibling order, later siblings win. **No dual parent**, no z-index field |
 | Layout | Do **not** translate, scale, or reflow any existing content ink; new ink stays as drawn |
-| Bounds | `SmartGroup` bounds are **not** expanded by membership |
+| Bounds | `SmartGroup` bounds are **not** expanded by membership (**this campaign**). Auto-expand on draw-into is **future** under sizing `WRAP_CONTENT` only — [CHL-0012](../../../../../.plan/iter-003/challenges/CHL-0012-inkbox-sizing-align.md) |
 | Undo | One entry |
+
+### Sizing / align (out of this campaign)
+
+Shipping policy remains `inkScaleMode`: `withBounds` | `fixedInk` ([ADR-0011](../../../../adr/ADR-0011-smart-group.md)).
+**Not** in this campaign: box sizing `FREE_FORM` | `WRAP_CONTENT`, or `align-content`
+TOP|RIGHT|BOTTOM|LEFT for content-ink. See [CHL-0012](../../../../../.plan/iter-003/challenges/CHL-0012-inkbox-sizing-align.md).
 
 ### `layoutOffset` + `fixedInk` draw rule (locked, inherited)
 
@@ -137,7 +149,8 @@ real ink; `set_smart_transform` publishes at pen-up as a consequence
 
 | Rule | Value |
 |---|---|
-| Pickable set | `SmartGroup` nodes, resolved against world `bounds` after transform |
+| Pickable set (single press) | `SmartGroup` nodes, resolved against world `bounds` after transform |
+| Pickable set (marquee / rubber-band) | Any document node with a world AABB: free `Ink`, `SmartGroup`, `Text`, `Primitive`, `Frame` (and `Group` union of children). **Not** ToolChip chrome. Ink that is already a child of a SmartGroup is **not** independently marquee-selected (parent SmartGroup may be) |
 | Resolution order | Topmost first — later siblings paint above, so they pick first |
 | Hit region | Inside `bounds`, plus a handle tolerance band when selected: visual **28 du**, hit **56 du** (14 du pad beyond visual). 1 du = 1 panel pixel @ 226 dpi. **Not** 8 CSS px |
 | Source | The **local document** — never a peer-supplied list |
@@ -158,16 +171,18 @@ inherited as written.
 
 | Gesture | Precondition | Result |
 |---|---|---|
-| Press inside bounds + drag | at/above LOD cutoff | **Move** — the real ink follows the pen; `set_smart_transform` translate on release |
-| Press, no drag | at/above LOD cutoff | **Select** — handles appear on geometric `bounds` |
-| Drag a handle | node selected | **Resize** — bounds follow the handle; `withBounds` scales content, `fixedInk` preserves each content ink's UV (draw rule above) |
-| Toggle `inkScaleMode` | node selected | `set_ink_scale_mode` |
+| Press inside SmartGroup bounds + drag | at/above LOD cutoff; not starting a marquee | **Move** — the real ink follows the pen; `set_smart_transform` translate on release |
+| Press, no drag | at/above LOD cutoff on a SmartGroup | **Select** — handles appear on geometric `bounds` |
+| Pen-down + move (marquee) | `selection` tool; press not on a SmartGroup handle / not claiming a move | **Rubber-band** — thin dotted AABB follows pen tip; on pen-up, select intersecting document nodes; show selection rect + **6** anchors |
+| Drag a handle | SmartGroup selected (manipulation chrome) | **Resize** — bounds follow the handle; `withBounds` scales content, `fixedInk` preserves each content ink's UV (draw rule above) |
+| Toggle `inkScaleMode` | SmartGroup selected | `set_ink_scale_mode` |
+| Tap `cta.enclose` | Selection non-empty | Run selection-create ([SRS-EP-10](./srs-logic.md#srs-ep-10-device-recognition)); refuse path if no surround / SmartGroup in set |
 | Press empty canvas | — | Deselect; **0** residual chrome on the next settled frame (CHL-0007) |
 | Press another pickable | — | Selection moves to that node |
 
-**Out of scope:** rotation handles and connector attachment to a `SmartGroup`. Anchor resolution
-computes a world AABB for translate + scale only, so exposing rotation would resolve connector ports
-incorrectly — the anchor math lands first, in [REQ-08](../../prd.md#node-manipulation).
+**Out of scope:** rotation handles and connector attachment to a `SmartGroup`. Anchor **events** on
+the 6 selection anchors (drag-to-resize the marquee selection) — later; chrome is visual only for
+EP-018. Anchor resolution for connectors lands in [REQ-08](../../prd.md#node-manipulation).
 
 ### Live manipulation — the rule the pilot did not have
 
@@ -200,7 +215,7 @@ than bespoke ones ([node-manipulation srs-product](../node-manipulation/srs-prod
 | Contract | This iter's obligation |
 |---|---|
 | Capability descriptor | `SmartGroup` declares exactly `{select, move, resize, set-ink-scale-mode}`. **0** hard-coded "if SmartGroup" branches in the gesture router |
-| Selection model | One selection holder, node-kind agnostic; multi-select is absent, not architecturally excluded |
+| Selection model | One selection holder, node-kind agnostic; **marquee multi-select adopted** for Creation B ([CHL-0013](../../../../../.plan/iter-003/challenges/CHL-0013-selection-create-feedback-enclose-cta.md)) — not full REQ-08 align/distribute |
 | Gizmo geometry | Bounds + handles computed from a node-kind-agnostic bounds provider |
 | Transform envelope | Carries a **reserved `rotation` field**, always unset this iter; nothing may assume it cannot be set |
 

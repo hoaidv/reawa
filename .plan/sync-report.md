@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-13T15:09:44+00:00
+generated_at: 2026-08-13T16:50:01+00:00
 ---
 
 # Sync Report
@@ -32,8 +32,6 @@ generated_at: 2026-08-13T15:09:44+00:00
 | [SRS-EP-16] | epaper |
 | [SRS-IN-05] | infini |
 | [SRS-IN-06] | infini |
-| [SRS-IN-17] | infini |
-| [SRS-IN-18] | infini |
 | [SRS-IN-19] | infini |
 
 ## BDD coverage by SRS
@@ -53,8 +51,8 @@ generated_at: 2026-08-13T15:09:44+00:00
 | [SRS-EP-12] | 0 | missing |
 | [SRS-EP-13] | 0 | missing |
 | [SRS-EP-14] | 0 | missing |
-| [SRS-EP-15] | 0 | missing |
-| [SRS-EP-16] | 0 | missing |
+| [SRS-EP-15] | 9 | covered |
+| [SRS-EP-16] | 5 | covered |
 | [SRS-IN-01] | 6 | covered |
 | [SRS-IN-02] | 4 | covered |
 | [SRS-IN-03] | 3 | covered |
@@ -71,9 +69,9 @@ generated_at: 2026-08-13T15:09:44+00:00
 | [SRS-IN-14] | 0 | missing |
 | [SRS-IN-15] | 4 | covered |
 | [SRS-IN-16] | 4 | covered |
-| [SRS-IN-17] | 0 | missing |
-| [SRS-IN-18] | 0 | missing |
-| [SRS-IN-19] | 0 | missing |
+| [SRS-IN-17] | 12 | covered |
+| [SRS-IN-18] | 8 | covered |
+| [SRS-IN-19] | 4 | covered |
 | [SRS-RW-01] | 0 | missing |
 | [SRS-RW-02] | 0 | missing |
 | [SRS-RW-03] | 0 | missing |

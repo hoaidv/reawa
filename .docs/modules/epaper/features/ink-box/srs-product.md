@@ -34,7 +34,7 @@ the final say. This feature removes both.
 |---|---|
 | Enclose recognition on the device (rect-only, guarded) | OCR / handwriting-to-Text; "is this text?" gating |
 | Selection-create from a surround stroke | AABB-only grouping with no boundary ink |
-| Draw-into membership for existing boxes | In-box alignment, reflow, auto-padding |
+| Draw-into membership for existing boxes | In-box alignment, reflow, auto-padding; sizing `FREE_FORM`/`WRAP_CONTENT`; `align-content` ([CHL-0012](../../../../../.plan/iter-003/challenges/CHL-0012-inkbox-sizing-align.md)) |
 | Select, move, resize, `inkScaleMode` toggle, deselect | **Rotation**, connector attachment — [REQ-08](../../prd.md#node-manipulation) |
 | Live direct manipulation of real ink | Advisory ghosts / outline stand-ins corrected later |
 | One undoable entry per gesture | Redo, per-sample undo |
@@ -79,6 +79,8 @@ the final say. This feature removes both.
 | Enclose stroke below the minimum size | Same — treated as ordinary ink (protects small annotations) |
 | Enclose stroke drawn in `Pen` mode | Ordinary ink, always; never grouped retroactively |
 | Enclose captures ink already inside another box | Ink with an existing Smart Group parent is skipped; the rest is captured |
+| Enclose around an existing Smart Group (nested box) | **Out of this campaign** — Smart Groups are not capturable content; flat free-ink enclose only ([CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)) |
+| `FREE_FORM` / `WRAP_CONTENT` sizing or `align-content` | **Out of this campaign** — [CHL-0012](../../../../../.plan/iter-003/challenges/CHL-0012-inkbox-sizing-align.md); shipping stays `inkScaleMode` + non-expanding membership |
 | Consecutive encloses in quick succession | Each is independent and correct; no shared state carries between them (CHL-0007 regression) |
 | Selection create with no surround stroke | Refused; selection unchanged; the UI states the reason |
 | Selection create with an open surround stroke | Artificial closed path used for the ≥80% test; the open stroke is preserved as `boundary` samples |

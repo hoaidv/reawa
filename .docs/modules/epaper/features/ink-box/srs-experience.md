@@ -98,12 +98,15 @@ somewhere else, or ink that settles somewhere other than where the hand released
 ### Journey: `journey.device_select_create` — Promote a selection that already has a frame
 
 - **Realizes:** [REQ-05](../../prd.md#device-ink-box) creation B; BR-B06
+- **Chrome:** [ADR-0016](../../../../adr/ADR-0016-selection-create-enclose-cta.md)
 
 | Step | Beat | In-scene state | Notes |
 |---|---|---|---|
-| 1 | Taps `Selection` and picks ink that includes a stroke drawn around the rest | `tool.selection.multi` | Open surround stroke is fine |
-| 2 | Invokes Smart Group | `tool.selection.create_pending` | |
-| 3 | The surrounding stroke becomes the frame; the rest becomes content | `tool.selection.selected` | ±1 px bounds fidelity |
+| 1 | Taps `Selection` | `tool.selection` | |
+| 2 | Pen-down + move — thin dotted rubber-band follows tip | `sel.marquee` | |
+| 3 | Pen-up — dotted rect around selected document nodes + 6 anchors; Enclose visible | `sel.nodes_selected` | Not ink-only |
+| 4 | Taps **Enclose** | `tool.selection.create_pending` | Explicit CTA — no silent invent |
+| 5 | Surround stroke becomes the frame; the rest becomes content | `sel.selected` | ±1 px bounds fidelity |
 
 ---
 
@@ -121,8 +124,8 @@ somewhere else, or ink that settles somewhere other than where the hand released
 
 | Step | Beat | In-scene state | Notes |
 |---|---|---|---|
-| 1 | Creator selects scattered ink with no stroke around it and invokes Smart Group | `tool.selection.multi` | |
-| 2 | Creation is refused and the reason is visible | `tool.selection.create_refused` | Selection unchanged; **no** AABB-only box |
+| 1 | Creator rubber-band selects scattered ink with no stroke around it and taps **Enclose** | `sel.nodes_selected` | |
+| 2 | Creation is refused and the reason is visible | `sel.create_refused` | Selection unchanged; **no** AABB-only box |
 | 3 | They draw a frame around it with `Ink-box` instead | `tool.ink_box.armed` | The refusal teaches the working path |
 
 ### Journey: `journey.device_edit.alt_offline` — Working with the link down

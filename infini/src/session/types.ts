@@ -136,6 +136,7 @@ export function isInfiniStructureOp(opType: string): boolean {
     opType === "insert_node" ||
     opType === "reparent" ||
     opType === "remove_node" ||
+    opType === "join_smart_group" ||
     opType === "set_smart_transform" ||
     opType === "set_ink_scale_mode" ||
     opType === "recognize_enclose"

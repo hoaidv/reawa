@@ -166,12 +166,17 @@ viewed at scale, and saved.
   enclose stroke is kept as `role: boundary` ink, contained ink is reparented as `role: content`,
   and `bounds` is the fitted rect. Guards: the fitted rect must be ≥ a fixed minimum size **and**
   contain ≥1 ink — otherwise the stroke stays ordinary ink. Enclosure is **rectangle-only**.
-- **Creation B — selection (explicit).** In `Selection` mode the creator selects ink and invokes
-  Smart Group. The device must find **one stroke among the selection** that surrounds almost all of
-  the other selected ink (≥80% of each other stroke's samples inside that surround stroke's region).
-  The surround stroke may be **open**; the device builds an **artificial closed path** from it for
-  the containment test only. **If no such surround stroke exists, creation is refused** with a
-  visible reason — no AABB-only Smart Group.
+- **Creation B — selection (explicit).** In `Selection` mode the creator rubber-band selects
+  **document nodes** (visible feedback: thin dotted boundary while dragging; on pen-up a thin
+  dotted selection rect + **6 square anchors**). They invoke Smart Group via an on-panel
+  **Enclose** control on the selection overlay ([ADR-0016](../../adr/ADR-0016-selection-create-enclose-cta.md)
+  — not a fourth tool chip). The device must find **one stroke among the selected free ink** that
+  surrounds almost all of the other selected free ink (≥80% of each other stroke's samples inside
+  that surround stroke's region). The surround stroke may be **open**; the device builds an
+  **artificial closed path** from it for the containment test only. **If no such surround stroke
+  exists, creation is refused** with a visible reason — no AABB-only Smart Group. If the selection
+  includes a Smart Group, Enclose is refused this campaign (no nesting —
+  [CHL-0011](../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)).
 - **Appearance.** A Smart Group always has boundary ink after a successful create. The creator's
   surround stroke is the visual frame — never a synthetic ink rectangle.
 - **Draw into an existing box.** When the creator draws with `Pen` and ≥80% of the new stroke's
@@ -189,13 +194,18 @@ viewed at scale, and saved.
 - Given the same gesture over empty canvas, or a fitted rect below the minimum size, or the `Pen`
   tool, When the stroke ends, Then no Smart Group is created and the stroke remains ordinary ink
   (0 creations on the negative fixture set).
-- Given the `Selection` tool and selected ink that includes a surround stroke containing ≥80% of
-  each other selected stroke's samples (open stroke OK), When the creator invokes Smart Group, Then
+- Given the `Selection` tool, When the creator pens down and moves, Then a thin dotted rubber-band
+  follows the pen tip; on pen-up a thin dotted selection rect appears around the selected document
+  nodes with **6** square anchors, and an **Enclose** control is available on the selection overlay.
+- Given the `Selection` tool and selected free ink that includes a surround stroke containing ≥80% of
+  each other selected stroke's samples (open stroke OK), When the creator taps **Enclose**, Then
   a Smart Group is created with that stroke as `boundary`, the others as `content`, and `bounds`
   from the surround stroke's fitted rect (±1 px @ 100% zoom).
-- Given selected ink with **no** surround stroke at the ≥80% bar, When the creator invokes Smart
-  Group, Then no Smart Group is created (0 creations on the negative fixture set), the selection is
+- Given selected ink with **no** surround stroke at the ≥80% bar, When the creator taps **Enclose**,
+  Then no Smart Group is created (0 creations on the negative fixture set), the selection is
   unchanged, and the UI states the reason.
+- Given a selection that includes a Smart Group, When the creator taps **Enclose**, Then creation is
+  refused (0 nested boxes this campaign) and the reason is visible.
 - Given the `Pen` tool and an existing Smart Group, When the creator draws a stroke with ≥80% of
   samples inside that box's world bounds, Then the stroke becomes `role: content` of that box within
   300 ms and no other content ink is translated or reflowed.
@@ -375,6 +385,19 @@ viewed at scale, and saved.
 - **Automatic (unprompted) ink-box creation** — every Smart Group comes from an explicit tool mode or
   an explicit selection command.
 - Non-rectangular enclosure shapes (ellipse, lasso) — `bounds` is axis-aligned.
+- **Nested enclose (Smart Groups capturing other Smart Groups)** — this campaign's enclose captures
+  **free top-level ink only**. Capturing whole ink-boxes as content (nested ink-boxes) is adopted
+  product intent for a **later campaign** —
+  [CHL-0011](../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md). Draw-into
+  membership into an existing box (flat parent) remains in [REQ-05](#device-ink-box) now.
+- **Ink-box sizing `FREE_FORM` / `WRAP_CONTENT` and `align-content`** — adopted product intent for a
+  **later campaign** ([CHL-0012](../../../.plan/iter-003/challenges/CHL-0012-inkbox-sizing-align.md)):
+  - `FREE_FORM`: w/h required (first create from boundary-ink); optional `align-content`
+    TOP|RIGHT|BOTTOM|LEFT for **content-ink** only (not boundary).
+  - `WRAP_CONTENT`: w/h from content-ink; no `align-content`; bounds may **auto-expand** on
+    draw-into.
+  - This campaign keeps `inkScaleMode` (`withBounds` | `fixedInk`) only; membership does **not**
+    expand bounds; no content align/reflow.
 - A general on-device tool palette — the toolbar is exactly the three tools in
   [REQ-03](#tool-modes); no brushes, colors, layers, or document browser.
 - Production use of `regionsync/` `append_ink` NetSink until wired into the Qt binary

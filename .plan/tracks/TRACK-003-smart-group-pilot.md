@@ -4,7 +4,7 @@ slug: smart-group-pilot
 kind: planned
 status: active
 iter: iter-003
-cursor: "W10b Device Log — IN-029 ∥ EP-021 in-review; WAIT USB deploy; EP-016 stays in-review"
+cursor: "W11a — EP-022 design ready → /designer; EP-018 waits; W10 done"
 goal: "Ink-box rework: epaper REQ-04…REQ-07 (device owns the document) + infini REQ-03 one-way sync"
 owner: sm
 ---
@@ -28,14 +28,15 @@ Pilot ADRs [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md) (semantics) and
 | [STORY-EP-014](../iter-003/stories/STORY-EP-014.md) | implement | **done** | W9 — RM2 ingest p95=231 µs; arrival→flush 1392 µs |
 | [STORY-EP-015](../iter-003/stories/STORY-EP-015.md) | implement | **done** | W9 — snapshot ring depth 20; no chrome (CHL-0010) |
 | [STORY-IN-027](../iter-003/stories/STORY-IN-027.md) | implement | **done** | W9 — desktop applier; WorldLayer from mirror |
-| [STORY-EP-016](../iter-003/stories/STORY-EP-016.md) | implement | **in-review** | W10 — enclose; WAIT human draw (use Device Log) |
-| [STORY-IN-029](../iter-003/stories/STORY-IN-029.md) | implement | **in-review** | W10b — Infini Device Log panel + `:9878` |
-| [STORY-EP-021](../iter-003/stories/STORY-EP-021.md) | implement | **in-review** | W10b — Epaper log shipper; `[enclose]` qInfo after ingest |
-| [STORY-EP-017](../iter-003/stories/STORY-EP-017.md) | implement | **draft** | W10 — membership |
-| [STORY-EP-018](../iter-003/stories/STORY-EP-018.md) | implement | **draft (frozen)** | CHL-0010 deferred — enclose is the create path |
-| [STORY-EP-019](../iter-003/stories/STORY-EP-019.md) | implement | **draft** | W11 — 28/56/96 du locked; after EP-016 |
+| [STORY-EP-016](../iter-003/stories/STORY-EP-016.md) | implement | **done** | W10 — enclose; human PASS 2026-08-13 |
+| [STORY-IN-029](../iter-003/stories/STORY-IN-029.md) | implement | **done** | W10b — Device Log; human accepted |
+| [STORY-EP-021](../iter-003/stories/STORY-EP-021.md) | implement | **done** | W10b — log shipper; human accepted |
+| [STORY-EP-017](../iter-003/stories/STORY-EP-017.md) | implement | **done** | W10 — draw-into membership (host PASS) |
+| [STORY-EP-022](../iter-003/stories/STORY-EP-022.md) | design | **ready** | W11a — rubber-band + 6 anchors + Enclose CTA |
+| [STORY-EP-018](../iter-003/stories/STORY-EP-018.md) | implement | **draft** | waits EP-022; CHL-0013 adopted |
+| [STORY-EP-019](../iter-003/stories/STORY-EP-019.md) | implement | **draft** | W11b — 28/56/96 du locked |
 | [STORY-EP-020](../iter-003/stories/STORY-EP-020.md) | implement | **draft** | W12 — device sync |
-| [STORY-IN-028](../iter-003/stories/STORY-IN-028.md) | implement | **draft** | W12 — desktop `doc_load` handshake |
+| [STORY-IN-028](../iter-003/stories/STORY-IN-028.md) | implement | **draft** | W12 — desktop `doc_load` |
 
 Pilot stories (IN-010…019, EP-003…006) remain **done** as history. Residue EP-007…011 / IN-020…026 stays **blocked** — not re-sliced (desktop ink-box authoring is out; device behaviour is the new ids above).
 
@@ -84,3 +85,8 @@ Pilot stories (IN-010…019, EP-003…006) remain **done** as history. Residue E
 | 2026-08-13 | EP-016 **in-review** — host PASS (enclose + fixtures 100% vs Infini). Non-synth epaper pid 5532 on RM2. **STOP** for human draw. EP-017 draft. |
 | 2026-08-13 | Human: Device Log (option 2, `:9878`) before continuing W10. Architect SRS-IN-17…19 / SRS-EP-15…16. SM sliced IN-029 ∥ EP-021 **ready**. No designer (needs_design: false). |
 | 2026-08-13 | W10b **in-review** — Infini overlay + `:9878`; Epaper worker shipper + `[enclose]` qInfo. Host tests PASS. RM2 deploy WAIT (`en7` link-local, no `10.11.99.12`). EP-016 stays in-review. |
+| 2026-08-13 | PM **CHL-0011 Adopt → future** — nested enclose (Smart Groups as content) out of this campaign. |
+| 2026-08-13 | Human enclose PASS → EP-016 **done**. SM continues W10: EP-017 membership **ready** (flat only). |
+| 2026-08-13 | PM **CHL-0012 Adopt → future** — FREE_FORM / WRAP_CONTENT sizing + align-content. EP-017 unchanged. |
+| 2026-08-13 | W10 auto — Device Log **done** (human accept). EP-017 membership **done** (host PASS). Opened CHL-0013 for EP-018 UX → `/pm`. |
+| 2026-08-13 | CHL-0013 **Adopted**; ADR-0016; SRS thickened; EP-022 design **ready**. Cursor → `/designer`. |
