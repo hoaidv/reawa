@@ -1,11 +1,14 @@
 ---
 id: CHL-0009
 title: device-document srs-logic.md is missing (SRS-EP-07 / SRS-EP-08)
-status: open
+status: resolved
+resolution: adopted
 severity: high
 raised_by: sm
+resolved_by: pm
 iter: iter-003
 date: 2026-08-13
+resolved: 2026-08-13
 related: [REQ-04, REQ-07, SRS-EP-07, SRS-EP-08, ADR-0014, ADR-0015]
 expedite: false
 interrupts_track: ""
@@ -34,11 +37,19 @@ Architect authors `device-document/srs-logic.md` with `[SRS-EP-07]` and `[SRS-EP
 
 ## Resolution
 
-<!-- PM fills after triage: adopted | deferred | rejected -->
+**Adopted** 2026-08-13 by PM.
+
+Completeness gap, not a product-direction change. IDs `[SRS-EP-07]` / `[SRS-EP-08]` were already assigned in the 2026-08-13 architect handoff; the file was never written. Product, data, quality, BDD, and infini tablet-sync already bind to those headings.
+
+- **No PRD rewrite.** REQ-04 / REQ-07 and BR-D01…D12 stand.
+- **No new ids.** Architect authors the missing file with the already-assigned headings.
+- **Not an interrupt** (`expedite: false`). TRACK-003 continues on W8 (EP-012 ∥ EP-013).
+- SM may flip EP-014 / EP-015 / EP-020 from `blocked` → `draft` after the file lands; `ready` still waits on EP-013 pass. PM does not flip story statuses.
 
 ## Product doc updates
 
-<!-- Architect: add `.docs/modules/epaper/features/device-document/srs-logic.md` -->
+- Created [`.docs/modules/epaper/features/device-document/srs-logic.md`](../../../.docs/modules/epaper/features/device-document/srs-logic.md) with `[SRS-EP-07]` `{#srs-ep-07-device-document}` and `[SRS-EP-08]` `{#srs-ep-08-one-way-sync}`. No new ids.
+- Feature [index.md](../../../.docs/modules/epaper/features/device-document/index.md) Logic links now point at those anchors.
 
 ## Interrupt / expedite (when applicable)
 

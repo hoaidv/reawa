@@ -287,6 +287,23 @@ Our own code costs ~0.3 ms of the budget, so the remaining latency is input
 plumbing, scene-graph render, and SWTCON waveform time. Further gains must come
 from those, not from the ink layer.
 
+### Resident-document probe (STORY-EP-013 / SRS-EP-13)
+
+Does **not** ship a document tree. Behind `RM_DOC_PROBE=1` the ingest path holds a
+500-node / 50k-sample stub and hit-tests on pen-down. `paint()` is unchanged.
+Host numbers and the device protocol live in
+[STORY-EP-013](../.plan/iter-003/stories/STORY-EP-013.md).
+
+```bash
+# Device-runnable (synthetic strokes, then exit):
+RM_INK_TRACE=1 RM_DOC_PROBE=1 RM_DOC_PROBE_SYNTH=1 ./scripts/deploy-rm2.sh --build
+ssh root@10.11.99.1 'sleep 2; grep -E "ink-trace|doc-probe" /tmp/epaper.log'
+
+# Or draw by hand, then dump:
+RM_INK_TRACE=1 RM_DOC_PROBE=1 ./scripts/deploy-rm2.sh --build
+ssh root@10.11.99.1 'killall -TERM epaper; sleep 1; grep -E "ink-trace|doc-probe" /tmp/epaper.log'
+```
+
 ---
 
 ## 6. How to run / measure

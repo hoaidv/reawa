@@ -148,7 +148,7 @@ somewhere else, or ink that settles somewhere other than where the hand released
 |---|---|---|---|
 | 1 | A box was created around the wrong strokes, or a drag went too far | any | |
 | 2 | Creator undoes once | `undo.applied` | Exactly one gesture reverts |
-| 3 | The document is back to the previous state, ±1 px | previous state | **Affordance for undo is an open question** — see REQ-04 Open Questions |
+| 3 | The document is back to the previous state, ±1 px | previous state | **No on-panel undo chrome this campaign** ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md) deferred); ring still ships (EP-015) |
 
 ---
 
@@ -178,7 +178,7 @@ somewhere else, or ink that settles somewhere other than where the hand released
 | Enter/exit a box to edit its children as a sub-scene | Defer | [REQ-08](../../prd.md#node-manipulation) |
 | Ellipse or lasso enclosure | Reject (this campaign) | epaper PRD Non-Goals |
 | Aligning writing inside the box | Reject (this campaign) | epaper PRD Non-Goals |
-| A fourth tool for undo | Open | REQ-04 Open Questions — pm + designer |
+| A fourth tool for undo | Defer (this campaign) | [CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md) — EP-015 ships the ring with no chrome |
 | Confirmation dialog before creating a box | Reject | BR-B09 — best-effort + undo, no modals on e-ink |
 
 ---

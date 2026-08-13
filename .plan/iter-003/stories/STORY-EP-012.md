@@ -4,7 +4,7 @@ title: "Design device selection overlay and manipulation chrome"
 kind: design
 parent_srs: [SRS-EP-12]
 parent_req: [REQ-05, REQ-06]
-status: ready
+status: done
 priority: P0
 iter: iter-003
 estimate: 5
@@ -19,9 +19,18 @@ acceptance_criteria:
   - "Given 1-bit dense handwriting, When chrome sits on ink, Then handles and bounds remain distinguishable from strokes without tint or shadow."
   - "Given ui-spec-gate, When run, Then hi-fi scenes + Spec pass; ToolChip is composed from EP-003, not redesigned; no rotation handle, no properties panel."
 design_package: ".plan/iter-003/design/device-selection-chrome/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-003/design/device-selection-chrome/ui-spec.md"
+scenes:
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-none.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-selected.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-moving.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-resizing-with-bounds.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-resizing-fixed-ink.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-deselected.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-create-refused.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-unavailable.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-reloaded.html"
+hifi: ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-selected.html"
 wireframe: ""
 ---
 

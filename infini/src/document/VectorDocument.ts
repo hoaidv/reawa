@@ -43,6 +43,11 @@ export class VectorDocument {
   path?: string;
   errorMessage?: string;
   rootChildren: DocNode[] = [];
+  /**
+   * Gap / unknown-op flag. A suspect mirror must not be serialized.
+   * @implements [SRS-IN-07] suspect mirror must not be saved
+   */
+  mirrorSuspect = false;
 
   private appliedOpIds = new Set<string>();
 
@@ -90,7 +95,26 @@ export class VectorDocument {
     this.appliedOpIds.clear();
     this.status = "open";
     this.errorMessage = undefined;
+    this.mirrorSuspect = false;
     this.refreshConnectors();
+  }
+
+  /**
+   * Persistence must refuse a gapped / unknown-op mirror.
+   * @implements [SRS-IN-07] do not save a suspect mirror
+   */
+  canSave(): boolean {
+    return !this.mirrorSuspect;
+  }
+
+  markSuspect(reason: string): void {
+    this.mirrorSuspect = true;
+    this.status = "error";
+    this.errorMessage = reason;
+  }
+
+  hasAppliedOpId(opId: string): boolean {
+    return this.appliedOpIds.has(opId);
   }
 
   /**
@@ -129,10 +153,21 @@ export class VectorDocument {
           this.opJoinSmartGroup(op.payload);
           break;
         case "set_smart_transform":
+        case "set_smart_group_transform":
           this.opSetSmartTransform(op.payload);
           break;
         case "set_ink_scale_mode":
           this.opSetInkScaleMode(op.payload);
+          break;
+        case "reparent":
+          this.opReparent(op.payload);
+          break;
+        case "remove":
+        case "remove_node":
+          this.opRemove(op.payload);
+          break;
+        case "restore_snapshot":
+          this.opRestoreSnapshot(op.payload);
           break;
         case "translate_node":
           this.opTranslateNode(op.payload);
@@ -397,6 +432,156 @@ export class VectorDocument {
       default:
         throw new Error(`cannot_translate:${node.kind}`);
     }
+  }
+
+  /**
+   * Move a node to a new parent (draw-into membership / tree edit).
+   * @implements [SRS-IN-07] reparent transmit op
+   */
+  private opReparent(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    const newParentId =
+      p.newParentId == null || p.newParentId === ""
+        ? undefined
+        : String(p.newParentId);
+    const index = typeof p.index === "number" ? p.index : undefined;
+    if (newParentId === id) throw new Error(`reparent_cycle:${id}`);
+    if (newParentId && this.isUnder(id, newParentId)) {
+      throw new Error(`reparent_cycle:${id}->${newParentId}`);
+    }
+    const detached = this.detachNode(id);
+    if (!detached) throw new Error(`reparent_missing:${id}`);
+    this.insertAt(newParentId, detached, index);
+    this.dissolveEmptySmartGroups();
+  }
+
+  /**
+   * Delete a node. Empty SmartGroups dissolve (domain invariant).
+   * @implements [SRS-IN-07] remove transmit op
+   */
+  private opRemove(p: Record<string, unknown>): void {
+    const id = String(p.id);
+    const detached = this.detachNode(id);
+    if (!detached) throw new Error(`remove_missing:${id}`);
+    this.dissolveEmptySmartGroups();
+  }
+
+  /**
+   * Wholesale replace — how device undo publishes.
+   * @implements [SRS-IN-07] restore_snapshot transmit op
+   */
+  private opRestoreSnapshot(p: Record<string, unknown>): void {
+    const raw = p.document ?? p;
+    let nodes: DocNode[] | undefined;
+    if (Array.isArray(raw)) {
+      nodes = raw as DocNode[];
+    } else if (raw && typeof raw === "object" && Array.isArray((raw as VectorDocSnapshot).rootChildren)) {
+      nodes = (raw as VectorDocSnapshot).rootChildren;
+    } else if (Array.isArray(p.rootChildren)) {
+      nodes = p.rootChildren as DocNode[];
+    }
+    if (!nodes) throw new Error("restore_snapshot_missing_document");
+    this.rootChildren = cloneJson(nodes);
+  }
+
+  /**
+   * Detach any node (root / frame / group / SmartGroup child).
+   * @implements [SRS-IN-07] reparent/remove detach
+   */
+  detachNode(id: Id): DocNode | null {
+    const removeFrom = (nodes: DocNode[]): DocNode | null => {
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (n.id === id) {
+          nodes.splice(i, 1);
+          return n;
+        }
+        if (n.kind === "frame" || n.kind === "group") {
+          const found = removeFrom(n.children);
+          if (found) return found;
+        }
+        if (n.kind === "smart_group") {
+          const idx = n.children.findIndex((c) => c.id === id);
+          if (idx >= 0) {
+            const [ink] = n.children.splice(idx, 1);
+            const free: InkNode = cloneJson(ink);
+            delete free.role;
+            delete free.layoutOffset;
+            return free;
+          }
+        }
+      }
+      return null;
+    };
+    return removeFrom(this.rootChildren);
+  }
+
+  private isUnder(ancestorId: Id, maybeDescendantId: Id): boolean {
+    const ancestor = this.indexById().get(ancestorId);
+    if (!ancestor) return false;
+    const walk = (nodes: DocNode[]): boolean => {
+      for (const n of nodes) {
+        if (n.id === maybeDescendantId) return true;
+        if (n.kind === "frame" || n.kind === "group") {
+          if (walk(n.children)) return true;
+        }
+        if (n.kind === "smart_group") {
+          if (n.children.some((c) => c.id === maybeDescendantId)) return true;
+        }
+      }
+      return false;
+    };
+    if (ancestor.kind === "frame" || ancestor.kind === "group") return walk(ancestor.children);
+    if (ancestor.kind === "smart_group") {
+      return ancestor.children.some((c) => c.id === maybeDescendantId);
+    }
+    return false;
+  }
+
+  private insertAt(parentId: Id | undefined, node: DocNode, index?: number): void {
+    const spliceInto = (nodes: DocNode[]) => {
+      if (index == null || index >= nodes.length) {
+        nodes.push(node);
+      } else {
+        nodes.splice(Math.max(0, index), 0, node);
+      }
+    };
+    if (!parentId) {
+      spliceInto(this.rootChildren);
+      return;
+    }
+    const parent = this.indexById().get(parentId);
+    if (!parent) throw new Error(`bad_parent:${parentId}`);
+    if (node.kind === "frame") throw new Error("frame_not_under_container");
+    if (parent.kind === "smart_group") {
+      if (node.kind !== "ink") throw new Error("smart_group_ink_only");
+      const ink: InkNode = cloneJson(node);
+      ink.role = "content";
+      ink.layoutOffset = seedLayoutOffset(ink.samples, parent.bounds);
+      if (index == null || index >= parent.children.length) {
+        parent.children.push(ink);
+      } else {
+        parent.children.splice(Math.max(0, index), 0, ink);
+      }
+      return;
+    }
+    if (!isContainer(parent)) throw new Error(`bad_parent:${parentId}`);
+    spliceInto(parent.children);
+  }
+
+  /** Domain: a SmartGroup with zero children is removed. */
+  private dissolveEmptySmartGroups(): void {
+    const prune = (nodes: DocNode[]): void => {
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        if (n.kind === "smart_group" && n.children.length === 0) {
+          nodes.splice(i, 1);
+          continue;
+        }
+        if (n.kind === "frame" || n.kind === "group") prune(n.children);
+      }
+    };
+    prune(this.rootChildren);
   }
 
   /** Re-resolve connector validity + cached straight path after moves. */

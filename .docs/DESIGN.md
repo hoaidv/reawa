@@ -38,6 +38,9 @@ subset into package `tokens.css` (same roles).
 | Profile | Frames | Resize | Input |
 |---|---|---|---|
 | **desktop** (Infini) | Electron window | Center world anchor | pointer + keyboard; hover required |
+| **epaper-device** (panel) | Landscape preview **1872×1404** (native 1404×1872 @ 226 dpi) | Fixed panel; no reflow | Pen for content/handles; finger for ToolChip. **No hover, no focus, no cursor, no motion** |
+
+Epaper tokens are a **1-bit subset** (`paper`/`ink` only, fill + hatch). Do not apply Infini slate/teal on the panel. Screen packages: `epaper-tool-strip`, `device-selection-chrome`.
 
 ## Accessibility baseline
 
@@ -57,3 +60,4 @@ subset into package `tokens.css` (same roles).
 - Purple-indigo themes; cream+#terracotta+serif marketing look
 - Hover-only discovery without focus path
 - Invented toolbars not in SRS inventory
+- On epaper: ghost / marquee / stand-in ink; rotation handles; properties panel; hover/focus/cursor chrome; tint or shadow to separate overlay from handwriting

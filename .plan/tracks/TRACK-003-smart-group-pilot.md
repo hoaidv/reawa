@@ -4,7 +4,7 @@ slug: smart-group-pilot
 kind: planned
 status: active
 iter: iter-003
-cursor: "W8 NOW — /designer STORY-EP-012 ∥ /dev STORY-EP-013 (latency gate); CHL-0009 blocks document/sync implement"
+cursor: "W9 — EP-015 undo ring ready; /qa then /dev; no chrome (CHL-0010)"
 goal: "Ink-box rework: epaper REQ-04…REQ-07 (device owns the document) + infini REQ-03 one-way sync"
 owner: sm
 ---
@@ -23,16 +23,16 @@ Pilot ADRs [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md) (semantics) and
 
 | Id | Kind | Status | Notes |
 |---|---|---|---|
-| [STORY-EP-012](../iter-003/stories/STORY-EP-012.md) | design | **ready** | W8 — selection chrome; hardware spike |
-| [STORY-EP-013](../iter-003/stories/STORY-EP-013.md) | implement | **ready** | W8 — latency gate; blocks all REQ-04 implement |
-| [STORY-EP-014](../iter-003/stories/STORY-EP-014.md) | implement | **blocked** | W9 — tree + ingestion; CHL-0009 |
-| [STORY-EP-015](../iter-003/stories/STORY-EP-015.md) | implement | **blocked** | W9 — undo ring |
-| [STORY-IN-027](../iter-003/stories/STORY-IN-027.md) | implement | **draft** | W9 — desktop applier |
+| [STORY-EP-012](../iter-003/stories/STORY-EP-012.md) | design | **done** | W8 — `[UI-EP-02]`; CHL-0010 + du confirm remain |
+| [STORY-EP-013](../iter-003/stories/STORY-EP-013.md) | implement | **done** | W8 — RM2 latency gate passed |
+| [STORY-EP-014](../iter-003/stories/STORY-EP-014.md) | implement | **done** | W9 — RM2 ingest p95=231 µs; arrival→flush 1392 µs |
+| [STORY-EP-015](../iter-003/stories/STORY-EP-015.md) | implement | **ready** | W9 — undo ring, no chrome (CHL-0010) |
+| [STORY-IN-027](../iter-003/stories/STORY-IN-027.md) | implement | **done** | W9 — desktop applier; WorldLayer from mirror |
 | [STORY-EP-016](../iter-003/stories/STORY-EP-016.md) | implement | **draft** | W10 — enclose |
 | [STORY-EP-017](../iter-003/stories/STORY-EP-017.md) | implement | **draft** | W10 — membership |
-| [STORY-EP-018](../iter-003/stories/STORY-EP-018.md) | implement | **draft** | W10 — selection-create; depends EP-012 |
-| [STORY-EP-019](../iter-003/stories/STORY-EP-019.md) | implement | **draft** | W11 — live manipulation + conformance |
-| [STORY-EP-020](../iter-003/stories/STORY-EP-020.md) | implement | **blocked** | W12 — device sync; CHL-0009 |
+| [STORY-EP-018](../iter-003/stories/STORY-EP-018.md) | implement | **draft (frozen)** | CHL-0010 deferred — enclose is the create path |
+| [STORY-EP-019](../iter-003/stories/STORY-EP-019.md) | implement | **draft** | W11 — 28/56/96 du locked; after EP-016 |
+| [STORY-EP-020](../iter-003/stories/STORY-EP-020.md) | implement | **draft** | W12 — device sync |
 | [STORY-IN-028](../iter-003/stories/STORY-IN-028.md) | implement | **draft** | W12 — desktop `doc_load` handshake |
 
 Pilot stories (IN-010…019, EP-003…006) remain **done** as history. Residue EP-007…011 / IN-020…026 stays **blocked** — not re-sliced (desktop ink-box authoring is out; device behaviour is the new ids above).
@@ -65,3 +65,15 @@ Pilot stories (IN-010…019, EP-003…006) remain **done** as history. Residue E
 | 2026-08-13 | PM **adopted** CHL-0008 — Epaper owns the document; one-way sync. Pilot slicing void; await architect |
 | 2026-08-13 | Architect delivered ADR-0014 + ADR-0015, the shared domain doc, `SRS-EP-07`…`SRS-EP-14`, device BDD, and both architecture views — [handoff to SM](../iter-003/handoffs/2026-08-13-architect-to-sm-device-document.md) |
 | 2026-08-13 | SM re-sliced W8–W12 (EP-012…020, IN-027…028). Opened [CHL-0009](../iter-003/challenges/CHL-0009-missing-device-document-srs-logic.md) for missing `srs-logic.md`. Track **active**. Cursor → designer EP-012 ∥ dev EP-013 |
+| 2026-08-13 | W8 launched in parallel: EP-012 (designer) ∥ EP-013 (dev) ∥ CHL-0009 (PM adopt + architect `srs-logic.md`) |
+| 2026-08-13 | CHL-0009 **adopted** — `srs-logic.md` landed (`SRS-EP-07` / `SRS-EP-08`). SM flipped EP-014/015/020 `blocked` → `draft`. W9 still waits on EP-013. |
+| 2026-08-13 | EP-013 **in-review** — host probe (hit-test ~1 µs, 0 drops, paint loop clean). Device pen-down → pixel p95 **not claimed**. Cursor → `/qa`. Do not ungate W9. |
+| 2026-08-13 | EP-012 **done** `[UI-EP-02]`. EP-018/019 stay `draft`. Opened [CHL-0010](../iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md). Handle 28/56 du + LOD 96 du await architect. |
+| 2026-08-13 | EP-013 **done** — RM2 arrival→flush p95=1298 µs, hit-test p95=22 µs, dropped=0. SM ungated W9: EP-014 ∥ IN-027 `ready`. EP-015 stays draft. |
+| 2026-08-13 | EP-012 spike **closed**: CHL-0010 **deferred** (EP-018 frozen; enclose is create path). Architect accepted 28/56/96 du for EP-019. |
+| 2026-08-13 | W9 BDD walk **done** — thin `ingest-stroke.feature` for EP-014; IN-027 stays on `session-channels.feature`. Devs already in-progress. |
+| 2026-08-13 | IN-027 **in-review** — `receiveDocChange` → VectorDocument; WorldLayer from mirror. Cursor → `/qa`. IN-028 still draft. |
+| 2026-08-13 | IN-027 **done** (QA PASS, 80/80). Leftover `@future` on epoch `doc_load` stays for IN-028. Cursor → EP-014 only. |
+| 2026-08-13 | EP-014 **in-review** — DeviceDocument + pen-up `append_ink`; host ingest p95 ~12 µs; `ops/` 100% vs Infini. Cursor → `/qa`. EP-015 stays draft. |
+| 2026-08-13 | EP-014 QA **HOLD** — host PASS (p95=15 µs); RM2 `10.11.99.1` unreachable. Status stays in-review. Do not flip EP-015. Re-run `/qa` when tablet is on USB. |
+| 2026-08-13 | EP-014 **done** — RM2 USB via `en7`: ingest p95=231 µs, ink_nodes=40, arrival→flush p95=1392 µs, dropped=0. SM flipped EP-015 `draft` → `ready`. Cursor → `/qa` then `/dev`. No chrome (CHL-0010). IN-028 / EP-016+ stay draft. |

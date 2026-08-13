@@ -4,7 +4,7 @@ title: "Desktop doc_change applier"
 kind: implement
 parent_srs: [SRS-IN-07, SRS-IN-08]
 parent_req: [REQ-03]
-status: draft
+status: done
 priority: P0
 iter: iter-003
 estimate: 5
@@ -32,6 +32,8 @@ and nothing enters `VectorDocument` — that path is withdrawn.
 
 BDD: [session-channels.feature](../../../.docs/modules/infini/features/tablet-sync/bdd/session-channels.feature)
 (`@SRS-IN-07` apply / gap / preview-replace / `@future` applier scenarios). Quality: [SRS-IN-08](../../../.docs/modules/infini/features/tablet-sync/srs-quality.md).
+QA walk: [2026-08-13-qa-to-dev-w9.md](../handoffs/2026-08-13-qa-to-dev-w9.md) — treat IN-027 AC
+`set_smart_group_transform` / `remove` as SRS-IN-09 `set_smart_transform` / `remove_node`.
 
 No design (protocol + mirror). May run in W9 ∥ device document once EP-013 has passed — does
 not wait on device publish, the wire contract is ADR-0015.

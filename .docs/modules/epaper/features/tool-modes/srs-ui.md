@@ -176,8 +176,10 @@ not design them.
 
 ### Open (needs design)
 
-- **Undo affordance.** Undo now lives on the device ([SRS-EP-07](../device-document/srs-logic.md)),
-  but the chip holds exactly three tools and there is no keyboard. Owner: pm + designer
-  ([epaper REQ-04](../../prd.md#device-document) Open Questions).
+- **Undo affordance.** **Deferred this campaign**
+  ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)):
+  no on-panel control; the chip stays three tools ([Closed control inventory](#closed-control-inventory));
+  no keyboard. [SRS-EP-07](../device-document/srs-logic.md) ring still ships. Reopen only with a
+  verified hardware gesture or a new SRS for a fourth chip.
 - **`inkScaleMode` toggle placement** — it belongs to a selected box, not to the chip; specified in
   [SRS-EP-12](../ink-box/srs-ui.md).

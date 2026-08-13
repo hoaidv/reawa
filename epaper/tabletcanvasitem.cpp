@@ -1,6 +1,8 @@
 #include "tabletcanvasitem.h"
 #include "strokesync.h"
 #include "epaperbridge.h"
+#include "latencyprobe/stub_document.hpp"
+#include "document/ingest_stroke.hpp"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -8,11 +10,13 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QQuickWindow>
+#include <QCoreApplication>
 #include <QtMath>
 #include <QByteArray>
 #include <QTransform>
 #include <QTimer>
 #include <QPen>
+#include <cstdio>
 
 namespace {
 
@@ -43,6 +47,38 @@ QString normalizeOrientation(const QString &raw)
     return QStringLiteral("gutToLeft");
 }
 
+/** RM_DOC_PROBE=1 — ingest-path stub only; never read from paint(). */
+bool g_docProbe = false;
+
+void armDocProbeFromEnv()
+{
+    const bool synth = envFlag("RM_DOC_PROBE_SYNTH", false);
+    if (!envFlag("RM_DOC_PROBE", false) && !synth)
+        return;
+    auto &h = epaper::latencyprobe::harness();
+    if (envFlag("RM_DOC_PROBE_EVERY_SAMPLE", false))
+        h.setEverySample(true);
+    h.enable();
+    g_docProbe = true;
+    qInfo() << "[doc-probe] enabled nodes" << h.document().nodeCount()
+            << "samples" << h.document().sampleCount()
+            << "every_sample" << h.everySample()
+            << "synth" << synth;
+}
+
+void runDocProbeSynth(TabletCanvasItem *canvas)
+{
+    auto stroke = [canvas](qreal x0, qreal y0, int n) {
+        canvas->ingestPoint(QEvent::TabletPress, QPointF(x0, y0), 0.6);
+        for (int i = 1; i < n; ++i) {
+            canvas->ingestPoint(QEvent::TabletMove, QPointF(x0 + i * 12.0, y0 + i * 4.0), 0.55);
+        }
+        canvas->ingestPoint(QEvent::TabletRelease, QPointF(x0 + n * 12.0, y0 + n * 4.0), 0.0);
+    };
+    for (int s = 0; s < 40; ++s)
+        stroke(200.0 + s * 30.0, 400.0 + (s % 8) * 80.0, 20);
+}
+
 } // namespace
 
 TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
@@ -51,6 +87,7 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
 {
     m_paintsInk = qgetenv("RM_INK_MODE").trimmed().toLower() != "pool";
     m_beacons = envFlag("RM_INK_BEACON", false);
+    armDocProbeFromEnv();
 
     setAntialiasing(false);
     setRenderTarget(QQuickPaintedItem::Image);
@@ -73,6 +110,14 @@ void TabletCanvasItem::componentComplete()
             << "parentItem" << parentItem()
             << "parentSize" << (parentItem() ? parentItem()->size() : QSizeF());
     EpaperBridge::instance()->attachPenModeRegion(this);
+    if (envFlag("RM_DOC_PROBE_SYNTH", false)) {
+        QTimer::singleShot(400, this, [this]() {
+            qInfo() << "[doc-probe] synth ingest start";
+            runDocProbeSynth(this);
+            qInfo() << "[doc-probe] synth ingest done";
+            QTimer::singleShot(250, qApp, &QCoreApplication::quit);
+        });
+    }
 }
 
 void TabletCanvasItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
@@ -170,12 +215,27 @@ QPointF TabletCanvasItem::mapInputToCanvas(const QPointF &raw) const
 
 void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure)
 {
+    IngestChannels ch;
+    ch.pressure = pressure;
+    ingestPoint(type, pos, ch);
+}
+
+void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const IngestChannels &ch)
+{
     EpaperBridge::instance()->traceArrival();
 
-    const qreal p = qBound<qreal>(0.0, pressure, 1.0);
+    const qreal p = qBound<qreal>(0.0, ch.pressure, 1.0);
+    IngestChannels bounded = ch;
+    bounded.pressure = p;
     const QPointF canvasPos = mapInputToCanvas(pos);
     m_lastPoint = canvasPos;
     m_lastRaw = pos;
+
+    // @implements [SRS-EP-13] hit-test probe on ingest, not in paint()
+    if (g_docProbe) {
+        const bool press = (type == QEvent::TabletPress || type == QEvent::MouseButtonPress);
+        epaper::latencyprobe::harness().onIngest(float(canvasPos.x()), float(canvasPos.y()), press);
+    }
 
     // Pen on ToolChip — not ink; arm via tile hit-test (pen-on-chip fallback).
     if (pointInToolChip(canvasPos)
@@ -190,15 +250,16 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal 
         if (m_toolMode == QLatin1String("selection"))
             beginSelectionGesture(canvasPos);
         else
-            beginStroke(canvasPos, p);
+            beginStroke(canvasPos, bounded);
         break;
     case QEvent::TabletMove:
     case QEvent::MouseMove:
         // @implements [SRS-EP-04] selection mode never inks (STORY-EP-007)
+        // @implements [SRS-EP-07] Selection armed → no stroke, no Ink node
         if (m_selectionGesture)
             updateSelectionGesture(canvasPos);
         else if (m_toolMode != QLatin1String("selection"))
-            appendPoint(canvasPos, p);
+            appendPoint(canvasPos, bounded);
         break;
     case QEvent::TabletRelease:
     case QEvent::MouseButtonRelease:
@@ -212,11 +273,32 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal 
     }
 }
 
+int TabletCanvasItem::documentInkCount() const
+{
+    return m_document.inkCount();
+}
+
+std::string TabletCanvasItem::ingestDumpText() const
+{
+    using epaper::latencyprobe::nsToUs;
+    using epaper::latencyprobe::summarizeNs;
+    const auto p = summarizeNs(m_ingestNs);
+    char buf[512];
+    std::snprintf(buf, sizeof(buf),
+                  "[doc-ingest] ink_nodes=%d applied=%d rejected=%d n=%d p50=%lldns p95=%lldns "
+                  "p99=%lldns (p95=%lldus)\n",
+                  m_document.inkCount(), m_ingestApplied, m_ingestRejected, p.n,
+                  static_cast<long long>(p.p50Ns), static_cast<long long>(p.p95Ns),
+                  static_cast<long long>(p.p99Ns), static_cast<long long>(nsToUs(p.p95Ns)));
+    return std::string(buf);
+}
+
 void TabletCanvasItem::paint(QPainter *painter)
 {
     if (!m_paintsInk)
         return;
 
+    // SRS-EP-13: do not hit-test or time the stub document here.
     ensureImage();
     m_paintCount.fetchAndAddRelaxed(1);
     painter->drawImage(0, 0, m_image);
@@ -289,15 +371,35 @@ void TabletCanvasItem::flushPending()
     }
 }
 
-void TabletCanvasItem::beginStroke(const QPointF &canvasPos, qreal pressure)
+TabletCanvasItem::Point TabletCanvasItem::makePoint(const QPointF &canvasPos, const IngestChannels &ch) const
+{
+    Point pt;
+    pt.pos = canvasPos;
+    pt.pressure = ch.pressure;
+    pt.raw = m_lastRaw;
+    pt.hasTilt = ch.hasTilt;
+    pt.tiltX = ch.tiltX;
+    pt.tiltY = ch.tiltY;
+    pt.hasDistance = ch.hasDistance;
+    pt.distance = ch.distance;
+    pt.hasTimestamp = ch.hasTimestamp;
+    pt.timestamp = ch.timestamp;
+    pt.hasRotation = ch.hasRotation;
+    pt.rotation = ch.rotation;
+    pt.hasTangential = ch.hasTangential;
+    pt.tangential = ch.tangential;
+    return pt;
+}
+
+void TabletCanvasItem::beginStroke(const QPointF &canvasPos, const IngestChannels &ch)
 {
     // Cancel pending settle follow-up so it cannot white-clear mid-stroke.
     ++m_settleFollowUpToken;
 
     m_current.clear();
     m_activeStrokeId = QStringLiteral("s-%1").arg(++m_strokeSeq);
-    m_activeWorldStrokeWidth = worldStrokeWidth(pressure);
-    m_current.append({canvasPos, pressure, m_lastRaw});
+    m_activeWorldStrokeWidth = worldStrokeWidth(ch.pressure);
+    m_current.append(makePoint(canvasPos, ch));
     m_lastEmitted = m_current.last();
     m_hasEmitted = false;
     m_strokeActive = true;
@@ -312,14 +414,14 @@ void TabletCanvasItem::beginStroke(const QPointF &canvasPos, qreal pressure)
     flushPending();
 }
 
-void TabletCanvasItem::appendPoint(const QPointF &canvasPos, qreal pressure)
+void TabletCanvasItem::appendPoint(const QPointF &canvasPos, const IngestChannels &ch)
 {
     if (!m_strokeActive || m_current.isEmpty()) {
-        beginStroke(canvasPos, pressure);
+        beginStroke(canvasPos, ch);
         return;
     }
 
-    Point next{canvasPos, pressure, m_lastRaw};
+    Point next = makePoint(canvasPos, ch);
     m_current.append(next);
     syncPoint(next);
 
@@ -346,9 +448,11 @@ void TabletCanvasItem::endStroke()
         syncEnd();
     }
 
+    // Pixels first — ingestion must not sit between a sample and its pixel (SRS-EP-07 / EP-13).
     flushPending();
 
-    appendLocalStrokeAsWorldPath();
+    if (m_current.size() >= 2)
+        ingestCurrentStroke();
 
     m_current.clear();
     m_hasEmitted = false;
@@ -365,14 +469,57 @@ void TabletCanvasItem::endStroke()
 
     // Status text is refreshed between strokes only: during a stroke it would
     // add a second damage region per flush.
-    m_debugInfo = QStringLiteral("(%1,%2) sz=%3x%4 flush=%5 paint=%6")
+    m_debugInfo = QStringLiteral("(%1,%2) sz=%3x%4 flush=%5 paint=%6 ink=%7")
                       .arg(int(m_lastPoint.x()))
                       .arg(int(m_lastPoint.y()))
                       .arg(int(width()))
                       .arg(int(height()))
                       .arg(m_flushCount)
-                      .arg(m_paintCount.loadRelaxed());
+                      .arg(m_paintCount.loadRelaxed())
+                      .arg(m_document.inkCount());
     emit debugChanged();
+}
+
+/** @implements [SRS-EP-07] finished stroke → append_ink at pen-up */
+void TabletCanvasItem::ingestCurrentStroke()
+{
+    using namespace epaper::document;
+    FinishedStroke stroke;
+    stroke.id = m_activeStrokeId.toStdString();
+    stroke.strokeWidthWorld = double(m_activeWorldStrokeWidth);
+    stroke.samples.reserve(size_t(m_current.size()));
+    for (int i = 0; i < m_current.size(); ++i) {
+        const Point &pt = m_current.at(i);
+        DigitizerSample d;
+        d.panelX = pt.pos.x();
+        d.panelY = pt.pos.y();
+        d.pressure = pt.pressure;
+        if (pt.hasTilt) {
+            d.tiltX = pt.tiltX;
+            d.tiltY = pt.tiltY;
+        }
+        if (pt.hasDistance)
+            d.distance = pt.distance;
+        if (pt.hasTimestamp)
+            d.timestamp = pt.timestamp;
+        d.t = double(i);
+        if (pt.hasRotation)
+            d.extras.emplace("rotation", JsonValue::number(double(pt.rotation)));
+        if (pt.hasTangential)
+            d.extras.emplace("tangentialPressure", JsonValue::number(double(pt.tangential)));
+        stroke.samples.push_back(std::move(d));
+    }
+    const PanelToWorld map = [this](double px, double py, double *wx, double *wy) {
+        const QPointF w = panelToWorld(QPointF(px, py));
+        *wx = w.x();
+        *wy = w.y();
+    };
+    const IngestTiming t = ingestFinishedStrokeTimed(m_document, stroke, map);
+    m_ingestNs.push_back(t.ns);
+    if (t.result.applied)
+        ++m_ingestApplied;
+    else
+        ++m_ingestRejected;
 }
 
 void TabletCanvasItem::syncBegin()
@@ -427,9 +574,9 @@ void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
         applyDocSnapshot(obj);
         return;
     }
-    // Legacy PNG path ignored — vectors only (ADR-0009 / human: no bitmap sync).
+    // Legacy PNG path ignored — paint stays on the local tree (SRS-EP-07 / ADR-0014 §2).
     if (type == QLatin1String("region_refresh")) {
-        qInfo() << "[sync] ignoring region_refresh bitmap; use doc_snapshot";
+        qInfo() << "[sync] ignoring region_refresh bitmap; paint stays on local tree";
         return;
     }
 }
@@ -455,33 +602,21 @@ void TabletCanvasItem::applyViewport(const QJsonObject &obj)
 
     const bool settle = obj.value(QStringLiteral("settle")).toBool(false);
     qInfo() << "[sync] viewport seq" << m_viewportSeq << "orientation" << m_orientation
-            << "settle" << settle << "nodes" << m_vectorNodes.size();
+            << "settle" << settle << "ink" << m_document.inkCount();
     scheduleVectorRasterize(settle);
 }
 
 void TabletCanvasItem::applyDocSnapshot(const QJsonObject &obj)
 {
-    m_vectorNodes = obj.value(QStringLiteral("nodes")).toArray();
-    m_pickables = obj.value(QStringLiteral("pickables")).toArray();
-    // Ghost discarded — authoritative geometry (SRS-EP-04 / SRS-IN-13).
-    m_selectionGesture = false;
-    m_gesturePickableId.clear();
-    // Keep selection highlight if the pickable still exists after snapshot.
-    if (!m_selectedPickableId.isEmpty()) {
-        bool stillThere = false;
-        for (const QJsonValue &v : m_pickables) {
-            if (v.toObject().value(QStringLiteral("id")).toString() == m_selectedPickableId) {
-                stillThere = true;
-                break;
-            }
-        }
-        if (!stillThere)
-            m_selectedPickableId.clear();
+    Q_UNUSED(obj);
+    // @implements [SRS-EP-07] 0 inbound peer pictures as a paint source
+    // Full inbound classification / handshake is STORY-EP-020; this story must not
+    // rasterize a peer snapshot over the local tree.
+    if (!m_loggedRetiredSnapshot) {
+        m_loggedRetiredSnapshot = true;
+        qInfo() << "[sync] reject retired doc_snapshot; paint stays on local tree ink"
+                << m_document.inkCount();
     }
-    qInfo() << "[sync] doc_snapshot nodes" << m_vectorNodes.size()
-            << "pickables" << m_pickables.size();
-    emit pickablesChanged();
-    scheduleVectorRasterize(true);
 }
 
 void TabletCanvasItem::setToolMode(const QString &mode)
@@ -865,28 +1000,16 @@ QPointF TabletCanvasItem::panelToWorld(const QPointF &panel) const
     return QPointF(m_drawingRegion.minX + u * rw, m_drawingRegion.minY + v * rh);
 }
 
-void TabletCanvasItem::appendLocalStrokeAsWorldPath()
+void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode &node)
 {
-    if (m_current.size() < 2 || !m_drawingRegion.valid)
+    using epaper::document::NodeKind;
+    using epaper::document::PrimitiveKind;
+    if (node.kind != NodeKind::Ink && node.kind != NodeKind::Primitive)
         return;
-    QJsonArray pts;
-    for (const Point &pt : m_current) {
-        const QPointF w = panelToWorld(pt.pos);
-        pts.append(QJsonObject{{"x", w.x()}, {"y", w.y()}});
-    }
-    m_vectorNodes.append(QJsonObject{
-        {"kind", "path"},
-        {"id", m_activeStrokeId},
-        {"points", pts},
-        {"strokeWidth", m_activeWorldStrokeWidth},
-    });
-}
 
-void TabletCanvasItem::drawVectorNode(QPainter &p, const QJsonObject &node)
-{
-    const QString kind = node.value(QStringLiteral("kind")).toString();
-    const qreal worldSw = node.value(QStringLiteral("strokeWidth")).toDouble(2.0);
-    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
+    const qreal worldSw = node.style.strokeWidth;
+    const double rw = m_drawingRegion.valid ? (m_drawingRegion.maxX - m_drawingRegion.minX)
+                                            : qMax(1.0, double(width()));
     const double sPanel = width() / qMax(1e-6, rw);
     const qreal lineW = qMax<qreal>(1.0, worldSw * sPanel);
 
@@ -897,49 +1020,31 @@ void TabletCanvasItem::drawVectorNode(QPainter &p, const QJsonObject &node)
     p.setPen(pen);
     p.setBrush(Qt::NoBrush);
 
-    if (kind == QLatin1String("line")) {
-        const QPointF a = worldToPanel(node.value(QStringLiteral("x1")).toDouble(),
-                                       node.value(QStringLiteral("y1")).toDouble());
-        const QPointF b = worldToPanel(node.value(QStringLiteral("x2")).toDouble(),
-                                       node.value(QStringLiteral("y2")).toDouble());
-        p.drawLine(a, b);
+    if (node.kind == NodeKind::Ink) {
+        if (int(node.samples.size()) < 2)
+            return;
+        QPainterPath path;
+        path.moveTo(worldToPanel(node.samples[0].x, node.samples[0].y));
+        for (size_t i = 1; i < node.samples.size(); ++i)
+            path.lineTo(worldToPanel(node.samples[i].x, node.samples[i].y));
+        p.drawPath(path);
         return;
     }
-    if (kind == QLatin1String("rect")) {
-        const QPointF tl = worldToPanel(node.value(QStringLiteral("x")).toDouble(),
-                                        node.value(QStringLiteral("y")).toDouble());
-        const QPointF br = worldToPanel(
-            node.value(QStringLiteral("x")).toDouble() + node.value(QStringLiteral("w")).toDouble(),
-            node.value(QStringLiteral("y")).toDouble() + node.value(QStringLiteral("h")).toDouble());
+
+    if (node.geomKind == PrimitiveKind::Line) {
+        p.drawLine(worldToPanel(node.x1, node.y1), worldToPanel(node.x2, node.y2));
+        return;
+    }
+    if (node.geomKind == PrimitiveKind::Rect) {
+        const QPointF tl = worldToPanel(node.gx, node.gy);
+        const QPointF br = worldToPanel(node.gx + node.gw, node.gy + node.gh);
         p.drawRect(QRectF(tl, br).normalized());
         return;
     }
-    if (kind == QLatin1String("ellipse")) {
-        const double cx = node.value(QStringLiteral("cx")).toDouble();
-        const double cy = node.value(QStringLiteral("cy")).toDouble();
-        const double rx = node.value(QStringLiteral("rx")).toDouble();
-        const double ry = node.value(QStringLiteral("ry")).toDouble();
-        const QPointF c = worldToPanel(cx, cy);
-        const QPointF e = worldToPanel(cx + rx, cy + ry);
-        const qreal prx = qAbs(e.x() - c.x());
-        const qreal pry = qAbs(e.y() - c.y());
-        p.drawEllipse(c, prx, pry);
-        return;
-    }
-    if (kind == QLatin1String("path")) {
-        const QJsonArray pts = node.value(QStringLiteral("points")).toArray();
-        if (pts.size() < 2)
-            return;
-        QPainterPath path;
-        const QJsonObject p0 = pts.at(0).toObject();
-        path.moveTo(worldToPanel(p0.value(QStringLiteral("x")).toDouble(),
-                                 p0.value(QStringLiteral("y")).toDouble()));
-        for (int i = 1; i < pts.size(); ++i) {
-            const QJsonObject pi = pts.at(i).toObject();
-            path.lineTo(worldToPanel(pi.value(QStringLiteral("x")).toDouble(),
-                                     pi.value(QStringLiteral("y")).toDouble()));
-        }
-        p.drawPath(path);
+    if (node.geomKind == PrimitiveKind::Ellipse) {
+        const QPointF c = worldToPanel(node.cx, node.cy);
+        const QPointF e = worldToPanel(node.cx + node.rx, node.cy + node.ry);
+        p.drawEllipse(c, qAbs(e.x() - c.x()), qAbs(e.y() - c.y()));
     }
 }
 
@@ -952,13 +1057,10 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
         return;
 
     QPainter p(&m_image);
-    // Full white clear + vector redraw → sharp when settle (sharp=true).
+    // Full white clear + local-tree redraw. Never an inbound peer picture (SRS-EP-07).
     p.fillRect(m_image.rect(), Qt::white);
     p.setRenderHint(QPainter::Antialiasing, sharp);
-    for (const QJsonValue &v : m_vectorNodes) {
-        if (v.isObject())
-            drawVectorNode(p, v.toObject());
-    }
+    m_document.forEachPaintNode([&](const epaper::document::DocNode &node) { drawDocNode(p, node); });
     p.end();
 
     stampStaticBeacon();
@@ -978,6 +1080,6 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
             win->update();
         }
     }
-    qInfo() << "[sync] vector rasterize nodes" << m_vectorNodes.size() << "sharp" << sharp
-            << "seq" << m_viewportSeq;
+    qInfo() << "[sync] vector rasterize ink" << m_document.inkCount() << "nodes"
+            << m_document.nodeCount() << "sharp" << sharp << "seq" << m_viewportSeq;
 }

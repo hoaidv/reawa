@@ -30,6 +30,9 @@ App env forwarded to the device when set locally:
   RM_INK_MODE      painted (default) | pool
   RM_INK_BEACON    1 (default) | 0 — render-path probe squares
   RM_INK_TRACE     1 — latency instrumentation
+  RM_DOC_PROBE     1 — 500-node / 50k-sample stub + hit-test on ingest (STORY-EP-013)
+  RM_DOC_PROBE_SYNTH 1 — synthetic strokes then exit (device harness)
+  RM_DOC_PROBE_EVERY_SAMPLE 1 — hit-test every sample (stress)
   RM_EP_SWAP       1 — direct EPFramebuffer::swapBuffers(Pen) after each flush
   RM_EP_SCREEN_MODE / RM_EP_CONTENT_TYPE   override resolved enum values
 EOF
@@ -89,7 +92,8 @@ echo "Deploying $(basename "$BIN") ($(ls -lh "$BIN" | awk '{print $5}')) to $HOS
 scp -i "$KEY" -o StrictHostKeyChecking=no "$BIN" "$HOST:$REMOTE"
 
 FORWARDED=(RM_SYNC_HOST RM_INK_MODE RM_INK_BEACON RM_INK_TRACE RM_EP_SWAP
-           RM_EP_SCREEN_MODE RM_EP_CONTENT_TYPE)
+           RM_EP_SCREEN_MODE RM_EP_CONTENT_TYPE
+           RM_DOC_PROBE RM_DOC_PROBE_SYNTH RM_DOC_PROBE_EVERY_SAMPLE)
 APP_ENV=""
 for name in "${FORWARDED[@]}"; do
   if [[ -n "${!name:-}" ]]; then

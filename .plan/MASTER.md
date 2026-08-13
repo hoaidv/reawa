@@ -92,14 +92,18 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
-| TRACK-003 | planned | **active** | W8 NOW — `/designer` EP-012 ∥ `/dev` EP-013; CHL-0009 blocks document/sync | [track](./tracks/TRACK-003-smart-group-pilot.md) |
+| TRACK-003 | planned | **active** | W9 — EP-015 undo ring `ready` | [track](./tracks/TRACK-003-smart-group-pilot.md) |
 
 ### Open challenges / blocked
 
 - **CHL-0008 resolved (adopted 2026-08-13)** — document ownership inverted to the device. Architect
   design landed the same day; SM re-sliced 2026-08-13.
-- **CHL-0009 open** — `device-document/srs-logic.md` (`SRS-EP-07` / `SRS-EP-08`) is missing.
-  Document/sync implement stories blocked until `/architect` drops the file. Does not block W8.
+- **CHL-0009 resolved (adopted 2026-08-13)** — `device-document/srs-logic.md` landed
+  (`[SRS-EP-07]` / `[SRS-EP-08]`). IN-027 **done**. EP-014 **done** (RM2 ingest p95=231 µs).
+  EP-015 **ready**. EP-020 stays `draft`. Verdict: READY-WITH-CONCERNS (op-type aliases — use SRS-IN-09 transmit names).
+- **CHL-0010 deferred (2026-08-13)** — no on-panel undo; no selection-create CTA. Enclose-with-Ink-box
+  is the create path. EP-018 frozen at `draft`. EP-015 ring still ships (no chrome). Handle **28/56 du**
+  and LOD **96 du** accepted as EP-019 implement locks.
 - CHL-0001…0003 adopted earlier; CHL-0004…0007 **superseded by CHL-0008**, retained as regression
   evidence (fixedInk resize, mode-correct preview, live direct manipulation, selection/enclose
   desync). Code hotfixes were discarded by the restore — do not treat as shipped.
@@ -107,8 +111,8 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 
 ### Design packages in flight
 
-- [device-selection-chrome](./iter-003/design/device-selection-chrome/) — STORY-EP-012 **ready**
-  (W8 NOW). New package; do not port the EP-003 ghost or deprecated ink-box-ui.
+- [device-selection-chrome](./iter-003/design/device-selection-chrome/) — STORY-EP-012 **done**
+  `[UI-EP-02]`. Do not port the EP-003 ghost or deprecated ink-box-ui.
 - [epaper-tool-strip](./iter-003/design/epaper-tool-strip/) — STORY-EP-003 done; ToolChip is composed
   into EP-012, not redesigned. Ghost selection scenes are withdrawn.
 - [ink-box-ui](./iter-003/design/ink-box-ui/) — **deprecated** with `[SRS-IN-14]`; desktop-side
@@ -116,23 +120,20 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 
 ### Execution board(s)
 
-- [iter-003 execution-board](./iter-003/execution-board.md) — **W8 NOW** (EP-012 ∥ EP-013)
+- [iter-003 execution-board](./iter-003/execution-board.md) — **W9** EP-015 undo ring `ready`
 - [iter-002 board (final)](./iter-002/execution-board.md) — frozen
 
 ### Freeze notes
 
-- **TRACK-003 active (W8)** — freeze note is history. No `/dev` on verify-fix or CHL-0004…0007
-  paths; no REQ-04 implement until EP-013 passes. Residue EP-007…011 / IN-020…026 stays blocked.
+- **TRACK-003 active (W9)** — freeze note is history. No `/dev` on verify-fix or CHL-0004…0007
+  paths. Residue EP-007…011 / IN-020…026 stays blocked. EP-013 latency gate **passed**.
 - Retro-gate: [pm-retro-gate-pass](./iter-002/handoffs/2026-08-11-pm-retro-gate-pass.md)
 - iter-004 folder stays closed until the iter-003 retro gate passes.
 
 ## Forward
 
 - **Done 2026-08-13:** `/architect` design + `/sm` re-slice (EP-012…020, IN-027…028)
-- **Now:** `/designer` [STORY-EP-012](./iter-003/stories/STORY-EP-012.md) ∥ `/dev`
-  [STORY-EP-013](./iter-003/stories/STORY-EP-013.md). `/pm` triage
-  [CHL-0009](./iter-003/challenges/CHL-0009-missing-device-document-srs-logic.md) (missing
-  `srs-logic.md`) — does not block W8.
+- **Now:** W9 — [STORY-EP-014](./iter-003/stories/STORY-EP-014.md) **done**. [STORY-EP-015](./iter-003/stories/STORY-EP-015.md) **ready** (ring, no chrome). Next `/qa` then `/dev`. IN-027 **done**.
 - **Next campaign:** epaper `[REQ-08]` direct manipulation of any document node — thickened in
   [node-manipulation](../.docs/modules/epaper/features/node-manipulation/), designed and built in a
   distinct iteration

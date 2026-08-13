@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>CreateRefusedIndicator — self-contained</title>
+  <style>
+    body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; }
+    .c-indicator {
+      display: inline-flex; align-items: center; gap: 6px; max-width: 16rem;
+      padding: 6px 8px; border: 2px solid #000;
+      background: repeating-linear-gradient(-45deg, #fff, #fff 3px, #000 3px, #000 4px);
+      font-size: 12px;
+    }
+    .c-indicator img { width: 20px; height: 20px; background: #fff; border: 1px solid #000; }
+    .c-indicator__copy { background: #fff; border: 1px solid #000; padding: 2px 6px; }
+  </style>
+</head>
+<body>
+  <div class="c-indicator" id="ind.create_refused_no_surround" role="status">
+    <img src="../../system/assets/icon-epaper-refused.svg" alt="" />
+    <span class="c-indicator__copy">No surrounding stroke</span>
+  </div>
+</body>
+</html>

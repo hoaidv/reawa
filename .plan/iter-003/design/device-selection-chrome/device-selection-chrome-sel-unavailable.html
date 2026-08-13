@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sel.unavailable — device selection chrome</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+  </style>
+</head>
+<body data-state="sel.unavailable">
+  <div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="ink-cluster is-tiny">
+        <svg viewBox="0 0 420 240" aria-hidden="true">
+          <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+          <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+          <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+          <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+        </svg>
+      </div>
+      <div data-region="SelectionOverlay">
+        <div class="c-indicator" id="ind.manipulation_unavailable" role="status" style="left: 38%; top: 56%;">
+          <img src="../system/assets/icon-epaper-unavailable.svg" alt="" />
+          <span class="c-indicator__copy">Too far out to move</span>
+        </div>
+      </div>
+      <p class="scene-caption">sel.unavailable — box smaller than proposed 96 du min-axis. Handles hidden. Press does nothing.
+        <a href="./device-selection-chrome-sel-selected.html">At/above cutoff</a> ·
+        <a href="./device-selection-chrome-sel-none.html">Idle</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolStrip" role="toolbar" aria-label="Tools">
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection"><img src="../system/assets/icon-epaper-selection.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+    </div>
+    <p data-region="StatusLine">sel.unavailable · LOD min-axis 96 du (proposed)</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

@@ -18,8 +18,8 @@ inherits semantics from the deprecated infini sections listed in the
 - Product REQ: [REQ-04 on-device working document](../../prd.md#device-document) ·
   [REQ-07 one-way document sync](../../prd.md#one-way-sync)
 - Product depth: [srs-product.md](./srs-product.md) — PM-owned
-- Logic: [srs-logic.md](./srs-logic.md) — [SRS-EP-07] device document, ingestion, undo ·
-  [SRS-EP-08] one-way sync (load handshake, publish queue)
+- Logic: [srs-logic.md](./srs-logic.md) — [SRS-EP-07](./srs-logic.md#srs-ep-07-device-document) device document, ingestion, undo ·
+  [SRS-EP-08](./srs-logic.md#srs-ep-08-one-way-sync) one-way sync (load handshake, publish queue)
 - Data: [srs-data.md](./srs-data.md) — [SRS-EP-09] device structures + wire binding; the grammar
   itself stays canonical in [infini SRS-IN-09](../../../infini/features/vector-document/srs-data.md)
 - Quality: [srs-quality.md](./srs-quality.md) — [SRS-EP-13] ingestion budget, publish latency,

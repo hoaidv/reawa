@@ -5,6 +5,7 @@
 #include <QTabletEvent>
 #include <QTouchEvent>
 #include <QEventPoint>
+#include <QPointingDevice>
 #include <QDebug>
 
 TabletAppFilter::TabletAppFilter(QObject *parent)
@@ -57,7 +58,32 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
     case QEvent::TabletMove:
     case QEvent::TabletRelease: {
         auto *tablet = static_cast<QTabletEvent *>(event);
-        m_canvas->ingestPoint(event->type(), tablet->position(), tablet->pressure());
+        TabletCanvasItem::IngestChannels ch;
+        // @implements [SRS-EP-09] retain digitizer-reported channels on the node
+        ch.pressure = tablet->pressure();
+        const QPointingDevice *dev = tablet->pointingDevice();
+        const auto caps = dev ? dev->capabilities() : QPointingDevice::Capabilities{};
+        using Cap = QPointingDevice::Capability;
+        if (caps.testFlag(Cap::XTilt) || caps.testFlag(Cap::YTilt)) {
+            ch.hasTilt = true;
+            ch.tiltX = tablet->xTilt();
+            ch.tiltY = tablet->yTilt();
+        }
+        if (caps.testFlag(Cap::ZPosition)) {
+            ch.hasDistance = true;
+            ch.distance = tablet->z();
+        }
+        ch.hasTimestamp = true;
+        ch.timestamp = qreal(tablet->timestamp());
+        if (caps.testFlag(Cap::Rotation)) {
+            ch.hasRotation = true;
+            ch.rotation = tablet->rotation();
+        }
+        if (caps.testFlag(Cap::TangentialPressure)) {
+            ch.hasTangential = true;
+            ch.tangential = tablet->tangentialPressure();
+        }
+        m_canvas->ingestPoint(event->type(), tablet->position(), ch);
         return true;
     }
     case QEvent::MouseButtonPress:

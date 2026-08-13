@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sel.create_refused — device selection chrome</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    .scatter { left: 18%; top: 30%; width: 58%; height: 36%; }
+  </style>
+</head>
+<body data-state="sel.create_refused">
+  <div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="ink-cluster scatter">
+        <svg viewBox="0 0 520 220" aria-hidden="true">
+          <path class="ink-stroke" d="M20 40c30-8 50 12 90-4 20-8 40 6 48 4"/>
+          <path class="ink-stroke" d="M210 70c40 10 70-14 110 2"/>
+          <path class="ink-stroke" d="M40 130c55-6 80 16 130 0 30-8 48 10 70 6"/>
+          <path class="ink-stroke" d="M320 150c36 8 70-12 110 4"/>
+          <path class="ink-stroke" d="M180 180c28-10 60 8 96-2"/>
+        </svg>
+      </div>
+      <div data-region="SelectionOverlay">
+        <div class="c-indicator" id="ind.create_refused_no_surround" role="status" style="left: 22%; top: 62%;">
+          <img src="../system/assets/icon-epaper-refused.svg" alt="" />
+          <span class="c-indicator__copy">No surrounding stroke</span>
+        </div>
+      </div>
+      <p class="scene-caption">sel.create_refused — scattered ink unchanged; no AABB box; no marquee. Invocation control is CHL-0010 (out of v1 chrome).
+        <a href="./device-selection-chrome-sel-selected.html">Back to a box</a> ·
+        <a href="./device-selection-chrome-sel-none.html">Idle</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolStrip" role="toolbar" aria-label="Tools">
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection"><img src="../system/assets/icon-epaper-selection.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+    </div>
+    <p data-region="StatusLine">sel.create_refused · no surround</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

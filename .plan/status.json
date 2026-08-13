@@ -1,14 +1,14 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-13T10:57:53+00:00",
+  "generated_at": "2026-08-13T13:12:18+00:00",
   "current_iter": "iter-003",
   "by_status": {
     "draft": 6,
-    "ready": 2,
+    "ready": 1,
     "in-progress": 0,
     "in-review": 0,
-    "done": 90,
-    "blocked": 16
+    "done": 94,
+    "blocked": 13
   },
   "by_module": {
     "reawa": {
@@ -18,18 +18,18 @@
     },
     "epaper": {
       "total": 20,
-      "done": 6,
+      "done": 9,
       "in_review": 0
     },
     "infini": {
       "total": 28,
-      "done": 18,
+      "done": 19,
       "in_review": 0
     }
   },
-  "open_challenges": 1,
-  "resolved_challenges_this_iter": 8,
-  "sync_orphans": 19,
+  "open_challenges": 0,
+  "resolved_challenges_this_iter": 9,
+  "sync_orphans": 16,
   "master_plan": true,
   "tracks": [
     {
@@ -50,7 +50,7 @@
       "id": "TRACK-003",
       "kind": "planned",
       "status": "active",
-      "cursor": "W8 NOW \u2014 /designer STORY-EP-012 \u2225 /dev STORY-EP-013 (latency gate); CHL-0009 blocks document/sync implement",
+      "cursor": "W9 \u2014 EP-015 undo ring ready; /qa then /dev; no chrome (CHL-0010)",
       "iter": "iter-003"
     }
   ]

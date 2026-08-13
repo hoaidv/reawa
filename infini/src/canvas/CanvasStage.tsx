@@ -2,9 +2,8 @@
  * @implements [SRS-IN-02] CanvasStage — gestures + host surface
  * @implements [SRS-IN-01] paint host
  * @implements [SRS-IN-03] optional rAF frame counter
- * @implements [SRS-IN-07] tablet drawing-region marker + viewport + region refresh
- * @implements [SRS-IN-04] tree-backed live ink ingestion on stroke_end
- * @implements [SRS-IN-10] enclose recognition when intent enclose
+ * @implements [SRS-IN-07] tablet drawing-region marker + viewport + doc_change applier
+ * @implements [SRS-IN-04] WorldLayer from VectorDocument mirror
  *
  * Perf: coalesce paints to one rAF; no React setState on the gesture hot path.
  */
@@ -12,7 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CanvasRenderer } from "./CanvasRenderer";
 import { InfiniDocument } from "./Document";
-import { demoPrimitives, makePath } from "./primitives";
+import { demoPrimitives } from "./primitives";
 import {
   frameWorldAabb,
   identityViewport,
@@ -28,9 +27,9 @@ import {
   type Viewport,
 } from "./Viewport";
 import { allowIndividualInteraction } from "./TileCache";
-import type { RmStrokeMsg } from "../native";
+import type { RmInboundMsg } from "../native";
 import { IpcRmTransport, MemoryTransport, TabletSession } from "../session";
-import { rmClientSyncHint, shouldPublishOnRmClient, type RmClientEvent } from "../session/rmClientSync";
+import { rmClientSyncHint, type RmClientEvent } from "../session/rmClientSync";
 import { ToolStrip } from "./ToolStrip";
 import {
   createSelectionSession,
@@ -42,15 +41,11 @@ import {
 import { screenToWorld } from "./Viewport";
 import {
   VectorDocument,
-  commitStrokeWithEncloseRecognition,
   createSmartGroupFromSelection,
-  buildPickables,
-  applyToolIntent,
-  normalizeStrokeIntent,
   UndoRing,
 } from "../document";
 import type { SmartGroupNode } from "../document/types";
-import type { Primitive } from "./primitives";
+import type { DocChangeMessage } from "../session";
 
 export interface CanvasStageProps {
   populated?: boolean;
@@ -66,23 +61,6 @@ function viewportCentered(cssW: number, cssH: number, scale = 1): Viewport {
 
 function get2dContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
   return canvas.getContext("2d", { alpha: false }) ?? canvas.getContext("2d");
-}
-
-/** Serialize WorldLayer primitives for Epaper vector rasterize (not a bitmap). */
-function primitivesToSnapshotNodes(prims: Primitive[]): Record<string, unknown>[] {
-  return prims.map((p) => {
-    const base = { id: p.id, strokeWidth: p.style.strokeWidth };
-    switch (p.kind) {
-      case "line":
-        return { ...base, kind: "line", x1: p.x1, y1: p.y1, x2: p.x2, y2: p.y2 };
-      case "rect":
-        return { ...base, kind: "rect", x: p.x, y: p.y, w: p.w, h: p.h };
-      case "ellipse":
-        return { ...base, kind: "ellipse", cx: p.cx, cy: p.cy, rx: p.rx, ry: p.ry };
-      case "path":
-        return { ...base, kind: "path", points: p.points };
-    }
-  });
 }
 
 export function CanvasStage({ populated = true }: CanvasStageProps) {
@@ -113,18 +91,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const gesturingRef = useRef(false);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const orientationRef = useRef<TabletOrientation>("gutToLeft");
-  const snapshotSentRef = useRef(false);
-  /** In-flight RM strokes only — committed ink lives in VectorDocument (STORY-IN-012). */
-  const rmStrokesRef = useRef(
-    new Map<
-      string,
-      {
-        points: { x: number; y: number }[];
-        width: number;
-        intent?: "ink" | "enclose";
-      }
-    >(),
-  );
+  /** Transient RM preview strokes — committed ink lives in the VectorDocument mirror. */
   const rmPanelRef = useRef({ w: 1404, h: 1872 });
 
   const [emptyHint, setEmptyHint] = useState(!populated);
@@ -169,29 +136,14 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   };
 
   /**
-   * One-shot (or rare) vector document push to Epaper — not a bitmap.
-   * Subsequent pan/zoom only sends viewport; tablet re-rasterizes locally.
+   * Viewport only — Infini does not push documents mid-session (IN-028 owns doc_load).
+   * @implements [SRS-IN-07] 0 outbound document ops
    */
-  const sendDocSnapshot = () => {
-    const api = window.infiniNative;
-    if (!api?.sendToRm) return;
-    const nodes = primitivesToSnapshotNodes([...docRef.current.all()]);
-    const pickables = buildPickables(treeRef.current);
-    void api.sendToRm({ type: "doc_snapshot", nodes, pickables });
-    snapshotSentRef.current = true;
-  };
-
-  /** Push fresh vector doc + pickables after tree mutations (STORY-IN-020). */
-  const pushDocSnapshotToRm = () => {
-    sendDocSnapshot();
-  };
-
   const publishViewportCoalesced = (force = false) => {
     const session = sessionRef.current;
     if (!session) return;
     session.setCssSize(sizeRef.current.w || 800, sizeRef.current.h || 600);
     session.setOrientation(orientationRef.current);
-    if (!snapshotSentRef.current) sendDocSnapshot();
     if (force) session.flushViewport(vpRef.current);
     else session.publishViewport(vpRef.current);
   };
@@ -230,28 +182,18 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   };
 
   /**
-   * Paint WorldLayer from demo figures + VectorDocument + optional in-flight live strokes.
-   * Demo figures are WorldLayer SoT ([SRS-IN-07]); tree ink must not replace them.
-   * @implements [SRS-IN-04] tree-backed live ink — syncFromVectorDoc is SoT for committed ink
-   * @fix [BUG] tablet ink must not wipe desktop demo figures
+   * Paint WorldLayer from the VectorDocument mirror + transient previews.
+   * Withdrawn: rebuildWithRmInk as the document source (flat RM primitives).
+   * @implements [SRS-IN-07] WorldLayer paints the mirror
    */
-  const rebuildWithRmInk = () => {
-    const base = populated ? demoPrimitives() : [];
-    docRef.current.syncFromVectorDoc(treeRef.current);
-    const fromTree = [...docRef.current.all()];
-    const inkStyle = { stroke: "#1C2430", strokeWidth: 2.5 };
-    const live = [...rmStrokesRef.current.entries()]
-      .filter(([, s]) => s.points.length >= 2)
-      .map(([id, s]) =>
-        makePath(`rm-live-${id}`, s.points, {
-          ...inkStyle,
-          strokeWidth: s.width,
-        }),
-      );
-    // Always keep demo figures under tree ink + live (SRS-IN-07 WorldLayer SoT).
-    const merged = [...base, ...fromTree, ...live];
-    docRef.current.setPrimitives(merged);
-    if (merged.length) setEmptyHint(false);
+  const paintMirror = () => {
+    const session = sessionRef.current;
+    session?.paintMirror();
+    const fromMirror = [...docRef.current.all()];
+    if (populated && fromMirror.length === 0) {
+      docRef.current.setPrimitives(demoPrimitives());
+    }
+    if (docRef.current.size) setEmptyHint(false);
     rendererRef.current.invalidateTiles();
     schedulePaint();
   };
@@ -348,8 +290,6 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     orientationRef.current = next;
     setOrientation(next);
     sessionRef.current?.setOrientation(next);
-    snapshotSentRef.current = false;
-    sendDocSnapshot();
     syncMarkerDom();
     publishViewportCoalesced(true);
     schedulePaint();
@@ -376,9 +316,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     }
 
     const handleRmClient = (ev: RmClientEvent) => {
-      if (shouldPublishOnRmClient(ev)) {
-        snapshotSentRef.current = false;
-        sendDocSnapshot();
+      if ((ev.type === "connected" || ev.type === "sync") && ev.n > 0) {
         publishViewportCoalesced(true);
       }
       setSyncHint(rmClientSyncHint(ev));
@@ -407,11 +345,14 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       handleRmClient({ type: "sync", n });
     });
 
-    const unsub = api.onRmStroke((msg: RmStrokeMsg | import("../native").RmToolIntentMsg) => {
+    const unsub = api.onRmStroke((msg: RmInboundMsg) => {
+      if (msg.type === "doc_change") {
+        sessionRef.current?.receiveDocChange(msg as DocChangeMessage);
+        paintMirror();
+        return;
+      }
       if (msg.type === "tool_intent") {
-        applyToolIntent(treeRef.current, undoRef.current, msg);
-        rebuildWithRmInk();
-        pushDocSnapshotToRm();
+        // Retired with SRS-IN-13 — Infini is not the document authority.
         return;
       }
       const cssW = sizeRef.current.w || 800;
@@ -419,29 +360,15 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       const orient = currentOrientation();
       const frame = tabletDrawingFrameCss(cssW, cssH, orient);
       const region = frameWorldAabb(frame, vpRef.current);
+      const session = sessionRef.current;
 
       if (msg.type === "stroke_begin") {
         if (msg.cw && msg.ch) rmPanelRef.current = { w: msg.cw, h: msg.ch };
-        // brush.width is world units (ADR-0012); legacy panel-px ignored.
         const widthWorld = msg.brush?.width ?? 2.5;
-        rmStrokesRef.current.set(msg.id, {
-          points: [],
-          width: widthWorld,
-          intent: msg.intent === "enclose" ? "enclose" : "ink",
-        });
+        session?.previewBegin(msg.id, widthWorld);
         return;
       }
       if (msg.type === "stroke_point") {
-        let stroke = rmStrokesRef.current.get(msg.id);
-        // Recover if stroke_begin was dropped on the wire (intermittent miss).
-        if (!stroke) {
-          stroke = {
-            points: [],
-            width: 2.5,
-            intent: "ink",
-          };
-          rmStrokesRef.current.set(msg.id, stroke);
-        }
         const { u, v } = panelToFrameUv(
           msg.x,
           msg.y,
@@ -449,38 +376,15 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
           rmPanelRef.current.h,
           orient,
         );
-        stroke.points.push({
-          x: region.minX + u * (region.maxX - region.minX),
-          y: region.minY + v * (region.maxY - region.minY),
-        });
-        // Live paint every sample — enclose boxes must stay visible while drawing.
-        rebuildWithRmInk();
+        const wx = region.minX + u * (region.maxX - region.minX);
+        const wy = region.minY + v * (region.maxY - region.minY);
+        session?.previewPoint(msg.id, wx, wy);
+        paintMirror();
         return;
       }
       if (msg.type === "stroke_end") {
-        const stroke = rmStrokesRef.current.get(msg.id);
-        let encKind: string | undefined;
-        if (stroke && stroke.points.length >= 2) {
-          const encResult = commitStrokeWithEncloseRecognition(
-            treeRef.current,
-            undoRef.current,
-            {
-              id: msg.id,
-              points: stroke.points,
-              width: stroke.width,
-              intent: normalizeStrokeIntent(stroke.intent),
-              source: "epaper",
-            },
-          );
-          encKind = encResult.kind;
-        }
-        rmStrokesRef.current.delete(msg.id);
-        // Rebuild BEFORE snapshot so tablet receives flattened Smart Group, not stale free ink.
-        rebuildWithRmInk();
-        if (encKind === "created") {
-          pushDocSnapshotToRm();
-        }
-        // Ordinary ink: no snapshot — device already drew locally (race avoidance).
+        session?.previewEnd(msg.id);
+        paintMirror();
       }
     });
 
@@ -626,7 +530,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     if (!node || node.kind !== "smart_group") return;
     node.transform = { ...prev.liveTransform };
     node.bounds = { ...prev.liveBounds };
-    rebuildWithRmInk();
+    paintMirror();
   };
 
   const restorePreviewOrigin = () => {
@@ -704,8 +608,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
           ...(result.commit.bounds ? { bounds: result.commit.bounds } : {}),
         },
       });
-      rebuildWithRmInk();
-      pushDocSnapshotToRm();
+      paintMirror();
     }
     dragRef.current = null;
     // Settle flush after pan/selection drag — tablet must sharp-rasterize once more.
@@ -753,8 +656,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
             selectedId: result.smartGroupId,
           };
           setInkSelCount(0);
-          rebuildWithRmInk();
-          pushDocSnapshotToRm();
+          paintMirror();
           schedulePaint();
         }}
         createDisabled={inkSelCount < 2}

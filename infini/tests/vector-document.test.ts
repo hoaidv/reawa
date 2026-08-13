@@ -268,3 +268,70 @@ describe("SRS-IN-04 flattenDrawables + WorldLayer", () => {
     expect(() => host.queryVisible(view)).not.toThrow();
   });
 });
+
+describe("SRS-IN-07 reparent remove restore_snapshot", () => {
+  it("reparents ink under a group and removes it", () => {
+    const doc = new VectorDocument();
+    doc.applyOp({ opId: "g", type: "create_group", payload: { id: "grp_1" } });
+    doc.applyOp({
+      opId: "ink",
+      type: "append_ink",
+      payload: {
+        id: "ink_1",
+        samples: [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
+        style,
+      },
+    });
+    expect(
+      doc.applyOp({
+        opId: "rp",
+        type: "reparent",
+        payload: { id: "ink_1", newParentId: "grp_1", index: 0 },
+      }).applied,
+    ).toBe(true);
+    const grp = doc.indexById().get("grp_1");
+    expect(grp?.kind).toBe("group");
+    if (grp?.kind === "group") expect(grp.children[0]?.id).toBe("ink_1");
+
+    expect(doc.applyOp({ opId: "rm", type: "remove", payload: { id: "ink_1" } }).applied).toBe(
+      true,
+    );
+    expect(doc.indexById().has("ink_1")).toBe(false);
+  });
+
+  it("restore_snapshot replaces the tree wholesale", () => {
+    const doc = new VectorDocument();
+    doc.applyOp({
+      opId: "old",
+      type: "create_primitive",
+      payload: { id: "p1", geom: { kind: "rect", x: 0, y: 0, w: 1, h: 1 }, style },
+    });
+    expect(
+      doc.applyOp({
+        opId: "rst",
+        type: "restore_snapshot",
+        payload: {
+          document: {
+            version: 1,
+            rootChildren: [
+              {
+                id: "fresh",
+                kind: "ink",
+                samples: [
+                  { x: 2, y: 2 },
+                  { x: 3, y: 3 },
+                ],
+                style,
+              },
+            ],
+          },
+        },
+      }).applied,
+    ).toBe(true);
+    expect(doc.indexById().has("fresh")).toBe(true);
+    expect(doc.indexById().has("p1")).toBe(false);
+  });
+});

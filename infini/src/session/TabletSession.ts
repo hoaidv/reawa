@@ -1,9 +1,10 @@
 /**
- * Infini side of ADR-0009 tablet session.
+ * Infini side of ADR-0015 tablet session — viewer + inbound applier.
  * @implements [SRS-IN-07] session roles and channel binding
- * @implements [SRS-IN-08] viewport emit timing hook for map-apply budget
+ * @implements [SRS-IN-08] viewport emit timing + mirror apply budget
  */
 
+import { makePath } from "../canvas/primitives";
 import type { InfiniDocument } from "../canvas/Document";
 import {
   frameWorldAabb,
@@ -13,12 +14,13 @@ import {
   type Viewport,
   visibleWorldAabb,
 } from "../canvas/Viewport";
+import { drawablesToPrimitives } from "../document/toPrimitives";
 import type { VectorDocument } from "../document/VectorDocument";
 import type { DocOp } from "../document/types";
 import {
-  docOpToMessage,
-  isInfiniStructureOp,
+  docChangeToOp,
   messageToDocOp,
+  type DocChangeMessage,
   type DocOpMessage,
   type SessionTransport,
   type ViewportMessage,
@@ -30,7 +32,7 @@ const MIN_PUBLISH_INTERVAL_MS = 1000 / VIEWPORT_PUBLISH_MAX_HZ;
 
 export interface TabletSessionOptions {
   tree: VectorDocument;
-  /** WorldLayer host — synced after successful doc apply. */
+  /** WorldLayer host — synced from the mirror after apply. */
   world?: InfiniDocument;
   transport: SessionTransport;
   cssWidth?: number;
@@ -42,11 +44,31 @@ export interface TabletSessionOptions {
   nowMs?: () => number;
 }
 
+export interface PreviewStroke {
+  id: string;
+  points: { x: number; y: number }[];
+  width: number;
+}
+
+export interface ApplyChangeResult {
+  applied: boolean;
+  reason?: string;
+  /** Wall time of apply (ms) for SRS-IN-08 budget. */
+  elapsedMs?: number;
+  resyncRequested?: boolean;
+}
+
 export class TabletSession {
   connected = false;
+  /** Last successfully applied doc_change seq. After load epoch this is 0. */
+  lastAppliedSeq = 0;
+  /** True after a gap or unknown op — do not save, request resync. */
+  resyncRequested = false;
+  /** Last inbound apply timestamp (ms) for SRS-IN-08. */
+  lastApplyAtMs = 0;
+
   private viewportSeq = 0;
   private epaperStrokeInFlight = false;
-  private structureQueue: DocOp[] = [];
   private readonly tree: VectorDocument;
   private readonly world?: InfiniDocument;
   private readonly transport: SessionTransport;
@@ -57,6 +79,7 @@ export class TabletSession {
   private readonly nowMs: () => number;
   private lastPublishAtMs = -Infinity;
   private pendingVp: Viewport | null = null;
+  private readonly previews = new Map<string, PreviewStroke>();
 
   /** Last viewport emit timestamp (ms, performance.now) for latency tests. */
   lastViewportEmitAtMs = 0;
@@ -81,6 +104,7 @@ export class TabletSession {
 
   disconnect(): void {
     this.connected = false;
+    this.dropAllPreviews();
   }
 
   setCssSize(w: number, h: number): void {
@@ -94,6 +118,10 @@ export class TabletSession {
 
   getOrientation(): TabletOrientation {
     return this.orientation;
+  }
+
+  get mirrorSuspect(): boolean {
+    return this.tree.mirrorSuspect;
   }
 
   /** Current tablet CSS frame for marker + drawingRegion. */
@@ -166,7 +194,6 @@ export class TabletSession {
   /** Epaper reports stroke still capturing samples. */
   setEpaperStrokeInFlight(inFlight: boolean): void {
     this.epaperStrokeInFlight = inFlight;
-    if (!inFlight) this.flushStructureQueue();
   }
 
   get isEpaperStrokeInFlight(): boolean {
@@ -174,39 +201,95 @@ export class TabletSession {
   }
 
   get queuedStructureCount(): number {
-    return this.structureQueue.length;
+    return 0;
   }
 
   /**
-   * Infini wants to emit a structure / Smart Group op (emit matrix).
-   * Queues while Epaper stroke is in flight.
-   * @implements [SRS-IN-07] no race in-flight Epaper stroke
+   * Infini is a viewer — it does not emit document ops (ADR-0014 / SRS-IN-07).
+   * @implements [SRS-IN-07] 0 outbound document ops
    */
-  emitLocalStructureOp(op: DocOp): { emitted: boolean; queued: boolean } {
-    if (!this.connected) return { emitted: false, queued: false };
-    const withSource: DocOp = { ...op, source: op.source ?? "infini" };
-    if (!isInfiniStructureOp(withSource.type)) {
-      this.log("not an Infini structure op", withSource.type);
-      return { emitted: false, queued: false };
-    }
-    // Apply locally first so tree stays ahead of wire.
-    const result = this.tree.applyOp(withSource);
-    if (!result.applied && result.reason !== "duplicate_opId") {
-      this.log("local structure apply failed", result.reason);
-      return { emitted: false, queued: false };
-    }
-    this.syncWorld();
-
-    if (this.epaperStrokeInFlight) {
-      this.structureQueue.push(withSource);
-      return { emitted: false, queued: true };
-    }
-    this.transport.sendDocOp(docOpToMessage(withSource));
-    return { emitted: true, queued: false };
+  emitLocalStructureOp(op: DocOp): { emitted: boolean; queued: boolean; reason?: string } {
+    this.log("viewer_only: Infini does not emit document ops", op.type);
+    return { emitted: false, queued: false, reason: "viewer_only" };
   }
 
   /**
-   * Receive a document-channel op from Epaper (or peer).
+   * Apply an inbound `doc_change` into the mirror tree and paint WorldLayer from it.
+   * @implements [SRS-IN-07] inbound doc_change applier
+   * @implements [SRS-IN-08] device commit → mirror apply budget
+   */
+  receiveDocChange(msg: DocChangeMessage): ApplyChangeResult {
+    const t0 = this.nowMs();
+    if (!this.connected) return { applied: false, reason: "not_connected" };
+    const op = docChangeToOp(msg);
+    const before = this.tree.snapshotString();
+
+    if (this.tree.hasAppliedOpId(op.opId)) {
+      if (this.tree.snapshotString() !== before) {
+        this.log("idempotent apply mutated tree unexpectedly", op.opId);
+      }
+      return { applied: false, reason: "duplicate_opId", elapsedMs: this.nowMs() - t0 };
+    }
+
+    if (this.tree.mirrorSuspect) {
+      this.resyncRequested = true;
+      return {
+        applied: false,
+        reason: "mirror_suspect",
+        resyncRequested: true,
+        elapsedMs: this.nowMs() - t0,
+      };
+    }
+
+    if (msg.baseSeq !== this.lastAppliedSeq) {
+      this.markSuspectAndResync(
+        `gap:baseSeq=${msg.baseSeq} lastAppliedSeq=${this.lastAppliedSeq}`,
+      );
+      return {
+        applied: false,
+        reason: "seq_gap",
+        resyncRequested: true,
+        elapsedMs: this.nowMs() - t0,
+      };
+    }
+
+    const result = this.tree.applyOp(op);
+
+    if (!result.applied && result.reason === "duplicate_opId") {
+      return { applied: false, reason: "duplicate_opId", elapsedMs: this.nowMs() - t0 };
+    }
+
+    if (result.reason?.startsWith("unknown_type:")) {
+      this.log("unknown doc_change op type", { type: op.type, opId: op.opId, seq: msg.seq });
+      this.markSuspectAndResync(`unknown_type:${op.type}`);
+      return {
+        applied: false,
+        reason: result.reason,
+        resyncRequested: true,
+        elapsedMs: this.nowMs() - t0,
+      };
+    }
+
+    if (!result.applied) {
+      this.log("doc_change apply failed", { reason: result.reason, opId: op.opId, seq: msg.seq });
+      this.markSuspectAndResync(result.reason ?? "apply_failed");
+      return {
+        applied: false,
+        reason: result.reason,
+        resyncRequested: true,
+        elapsedMs: this.nowMs() - t0,
+      };
+    }
+
+    this.lastAppliedSeq = msg.seq;
+    this.lastApplyAtMs = this.nowMs();
+    this.dropPreviewsForOp(op);
+    this.paintMirror();
+    return { applied: true, elapsedMs: this.lastApplyAtMs - t0 };
+  }
+
+  /**
+   * Receive a legacy `doc_op` (retired wire). Applies without seq/gap — tests only.
    * @implements [SRS-IN-07] idempotent apply + unknown type log
    */
   receiveDocOp(msg: DocOpMessage): {
@@ -230,18 +313,102 @@ export class TabletSession {
       return { applied: false, reason: "duplicate_opId" };
     }
 
-    if (result.applied) this.syncWorld();
+    if (result.applied) this.paintMirror();
     return result;
   }
 
-  private flushStructureQueue(): void {
-    while (this.structureQueue.length > 0 && !this.epaperStrokeInFlight) {
-      const op = this.structureQueue.shift()!;
-      this.transport.sendDocOp(docOpToMessage(op));
+  /**
+   * WorldLayer from the mirror tree + transient previews (never persisted).
+   * Replaces CanvasStage.rebuildWithRmInk as the document paint source.
+   * @implements [SRS-IN-07] WorldLayer paints the mirror
+   */
+  paintMirror(): void {
+    if (!this.world) return;
+    const treePrims = drawablesToPrimitives(this.tree.flatten());
+    const live = [...this.previews.values()]
+      .filter((s) => s.points.length >= 2)
+      .map((s) =>
+        makePath(`preview:${s.id}`, s.points, {
+          stroke: "#1C2430",
+          strokeWidth: s.width,
+        }),
+      );
+    this.world.setPrimitives([...treePrims, ...live]);
+  }
+
+  /**
+   * Preview stream — advisory, never written to the mirror.
+   * @implements [SRS-IN-07] transient preview path
+   */
+  previewBegin(id: string, width: number): void {
+    this.previews.set(id, { id, points: [], width });
+  }
+
+  previewPoint(id: string, x: number, y: number, width = 2.5): void {
+    let stroke = this.previews.get(id);
+    if (!stroke) {
+      stroke = { id, points: [], width };
+      this.previews.set(id, stroke);
+    }
+    stroke.points.push({ x, y });
+    this.paintMirror();
+  }
+
+  previewEnd(id: string): void {
+    // Keep until matching doc_change (SRS-IN-07 lifetime).
+    void id;
+    this.paintMirror();
+  }
+
+  previewIds(): string[] {
+    return [...this.previews.keys()];
+  }
+
+  dropAllPreviews(): void {
+    this.previews.clear();
+    this.paintMirror();
+  }
+
+  /**
+   * Persistence guard — never serialize a gapped mirror.
+   * @implements [SRS-IN-07] do not save a suspect mirror
+   */
+  trySerializeMirror(serialize: (tree: VectorDocument) => string): string | null {
+    if (this.tree.mirrorSuspect || !this.tree.canSave()) return null;
+    return serialize(this.tree);
+  }
+
+  private dropPreviewsForOp(op: DocOp): void {
+    for (const id of idsReferencedByOp(op)) {
+      this.previews.delete(id);
     }
   }
 
-  private syncWorld(): void {
-    this.world?.syncFromVectorDoc(this.tree);
+  private markSuspectAndResync(reason: string): void {
+    this.tree.markSuspect(reason);
+    this.resyncRequested = true;
+    this.log("mirror_suspect: requesting explicit resync", reason);
   }
+}
+
+/**
+ * Node ids an applied op may replace a preview for (stroke id == node id).
+ * @implements [SRS-IN-07] preview replaced by matching doc_change
+ */
+function idsReferencedByOp(op: DocOp): string[] {
+  const ids: string[] = [];
+  const p = op.payload;
+  if (typeof p.id === "string") ids.push(p.id);
+  if (typeof p.inkId === "string") ids.push(p.inkId);
+  if (Array.isArray(p.captureIds)) {
+    for (const c of p.captureIds) if (typeof c === "string") ids.push(c);
+  }
+  if (Array.isArray(p.children)) {
+    for (const c of p.children) {
+      if (c && typeof c === "object" && typeof (c as { id?: unknown }).id === "string") {
+        ids.push((c as { id: string }).id);
+      }
+    }
+  }
+  return ids;
 }

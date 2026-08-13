@@ -4,13 +4,12 @@ title: "Device undo ring"
 kind: implement
 parent_srs: [SRS-EP-07]
 parent_req: [REQ-04]
-status: blocked
+status: ready
 priority: P0
 iter: iter-003
 estimate: 3
 owner: dev
 depends_on: [STORY-EP-014]
-blocked_reason: "CHL-0009 — srs-logic.md (SRS-EP-07) not on disk; waits on STORY-EP-014"
 acceptance_criteria:
   - "Given a structural op applied through the undo-aware path, When it commits, Then the ring gained exactly one pre-op snapshot and one undo restores that tree exactly (geometry ±1 world unit)."
   - "Given a move that rendered many intermediate frames, When it is released, Then the ring gained exactly one entry and one undo reverts exactly that gesture."
@@ -32,8 +31,8 @@ Implements the undo half of [SRS-EP-07](../../../.docs/modules/epaper/features/d
 (re-homed from deprecated SRS-IN-12). BDD:
 [undo-ring.feature](../../../.docs/modules/epaper/features/device-document/bdd/undo-ring.feature).
 
-Undo *affordance* is a design question on [STORY-EP-012](./STORY-EP-012.md); this story is the
-ring itself.
+Undo *affordance* is **deferred** ([CHL-0010](../challenges/CHL-0010-undo-vs-selection-create-chrome.md)):
+this story is the ring itself, with **no on-panel chrome**.
 
 ## Kind
 
@@ -46,3 +45,7 @@ ring itself.
 ## Done when
 
 - All `@SRS-EP-07` undo-ring scenarios green
+- No on-panel undo chrome ([CHL-0010](../challenges/CHL-0010-undo-vs-selection-create-chrome.md))
+- No EP-020 handshake / Infini edits; `restore_snapshot` is queued locally
+
+**SM 2026-08-13:** EP-014 **done** (RM2 ingest p95=231 µs). This story is **ready**. BDD already lives in `undo-ring.feature` — QA reviews, does not rewrite.

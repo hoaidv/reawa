@@ -1,6 +1,6 @@
 /**
  * Tablet session message shapes (JSON-lines framing).
- * @implements [SRS-IN-07] viewport + doc_op envelopes
+ * @implements [SRS-IN-07] viewport + doc_change envelopes
  */
 
 import type { Aabb, TabletOrientation } from "../canvas/Viewport";
@@ -50,12 +50,62 @@ export interface DocOpMessage {
   ts?: number;
 }
 
+/** Nested op inside a doc_change envelope (SRS-IN-09). */
+export interface DocChangeOp {
+  type: string;
+  payload?: Record<string, unknown>;
+  opId?: string;
+  ts?: number;
+  source?: "epaper" | "infini";
+}
+
+/**
+ * Epaper → Infini committed change (ADR-0015 §2).
+ * @implements [SRS-IN-07] doc_change envelope
+ */
+export interface DocChangeMessage {
+  type: "doc_change";
+  seq: number;
+  opId: string;
+  op: DocChangeOp;
+  baseSeq: number;
+}
+
 export type SessionOutbound = ViewportMessage | DocOpMessage;
 
 /** Peer transport — tests use in-memory; production wires TCP/JSON-lines later. */
 export interface SessionTransport {
   sendViewport(msg: ViewportMessage): void;
   sendDocOp(msg: DocOpMessage): void;
+}
+
+/**
+ * Normalize a doc_change envelope to a DocOp for VectorDocument.applyOp.
+ * @implements [SRS-IN-07] doc_change → op
+ */
+export function docChangeToOp(msg: DocChangeMessage): DocOp {
+  const raw = msg.op ?? {};
+  const type = String(raw.type ?? "");
+  const opId = String(raw.opId ?? msg.opId);
+  let payload: Record<string, unknown>;
+  if (raw.payload && typeof raw.payload === "object" && !Array.isArray(raw.payload)) {
+    payload = raw.payload;
+  } else {
+    const rest = { ...(raw as unknown as Record<string, unknown>) };
+    delete rest.type;
+    delete rest.opId;
+    delete rest.ts;
+    delete rest.source;
+    delete rest.payload;
+    payload = rest;
+  }
+  return {
+    opId,
+    type,
+    payload,
+    ts: raw.ts,
+    source: raw.source ?? "epaper",
+  };
 }
 
 export function docOpToMessage(op: DocOp): DocOpMessage {

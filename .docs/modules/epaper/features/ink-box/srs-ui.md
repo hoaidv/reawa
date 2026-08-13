@@ -59,8 +59,9 @@ through a drag. It is not pinned chrome.
 
 No properties panel, no context menu, no handle labels, no z-order controls, no alignment guides.
 `cta.create_smart_group` is **out of scope for v1 chrome** — selection-create exists in logic
-([SRS-EP-10](./srs-logic.md#srs-ep-10-device-recognition)) but has no on-panel invocation until the
-undo/command affordance question is answered ([Open](#open-needs-design)).
+([SRS-EP-10](./srs-logic.md#srs-ep-10-device-recognition)) but has no on-panel invocation this
+campaign ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)
+deferred). Enclose-with-Ink-box remains the create path.
 
 ### Box appearance (binding)
 
@@ -155,10 +156,10 @@ a creator unable to tell which mode they were resizing in until after they relea
 
 | Question | Why it is open | Owner |
 |---|---|---|
-| **Handle size and hit tolerance in device units** | [SRS-IN-11]'s 8 CSS px is a mouse constant; the pen and panel DPI give a different answer. Needs a spike on hardware | architect + designer |
-| **LOD cutoff value on device** | `TILE_LOD_SCALE = 0.35` is a desktop tile constant; the device has a fixed panel and no tiles | architect |
-| **Undo affordance** | Undo is now device-side ([SRS-EP-07](../device-document/srs-logic.md)) with no button and no keyboard | pm + designer |
-| **Selection-create invocation** | The logic exists; the gesture or control that triggers it does not, and it competes with undo for the same scarce chrome | pm + designer |
+| **Handle size and hit tolerance in device units** | **Closed 2026-08-13 (architect).** Visual **28 du**; hit **56 du** (14 du pad beyond visual). 1 du = 1 panel pixel @ 226 dpi. **Not** 8 CSS px. Binding for [STORY-EP-019](../../../../../.plan/iter-003/stories/STORY-EP-019.md). | architect — accepted |
+| **LOD cutoff value on device** | **Closed 2026-08-13 (architect).** Manipulation unavailable when the selected box's **smaller on-panel axis < 96 du**. **Not** `TILE_LOD_SCALE = 0.35`. Binding for EP-019. | architect — accepted |
+| **Undo affordance** | **Deferred this campaign ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)).** No on-panel control; no fourth ToolChip slot; no properties panel. [SRS-EP-07](../device-document/srs-logic.md) ring still ships (EP-015) with no chrome. Hardware / two-finger undo unspecified. | pm + designer — deferred |
+| **Selection-create invocation** | **Deferred this campaign ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)).** `cta.create_smart_group` stays out of v1 chrome. Enclose-with-Ink-box remains the create path. Refuse scene still ships; no invented pen gesture. | pm + designer — deferred |
 | **Chrome legibility against dense ink** | 1-bit chrome over handwriting, with no tint or shadow available | designer |
 
 ---

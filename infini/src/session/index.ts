@@ -5,11 +5,14 @@
 export type {
   ViewportMessage,
   DocOpMessage,
+  DocChangeMessage,
+  DocChangeOp,
   SessionOutbound,
   SessionTransport,
 } from "./types";
 export {
   docOpToMessage,
+  docChangeToOp,
   messageToDocOp,
   isInfiniStructureOp,
 } from "./types";

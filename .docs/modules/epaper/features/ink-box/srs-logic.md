@@ -139,16 +139,16 @@ real ink; `set_smart_transform` publishes at pen-up as a consequence
 |---|---|
 | Pickable set | `SmartGroup` nodes, resolved against world `bounds` after transform |
 | Resolution order | Topmost first — later siblings paint above, so they pick first |
-| Hit region | Inside `bounds`, plus a handle tolerance band when selected (device value below) |
+| Hit region | Inside `bounds`, plus a handle tolerance band when selected: visual **28 du**, hit **56 du** (14 du pad beyond visual). 1 du = 1 panel pixel @ 226 dpi. **Not** 8 CSS px |
 | Source | The **local document** — never a peer-supplied list |
-| LOD cutoff | Picking disabled below a device scale threshold (**open**, below) |
+| LOD cutoff | Picking disabled when the selected box's **smaller on-panel axis < 96 du**. **Not** `TILE_LOD_SCALE = 0.35` (desktop tile constant — the device has a fixed panel and no tiles) |
 | Below cutoff | The press does nothing to the document, and the UI states that manipulation is unavailable ([SRS-EP-12](./srs-ui.md)) |
 
-**Open — device constants.** `TILE_LOD_SCALE = 0.35` and the 8 CSS px tolerance band are *desktop*
-values from [SRS-IN-11]. The device has a fixed panel, no CSS pixel, and a pen with a different
-pointing error than a mouse. Both must be re-derived in device units against the panel DPI before
-the first manipulation story. Owner: architect + design spike
-([SRS-EP-12](./srs-ui.md), handoff ask).
+**Device constants (closed 2026-08-13).** Handle 28/56 du and LOD 96 du min-axis are accepted from
+the [EP-012 Spec spike](../../../../../.plan/iter-003/design/device-selection-chrome/ui-spec.md#spike)
+against known RM2 panel DPI. They are implement locks for EP-019. Do not fall back to 8 CSS px or
+`TILE_LOD_SCALE = 0.35`. First-device miss-rate may file a `CHL-*` with a new **du** number — never
+a desktop constant.
 
 Below the cutoff the press **falls through to nothing** — not to pan, because there is no on-device
 pan ([epaper Non-Goals](../../prd.md)). That is the one line of [SRS-IN-11] that could not be

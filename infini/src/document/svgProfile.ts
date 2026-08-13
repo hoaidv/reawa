@@ -144,6 +144,10 @@ function serializeNode(node: DocNode, indent: string): string {
  * @implements [SRS-IN-09] tree → SVG profile
  */
 export function serializeInfiniSvg(doc: VectorDocument): string {
+  // @implements [SRS-IN-07] refuse silently saving a suspect mirror
+  if (doc.mirrorSuspect || !doc.canSave()) {
+    throw new Error("refuse_save_suspect_mirror");
+  }
   const body = doc.rootChildren
     .map((n) => serializeNode(n, "  "))
     .join("\n");

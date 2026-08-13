@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QTimer>
+#include <QDebug>
 #include <QtPlugin>
 
 #include <csignal>
@@ -10,6 +11,7 @@
 #include "tabletwindow.h"
 #include "tabletappfilter.h"
 #include "epaperbridge.h"
+#include "latencyprobe/stub_document.hpp"
 
 namespace {
 
@@ -73,5 +75,22 @@ int main(int argc, char *argv[])
 
     const int rc = app.exec();
     bridge->dumpTraceStats();
+    if (epaper::latencyprobe::harness().enabled()) {
+        const QString dump = QString::fromStdString(epaper::latencyprobe::harness().dumpText());
+        const auto lines = dump.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+        for (const QString &line : lines)
+            qInfo().noquote() << line;
+    }
+    for (QObject *root : engine.rootObjects()) {
+        if (auto *win = qobject_cast<TabletWindow *>(root)) {
+            if (TabletCanvasItem *c = win->canvas()) {
+                const QString dump = QString::fromStdString(c->ingestDumpText());
+                const auto lines = dump.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+                for (const QString &line : lines)
+                    qInfo().noquote() << line;
+            }
+            break;
+        }
+    }
     return rc;
 }

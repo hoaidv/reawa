@@ -154,8 +154,8 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 | C++/TS geometry divergence | Document fidelity | M×H | Shared fixtures (`ops/`, `enclose/`, `fixed-ink/`, `round-trip/`) + the domain doc |
 | Undo ring memory (20 whole-tree snapshots) | Ink latency | M×M | Measured in [SRS-EP-13](./features/device-document/srs-quality.md); shrink the ring before slowing ink |
 | Live manipulation exceeds the partial-refresh budget | Gesture feel | M×M | ≥5 Hz / 0 full-panel bar; CHL-0006 established that slow is acceptable |
-| Device constants inherited from desktop values (LOD 0.35, 8 px tolerance) | Manipulation usability | **H×M** | Open in [SRS-EP-12](./features/ink-box/srs-ui.md); re-derive on hardware before the first manipulation story |
-| No undo affordance on a three-tool chip | Recoverability | H×M | Open design question ([SRS-EP-05](./features/tool-modes/srs-ui.md)); undo logic ships regardless |
+| Device constants inherited from desktop values (LOD 0.35, 8 px tolerance) | Manipulation usability | **H×M** | **Closed.** Device locks: handle 28/56 du, LOD min on-panel axis 96 du ([SRS-EP-12](./features/ink-box/srs-ui.md)). Miss-rate on hardware files a `CHL-*` in du, never 8 CSS px / 0.35 |
+| No undo affordance on a three-tool chip | Recoverability | H×M | **Deferred this campaign ([CHL-0010](../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)).** Undo logic ships regardless ([SRS-EP-07](./features/device-document/srs-logic.md) / EP-015) |
 | Unpublished work lost on app restart | Data loss | L×M (accepted) | Publish per committed op + visible pending state |
 | RM2 touch unreachable from Qt | Tool arming | M×H | Spike shipped; fallback is pen-on-chip |
 | `regionsync/` library still unwired from the Qt binary | Dual path confusion | H×M | Wire it as the document layer lands, or retire it |

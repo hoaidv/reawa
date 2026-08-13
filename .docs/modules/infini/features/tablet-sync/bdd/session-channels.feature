@@ -115,7 +115,7 @@ Feature: Infini tablet session viewport load and change channels
 
   # Library / applier helpers — not live CanvasStage wire
 
-  @SRS-IN-07 @future
+  @SRS-IN-07
   Scenario: append_ink from Epaper updates tree and WorldLayer
     Given VectorDocument session helpers under unit test
     When an Epaper-shaped doc_change carrying append_ink with opId "ink_1" is applied

@@ -10,7 +10,7 @@ export class IpcRmTransport implements SessionTransport {
     void window.infiniNative?.sendToRm?.(msg);
   }
 
-  sendDocOp(msg: DocOpMessage): void {
-    void window.infiniNative?.sendToRm?.(msg);
+  sendDocOp(_msg: DocOpMessage): void {
+    // Viewer only — Infini must not emit document ops ([SRS-IN-07] / IN-027).
   }
 }

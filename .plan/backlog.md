@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-13T10:57:53+00:00
+generated_at: 2026-08-13T13:12:18+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -18,15 +18,15 @@ generated_at: 2026-08-13T10:57:53+00:00
 | [STORY-EP-009](./iter-003/stories/STORY-EP-009.md) | Tablet move/resize ghost with ink preview | implement | dev | epaper | [SRS-EP-04] | blocked | iter-003 | 2 |
 | [STORY-EP-010](./iter-003/stories/STORY-EP-010.md) | fixedInk mode-correct resize ghost | implement | dev | epaper | [SRS-EP-04] | blocked | iter-003 | 3 |
 | [STORY-EP-011](./iter-003/stories/STORY-EP-011.md) | Live direct resize — drop ghost | implement | dev | epaper | [SRS-EP-04] | blocked | iter-003 | 5 |
-| [STORY-EP-012](./iter-003/stories/STORY-EP-012.md) | Design device selection overlay and manipulation chrome | design | designer | epaper | [SRS-EP-12] | ready | iter-003 | 5 |
-| [STORY-EP-013](./iter-003/stories/STORY-EP-013.md) | Measure ink latency with a resident document | implement | dev | epaper | [SRS-EP-13] | ready | iter-003 | 3 |
-| [STORY-EP-014](./iter-003/stories/STORY-EP-014.md) | Device document tree and stroke ingestion | implement | dev | epaper | [SRS-EP-07], [SRS-EP-09] | blocked | iter-003 | 5 |
-| [STORY-EP-015](./iter-003/stories/STORY-EP-015.md) | Device undo ring | implement | dev | epaper | [SRS-EP-07] | blocked | iter-003 | 3 |
+| [STORY-EP-012](./iter-003/stories/STORY-EP-012.md) | Design device selection overlay and manipulation chrome | design | designer | epaper | [SRS-EP-12] | done | iter-003 | 5 |
+| [STORY-EP-013](./iter-003/stories/STORY-EP-013.md) | Measure ink latency with a resident document | implement | dev | epaper | [SRS-EP-13] | done | iter-003 | 3 |
+| [STORY-EP-014](./iter-003/stories/STORY-EP-014.md) | Device document tree and stroke ingestion | implement | dev | epaper | [SRS-EP-07], [SRS-EP-09] | done | iter-003 | 5 |
+| [STORY-EP-015](./iter-003/stories/STORY-EP-015.md) | Device undo ring | implement | dev | epaper | [SRS-EP-07] | ready | iter-003 | 3 |
 | [STORY-EP-016](./iter-003/stories/STORY-EP-016.md) | On-device enclose recognition | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | draft | iter-003 | 5 |
 | [STORY-EP-017](./iter-003/stories/STORY-EP-017.md) | On-device draw-into membership | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | draft | iter-003 | 3 |
 | [STORY-EP-018](./iter-003/stories/STORY-EP-018.md) | On-device selection-create surround | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | draft | iter-003 | 3 |
 | [STORY-EP-019](./iter-003/stories/STORY-EP-019.md) | On-device live manipulation and REQ-08 conformance | implement | dev | epaper | [SRS-EP-11], [SRS-EP-14] | draft | iter-003 | 5 |
-| [STORY-EP-020](./iter-003/stories/STORY-EP-020.md) | Device one-way sync handshake and publish queue | implement | dev | epaper | [SRS-EP-08] | blocked | iter-003 | 5 |
+| [STORY-EP-020](./iter-003/stories/STORY-EP-020.md) | Device one-way sync handshake and publish queue | implement | dev | epaper | [SRS-EP-08] | draft | iter-003 | 5 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |
@@ -53,7 +53,7 @@ generated_at: 2026-08-13T10:57:53+00:00
 | [STORY-IN-024](./iter-003/stories/STORY-IN-024.md) | Ink-scale mode toggle on desktop | implement | dev | infini | [SRS-IN-11] | blocked | iter-003 | 2 |
 | [STORY-IN-025](./iter-003/stories/STORY-IN-025.md) | Pickables inkScaleMode + members | implement | dev | infini | [SRS-IN-13] | blocked | iter-003 | 2 |
 | [STORY-IN-026](./iter-003/stories/STORY-IN-026.md) | Live resize tool_intent + undo origin | implement | dev | infini | [SRS-IN-13] | blocked | iter-003 | 3 |
-| [STORY-IN-027](./iter-003/stories/STORY-IN-027.md) | Desktop doc_change applier | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | draft | iter-003 | 5 |
+| [STORY-IN-027](./iter-003/stories/STORY-IN-027.md) | Desktop doc_change applier | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | done | iter-003 | 5 |
 | [STORY-IN-028](./iter-003/stories/STORY-IN-028.md) | Desktop handshake-gated doc_load | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | draft | iter-003 | 3 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |

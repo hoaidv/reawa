@@ -11,7 +11,12 @@ export function rmClientSyncHint(ev: RmClientEvent): string {
   return "RM disconnected — waiting";
 }
 
-/** True when Infini should push doc_snapshot + viewport after observing RM clients. */
-export function shouldPublishOnRmClient(ev: RmClientEvent): boolean {
+/** Viewport-only on RM connect — document load is IN-028. */
+export function shouldPublishViewportOnRmClient(ev: RmClientEvent): boolean {
   return (ev.type === "connected" || ev.type === "sync") && ev.n > 0;
+}
+
+/** @deprecated snapshot push withdrawn (STORY-IN-027 / ADR-0015). Always false. */
+export function shouldPublishOnRmClient(_ev: RmClientEvent): boolean {
+  return false;
 }

@@ -20,8 +20,25 @@ export type RmToolIntentMsg = {
   seq?: number;
 };
 
+/** @implements [SRS-IN-07] inbound doc_change from Epaper */
+export type RmDocChangeMsg = {
+  type: "doc_change";
+  seq: number;
+  opId: string;
+  op: {
+    type: string;
+    payload?: Record<string, unknown>;
+    opId?: string;
+    ts?: number;
+    source?: "epaper" | "infini";
+  };
+  baseSeq: number;
+};
+
+export type RmInboundMsg = RmStrokeMsg | RmToolIntentMsg | RmDocChangeMsg;
+
 export interface InfiniNative {
-  onRmStroke: (cb: (msg: RmStrokeMsg) => void) => () => void;
+  onRmStroke: (cb: (msg: RmInboundMsg) => void) => () => void;
   onRmToolIntent?: (cb: (msg: RmToolIntentMsg) => void) => () => void;
   strokeIngestPort: () => Promise<number>;
   sendToRm?: (obj: unknown) => Promise<number>;

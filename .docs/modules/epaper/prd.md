@@ -400,7 +400,9 @@ viewed at scale, and saved.
 
 - Undo depth and affordance on the device — **owner:** pm with designer — **needed by:** first
   [REQ-06](#device-manipulation) design story. [REQ-04](#device-document) sets a floor of 20
-  structural ops, but how the creator reaches undo without a fourth tool is unspecified.
+  structural ops. **Affordance deferred this campaign**
+  ([CHL-0010](../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)): no
+  on-panel control, no fourth tool; the ring still ships. Depth-20 is unchanged.
 - Document-change granularity on the wire (op log vs coalesced change set) — **owner:** architect —
   **needed by:** ADR-0015. Affects the ≤300 ms mirror target and the reconnect queue.
 - Manual "reload document to tablet" control — **owner:** pm — **needed by:** first
@@ -410,9 +412,10 @@ viewed at scale, and saved.
   iter; confirm before [REQ-04](#device-document) is sliced.
 - Minimum fitted-rect size for enclose — **owner:** architect with qa evidence — **needed by:** first
   [REQ-05](#device-ink-box) build. World units vs screen px, and the value itself.
-- LOD cutoff for on-device manipulation — **owner:** architect — **needed by:** first
-  [REQ-06](#device-manipulation) story. The desktop pilot used 0.35 viewport scale; the device may
-  need a different bar given panel resolution.
+- LOD cutoff for on-device manipulation — **closed 2026-08-13 (architect).** Unavailable when the
+  selected box's smaller **on-panel** axis is **< 96 du** (not `TILE_LOD_SCALE = 0.35`). Handle
+  visual **28 du** / hit **56 du**. Binding: [SRS-EP-11](./features/ink-box/srs-logic.md) /
+  [SRS-EP-12](./features/ink-box/srs-ui.md).
 
 ## Linked Modules
 

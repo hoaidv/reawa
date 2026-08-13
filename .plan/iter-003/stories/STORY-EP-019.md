@@ -11,7 +11,7 @@ estimate: 5
 owner: dev
 depends_on: [STORY-EP-012, STORY-EP-016]
 acceptance_criteria:
-  - "Given scale at or above the device LOD cutoff (value from EP-012 Spec, not 0.35), When the pen presses a SmartGroup, Then the topmost sibling is selected and chrome appears p95 ≤100 ms."
+  - "Given the selected box's smaller on-panel axis is ≥ 96 du (not TILE_LOD_SCALE 0.35), When the pen presses a SmartGroup, Then the topmost sibling is selected and chrome appears p95 ≤100 ms."
   - "Given a press+drag inside bounds, When the gesture runs, Then the real ink follows the pen (≥5 Hz, stall ≤200 ms, 0 full-panel invalidations, 0 ghost) and release commits exactly one set_smart_transform whose geometry equals the last previewed geometry (0 px jump, 0 snap-back) — CHL-0006 / CHL-0007."
   - "Given fixedInk resize, When bounds change, Then each content ink keeps sample size (±1 px) and its own layoutOffset UV; boundary follows the frame; 0 unrelated content moves — CHL-0004 / CHL-0005."
   - "Given withBounds resize, When bounds change, Then content scales with the box and boundary always transforms with the frame."
@@ -21,9 +21,17 @@ acceptance_criteria:
   - "Given the gesture router, When it resolves a SmartGroup press, Then verbs come from the capability descriptor {select, move, resize, set-ink-scale-mode}, 0 node-kind branches exist in the router, and the transform envelope carries an unset reserved rotation field."
   - "Given shared fixtures fixed-ink/, When device and desktop place content, Then they agree 100%."
 design_package: ".plan/iter-003/design/device-selection-chrome/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-003/design/device-selection-chrome/ui-spec.md"
+scenes:
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-none.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-selected.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-moving.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-resizing-with-bounds.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-resizing-fixed-ink.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-deselected.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-unavailable.html"
+  - ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-reloaded.html"
+hifi: ".plan/iter-003/design/device-selection-chrome/device-selection-chrome-sel-selected.html"
 wireframe: ""
 ---
 
@@ -38,8 +46,9 @@ BDD: [smart-group-selection.feature](../../../.docs/modules/epaper/features/ink-
 passes this iter's tests and costs [REQ-08](../../../.docs/modules/epaper/prd.md#node-manipulation)
 its premise.
 
-**Waits on [STORY-EP-012](./STORY-EP-012.md)** for handle size, LOD cutoff, and chrome.
-Do not silently adopt desktop constants.
+**Device units locked (architect 2026-08-13):** handle visual **28 du**, hit **56 du**, LOD =
+smaller on-panel axis **< 96 du**. 1 du = 1 panel pixel @ 226 dpi. Do not fall back to 8 CSS px
+or `TILE_LOD_SCALE 0.35`. Story stays `draft` until W11 (after EP-016). Chrome package is `done`.
 
 ## Kind
 

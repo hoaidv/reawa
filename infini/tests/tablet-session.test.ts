@@ -143,11 +143,9 @@ describe("SRS-IN-07 append_ink updates tree and WorldLayer", () => {
   });
 });
 
-describe("SRS-IN-07 structure emit vs in-flight stroke", () => {
-  it("queues while stroke in flight then emits", () => {
+describe("SRS-IN-07 Infini is a viewer — no document ops", () => {
+  it("refuses local structure emit", () => {
     const { session, transport, tree } = liveSession();
-    session.setEpaperStrokeInFlight(true);
-
     const r = session.emitLocalStructureOp({
       opId: "struct_1",
       type: "create_primitive",
@@ -158,26 +156,10 @@ describe("SRS-IN-07 structure emit vs in-flight stroke", () => {
         style,
       },
     });
-    expect(r.queued).toBe(true);
     expect(r.emitted).toBe(false);
+    expect(r.queued).toBe(false);
     expect(transport.docOps).toHaveLength(0);
-    expect(tree.indexById().has("rect_1")).toBe(true);
-    expect(session.queuedStructureCount).toBe(1);
-
-    session.setEpaperStrokeInFlight(false);
-    expect(transport.docOps).toHaveLength(1);
-    expect(transport.docOps[0].opType).toBe("create_primitive");
-    expect(transport.docOps[0].source).toBe("infini");
-
-    // No stroke — emit immediately
-    const r2 = session.emitLocalStructureOp({
-      opId: "struct_2",
-      type: "create_group",
-      source: "infini",
-      payload: { id: "grp_1" },
-    });
-    expect(r2.emitted).toBe(true);
-    expect(transport.docOps).toHaveLength(2);
+    expect(tree.indexById().has("rect_1")).toBe(false);
   });
 });
 

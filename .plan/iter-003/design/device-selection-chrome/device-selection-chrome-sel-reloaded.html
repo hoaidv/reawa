@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sel.reloaded — device selection chrome</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    .reloaded { left: 14%; top: 24%; width: 42%; height: 44%; }
+  </style>
+</head>
+<body data-state="sel.reloaded">
+  <div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="ink-cluster reloaded">
+        <svg viewBox="0 0 400 260" aria-hidden="true">
+          <path class="ink-stroke" d="M30 50c60-20 110 10 180-8 50-12 90 16 140 2"/>
+          <path class="ink-stroke" d="M40 95c70 8 120-18 200 6"/>
+          <path class="ink-stroke" d="M28 140c50-6 100 20 170-4 40-12 88 8 130 0"/>
+          <path class="ink-stroke" d="M50 188c40 10 90-14 150 4 36 10 70-4 100 6"/>
+          <path class="ink-stroke" d="M70 226c80 4 140-10 200 2"/>
+        </svg>
+      </div>
+      <div data-region="SelectionOverlay" class="is-hidden" hidden></div>
+      <p class="scene-caption">sel.reloaded — document replaced; selection cleared; overlay hidden.
+        <a href="./device-selection-chrome-sel-none.html">Continue</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolStrip" role="toolbar" aria-label="Tools">
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection"><img src="../system/assets/icon-epaper-selection.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+    </div>
+    <p data-region="StatusLine">sel.reloaded · new epoch</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

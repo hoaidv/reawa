@@ -4,13 +4,12 @@ title: "Device one-way sync handshake and publish queue"
 kind: implement
 parent_srs: [SRS-EP-08]
 parent_req: [REQ-07]
-status: blocked
+status: draft
 priority: P0
 iter: iter-003
 estimate: 5
 owner: dev
 depends_on: [STORY-EP-014]
-blocked_reason: "CHL-0009 — srs-logic.md (SRS-EP-08) not on disk; waits on STORY-EP-014"
 acceptance_criteria:
   - "Given a session that has completed its initial load, When the lifetime is traced, Then 0 inbound document-bearing messages are observed and viewport messages continue to apply."
   - "Given a live session, When an unsolicited doc_load, doc_snapshot, pickables, or tool_intent arrives, Then it is not applied, it is logged, and the local document is unchanged."
@@ -47,4 +46,3 @@ Last on the device (architect ask 3): editing works offline by design. Pairs wit
 ## Done when
 
 - `@SRS-EP-08` scenarios green
-- [CHL-0009](../challenges/CHL-0009-missing-device-document-srs-logic.md) resolved so the logic file exists

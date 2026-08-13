@@ -11,13 +11,20 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QString>
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#include "document/device_document.hpp"
 
 class StrokeSync;
 
 /**
- * Pen ink + ADR-0009 viewport / vector document rasterize for the sync region.
+ * Pen ink + device document rasterize for the sync region.
  * @implements [SRS-EP-01]
  * @implements [SRS-EP-02] vector ∩ drawingRegion paint (no bitmap push)
+ * @implements [SRS-EP-07] local tree paint + stroke ingest
+ * @implements [SRS-EP-09] digitizer channels on Ink samples
  */
 class TabletCanvasItem : public QQuickPaintedItem
 {
@@ -43,8 +50,27 @@ public:
     QRectF toolChipRect() const { return m_toolChipRect; }
     int pickableCount() const { return m_pickables.size(); }
 
+    /** Digitizer channels reported on this sample (SRS-EP-09). Unset = not reported. */
+    struct IngestChannels {
+        qreal pressure = 0;
+        bool hasTilt = false;
+        qreal tiltX = 0;
+        qreal tiltY = 0;
+        bool hasDistance = false;
+        qreal distance = 0;
+        bool hasTimestamp = false;
+        qreal timestamp = 0;
+        bool hasRotation = false;
+        qreal rotation = 0;
+        bool hasTangential = false;
+        qreal tangential = 0;
+    };
+
     Q_INVOKABLE void ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure);
+    void ingestPoint(QEvent::Type type, const QPointF &pos, const IngestChannels &ch);
     Q_INVOKABLE void armTool(const QString &mode);
+    int documentInkCount() const;
+    std::string ingestDumpText() const;
     /** @implements [SRS-EP-04] finger/pen tap on ToolChip tile */
     bool tryArmToolAtCanvasPos(const QPointF &canvasPos);
 
@@ -68,6 +94,17 @@ private:
         QPointF pos;
         qreal pressure;
         QPointF raw;
+        bool hasTilt = false;
+        qreal tiltX = 0;
+        qreal tiltY = 0;
+        bool hasDistance = false;
+        qreal distance = 0;
+        bool hasTimestamp = false;
+        qreal timestamp = 0;
+        bool hasRotation = false;
+        qreal rotation = 0;
+        bool hasTangential = false;
+        qreal tangential = 0;
     };
 
     struct WorldAabb {
@@ -79,9 +116,11 @@ private:
     };
 
     QPointF mapInputToCanvas(const QPointF &raw) const;
-    void beginStroke(const QPointF &canvasPos, qreal pressure);
-    void appendPoint(const QPointF &canvasPos, qreal pressure);
+    Point makePoint(const QPointF &canvasPos, const IngestChannels &ch) const;
+    void beginStroke(const QPointF &canvasPos, const IngestChannels &ch);
+    void appendPoint(const QPointF &canvasPos, const IngestChannels &ch);
     void endStroke();
+    void ingestCurrentStroke();
     void flushPending();
     void emitSegment(const Point &from, const Point &to);
     void ensureImage();
@@ -109,8 +148,7 @@ private:
     void rasterizeVectors(bool sharp);
     QPointF worldToPanel(double wx, double wy) const;
     QPointF panelToWorld(const QPointF &panel) const;
-    void appendLocalStrokeAsWorldPath();
-    void drawVectorNode(QPainter &p, const QJsonObject &node);
+    void drawDocNode(QPainter &p, const epaper::document::DocNode &node);
     double panelScale() const;
     qreal worldStrokeWidth(qreal pressure) const;
     void panelToFrameUv(double localX, double localY, double *u, double *v) const;
@@ -141,7 +179,11 @@ private:
     qreal m_activeWorldStrokeWidth = 2.5;
     int m_viewportSeq = 0;
     WorldAabb m_drawingRegion;
-    QJsonArray m_vectorNodes;
+    epaper::document::DeviceDocument m_document;
+    std::vector<std::int64_t> m_ingestNs;
+    int m_ingestApplied = 0;
+    int m_ingestRejected = 0;
+    bool m_loggedRetiredSnapshot = false;
     QJsonArray m_pickables;
     QString m_toolMode = QStringLiteral("pen");
     QRectF m_toolChipRect;
