@@ -3,16 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>sel.nodes_selected — selection enclose chrome</title>
+  <title>sel.lasso — selection enclose chrome</title>
   <link rel="stylesheet" href="tokens.css" />
   <link rel="stylesheet" href="common.css" />
   <style>
-    .c-tool-btn:active, .c-enclose:active { background: #000; color: #fff; }
-    .c-tool-btn:active img, .c-enclose:active img { filter: invert(1); }
+    .c-tool-btn:active, .c-enclose:active, .c-sel-mode:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-enclose:active img, .c-sel-mode:active img { filter: invert(1); }
   </style>
 </head>
-<body data-state="sel.nodes_selected">
+<body data-state="sel.lasso">
   <div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <a class="hop-canvas" href="./selection-enclose-chrome-sel-nodes-selected.html" aria-label="Pen up"></a>
     <div data-region="InkSurface">
       <div class="ink-cluster scatter-nodes">
         <svg viewBox="18 16 266 178" aria-hidden="true">
@@ -23,31 +24,24 @@
         </svg>
       </div>
       <div data-region="SelectionOverlay">
-        <div class="c-nodes-bounds pos-union" id="ovl.nodes_bounds">
-          <span class="c-select-anchor nw" id="ovl.select_anchors"></span>
-          <span class="c-select-anchor n"></span>
-          <span class="c-select-anchor ne"></span>
-          <span class="c-select-anchor sw"></span>
-          <span class="c-select-anchor s"></span>
-          <span class="c-select-anchor se"></span>
-          <a class="c-enclose" id="cta.enclose" href="./selection-enclose-chrome-sel-create-refused.html" data-interactive aria-label="Enclose">
-            <img src="../system/assets/icon-epaper-enclose.svg" alt="" />
-          </a>
-        </div>
+        <svg class="c-lasso" id="ovl.lasso" viewBox="0 0 240 160" aria-hidden="true">
+          <path d="M16 88 C 36 18, 92 12, 148 38 S 220 48, 228 92 S 184 152, 108 144 S 4 148, 16 88"/>
+        </svg>
+        <span class="pen-tip pos-marquee" aria-hidden="true"></span>
       </div>
-      <p class="scene-caption">sel.nodes_selected — after rect or freeform: tight union AABB (0 pad) + 6 anchors + Enclose. Polyline is gone.
-        <a href="./selection-enclose-chrome-sel-create-refused.html">Enclose (refuse demo)</a> ·
-        <a href="./selection-enclose-chrome-sel-none.html">Deselect</a>
+      <p class="scene-caption">sel.lasso — thin dotted polyline while drawing (not a rectangle). Pen-up closes path; hit-test is inside polyline; chrome becomes tight AABB.
+        <a href="./selection-enclose-chrome-sel-nodes-selected.html">Pen up</a> ·
+        <a href="./selection-enclose-chrome-sel-marquee.html">Rect mode</a>
       </p>
       <span class="orient-tag">orient: gutToLeft</span>
     </div>
     <div class="c-tool-chip" data-region="ToolStrip" role="toolbar" aria-label="Tools">
-      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_rect" aria-pressed="true" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
-      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_freeform" aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_rect" aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_freeform" aria-pressed="true" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
       <button type="button" class="c-tool-btn" data-interactive id="tool.pen" aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
       <button type="button" class="c-tool-btn" data-interactive id="tool.ink_box" aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
     </div>
-    <p data-region="StatusLine">sel.nodes_selected · cta.enclose</p>
+    <p data-region="StatusLine">sel.lasso · ovl.lasso</p>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {

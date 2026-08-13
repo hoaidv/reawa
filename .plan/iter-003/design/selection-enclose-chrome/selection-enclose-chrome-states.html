@@ -20,16 +20,23 @@
   <div class="show">
     <h1>UI-EP-03 control states (press invert; no hover)</h1>
     <div>
-      <div class="lab">ToolChip default / Selection pressed / Pen / Ink-box</div>
+      <div class="lab">ToolChip — sel_rect | sel_freeform | Pen | Ink-box</div>
       <div class="c-tool-chip" role="toolbar" aria-label="Tools" style="position:relative;transform:none;left:auto;top:auto;">
-        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection"><img src="../system/assets/icon-epaper-selection.svg" alt="" /></button>
-        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
-        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
-      </div>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_rect" aria-pressed="true" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_freeform" aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.pen" aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.ink_box" aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+    </div>
     </div>
     <div>
-      <div class="lab">ovl.marquee</div>
+      <div class="lab">ovl.marquee (rect)</div>
       <div class="c-marquee" style="position:relative;width:180px;height:100px;"></div>
+    </div>
+    <div>
+      <div class="lab">ovl.lasso (freeform drawing)</div>
+      <svg class="c-lasso" viewBox="0 0 240 160" aria-hidden="true" style="position:relative;left:auto;top:auto;width:180px;height:120px;">
+        <path d="M16 88 C 36 18, 92 12, 148 38 S 220 48, 228 92 S 184 152, 108 144 S 4 148, 16 88"/>
+      </svg>
     </div>
     <div>
       <div class="lab">ovl.nodes_bounds + 6 anchors</div>

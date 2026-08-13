@@ -301,6 +301,23 @@ html, body {
   left: 50%;
   transform: translateX(-50%);
 }
+.c-lasso {
+  position: absolute;
+  left: 18%;
+  top: 26%;
+  width: 48%;
+  height: 46%;
+  pointer-events: none;
+  overflow: visible;
+}
+.c-lasso path {
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
 .c-tool-btn {
   box-sizing: border-box;
   width: var(--chip-btn);

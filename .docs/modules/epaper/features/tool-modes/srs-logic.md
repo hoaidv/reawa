@@ -32,7 +32,7 @@ Touch-on-chip uses MouseArea; pen-on-chip press is ignored for ink (fallback pat
 
 | Rule | Value |
 |---|---|
-| Tools | `selection` \| `pen` \| `ink_box` |
+| Tools | `sel_rect` \| `sel_freeform` \| `pen` \| `ink_box` |
 | Default on launch | `pen` — the device must still be a notebook if nothing else works |
 | Ownership | **Device-local UI state.** Never sent to Infini, never set by Infini (ADR-0013 §1) |
 | Persistence | Not persisted across restarts in v0 |
@@ -44,7 +44,8 @@ Touch-on-chip uses MouseArea; pen-on-chip press is ignored for ink (fallback pat
 |---|---|---|---|
 | `pen` | Local ink → ingest as an `Ink` node at pen-up ([SRS-EP-07](../device-document/srs-logic.md)); draw-into membership evaluated ([SRS-EP-10](../ink-box/srs-logic.md)) | Switch tool | Ignored (no on-device pan — PRD Non-Goal) |
 | `ink_box` | Local ink → evaluate enclose at pen-up ([SRS-EP-10](../ink-box/srs-logic.md)) | Switch tool | Ignored |
-| `selection` | Pick / move / resize against the local document ([SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Ignored |
+| `sel_rect` | Rect marquee / pick / move / resize against the local document ([SRS-EP-10](../ink-box/srs-logic.md), [SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Ignored |
+| `sel_freeform` | Freeform lasso / pick / move / resize ([SRS-EP-10](../ink-box/srs-logic.md), [SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Ignored |
 
 `ink_box` and `pen` share one ink path — same Round 19 map, same paint, byte-identical while the pen
 is down. They differ only in **what the device does at pen-up**, so ink latency cannot regress by
@@ -68,7 +69,7 @@ Tool mode is device-local and now trivially so: the peer has no tools this campa
 | Case | Behavior |
 |---|---|
 | Touch layer unavailable at runtime | Fall back to `pen` permanently; surface it in the status line; never trap the creator in a non-drawing tool |
-| Session down | **All three tools stay fully available** — editing is local ([REQ-04](../../prd.md#device-document)). Only publishing waits; the status affordance shows changes are queued |
+| Session down | **All four tools stay fully available** — editing is local ([REQ-04](../../prd.md#device-document)). Only publishing waits; the status affordance shows changes are queued |
 | Pen-down starts on the ToolChip bounds | Not ink; may arm a tool when pen-on-chip fallback is active |
 | Tool switched mid-gesture | The in-flight gesture completes under the tool it started with; the new tool applies from the next pen-down |
 

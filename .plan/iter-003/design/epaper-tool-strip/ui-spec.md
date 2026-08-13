@@ -75,7 +75,7 @@ amends: CHL-0003
 
 | Icon | Path |
 |---|---|
-| Selection / Pen / Ink-box | `../system/assets/icon-epaper-*.svg` |
+| Selection rect / freeform / Pen / Ink-box | `../system/assets/icon-epaper-sel-rect.svg`, `icon-epaper-sel-freeform.svg`, `icon-epaper-pen.svg`, `icon-epaper-ink-box.svg` |
 
 ## SRS delta
 

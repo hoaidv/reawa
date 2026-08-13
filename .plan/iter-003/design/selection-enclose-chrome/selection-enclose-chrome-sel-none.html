@@ -24,17 +24,19 @@
         </svg>
       </div>
       <div data-region="SelectionOverlay" class="is-hidden" hidden></div>
-      <p class="scene-caption">sel.none — Selection armed; overlay hidden.
-        <a href="./selection-enclose-chrome-sel-marquee.html">Drag marquee</a>
+      <p class="scene-caption">sel.none — four-tool chip; Selection rect armed; overlay hidden.
+        <a href="./selection-enclose-chrome-sel-marquee.html">Rect drag</a> ·
+        <a href="./selection-enclose-chrome-sel-lasso.html">Freeform</a>
       </p>
       <span class="orient-tag">orient: gutToLeft</span>
     </div>
     <div class="c-tool-chip" data-region="ToolStrip" role="toolbar" aria-label="Tools">
-      <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection"><img src="../system/assets/icon-epaper-selection.svg" alt="" /></button>
-      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
-      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_rect" aria-pressed="true" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_freeform" aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.pen" aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.ink_box" aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
     </div>
-    <p data-region="StatusLine">sel.none · 3 tools</p>
+    <p data-region="StatusLine">sel.none · 4 tools</p>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {

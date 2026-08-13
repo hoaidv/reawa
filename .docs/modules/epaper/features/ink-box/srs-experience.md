@@ -102,9 +102,10 @@ somewhere else, or ink that settles somewhere other than where the hand released
 
 | Step | Beat | In-scene state | Notes |
 |---|---|---|---|
-| 1 | Taps `Selection` | `tool.selection` | |
-| 2 | Pen-down + move — thin dotted rubber-band follows tip | `sel.marquee` | |
-| 3 | Pen-up — dotted rect **tightly** around selected nodes’ AABBs + 6 anchors; icon-only Enclose | `sel.nodes_selected` | 0 extra padding in the rect |
+| 1 | Taps **Selection rect** or **Selection freeform** on the primary chip (four tools) | `sel.none` | [ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md) |
+| 2a | Rect armed: one straight drag — thin dotted **rectangle** follows tip | `sel.marquee` | AABB membership |
+| 2b | Freeform armed: draw around — thin dotted **polyline**; pen-up closes it | `sel.lasso` | Inside-polyline membership |
+| 3 | Pen-up — dotted rect **tightly** around selected nodes’ AABBs + 6 anchors; icon-only Enclose | `sel.nodes_selected` | 0 extra padding; lasso chrome gone |
 | 4 | Taps **Enclose** | `tool.selection.create_pending` | Explicit CTA — no silent invent |
 | 5 | Surround stroke becomes the frame; the rest becomes content | `sel.selected` | ±1 px bounds fidelity |
 
@@ -181,7 +182,7 @@ somewhere else, or ink that settles somewhere other than where the hand released
 | Enter/exit a box to edit its children as a sub-scene | Defer | [REQ-08](../../prd.md#node-manipulation) |
 | Ellipse or lasso enclosure | Reject (this campaign) | epaper PRD Non-Goals |
 | Aligning writing inside the box | Reject (this campaign) | epaper PRD Non-Goals |
-| A fourth tool for undo | Defer (this campaign) | [CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md) — EP-015 ships the ring with no chrome |
+| A fifth tool for undo | Defer (this campaign) | [CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md) — EP-015 ships the ring with no chrome |
 | Confirmation dialog before creating a box | Reject | BR-B09 — best-effort + undo, no modals on e-ink |
 
 ---

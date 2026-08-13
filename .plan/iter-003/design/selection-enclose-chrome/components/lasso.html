@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>Lasso — self-contained</title>
+  <style>
+    body { margin: 1rem; font-family: system-ui; background: #ddd; }
+    .c-lasso { width: 240px; height: 160px; }
+    .c-lasso path {
+      fill: none; stroke: #000; stroke-width: 1; stroke-dasharray: 4 4;
+    }
+  </style>
+</head>
+<body>
+  <p>ovl.lasso — thin dotted polyline while drawing. Gone after pen-up.</p>
+  <svg class="c-lasso" id="ovl.lasso" viewBox="0 0 240 160" aria-hidden="true">
+    <path d="M20 90 C 40 20, 90 16, 140 40 S 210 50, 220 90 S 180 150, 110 140 S 8 140, 20 90"/>
+  </svg>
+</body>
+</html>

@@ -9,6 +9,7 @@ iter: iter-003
 scenes:
   - selection-enclose-chrome-sel-none.html
   - selection-enclose-chrome-sel-marquee.html
+  - selection-enclose-chrome-sel-lasso.html
   - selection-enclose-chrome-sel-nodes-selected.html
   - selection-enclose-chrome-sel-create-refused.html
 hifi_html: selection-enclose-chrome-sel-nodes-selected.html
@@ -24,15 +25,17 @@ fidelity: hifi
 platform: epaper
 ---
 
-# [UI-EP-03] — Selection rubber-band and Enclose CTA
+# [UI-EP-03] — Selection rect / freeform and Enclose CTA
 
 Creation B chrome for [SRS-EP-12](../../../../.docs/modules/epaper/features/ink-box/srs-ui.md)
 after [CHL-0013](../../challenges/CHL-0013-selection-create-feedback-enclose-cta.md) /
-[ADR-0016](../../../../.docs/adr/ADR-0016-selection-create-enclose-cta.md).
+[CHL-0014](../../challenges/CHL-0014-selection-rect-and-freeform.md) /
+[CHL-0015](../../challenges/CHL-0015-four-tool-chip-selection-modes.md) /
+[ADR-0017](../../../../.docs/adr/ADR-0017-four-tool-chip.md).
 
 **Composes** [UI-EP-02](../device-selection-chrome/) (manipulation overlay) and
-[UI-EP-01](../epaper-tool-strip/) ToolChip. This package owns marquee + nodes_selected + Enclose.
-Does **not** redesign SmartGroup 8-handle chrome.
+[UI-EP-01](../epaper-tool-strip/) ToolChip. This package owns rect marquee, freeform lasso,
+nodes_selected, Enclose. Does **not** redesign SmartGroup 8-handle chrome.
 
 ## Source
 
@@ -59,8 +62,10 @@ Does **not** redesign SmartGroup 8-handle chrome.
 
 ```mermaid
 flowchart LR
-  none[sel.none] -->|pen-down+move| marquee[sel.marquee]
+  none[sel.none] -->|rect drag| marquee[sel.marquee]
+  none -->|freeform draw| lasso[sel.lasso]
   marquee -->|pen-up| nodes[sel.nodes_selected]
+  lasso -->|pen-up close polyline| nodes
   nodes -->|tap Enclose surround OK| selected[sel.selected UI-EP-02]
   nodes -->|tap Enclose refuse| refused[sel.create_refused]
   refused -->|empty canvas| none
@@ -75,8 +80,8 @@ Nav kind: **in-scene state**. Relative hops in scene HTML.
 |---|---|---|---|
 | DeviceScreen | Landscape panel | — | default |
 | InkSurface | Free ink / document nodes | InkFigure | document |
-| SelectionOverlay | marquee / nodes_bounds + 6 anchors + cta.enclose / refuse | Marquee, NodesBounds, EncloseCta, CreateRefusedIndicator | hidden / marquee / nodes / refused |
-| ToolStrip | Three-tool chip | ToolChip | Selection armed |
+| SelectionOverlay | marquee / lasso / nodes_bounds + 6 anchors + cta.enclose / refuse | Marquee, Lasso, NodesBounds, EncloseCta, CreateRefusedIndicator | hidden / marquee / lasso / nodes / refused |
+| ToolStrip | Four-tool chip | ToolChip | one of four armed |
 | StatusLine | Preview caption | — | default |
 
 **Chrome:** SelectionOverlay above InkSurface, below ToolChip. Overlay is content-space.
@@ -88,6 +93,7 @@ Nav kind: **in-scene state**. Relative hops in scene HTML.
 |---|---|---|---|---|
 | ToolChip | system | reuse UI-EP-01 | `components/tool-chip.html` | ToolStrip |
 | Marquee | screen | build | `components/marquee.html` | SelectionOverlay `sel.marquee` |
+| Lasso | screen | build | `components/lasso.html` | SelectionOverlay `sel.lasso` |
 | NodesBounds | screen | build | `components/nodes-bounds.html` | `sel.nodes_selected` |
 | EncloseCta | screen | build | `components/enclose-cta.html` | `sel.nodes_selected` |
 | CreateRefusedIndicator | screen | reuse UI-EP-02 | `components/create-refused-indicator.html` | `sel.create_refused` |
@@ -96,19 +102,21 @@ Nav kind: **in-scene state**. Relative hops in scene HTML.
 
 | Icon | Path | Used |
 |---|---|---|
-| Selection | `../system/assets/icon-epaper-selection.svg` | ToolChip |
 | Pen | `../system/assets/icon-epaper-pen.svg` | ToolChip |
 | Ink-box | `../system/assets/icon-epaper-ink-box.svg` | ToolChip |
 | Enclose | `../system/assets/icon-epaper-enclose.svg` | `cta.enclose` |
+| Selection rect | `../system/assets/icon-epaper-sel-rect.svg` | `tool.sel_rect` |
+| Selection freeform | `../system/assets/icon-epaper-sel-freeform.svg` | `tool.sel_freeform` |
 | Refused | `../system/assets/icon-epaper-refused.svg` | refuse indicator |
 
 ## States (required)
 
 | State | Trigger | UI | SRS |
 |---|---|---|---|
-| `sel.none` | Idle, Selection armed | Overlay hidden; 3-tool chip | SRS-EP-12 |
-| `sel.marquee` | Pen-down+move | Thin dotted `ovl.marquee` follows tip | CHL-0013 |
-| `sel.nodes_selected` | Pen-up | **Tight** union AABB (0 pad) + **6** anchors + icon-only `cta.enclose` 64 du | CHL-0013 |
+| `sel.none` | Idle, `sel_rect` or `sel_freeform` armed | Overlay hidden; **4-tool** chip | SRS-EP-05 / ADR-0017 |
+| `sel.marquee` | Rect drag | Thin dotted `ovl.marquee` AABB follows tip | CHL-0014 |
+| `sel.lasso` | Freeform draw | Thin dotted `ovl.lasso` polyline follows tip | CHL-0014 |
+| `sel.nodes_selected` | Pen-up (either mode) | **Tight** union AABB (0 pad) + **6** anchors + icon-only `cta.enclose` 64 du; lasso **gone** | CHL-0013 |
 | `sel.create_refused` | Enclose with no surround | Selection chrome **kept**; `ind.create_refused_no_surround` | BR-B06 |
 
 6-anchor layout (Designer choice, count locked): **corners + top/bottom mid** — no east/west mids. Visual 16 du; **not pressable** this campaign.
@@ -117,34 +125,39 @@ Nav kind: **in-scene state**. Relative hops in scene HTML.
 
 | Control | Action | Result | Feedback |
 |---|---|---|---|
-| Canvas | Pen-down+move | Marquee | Dotted AABB follows tip |
-| Canvas | Pen-up | Nodes selected | Union rect + 6 anchors + Enclose |
+| `tool.sel_rect` / `tool.sel_freeform` | Finger tap | Arm that tool | Exclusive invert on primary 4-tool chip |
+| Canvas (`sel_rect`) | Pen-down+move | Marquee | Dotted AABB follows tip |
+| Canvas (`sel_freeform`) | Pen-down+move | Lasso | Dotted polyline follows tip |
+| Canvas | Pen-up | Nodes selected | Union rect + 6 anchors + Enclose; polyline gone |
 | `cta.enclose` | Tap | Create or refuse | Invert press; then box or refuse chip |
 | Empty canvas | Press no drag | Deselect | Overlay gone |
-| ToolChip | Finger | Arm tool | Invert; still 3 tools |
+| ToolChip | Finger | Arm tool | Invert; **four** tools |
 
 ## Trace matrix
 
 | Region / state | SRS | Story AC |
 |---|---|---|
 | `sel.marquee` | SRS-EP-12 | EP-022 AC1 |
+| `sel.lasso` | SRS-EP-12 / CHL-0014 | EP-022 AC1 |
 | `sel.nodes_selected` | SRS-EP-12 | EP-022 AC1 |
 | `cta.enclose` on overlay | ADR-0016 | EP-022 AC2 |
 | `sel.create_refused` | SRS-EP-12 | EP-022 AC4 |
-| ToolChip 3 tools | SRS-EP-05 | EP-022 AC2 |
+| ToolChip 4 tools | SRS-EP-05 / ADR-0017 | EP-022 AC2 |
 
 ## SRS delta table
 
 | SRS closed item | Spec / HTML | Delta |
 |---|---|---|
 | `ovl.marquee` | `.c-marquee` | honor |
+| `ovl.lasso` | `.c-lasso` | honor — polyline while drawing only |
+| `tool.sel_rect` / `tool.sel_freeform` | `.c-tool-btn` on primary chip | honor CHL-0015 / ADR-0017 |
 | `ovl.nodes_bounds` | `.c-nodes-bounds` same box as ink cluster | honor — **tight** 0 pad |
 | `ovl.select_anchors` × 6 | `.c-select-anchor` nw n ne sw s se | honor; no e/w |
 | `cta.enclose` | `.c-enclose` icon-only 64×64, no toolbar chrome | honor (human 2026-08-14) |
-| ToolChip 3 tools | composed | honor |
+| ToolChip 4 tools | composed | honor ADR-0017 |
 | `ind.create_refused_no_surround` | reuse UI-EP-02 | honor; chrome kept |
 | `ovl.selection_bounds` / 8 handles | **not in this package** | compose UI-EP-02 `sel.selected` |
-| Fourth chip | absent | honor |
+| Enclose as 5th chip | absent | honor ADR-0016 |
 | Anchor drag events | pointer-events none | honor (later) |
 | Nested SG Enclose | refuse copy can mention later | logic EP-018 |
 | Composition overlay > ink < chip | common.css z | honor |
@@ -156,4 +169,5 @@ Nav kind: **in-scene state**. Relative hops in scene HTML.
 - SmartGroup `sel.selected` after successful Enclose is UI-EP-02 — hop caption only.
 - Chrome legibility (1-bit over ink): dotted 1 px vs solid double-rail of SmartGroup chrome so marquee never reads as boundary ink.
 - **Tight bounds (PM 2026-08-14):** `ovl.nodes_bounds` equals selected nodes’ union AABB; 0 extra padding.
-- **Context buttons (human 2026-08-14):** icon-only; size = ToolChip primary 64×64; no hatch/context-toolbar chrome.
+- **Four-tool chip (CHL-0015 / ADR-0017):** sel_rect | sel_freeform | pen | ink_box. No off-chip latches.
+- **Two select modes (CHL-0014):** rect AABB vs freeform polyline hit-test; settled chrome is always tight AABB.

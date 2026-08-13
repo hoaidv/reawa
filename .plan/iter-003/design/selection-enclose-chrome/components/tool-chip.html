@@ -41,16 +41,11 @@
 <body>
   <p class="note">Composed from UI-EP-01 — 64×64 squared tiles, radius 0, three tools. Not redesigned. No undo / Smart Group slot.</p>
   <div class="c-tool-chip" data-region="ToolStrip" role="toolbar" aria-label="Tools">
-    <button type="button" class="c-tool-btn" aria-label="Selection" aria-pressed="true" data-interactive>
-      <img src="../../system/assets/icon-epaper-selection.svg" alt="" />
-    </button>
-    <button type="button" class="c-tool-btn" aria-label="Pen" aria-pressed="false" data-interactive>
-      <img src="../../system/assets/icon-epaper-pen.svg" alt="" />
-    </button>
-    <button type="button" class="c-tool-btn" aria-label="Ink box" aria-pressed="false" data-interactive>
-      <img src="../../system/assets/icon-epaper-ink-box.svg" alt="" />
-    </button>
-  </div>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_rect" aria-pressed="false" aria-label="Selection rect"><img src="../../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_freeform" aria-pressed="false" aria-label="Selection freeform"><img src="../../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.pen" aria-pressed="true" aria-label="Pen"><img src="../../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.ink_box" aria-pressed="false" aria-label="Ink box"><img src="../../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+    </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {
       el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));

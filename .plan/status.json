@@ -1,6 +1,6 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-13T23:26:33+00:00",
+  "generated_at": "2026-08-13T23:50:23+00:00",
   "current_iter": "iter-003",
   "by_status": {
     "draft": 3,
@@ -28,7 +28,7 @@
     }
   },
   "open_challenges": 0,
-  "resolved_challenges_this_iter": 12,
+  "resolved_challenges_this_iter": 14,
   "sync_orphans": 19,
   "master_plan": true,
   "tracks": [

@@ -98,12 +98,16 @@ viewed at scale, and saved.
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
 - The creator decides **on the device** what the pen does, without reaching for the desktop.
-  A minimal, always-visible toolbar offers exactly three tools — **Selection · Pen · Ink-box** —
+  A minimal, always-visible toolbar offers exactly **four** tools —
+  **Selection rect · Selection freeform · Pen · Ink-box** —
   switched by **finger touch**, so the pen stays free for content. `Pen` is the default and
-  leaves [REQ-01](#local-pen-ink) local ink behaviour unchanged.
-- All three tools act on the **device's own document** ([REQ-04](#device-document)): `Pen` adds ink,
-  `Ink-box` arms enclose recognition ([REQ-05](#device-ink-box)), `Selection` picks and manipulates
-  ([REQ-06](#device-manipulation)). No tool depends on a reply from the desktop.
+  leaves [REQ-01](#local-pen-ink) local ink behaviour unchanged. There is no separate sub-mode
+  strip; the two Selection arms **replace** a single mouse-like Selection button
+  ([ADR-0017](../../adr/ADR-0017-four-tool-chip.md)).
+- All four tools act on the **device's own document** ([REQ-04](#device-document)): `Pen` adds ink,
+  `Ink-box` arms enclose recognition ([REQ-05](#device-ink-box)), `Selection rect` / `Selection
+  freeform` pick and manipulate ([REQ-06](#device-manipulation)). No tool depends on a reply from
+  the desktop.
 - Tool state is **local to the device** — Infini neither drives nor mirrors it.
 - The toolbar also carries the **session/publish status** affordance for
   [REQ-07](#one-way-sync): linked, link down with changes queued, and document reloading.
@@ -119,8 +123,8 @@ viewed at scale, and saved.
   (0 stray strokes inside the chip exclusion rect; InkSurface stays full-bleed).
 - Given a full-panel refresh is in flight, When the creator switches tools, Then the active-tool
   indicator is still legible (partial refresh of the chip, no dependence on the settled frame).
-- **UI states / journeys to design:** default `Pen`; switching tools; `Selection` with nothing
-  selected; `Selection` with a Smart Group selected (handles); `Ink-box` armed; enclose rejected
+- **UI states / journeys to design:** default `Pen`; switching tools; `Selection rect` /
+  `Selection freeform` idle; Smart Group selected (handles); `Ink-box` armed; enclose rejected
   (too small / no ink inside); ToolChip during a trailing panel refresh; orientation-top placement;
   link down with queued changes; document reloading after reconnect.
 
@@ -166,13 +170,17 @@ viewed at scale, and saved.
   enclose stroke is kept as `role: boundary` ink, contained ink is reparented as `role: content`,
   and `bounds` is the fitted rect. Guards: the fitted rect must be ≥ a fixed minimum size **and**
   contain ≥1 ink — otherwise the stroke stays ordinary ink. Enclosure is **rectangle-only**.
-- **Creation B — selection (explicit).** In `Selection` mode the creator rubber-band selects
-  **document nodes** (visible feedback: thin dotted boundary while dragging; on pen-up a thin
-  dotted selection rect that **tightly** fits the selected nodes’ world AABBs (union AABB, **0**
-  extra padding — empty space inside the rect would read as “more selected”) + **6 square anchors**.
-  They invoke Smart Group via an **icon-only Enclose** control on the selection overlay
-  ([ADR-0016](../../adr/ADR-0016-selection-create-enclose-cta.md) — not a fourth tool chip; no
-  context-toolbar chrome; size matches primary tool buttons). The device must find **one stroke among the selected free ink** that
+- **Creation B — selection (explicit).** The creator arms **Selection rect** or **Selection
+  freeform** on the primary ToolChip ([ADR-0017](../../adr/ADR-0017-four-tool-chip.md)):
+  - **Rect:** one straight drag. Thin dotted **rectangle** while dragging. Membership = every
+    document node whose world AABB **intersects** that rectangle.
+  - **Freeform:** draw around. Thin dotted **polyline** while drawing; pen-up **closes** the
+    polyline. Membership = nodes **inside the closed polyline** (even-odd), **not** the AABB of
+    the gesture.
+  After pen-up, chrome is the thin dotted **tight union AABB** of selected nodes (**0** extra
+  padding) + **6 square anchors**. They invoke Smart Group via an **icon-only Enclose** control on
+  the selection overlay ([ADR-0016](../../adr/ADR-0016-selection-create-enclose-cta.md) — Enclose
+  is **not** a fifth chip; no context-toolbar chrome; size matches primary tool buttons). The device must find **one stroke among the selected free ink** that
   surrounds almost all of the other selected free ink (≥80% of each other stroke's samples inside
   that surround stroke's region). The surround stroke may be **open**; the device builds an
   **artificial closed path** from it for the containment test only. **If no such surround stroke
@@ -401,7 +409,7 @@ viewed at scale, and saved.
     draw-into.
   - This campaign keeps `inkScaleMode` (`withBounds` | `fixedInk`) only; membership does **not**
     expand bounds; no content align/reflow.
-- A general on-device tool palette — the toolbar is exactly the three tools in
+- A general on-device tool palette — the toolbar is exactly the four tools in
   [REQ-03](#tool-modes); no brushes, colors, layers, or document browser.
 - Production use of `regionsync/` `append_ink` NetSink until wired into the Qt binary
   (library remains the future ADR-0009 shape).

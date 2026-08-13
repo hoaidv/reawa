@@ -52,7 +52,8 @@ through a drag. It is not pinned chrome.
 |---|---|---|
 | `ovl.selection_bounds` | Selected box bounds outline (SmartGroup) | SelectionOverlay |
 | `ovl.resize_handles` | Resize handles — **no rotation handle** (SmartGroup) | SelectionOverlay |
-| `ovl.marquee` | Thin dotted rubber-band while pen-down+move | SelectionOverlay |
+| `ovl.marquee` | Thin dotted **rectangle** while dragging with `tool.sel_rect` | SelectionOverlay |
+| `ovl.lasso` | Thin dotted **polyline** while drawing with `tool.sel_freeform`; gone after pen-up | SelectionOverlay |
 | `ovl.nodes_bounds` | Thin dotted selection rect = **tight** union AABB of selected document nodes (**0** extra padding) | SelectionOverlay |
 | `ovl.select_anchors` | **6** square anchors on `ovl.nodes_bounds` (visual only; events later) | SelectionOverlay |
 | `cta.enclose` | Create Smart Group from selection (Creation B) — **icon only**, primary-button size | SelectionOverlay |
@@ -61,9 +62,9 @@ through a drag. It is not pinned chrome.
 | `ind.manipulation_unavailable` | Below the LOD cutoff | SelectionOverlay or ToolChip |
 | `ind.create_refused_no_surround` | Why a selection-create was refused | Transient, near the selection |
 
-No properties panel, no context menu, no handle labels, no z-order controls, no alignment guides.
-No fourth ToolChip. `cta.enclose` is **selection-contextual** on SelectionOverlay
-([ADR-0016](../../../../adr/ADR-0016-selection-create-enclose-cta.md) / [CHL-0013](../../../../../.plan/iter-003/challenges/CHL-0013-selection-create-feedback-enclose-cta.md)).
+No fifth ToolChip (Enclose / undo stay off-chip). `cta.enclose` is **selection-contextual** on
+SelectionOverlay ([ADR-0016](../../../../adr/ADR-0016-selection-create-enclose-cta.md)).
+Primary inventory is four tools ([ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md)).
 `cta.create_smart_group` is the logic alias of `cta.enclose`. Enclose-with-Ink-box (Creation A)
 remains a separate path.
 
@@ -86,11 +87,13 @@ them it "failed" would be telling them their ink was a mistake.
 |---|---|---|---|
 | Box bounds | Pen press, no drag | Select SmartGroup | Bounds + handles appear ≤100 ms |
 | Box bounds | Pen press + drag | Move | **The ink moves.** Bounds track the ink at ≥5 Hz |
-| Canvas (selection tool) | Pen-down + move | Marquee | `ovl.marquee` follows tip; on pen-up → `ovl.nodes_bounds` + 6 anchors + `cta.enclose` if selection non-empty |
+| Canvas (`tool.sel_rect`) | Pen-down + move | Rect marquee | `ovl.marquee` AABB follows tip; pen-up → nodes whose AABB intersects; then `ovl.nodes_bounds` + 6 anchors + `cta.enclose` |
+| Canvas (`tool.sel_freeform`) | Pen-down + move | Lasso | `ovl.lasso` polyline follows tip; pen-up closes path, hit-test **inside polyline**; chrome → `ovl.nodes_bounds` (tight AABB) + 6 anchors + `cta.enclose` — **not** a dotted polyline |
+| `tool.sel_rect` / `tool.sel_freeform` | Finger tap on ToolChip | Arm that selection tool | Exclusive invert on primary bar ([ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md)) |
 | `ovl.resize_handles` | Pen drag on a handle | Resize | Real ink resizes per mode; bounds follow the handle |
 | `tgl.ink_scale_mode` | Pen tap | Swap mode | `ind.mode_current` updates; effect visible on the next resize |
 | `cta.enclose` | Pen or finger tap | Selection-create | Box created, or `sel.create_refused` |
-| Empty canvas | Pen press in `selection` (no drag) | Deselect | Overlay gone; **0** residual pixels on the next settled frame |
+| Empty canvas | Pen press in either selection tool (no drag) | Deselect | Overlay gone; **0** residual pixels on the next settled frame |
 | Another box | Pen press | Move selection | Previous overlay fully cleared before the new one draws |
 | Any | Pen press below the LOD cutoff | Nothing | `ind.manipulation_unavailable` states why |
 
@@ -106,10 +109,11 @@ No hover, no focus, no cursor on this platform — do not design them.
 |---|---|---|---|---|
 | `ovl.selection_bounds` | hidden | drawn on the selected box | — | hidden below the LOD cutoff |
 | `ovl.resize_handles` | hidden | drawn when selected | the dragged handle is distinct | hidden below the LOD cutoff |
-| `ovl.marquee` | hidden | drawn during pen-down+move marquee | — | — |
-| `ovl.nodes_bounds` | hidden | drawn when ≥1 document node selected via marquee / multi | — | — |
+| `ovl.marquee` | hidden | drawn during `sel_rect` drag | — | — |
+| `ovl.lasso` | hidden | drawn during `sel_freeform` draw; **hidden** after pen-up | — | — |
+| `ovl.nodes_bounds` | hidden | drawn when ≥1 document node selected | — | — |
 | `ovl.select_anchors` | hidden | 6 squares on `ovl.nodes_bounds` | — | events deferred — not pressable this campaign |
-| `cta.enclose` | hidden | visible when selection non-empty under Selection tool; **icon-only**, size = ToolChip primary (64 du); **no** context-toolbar chrome | brief invert | hidden when selection empty |
+| `cta.enclose` | hidden | visible when selection non-empty under `sel_rect` or `sel_freeform`; **icon-only**, size = ToolChip primary (64 du); **no** context-toolbar chrome | brief invert | hidden when selection empty |
 | `tgl.ink_scale_mode` | hidden | drawn when SmartGroup selected; reflects current mode | brief invert | hidden when nothing is selected |
 | `ind.manipulation_unavailable` | hidden | visible below the cutoff | — | — |
 
@@ -117,9 +121,10 @@ No hover, no focus, no cursor on this platform — do not design them.
 
 | State id | InkSurface | SelectionOverlay | Refresh |
 |---|---|---|---|
-| `sel.none` | Document | hidden | — |
-| `sel.marquee` | Document | `ovl.marquee` follows pen tip | Partial |
-| `sel.nodes_selected` | Document | `ovl.nodes_bounds` + 6 anchors + `cta.enclose` | Partial |
+| `sel.none` | Document | overlay hidden; ToolChip shows four tools (`sel_rect` or `sel_freeform` armed) | — |
+| `sel.marquee` | Document | `ovl.marquee` AABB follows tip; `tool.sel_rect` armed | Partial |
+| `sel.lasso` | Document | `ovl.lasso` polyline follows tip; `tool.sel_freeform` armed | Partial |
+| `sel.nodes_selected` | Document | `ovl.nodes_bounds` + 6 anchors + `cta.enclose` (polyline gone) | Partial |
 | `sel.selected` | Document | bounds + handles + mode toggle (SmartGroup) | Partial |
 | `sel.moving` | **Ink following the pen** | bounds tracking the ink | Partial only, ≥5 Hz |
 | `sel.resizing.with_bounds` | **Content scaling with the box** | bounds + active handle | Partial only, ≥5 Hz |
@@ -168,7 +173,7 @@ a creator unable to tell which mode they were resizing in until after they relea
 - Connector attachment chrome on a box.
 - Any confirm/accept step beyond tapping `cta.enclose`.
 - Drag events on the 6 selection anchors (visual only this campaign).
-- A fourth ToolChip slot.
+- A fifth ToolChip slot (Enclose or undo).
 
 ### Open (needs design) {#open-needs-design}
 
@@ -176,8 +181,8 @@ a creator unable to tell which mode they were resizing in until after they relea
 |---|---|---|
 | **Handle size and hit tolerance in device units** | **Closed 2026-08-13 (architect).** Visual **28 du**; hit **56 du** (14 du pad beyond visual). 1 du = 1 panel pixel @ 226 dpi. **Not** 8 CSS px. Binding for [STORY-EP-019](../../../../../.plan/iter-003/stories/STORY-EP-019.md). | architect — accepted |
 | **LOD cutoff value on device** | **Closed 2026-08-13 (architect).** Manipulation unavailable when the selected box's **smaller on-panel axis < 96 du**. **Not** `TILE_LOD_SCALE = 0.35`. Binding for EP-019. | architect — accepted |
-| **Undo affordance** | **Deferred this campaign ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)).** No on-panel control; no fourth ToolChip slot; no properties panel. [SRS-EP-07](../device-document/srs-logic.md) ring still ships (EP-015) with no chrome. Hardware / two-finger undo unspecified. | pm + designer — deferred |
-| **Selection-create invocation** | **Closed 2026-08-13 ([CHL-0013](../../../../../.plan/iter-003/challenges/CHL-0013-selection-create-feedback-enclose-cta.md) / [ADR-0016](../../../../adr/ADR-0016-selection-create-enclose-cta.md)).** `cta.enclose` on SelectionOverlay; rubber-band + 6 anchors. Design: [STORY-EP-022](../../../../../.plan/iter-003/stories/STORY-EP-022.md). | architect — accepted; designer |
+| **Undo affordance** | **Deferred this campaign ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)).** No on-panel control; no fifth ToolChip; no properties panel. | pm + designer — deferred |
+| **Selection-create invocation** | **Closed** CHL-0013 / ADR-0016 / CHL-0014 hit-tests / **CHL-0015 + ADR-0017** four-tool chip. Design: [STORY-EP-022](../../../../../.plan/iter-003/stories/STORY-EP-022.md). | architect — accepted; designer |
 | **Chrome legibility against dense ink** | 1-bit chrome over handwriting, with no tint or shadow available | designer |
 
 ---

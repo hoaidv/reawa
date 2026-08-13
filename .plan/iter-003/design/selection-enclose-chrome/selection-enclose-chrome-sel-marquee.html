@@ -27,16 +27,17 @@
         <div class="c-marquee pos-drag" id="ovl.marquee"></div>
         <span class="pen-tip pos-marquee" aria-hidden="true"></span>
       </div>
-      <p class="scene-caption">sel.marquee — thin dotted rubber-band follows pen tip (not ink).
+      <p class="scene-caption">sel.marquee — thin dotted rectangle follows pen tip (rect mode). Same rect until settled chrome.
         <a href="./selection-enclose-chrome-sel-nodes-selected.html">Pen up</a> ·
-        <a href="./selection-enclose-chrome-sel-none.html">Cancel</a>
+        <a href="./selection-enclose-chrome-sel-lasso.html">Freeform</a>
       </p>
       <span class="orient-tag">orient: gutToLeft</span>
     </div>
     <div class="c-tool-chip" data-region="ToolStrip" role="toolbar" aria-label="Tools">
-      <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection"><img src="../system/assets/icon-epaper-selection.svg" alt="" /></button>
-      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
-      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_rect" aria-pressed="true" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_freeform" aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.pen" aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.ink_box" aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
     </div>
     <p data-region="StatusLine">sel.marquee · ovl.marquee</p>
   </div>

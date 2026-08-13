@@ -25,11 +25,12 @@
   </style>
 </head>
 <body>
-  <div class="c-tool-chip" data-region="ToolStrip" role="toolbar">
-    <button type="button" class="c-tool-btn" aria-label="Selection" aria-pressed="false"><img src="../../system/assets/icon-epaper-selection.svg" alt="" /></button>
-    <button type="button" class="c-tool-btn" aria-label="Pen" aria-pressed="true"><img src="../../system/assets/icon-epaper-pen.svg" alt="" /></button>
-    <button type="button" class="c-tool-btn" aria-label="Ink box" aria-pressed="false"><img src="../../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
-  </div>
+  <div class="c-tool-chip" data-region="ToolStrip" role="toolbar" aria-label="Tools">
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_rect" aria-pressed="false" aria-label="Selection rect"><img src="../../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.sel_freeform" aria-pressed="false" aria-label="Selection freeform"><img src="../../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.pen" aria-pressed="true" aria-label="Pen"><img src="../../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="tool.ink_box" aria-pressed="false" aria-label="Ink box"><img src="../../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+    </div>
   <p>32×32 squared tiles · radius 0 · floating hug</p>
   <script>
     document.querySelectorAll(".c-tool-btn").forEach((btn) => {

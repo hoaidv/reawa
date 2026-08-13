@@ -9,9 +9,9 @@ lifecycle: active
 |---|---|---|---|---|---|---|
 | Infini infinity canvas `[UI-IN-01]` | infini / [SRS-IN-02] | `.plan/iter-002/design/infinity-canvas/` | iter-002 | — | current | STORY-IN-001 |
 | Infini ink-box tools `[UI-IN-02]` | infini / [SRS-IN-14] | `.plan/iter-003/design/ink-box-ui/` | iter-003 | — | **deprecated** | Desktop mouse+ghost. Superseded on-device by `[UI-EP-02]`. Keep row; do not delete. STORY-IN-013 |
-| Epaper tool strip `[UI-EP-01]` | epaper / [SRS-EP-05] | `.plan/iter-003/design/epaper-tool-strip/` | iter-003 | — | current | STORY-EP-003. Selection-dragging **ghost** scenes withdrawn; compose ToolChip only. |
+| Epaper tool strip `[UI-EP-01]` | epaper / [SRS-EP-05] | `.plan/iter-003/design/epaper-tool-strip/` | iter-003 | — | current | STORY-EP-003. Four tools (ADR-0017). Compose ToolChip only. |
 | Device selection chrome `[UI-EP-02]` | epaper / [SRS-EP-12] | `.plan/iter-003/design/device-selection-chrome/` | iter-003 | `[UI-IN-02]` (on-device) | current | STORY-EP-012. Live ink; 0 ghost. |
-| Selection enclose chrome `[UI-EP-03]` | epaper / [SRS-EP-12] | `.plan/iter-003/design/selection-enclose-chrome/` | iter-003 | — | current | STORY-EP-022. Marquee + 6 anchors + Enclose CTA. Composes UI-EP-01/02. |
+| Selection enclose chrome `[UI-EP-03]` | epaper / [SRS-EP-12] | `.plan/iter-003/design/selection-enclose-chrome/` | iter-003 | — | current | STORY-EP-022. Rect + freeform (CHL-0014) + 6 anchors + Enclose CTA. Composes UI-EP-01/02. |
 
 ## Changelog
 

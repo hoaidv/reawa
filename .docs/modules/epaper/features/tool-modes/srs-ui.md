@@ -62,7 +62,7 @@ latency or reserving a full edge band of drawing area.
 | Layer id | Role | Fill |
 |---|---|---|
 | InkSurface | **Full-bleed** drawing area (existing) | White |
-| ToolChip | Compact three-tool cluster (aka ToolStrip) | White; 1 px outline; squared (`border-radius: 0`) |
+| ToolChip | Compact **four**-tool cluster (aka ToolStrip) | White; 1 px outline; squared (`border-radius: 0`) |
 | SelectionOverlay | Handles + ghost while `selection` is active | Outline only |
 | StatusLine | Existing debug/status text | Unchanged |
 
@@ -78,7 +78,7 @@ hits on the chip are excluded from ink via hit-test ([SRS-EP-04](./srs-logic.md)
 | # | Region id | Parent | Contents |
 |---|---|---|---|
 | 0 | DeviceScreen | panel | Full panel |
-| 1 | ToolChip | DeviceScreen | 3 tool buttons, floating orientation-top chip |
+| 1 | ToolChip | DeviceScreen | 4 tool buttons, floating orientation-top chip |
 | 2 | InkSurface | DeviceScreen | Full-bleed drawing region |
 | 3 | SelectionOverlay | InkSurface | Bounds + handles for the selected node |
 | 4 | StatusLine | DeviceScreen | Existing status text |
@@ -87,7 +87,8 @@ hits on the chip are excluded from ink via hit-test ([SRS-EP-04](./srs-logic.md)
 
 | id | Control | Region |
 |---|---|---|
-| `tool.selection` | Selection tool | ToolChip |
+| `tool.sel_rect` | Selection rect (AABB marquee) | ToolChip |
+| `tool.sel_freeform` | Selection freeform (lasso) | ToolChip |
 | `tool.pen` | Pen tool (**default**) | ToolChip |
 | `tool.ink_box` | Ink-box tool | ToolChip |
 | `ind.tool_active` | Which tool is armed | ToolChip |
@@ -115,7 +116,8 @@ Note there is **no hover and no focus** on this platform — do not design them.
 
 | Control | default | active (armed) | pressed | unavailable |
 |---|---|---|---|---|
-| `tool.selection` | outline | filled / inverted | brief invert | hatched + inert **only** below the LOD cutoff |
+| `tool.sel_rect` | outline | filled / inverted | brief invert | hatched + inert **only** below the LOD cutoff |
+| `tool.sel_freeform` | outline | filled / inverted | brief invert | hatched + inert **only** below the LOD cutoff |
 | `tool.pen` | outline | filled / inverted | brief invert | never — always available |
 | `tool.ink_box` | outline | filled / inverted | brief invert | never — works with the link down |
 
@@ -132,10 +134,11 @@ ghost of the previous state on screen.
 | `tool.pen` | Pen armed | Ink under pen | hidden |
 | `tool.ink_box` | Ink-box armed | Ink under pen (identical) | hidden |
 | `tool.ink_box.rejected` | Ink-box still armed | Stroke stayed ordinary ink | hidden; **no** banner |
-| `tool.selection.idle` | Selection armed | No ink from pen | hidden |
-| `tool.selection.selected` | Selection armed | — | bounds + handles |
-| `tool.selection.moving` | Selection armed | **Real ink moving under the pen** | bounds tracking the ink |
-| `tool.selection.resizing` | Selection armed | **Real ink resizing** per `inkScaleMode` | bounds + active handle |
+| `tool.sel_rect.idle` | Rect armed | No ink from pen | hidden |
+| `tool.sel_freeform.idle` | Freeform armed | No ink from pen | hidden |
+| `tool.selection.selected` | Either selection tool armed | — | bounds + handles |
+| `tool.selection.moving` | Either selection tool armed | **Real ink moving under the pen** | bounds tracking the ink |
+| `tool.selection.resizing` | Either selection tool armed | **Real ink resizing** per `inkScaleMode` | bounds + active handle |
 | `session.linked` | `ind.publish_status` = linked | unchanged | unchanged |
 | `session.pending_changes` | `ind.publish_status` = queued (**tools still usable**) | Pen still inks; all editing works | unchanged |
 | `session.reloading` | `ind.publish_status` = reloading | Document being replaced | hidden |
@@ -178,8 +181,8 @@ not design them.
 
 - **Undo affordance.** **Deferred this campaign**
   ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)):
-  no on-panel control; the chip stays three tools ([Closed control inventory](#closed-control-inventory));
+  no on-panel control; the chip stays **four** tools ([Closed control inventory](#closed-control-inventory));
   no keyboard. [SRS-EP-07](../device-document/srs-logic.md) ring still ships. Reopen only with a
-  verified hardware gesture or a new SRS for a fourth chip.
+  verified hardware gesture or a new SRS for a **fifth** chip.
 - **`inkScaleMode` toggle placement** — it belongs to a selected box, not to the chip; specified in
   [SRS-EP-12](../ink-box/srs-ui.md).

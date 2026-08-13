@@ -8,20 +8,38 @@ Feature: Selection create requires a surround stroke on the device
   # Rules verbatim, including the even-odd artificial-closed-path test.
 
   @SRS-EP-10 @SRS-EP-12
-  Scenario: Rubber-band follows pen tip
-    Given the Selection tool is armed
+  Scenario: Rect rubber-band follows pen tip
+    Given tool.sel_rect is armed
     When the creator pens down and moves on the canvas
     Then ovl.marquee is a thin dotted AABB that follows the pen tip
     And no Smart Group is created until cta.enclose is tapped
 
   @SRS-EP-10 @SRS-EP-12
-  Scenario: Pen-up shows union rect six anchors and Enclose
+  Scenario: Rect pen-up selects AABB intersection
     Given a rubber-band that intersects document nodes
-    When pen-up completes the marquee
-    Then ovl.nodes_bounds is the tight union AABB of those nodes with 0 extra padding
+    When pen-up completes the rect marquee
+    Then those nodes are selected
+    And ovl.nodes_bounds is the tight union AABB of those nodes with 0 extra padding
     And six square anchors are drawn on that rect
     And cta.enclose is visible on SelectionOverlay
-    And the ToolChip still has exactly three tools
+    And the ToolChip has exactly four tools
+
+  @SRS-EP-10 @SRS-EP-12
+  Scenario: Freeform polyline while drawing
+    Given tool.sel_freeform is armed
+    When the creator pens down and draws around nodes
+    Then ovl.lasso is a thin dotted polyline that follows the pen tip
+    And no Smart Group is created until cta.enclose is tapped
+
+  @SRS-EP-10 @SRS-EP-12
+  Scenario: Freeform pen-up closes polyline and uses inside hit-test
+    Given a freeform polyline around some document nodes
+    When pen-up closes the polyline
+    Then nodes inside the closed polyline are selected
+    And nodes that only intersect the polyline AABB but lie outside the path are not selected
+    And ovl.lasso is gone
+    And ovl.nodes_bounds is the tight union AABB of the selected nodes with 0 extra padding
+    And six square anchors and cta.enclose are visible
 
   @SRS-EP-10 @SRS-EP-12
   Scenario: Enclose CTA runs surround create

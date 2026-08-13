@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-13T23:26:33+00:00
+generated_at: 2026-08-13T23:50:23+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
