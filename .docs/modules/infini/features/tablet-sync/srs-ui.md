@@ -52,10 +52,11 @@ is **closed**.
 |---|---|---|
 | `btn.device_log` | Device Log | Toggle overlay open / closed |
 | `btn.device_log_close` | Close | Same as toggle-to-closed (toolbar) |
+| `btn.device_log_clear` | Clear | Empty the in-memory ring (view + process buffer) |
 | `field.device_log_filter` | Filter | Substring search over the in-memory buffer |
 | `list.device_log_stream` | (none) | Read-only lines |
 
-No persist, no export, no clear, no second window, no on-device chrome.
+No persist, no export, no second window, no on-device chrome. Clear is allowed (debug chrome).
 
 ### Copy table (en)
 
@@ -68,6 +69,7 @@ No persist, no export, no clear, no second window, no on-device chrome.
 | `copy.device_log.disconnected` | `Device log not connected` |
 | `copy.device_log.disconnected_hint` | `Enable EPAPER_DEBUG_LOG on the tablet and keep Infini listening on TCP 9878.` |
 | `copy.device_log.close` | `Close` |
+| `copy.device_log.clear` | `Clear` |
 | `copy.device_log.filter_empty` | `No lines match the filter` |
 
 ### Interaction map
@@ -76,6 +78,7 @@ No persist, no export, no clear, no second window, no on-device chrome.
 |---|---|---|---|---|
 | `btn.device_log` (closed) | click / Enter | overlay open | send `debug_request` then `debug_start` | hover lift · press tint · focus ring |
 | `btn.device_log` (open) / `btn.device_log_close` / Escape | click / Escape | overlay closed | send `debug_stop`; **buffer kept** | same |
+| `btn.device_log_clear` | click | in-scene | empty Infini ring (main + overlay); device not asked | press tint · focus ring |
 | `field.device_log_filter` | input | in-scene filter | view-only; buffer unchanged | caret · focus ring |
 | `list.device_log_stream` | scroll | in-scene | none | native scroll |
 

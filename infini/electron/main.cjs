@@ -247,6 +247,10 @@ ipcMain.handle("rm-client-count", () => rmClients.size);
 ipcMain.handle("debug-port", () => DEBUG_PORT);
 ipcMain.handle("debug-client-count", () => debugClients.size);
 ipcMain.handle("debug-log-snapshot", () => debugRing.slice());
+ipcMain.handle("debug-log-clear", () => {
+  debugRing.length = 0;
+  return true;
+});
 ipcMain.handle("debug-send", (_event, type) => sendDebugControl(type));
 ipcMain.handle("debug-set-panel-open", (_event, open) => {
   debugPanelOpen = !!open;

@@ -49,11 +49,20 @@ Feature: Device console log ship on TCP 9878
     And the process does not abort
 
   @SRS-EP-15
-  Scenario: Enclose ingest emits one tagged qInfo
-    Given shipping may be on or off
+  Scenario: Enclose ingest emits one tagged qInfo only for ink_box
+    Given the latched tool at pen-down is ink_box
     When ingestStrokeAtPenUp returns
     Then exactly one qInfo whose msg starts with "[enclose]" is emitted
+    And when outcome is created the msg includes children=[…]
     And recognize_enclose.hpp guards are unchanged
+
+  @SRS-EP-15
+  Scenario: Pen ingest logs ink id and never enclose
+    Given the latched tool at pen-down is pen
+    When ordinary append_ink succeeds
+    Then exactly one qInfo "[ink] id=<inkId>" is emitted
+    And zero "[enclose]" lines are emitted
+    And recognize_enclose is not called for that stroke
 
   @SRS-EP-15 @SRS-EP-16
   Scenario: Env off never connects

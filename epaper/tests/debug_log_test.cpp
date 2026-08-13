@@ -22,6 +22,7 @@ using epaper::debuglog::debugLogPort;
 using epaper::debuglog::DebugLogQueue;
 using epaper::debuglog::DebugLogRecord;
 using epaper::debuglog::formatEncloseLog;
+using epaper::debuglog::formatInkLog;
 using epaper::debuglog::isDocumentTypeOnDebugPort;
 using epaper::debuglog::isDebugControlType;
 
@@ -74,12 +75,12 @@ int main()
     CHECK(batch.front().second >= 1);
     CHECK(q.size() == 0);
 
-    CHECK(formatEncloseLog("ink_box", "Created", "", "sg_enclose_1")
-          == "[enclose] armed=ink_box outcome=created id=sg_enclose_1");
-    CHECK(formatEncloseLog("ink_box", "OrdinaryInk", "too_small", "")
+    CHECK(formatInkLog("stroke_42") == "[ink] id=stroke_42");
+    CHECK(formatEncloseLog("Created", "", "sg_enclose_1", {"stroke_1", "ink_a", "ink_b"})
+          == "[enclose] armed=ink_box outcome=created id=sg_enclose_1 "
+             "children=[stroke_1,ink_a,ink_b] captured=2");
+    CHECK(formatEncloseLog("OrdinaryInk", "too_small", "")
           == "[enclose] armed=ink_box outcome=stayed_ink guard=size captured=0");
-    CHECK(formatEncloseLog("pen", "OrdinaryInk", "pen_armed", "")
-          == "[enclose] armed=pen outcome=not_evaluated captured=0");
 
     std::printf("debug_log_test OK\n");
     return 0;

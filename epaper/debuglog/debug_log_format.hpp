@@ -1,11 +1,11 @@
-#pragma once
 /**
- * @implements [SRS-EP-15] env gate, port, enclose log line, inbound type filter
+ * @implements [SRS-EP-15] env gate, port, ink/enclose log lines, inbound type filter
  */
 
 #include <cctype>
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 namespace epaper {
 namespace debuglog {
@@ -55,19 +55,24 @@ inline bool isDocumentTypeOnDebugPort(const std::string &type)
         || type == "pickables" || type == "tool_intent";
 }
 
+/** Ordinary pen ingest — never an [enclose] line. */
+inline std::string formatInkLog(const std::string &inkId)
+{
+    return "[ink] id=" + inkId;
+}
+
 /**
- * One [enclose] line after ingestStrokeAtPenUp returns.
- * Does not change recognizer behaviour.
+ * One [enclose] line after ink_box enclose ingest returns.
+ * Only call when the latched tool was ink_box.
  */
-inline std::string formatEncloseLog(const std::string &armed, const std::string &kind,
-                                   const std::string &reason, const std::string &smartGroupId)
+inline std::string formatEncloseLog(const std::string &kind, const std::string &reason,
+                                   const std::string &smartGroupId,
+                                   const std::vector<std::string> &childIds = {})
 {
     std::string outcome;
     std::string guard = "none";
     if (kind == "Created") {
         outcome = "created";
-    } else if (kind == "Skipped" || reason == "pen_armed" || reason == "too_few_samples") {
-        outcome = "not_evaluated";
     } else {
         outcome = "stayed_ink";
     }
@@ -78,13 +83,22 @@ inline std::string formatEncloseLog(const std::string &armed, const std::string 
     else if (reason == "already_grouped")
         guard = "already_grouped";
 
-    std::string line = "[enclose] armed=" + armed + " outcome=" + outcome;
-    if (outcome == "created" && !smartGroupId.empty())
-        line += " id=" + smartGroupId;
-    if (outcome == "stayed_ink")
+    std::string line = "[enclose] armed=ink_box outcome=" + outcome;
+    if (outcome == "created") {
+        if (!smartGroupId.empty())
+            line += " id=" + smartGroupId;
+        line += " children=[";
+        for (size_t i = 0; i < childIds.size(); ++i) {
+            if (i)
+                line += ',';
+            line += childIds[i];
+        }
+        line += ']';
+        const int captured = childIds.size() > 1 ? int(childIds.size()) - 1 : 0;
+        line += " captured=" + std::to_string(captured);
+    } else {
         line += " guard=" + guard + " captured=0";
-    else if (outcome == "not_evaluated")
-        line += " captured=0";
+    }
     return line;
 }
 

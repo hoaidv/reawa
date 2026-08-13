@@ -12,6 +12,7 @@ const COPY = {
   disconnected: "Device log not connected",
   disconnectedHint: "Enable EPAPER_DEBUG_LOG on the tablet and keep Infini listening on TCP 9878.",
   close: "Close",
+  clear: "Clear",
   filterEmpty: "No lines match the filter",
 } as const;
 
@@ -75,6 +76,11 @@ export function DeviceLogChrome() {
     void native?.setDebugPanelOpen?.(false);
     sendControl("debug_stop");
   }, [native, sendControl]);
+
+  const clearLog = useCallback(() => {
+    setBuffer([]);
+    void native?.clearDebugLog?.();
+  }, [native]);
 
   const toggle = useCallback(() => {
     if (open) closeOverlay();
@@ -150,6 +156,14 @@ export function DeviceLogChrome() {
               onChange={(e) => setFilter(e.target.value)}
             />
           </label>
+          <button
+            type="button"
+            data-control="btn.device_log_clear"
+            data-copy="copy.device_log.clear"
+            onClick={clearLog}
+          >
+            {COPY.clear}
+          </button>
           <button
             type="button"
             data-control="btn.device_log_close"

@@ -130,7 +130,7 @@ logs cannot fit under those ceilings, the shipper changes — not the ink budget
 | `debug_*` on `:9877` | Sent by this feature | **0** |
 | Env off | Connects to `:9878` | **0** |
 | Stdio capture fail | Process abort | **0** — Qt logs still ship; one notice line |
-| `[enclose]` source | Lines per pen-up ingest | **≤1**; recognizer verdict unchanged vs no-log build (shared enclose fixtures still 100%) |
+| `[ink]` / `[enclose]` source | Lines per pen-up | Pen: **≤1** `[ink]`; ink_box: **≤1** `[enclose]`; **0** `[enclose]` when not ink_box; recognizer verdict unchanged (shared enclose fixtures still 100%) |
 
 ---
 

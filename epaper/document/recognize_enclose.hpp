@@ -48,6 +48,8 @@ struct EncloseResult {
     std::string reason;
     std::string smartGroupId;
     SmartBounds fittedWorldBounds;
+    /** Populated on Created — boundary then content ids (for Device Log). */
+    std::vector<std::string> childIds;
 };
 
 inline SmartBounds samplesAabb(const std::vector<InkSample> &samples)
@@ -303,6 +305,8 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
     children.push_back(inkChildToJson(stroke.id, "boundary", boundarySamples, style, std::nullopt));
 
     JsonValue::Array captureIds;
+    std::vector<std::string> childIdsForLog;
+    childIdsForLog.push_back(stroke.id);
     for (auto &cap : capturable) {
         for (size_t i = 0; i < cap.samples.size(); ++i) {
             cap.samples[i].x -= world.x;
@@ -313,6 +317,7 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
         const auto uv = seedLayoutOffset(cap.samples, bounds);
         children.push_back(inkChildToJson(cap.id, "content", cap.samples, cap.style, uv));
         captureIds.push_back(JsonValue::string(cap.id));
+        childIdsForLog.push_back(cap.id);
     }
 
     JsonValue::Object b;
@@ -352,6 +357,7 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
     }
     out.kind = EncloseKind::Created;
     out.smartGroupId = smartGroupId;
+    out.childIds = std::move(childIdsForLog);
     return out;
 }
 

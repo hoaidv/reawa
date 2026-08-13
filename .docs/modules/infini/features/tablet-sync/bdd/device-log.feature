@@ -70,6 +70,15 @@ Feature: Device Log sidecar on TCP 9878
     Then the stream body shows "No lines match the filter"
     And the state is dlog.filtered
 
+  @SRS-IN-18
+  Scenario: Clear empties the buffer
+    Given the overlay is open
+    And the buffer holds 3 lines
+    When the user clicks Clear
+    Then the buffer holds 0 lines
+    And the stream body shows "No device log yet" or the empty/disconnected copy
+    And Infini does not send a clear message to the device
+
   @SRS-IN-17 @SRS-IN-18
   Scenario: Close sends debug_stop and keeps the buffer
     Given the overlay is open

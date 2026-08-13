@@ -59,6 +59,7 @@ export interface InfiniNative {
   debugPort?: () => Promise<number>;
   debugClientCount?: () => Promise<number>;
   debugLogSnapshot?: () => Promise<DebugLogRecord[]>;
+  clearDebugLog?: () => Promise<boolean>;
   sendDebugControl?: (type: "debug_request" | "debug_start" | "debug_stop") => Promise<number>;
   setDebugPanelOpen?: (open: boolean) => Promise<boolean>;
 }

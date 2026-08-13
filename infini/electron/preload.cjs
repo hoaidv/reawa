@@ -56,6 +56,7 @@ contextBridge.exposeInMainWorld("infiniNative", {
   debugPort: () => ipcRenderer.invoke("debug-port"),
   debugClientCount: () => ipcRenderer.invoke("debug-client-count"),
   debugLogSnapshot: () => ipcRenderer.invoke("debug-log-snapshot"),
+  clearDebugLog: () => ipcRenderer.invoke("debug-log-clear"),
   sendDebugControl: (type) => ipcRenderer.invoke("debug-send", type),
   setDebugPanelOpen: (open) => ipcRenderer.invoke("debug-set-panel-open", open),
 });

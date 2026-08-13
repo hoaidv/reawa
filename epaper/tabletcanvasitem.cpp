@@ -498,7 +498,8 @@ void TabletCanvasItem::endStroke()
 }
 
 /** @implements [SRS-EP-07] finished stroke → append_ink at pen-up */
-/** @implements [SRS-EP-10] Ink-box latch → enclose; Pen → ordinary ink */
+/** @implements [SRS-EP-10] Ink-box latch → enclose; Pen → ordinary ink (no enclose path) */
+/** @implements [SRS-EP-15] [ink] / [enclose] log sources after ingest */
 void TabletCanvasItem::ingestCurrentStroke()
 {
     using namespace epaper::document;
@@ -532,28 +533,34 @@ void TabletCanvasItem::ingestCurrentStroke()
         *wx = w.x();
         *wy = w.y();
     };
-    StrokeArmedTool armed = StrokeArmedTool::Pen;
-    if (m_strokeArmedTool == QLatin1String("ink_box"))
-        armed = StrokeArmedTool::InkBox;
-    else if (m_strokeArmedTool == QLatin1String("selection"))
-        armed = StrokeArmedTool::Selection;
-    const EncloseIngestTiming t = ingestStrokeAtPenUp(m_document, stroke, map, armed);
+
+    // Pen (and any non-ink_box latch): ordinary ingest only — never recognize_enclose.
+    if (m_strokeArmedTool != QLatin1String("ink_box")) {
+        const IngestTiming t = ingestFinishedStrokeTimed(m_document, stroke, map);
+        m_ingestNs.push_back(t.ns);
+        if (t.result.applied) {
+            ++m_ingestApplied;
+            qInfo().noquote() << QString::fromStdString(epaper::debuglog::formatInkLog(stroke.id));
+        } else {
+            ++m_ingestRejected;
+        }
+        return;
+    }
+
+    const EncloseIngestTiming t =
+        ingestStrokeAtPenUp(m_document, stroke, map, StrokeArmedTool::InkBox);
     {
-        std::string armedName = "other";
-        if (m_strokeArmedTool == QLatin1String("ink_box"))
-            armedName = "ink_box";
-        else if (m_strokeArmedTool == QLatin1String("pen"))
-            armedName = "pen";
-        else if (m_strokeArmedTool == QLatin1String("selection"))
-            armedName = "selection";
         std::string kindName = "Skipped";
         if (t.result.kind == EncloseKind::Created)
             kindName = "Created";
         else if (t.result.kind == EncloseKind::OrdinaryInk)
             kindName = "OrdinaryInk";
-        const std::string line = epaper::debuglog::formatEncloseLog(
-            armedName, kindName, t.result.reason, t.result.smartGroupId);
-        qInfo().noquote() << QString::fromStdString(line);
+        // Skip too_few_samples / Skipped — no enclose evaluation worth a line.
+        if (t.result.kind != EncloseKind::Skipped) {
+            const std::string line = epaper::debuglog::formatEncloseLog(
+                kindName, t.result.reason, t.result.smartGroupId, t.result.childIds);
+            qInfo().noquote() << QString::fromStdString(line);
+        }
     }
     m_ingestNs.push_back(t.ns);
     if (t.apply.applied)

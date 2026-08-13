@@ -361,34 +361,41 @@ or equivalent). If redirect **fails**, continue shipping Qt messages and emit **
 `debug_log` `{ logger: "qt", msg: "[debug] stdio capture unavailable" }`. Do not crash.
 Do not install a handler that writes the debug socket from the ink thread as a fallback.
 
-### `[enclose]` log source (not a recognizer change)
+### `[ink]` and `[enclose]` log sources (not recognizer changes)
 
-After **pen-up ingest dispatch** returns ([SRS-EP-07](#srs-ep-07-device-document) steps 4–5
-and the [SRS-EP-10](../ink-box/srs-logic.md) trigger table), emit **exactly one** `qInfo`
-whose `msg` starts with `[enclose]`.
+Logging is a **side channel** after pen-up dispatch. It must not alter
+`recognize_enclose` guards, `create_smart_group` payloads, membership, or published ops.
 
-This is a **log source**. It must not alter `recognize_enclose`, `create_smart_group`,
-membership, guards, or any published op. Facts already known to the dispatch are enough.
+| When (latched tool at pen-down) | Log | Path |
+|---|---|---|
+| `pen` (ordinary ink) | Exactly one `qInfo` `[ink] id=<inkId>` after successful `append_ink` | [SRS-EP-07](#srs-ep-07-device-document) ingest only — **do not** call enclose recognition |
+| `ink_box` | Exactly one `qInfo` whose `msg` starts with `[enclose]` after enclose ingest returns | [SRS-EP-10](../ink-box/srs-logic.md) |
+| `selection` | No stroke ingest → **0** `[ink]` / `[enclose]` lines | — |
+
+`[enclose]` tokens:
 
 | Token | Meaning |
 |---|---|
-| `armed` | Latched tool at pen-down: `ink_box` \| `pen` \| `selection` \| other |
-| `outcome` | `created` \| `stayed_ink` \| `not_evaluated` |
-| `guard` | `none` \| `size` \| `content` \| `already_grouped` — only when enclose ran and did not create |
-| `captured` | Integer count of ink that became (or would have been) content; `0` if not evaluated |
-| `bounds` | Fitted AABB if enclose ran; omitted otherwise |
+| `armed` | Always `ink_box` for this line |
+| `outcome` | `created` \| `stayed_ink` |
+| `guard` | `none` \| `size` \| `content` \| `already_grouped` — when stayed_ink |
+| `id` | Smart Group id when `outcome=created` |
+| `children` | `[id,…]` boundary then content ink ids when `outcome=created` |
+| `captured` | Content ink count (children minus boundary) when created; `0` when stayed_ink |
 
 Example (informative):
 
 ```text
+[ink] id=stroke_42
+[enclose] armed=ink_box outcome=created id=sg_enclose_stroke_99 children=[stroke_99,stroke_42,stroke_7]
 [enclose] armed=ink_box outcome=stayed_ink guard=size captured=0
 ```
 
 | Rule | Value |
 |---|---|
-| When | Once per pen-up that ran ingest **or** enclose evaluation. Selection-only pen-up (no ink) may emit `outcome=not_evaluated` or skip — pick one and keep it stable |
-| Path | `qInfo` → the same handler/queue as every other Qt log. **Not** a `:9877` message |
-| Recognizer | **0** behaviour change. Adding this line is not an [SRS-EP-10](../ink-box/srs-logic.md) edit |
+| Pen / non-ink_box | **0** calls into enclose recognition for logging; **0** `[enclose]` lines |
+| Path | `qInfo` → debug handler/queue. **Not** a `:9877` message |
+| Recognizer | Logging must not change [SRS-EP-10](../ink-box/srs-logic.md) verdicts |
 
 ### Errors / partial failure
 
