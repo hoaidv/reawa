@@ -1,7 +1,7 @@
 ---
 feature: vector-document
 parent_req: [REQ-02]
-version: 0.2.0
+version: 0.3.0
 lifecycle: active
 ---
 
@@ -9,14 +9,23 @@ lifecycle: active
 
 ## [SRS-IN-09] Persistence and transmit schemas
 
-**Logic:** [SRS-IN-04](./srs-logic.md). **ADR:** [ADR-0010](../../../../adr/ADR-0010-tree-of-vectors.md).
+<!-- revised: 2026-08-13 — CHL-0008 / ADR-0015. Added the doc_change envelope and the load shape;
+     ownership table re-stated for one-writer sessions. Same id, content revised. -->
+
+**Logic:** [SRS-IN-04](./srs-logic.md). **ADR:** [ADR-0010](../../../../adr/ADR-0010-tree-of-vectors.md),
+[ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md).
+**Shared semantics:** [domain/vector-document](../../../../domain/vector-document.md).
+
+Schemas here are the **shared** ones — the device implements the same shapes in C++. Do not fork a
+device-side dialect; extend this file.
 
 ### Ownership
 
-| Data | Owner at rest | Owner live |
+| Data | Owner at rest | Owner live (in-session) |
 |---|---|---|
-| Tree snapshot | SVG file on disk | Materialised tree in Infini/Epaper memory |
-| Op-log | N/A (ephemeral / optional journal later) | Session document channel |
+| Tree snapshot | SVG file on disk (**Infini**) | **Epaper** working document; Infini mirror follows |
+| Change stream | N/A (ephemeral; optional journal later) | Emitted by **Epaper**, applied by Infini |
+| Full load | Serialized from the Infini mirror | Sent **once** per session epoch, handshake-gated |
 
 ### Node JSON shape (canonical in-memory / fixtures)
 
@@ -177,9 +186,37 @@ Exact attribute grammar may tighten in an appendix without changing ADR-0010.
 
 Op envelope: `{ opId, type, payload, ts?, source? }`. Apply is idempotent on `opId`.
 
-**Sync bind:** which peer emits which ops in v0 — see
-[tablet-sync SRS-IN-07](../tablet-sync/srs-logic.md) emit matrix and
-[region-sync SRS-EP-02](../../../epaper/features/region-sync/srs-logic.md).
+`restore_snapshot { document }` joins the list as of [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md)
+§2 — it is how device undo publishes, since the device restores wholesale rather than computing
+inverse ops.
+
+### Document-change envelope (Epaper → Infini)
+
+```text
+{ "type": "doc_change", "seq": n, "opId": "<uuid>", "op": { … op envelope … }, "baseSeq": n-1 }
+```
+
+| Field | Rule |
+|---|---|
+| `seq` | Monotonic per session epoch, assigned by the device |
+| `opId` | Idempotency key — a duplicate apply is a no-op |
+| `baseSeq` | The `seq` the device believed current at commit; a mismatch on the receiver is a **gap** |
+| Ordering | Strict `seq`; the receiver must not reorder or interpolate |
+| Gap | Mirror marked **suspect**; request explicit resync; do not save a suspect mirror |
+
+### Document-load envelope (Infini → Epaper)
+
+```text
+{ "type": "doc_load", "document": { … full tree … }, "seq": 0 }
+```
+
+Replaces `doc_snapshot` and its `pickables` array (both retired with
+[SRS-IN-13](../tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport)). Legal only after the
+device's change queue has drained.
+
+**Sync bind:** the device emits ops, the desktop applies them — see
+[tablet-sync SRS-IN-07](../tablet-sync/srs-logic.md) and
+[epaper SRS-EP-08](../../../epaper/features/device-document/srs-logic.md).
 
 ### Fixtures
 

@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-11T09:40:51+00:00
+generated_at: 2026-08-13T10:40:46+00:00
 ---
 
 # Sync Report
@@ -17,25 +17,44 @@ _None._
 | [SRS-EP-04] | epaper |
 | [SRS-EP-05] | epaper |
 | [SRS-EP-06] | epaper |
+| [SRS-EP-09] | epaper |
+| [SRS-EP-10] | epaper |
+| [SRS-EP-11] | epaper |
+| [SRS-EP-12] | epaper |
+| [SRS-EP-13] | epaper |
+| [SRS-EP-14] | epaper |
+| [SRS-IN-01] | infini |
+| [SRS-IN-02] | infini |
+| [SRS-IN-03] | infini |
+| [SRS-IN-04] | infini |
 | [SRS-IN-05] | infini |
 | [SRS-IN-06] | infini |
+| [SRS-IN-07] | infini |
+| [SRS-IN-08] | infini |
+| [SRS-IN-09] | infini |
 
 ## BDD coverage by SRS
 | SRS | Scenarios | Status |
 |---|---|---|
 | [SRS-EP-01] | 0 | missing |
-| [SRS-EP-02] | 12 | covered |
-| [SRS-EP-03] | 5 | covered |
-| [SRS-EP-04] | 7 | covered |
+| [SRS-EP-02] | 14 | covered |
+| [SRS-EP-03] | 6 | covered |
+| [SRS-EP-04] | 10 | covered |
 | [SRS-EP-05] | 0 | missing |
 | [SRS-EP-06] | 1 | covered |
+| [SRS-EP-09] | 0 | missing |
+| [SRS-EP-10] | 18 | covered |
+| [SRS-EP-11] | 10 | covered |
+| [SRS-EP-12] | 0 | missing |
+| [SRS-EP-13] | 0 | missing |
+| [SRS-EP-14] | 0 | missing |
 | [SRS-IN-01] | 6 | covered |
 | [SRS-IN-02] | 4 | covered |
 | [SRS-IN-03] | 3 | covered |
-| [SRS-IN-04] | 8 | covered |
+| [SRS-IN-04] | 10 | covered |
 | [SRS-IN-05] | 0 | missing |
 | [SRS-IN-06] | 0 | missing |
-| [SRS-IN-07] | 13 | covered |
+| [SRS-IN-07] | 16 | covered |
 | [SRS-IN-08] | 2 | covered |
 | [SRS-IN-09] | 3 | covered |
 | [SRS-IN-10] | 4 | covered |

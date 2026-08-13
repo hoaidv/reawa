@@ -4,7 +4,8 @@ title: Tablet handle resize tool_intent
 kind: implement
 parent_srs: [SRS-EP-04]
 parent_req: [REQ-03]
-status: in-review
+status: blocked
+blocked_reason: "CHL-0008 adopted 2026-08-13 — device-side behaviour re-specified under epaper REQ-04…REQ-07; code discarded by the restore. Not scheduled; SM re-slices."
 priority: P1
 iter: iter-003
 estimate: 3

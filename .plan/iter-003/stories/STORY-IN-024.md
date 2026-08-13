@@ -4,7 +4,8 @@ title: Ink-scale mode toggle on desktop
 kind: implement
 parent_srs: [SRS-IN-11]
 parent_req: [REQ-04]
-status: in-review
+status: blocked
+blocked_reason: "CHL-0008 adopted 2026-08-13 — desktop ink-box authoring deprecated (infini REQ-04). Not scheduled; SM re-slices."
 priority: P2
 iter: iter-003
 estimate: 2

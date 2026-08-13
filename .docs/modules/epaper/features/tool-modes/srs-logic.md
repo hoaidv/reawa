@@ -1,21 +1,32 @@
 ---
 feature: tool-modes
 parent_req: [REQ-03]
-version: 0.1.0
+version: 0.2.0
 lifecycle: active
 ---
 
 # SRS — Tool modes Epaper (Logic)
 
 Device-side rules for [REQ-03](../../prd.md#tool-modes).
-Decision: [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md).
-Wire peer: [SRS-IN-13](../../../infini/features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport).
+Decision: [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md) §1 (device-local tool state),
+as amended by [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md).
+What the tools act on: [SRS-EP-07](../device-document/srs-logic.md) (document),
+[SRS-EP-10](../ink-box/srs-logic.md) (creation), [SRS-EP-11](../ink-box/srs-logic.md) (manipulation).
 
 **Implementation status (code SoT, 2026-08-11):** ToolChip + `toolMode` + `stroke_begin.intent`
 + `pickables` ingest + `tool_intent` emit in `tabletcanvasitem` / `Main.qml` (STORY-EP-005).
 Touch-on-chip uses MouseArea; pen-on-chip press is ignored for ink (fallback path).
+**The intent-emission half of that code is superseded** — the chip and routing survive.
 
-## [SRS-EP-04] Tool state and intent emission
+## [SRS-EP-04] Tool state and input routing
+
+<!-- revised: 2026-08-13 — CHL-0008 / ADR-0014. Enclose-intent and Selection-intent tables retired;
+     tools now invoke local document operations. Same id, content revised. -->
+
+> **Revised 2026-08-13.** This section is now only about **what the pen does next** — tool state and
+> input routing. The two intent tables are gone: there is no `intent` flag, no `pickables`, no
+> `tool_intent`, and no advisory ghost. A tool invokes a local operation and the document changes
+> immediately.
 
 ### Tool state
 
@@ -31,52 +42,35 @@ Touch-on-chip uses MouseArea; pen-on-chip press is ignored for ink (fallback pat
 
 | Tool | Pen down on canvas | Finger / pen on ToolChip | Finger on canvas |
 |---|---|---|---|
-| `pen` | Local ink + `stroke_*` with `intent: ink` | Switch tool | Ignored (no on-device pan — PRD Non-Goal) |
-| `ink_box` | Local ink + `stroke_*` with `intent: enclose` | Switch tool | Ignored |
-| `selection` | Pick / move / resize (below) | Switch tool | Ignored |
+| `pen` | Local ink → ingest as an `Ink` node at pen-up ([SRS-EP-07](../device-document/srs-logic.md)); draw-into membership evaluated ([SRS-EP-10](../ink-box/srs-logic.md)) | Switch tool | Ignored (no on-device pan — PRD Non-Goal) |
+| `ink_box` | Local ink → evaluate enclose at pen-up ([SRS-EP-10](../ink-box/srs-logic.md)) | Switch tool | Ignored |
+| `selection` | Pick / move / resize against the local document ([SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Ignored |
 
-`ink_box` and `pen` differ **only** in the emitted `intent` field — the local ink path, the
-Round 19 map, and the paint are byte-identical, so ink latency cannot regress by tool
-([SRS-EP-01](../local-pen-ink/srs-logic.md)).
+`ink_box` and `pen` share one ink path — same Round 19 map, same paint, byte-identical while the pen
+is down. They differ only in **what the device does at pen-up**, so ink latency cannot regress by
+tool ([SRS-EP-01](../local-pen-ink/srs-logic.md)).
 
-### Enclose intent
+### Arming
 
-| Step | Rule |
+| Rule | Value |
 |---|---|
-| Arm | Creator taps `Ink-box`; the tool **stays armed** for repeated boxes until switched |
-| Emit | `stroke_begin` carries `intent: "enclose"`; points and end are unchanged |
-| Device role | Draw the stroke locally as ordinary ink. **No** rectangle fitting, **no** containment test |
-| Result | Arrives as a normal `doc_snapshot` re-raster; the device learns nothing about grouping |
-| Guards fail on Infini | Nothing comes back; the stroke simply stays ink on the panel (already drawn) |
-
-### Selection intent
-
-| Step | Rule |
-|---|---|
-| Pickable source | `pickables[]` from the most recent `doc_snapshot` (id, kind, world bounds) |
-| Hit-test | Local: `panelToWorld(pen)` inside a pickable's bounds; topmost (last in array) wins |
-| Select | Draw selection affordance locally (bounds + 8 handles); emit `tool_intent { action: "select", nodeId }` |
-| Move | Drag renders a **local ghost** of the bounds (dashed, composited chrome ≥20 Hz dirty-rect); on pen-up emit `tool_intent { action: "move", nodeId, delta }` |
-| Resize | Drag on a handle band; on pen-up emit `tool_intent { action: "resize", nodeId, bounds }` |
-| Authority | The ghost is advisory. The next `doc_snapshot` is truth, even if geometry jumps |
-| No pickables | Selection tool is inert — pen does nothing on canvas; must be visible in the UI |
-| Miss | Press outside every pickable clears selection |
+| `ink_box` stays armed | Repeated boxes without re-tapping, until the creator switches tool |
+| Arming is the confirmation | No propose/accept step; creation is immediate and undoable (ADR-0013, ADR-0011 §4A as amended) |
+| Refused enclose | The stroke stays ordinary ink; the tool stays armed; no banner |
 
 ### Tool independence
 
-Device tool mode is **never synced**. Infini may be on Selection / Ink-box while Epaper is on
-Ink-box — enclose recognition is driven solely by `stroke_begin.intent` from the drawing device
-([SRS-IN-10](../../../infini/features/vector-document/srs-logic.md)). The peer tool does not
-gate ingest or create.
+Tool mode is device-local and now trivially so: the peer has no tools this campaign
+([infini REQ-04](../../../infini/prd.md#smart-group) deprecated) and never sees the device's.
 
 ### Errors / partial failure
 
 | Case | Behavior |
 |---|---|
 | Touch layer unavailable at runtime | Fall back to `pen` permanently; surface it in the status line; never trap the creator in a non-drawing tool |
-| Session down | `pen` still inks locally (REQ-01 is offline-capable); `selection` / `ink_box` show as unavailable |
-| Snapshot older than the creator's edits | Ghost discarded on next snapshot; last write wins (no locking, ADR-0013 §4) |
+| Session down | **All three tools stay fully available** — editing is local ([REQ-04](../../prd.md#device-document)). Only publishing waits; the status affordance shows changes are queued |
 | Pen-down starts on the ToolChip bounds | Not ink; may arm a tool when pen-on-chip fallback is active |
+| Tool switched mid-gesture | The in-flight gesture completes under the tool it started with; the new tool applies from the next pen-down |
 
 ### Other logic
 

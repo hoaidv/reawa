@@ -1,7 +1,7 @@
 ---
 feature: tool-modes
 parent_req: [REQ-03]
-version: 0.1.0
+version: 0.2.0
 lifecycle: active
 needs_design: true
 ---
@@ -11,11 +11,26 @@ needs_design: true
 Durable UI contract for the on-device toolbar. This is the **first chrome ever placed on the
 Epaper panel** — everything before it was full-bleed ink ([region-sync srs-ui](../region-sync/srs-ui.md)).
 Logic: [SRS-EP-04](./srs-logic.md). Quality: [SRS-EP-06](./srs-quality.md).
-Decision: [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md).
+Decision: [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md) §1, as amended by
+[ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md).
+Selection and manipulation chrome: [SRS-EP-12](../ink-box/srs-ui.md).
 
 ## [SRS-EP-05] On-device tool chip {#srs-ep-05-tool-chip}
 
 <!-- adopted CHL-0003 2026-08-11: floating 32px orientation-top chip; supersedes full-band strip -->
+<!-- revised: 2026-08-13 — CHL-0008 / ADR-0014. Selection affordances are real, not ghosts; adds
+     the session/publish status affordance; tools no longer go unavailable when the link drops.
+     Same id, content revised. -->
+
+> **Revised 2026-08-13.** Two changes that matter to design:
+> 1. **The overlay is real.** `ovl.drag_ghost` is gone — a drag moves the actual ink
+>    ([SRS-EP-11](../ink-box/srs-logic.md)). Nothing on this panel is "advisory pending a peer".
+> 2. **The link no longer gates tools.** Editing is local, so `Selection` and `Ink-box` stay
+>    available with the session down. What the chip must now show instead is **publish status**:
+>    linked, changes queued, or document reloading.
+>
+> The detailed selection/manipulation chrome moves to [SRS-EP-12](../ink-box/srs-ui.md); this
+> section keeps the chip, the containment rules, and the platform profile.
 
 ### Design authority
 
@@ -76,22 +91,23 @@ hits on the chip are excluded from ink via hit-test ([SRS-EP-04](./srs-logic.md)
 | `tool.pen` | Pen tool (**default**) | ToolChip |
 | `tool.ink_box` | Ink-box tool | ToolChip |
 | `ind.tool_active` | Which tool is armed | ToolChip |
-| `ind.tool_unavailable` | Tool cannot act (no session / no pickables) | ToolChip |
-| `ovl.selection_bounds` | Selected node bounds | SelectionOverlay |
-| `ovl.resize_handles` | Resize handles on bounds | SelectionOverlay |
-| `ovl.drag_ghost` | Advisory position during a drag | SelectionOverlay |
+| `ind.tool_unavailable` | Tool cannot act (below LOD cutoff; touch layer dead) | ToolChip |
+| `ind.publish_status` | Linked · changes queued · reloading document | ToolChip |
+| `ovl.selection_bounds` | Selected node bounds | SelectionOverlay ([SRS-EP-12](../ink-box/srs-ui.md)) |
+| `ovl.resize_handles` | Resize handles on bounds | SelectionOverlay ([SRS-EP-12](../ink-box/srs-ui.md)) |
 
-No other controls. No brushes, colors, layers, undo button, or document browser
-([epaper Non-Goals](../../prd.md)).
+`ovl.drag_ghost` is **removed** — the ink itself moves. No other controls. No brushes, colors,
+layers, undo button, or document browser ([epaper Non-Goals](../../prd.md)).
 
 ### Interaction map
 
 | Control | Action | Result | Feedback |
 |---|---|---|---|
 | `tool.*` | Finger tap (or pen-on-chip fallback) | Arm that tool | Active indicator moves within **300 ms** (partial refresh of chip) |
-| `ovl.selection_bounds` | Pen press inside | Select + begin move | Bounds outline appears |
-| `ovl.resize_handles` | Pen drag on handle | Resize (ghost) | Ghost follows pen; truth on next snapshot |
-| InkSurface empty | Pen press in `selection` | Clear selection | Overlay disappears |
+| `ovl.selection_bounds` | Pen press inside | Select + begin move | Bounds outline appears; the **ink** follows the pen |
+| `ovl.resize_handles` | Pen drag on handle | Resize | Real ink resizes live; committed geometry = released geometry |
+| InkSurface empty | Pen press in `selection` | Clear selection | Overlay disappears, leaving 0 residual pixels |
+| `ind.publish_status` | — (indicator only) | — | Reflects link + queue state; never blocks a tool |
 
 ### Control states
 
@@ -99,9 +115,12 @@ Note there is **no hover and no focus** on this platform — do not design them.
 
 | Control | default | active (armed) | pressed | unavailable |
 |---|---|---|---|---|
-| `tool.selection` | outline | filled / inverted | brief invert | hatched + inert when no `pickables` |
+| `tool.selection` | outline | filled / inverted | brief invert | hatched + inert **only** below the LOD cutoff |
 | `tool.pen` | outline | filled / inverted | brief invert | never — always available |
-| `tool.ink_box` | outline | filled / inverted | brief invert | hatched + inert when session is down |
+| `tool.ink_box` | outline | filled / inverted | brief invert | never — works with the link down |
+
+**No tool is gated by the session.** The link state is reported by `ind.publish_status`, not by
+disabling the creator's tools.
 
 **Active state must be readable from shape/fill alone**, because a trailing refresh can leave a
 ghost of the previous state on screen.
@@ -112,13 +131,20 @@ ghost of the previous state on screen.
 |---|---|---|---|
 | `tool.pen` | Pen armed | Ink under pen | hidden |
 | `tool.ink_box` | Ink-box armed | Ink under pen (identical) | hidden |
+| `tool.ink_box.rejected` | Ink-box still armed | Stroke stayed ordinary ink | hidden; **no** banner |
 | `tool.selection.idle` | Selection armed | No ink from pen | hidden |
 | `tool.selection.selected` | Selection armed | — | bounds + handles |
-| `tool.selection.dragging` | Selection armed | — | ghost following pen |
-| `tool.selection.empty` | Selection **unavailable** | No ink from pen | hidden; chip states why |
-| `session.down` | Ink-box + Selection unavailable | Pen still inks | hidden |
+| `tool.selection.moving` | Selection armed | **Real ink moving under the pen** | bounds tracking the ink |
+| `tool.selection.resizing` | Selection armed | **Real ink resizing** per `inkScaleMode` | bounds + active handle |
+| `session.linked` | `ind.publish_status` = linked | unchanged | unchanged |
+| `session.pending_changes` | `ind.publish_status` = queued (**tools still usable**) | Pen still inks; all editing works | unchanged |
+| `session.reloading` | `ind.publish_status` = reloading | Document being replaced | hidden |
+| `manipulation.unavailable` | Selection hatched + inert | No grab | hidden; chip states why |
 | `touch.unavailable` | Chip inert for finger; pen-on-chip or pen forced | Pen inks | hidden; status line explains |
 | `orient.gutOnTop` | Chip on oriented top (near opposite short edge) | Full-bleed | unchanged |
+
+`tool.selection.dragging` (ghost) and `session.down` (tools disabled) are **retired states** — do
+not design them.
 
 ### Platform profile
 
@@ -144,5 +170,14 @@ ghost of the previous state on screen.
 ### Out of scope (UI)
 
 - Pan / zoom chrome (PRD Non-Goal), page navigation, document browser.
-- Undo affordance on device (undo lives on Infini in the pilot, [SRS-IN-12](../../../infini/features/vector-document/srs-logic.md#srs-in-12-undo-history)).
-- `inkScaleMode` toggle on device — desktop-only in the pilot.
+- Rotation, multi-select, marquee, align/distribute affordances — [REQ-08](../../prd.md#node-manipulation).
+- A `doc_load` confirmation dialog — the handshake makes a load safe by construction; the creator
+  sees `session.reloading`, not a decision.
+
+### Open (needs design)
+
+- **Undo affordance.** Undo now lives on the device ([SRS-EP-07](../device-document/srs-logic.md)),
+  but the chip holds exactly three tools and there is no keyboard. Owner: pm + designer
+  ([epaper REQ-04](../../prd.md#device-document) Open Questions).
+- **`inkScaleMode` toggle placement** — it belongs to a selected box, not to the chip; specified in
+  [SRS-EP-12](../ink-box/srs-ui.md).

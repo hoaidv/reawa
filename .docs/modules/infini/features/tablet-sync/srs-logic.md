@@ -1,40 +1,54 @@
 ---
 feature: tablet-sync
-parent_req: [REQ-03, REQ-04]
-version: 0.5.0
+parent_req: [REQ-03]
+version: 0.6.0
 lifecycle: active
 ---
 
 # SRS — Tablet sync Infini (Logic)
 
-Binds Infini to the shared session in [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md)
-(interim wire: see ADR amendments) and stroke paint parity in
+Binds Infini to the session contract in
+[ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) under the ownership model of
+[ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md), with stroke paint parity from
 [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md).
-Tree library: [vector-document](../vector-document/srs-logic.md).
+Shared node semantics: [domain/vector-document](../../../../domain/vector-document.md).
+Device peer: [epaper/device-document](../../../epaper/features/device-document/srs-logic.md).
 
 **Code SoT (2026-08-11):** `infini/src/session/TabletSession.ts`,
 `infini/src/canvas/CanvasStage.tsx`, `infini/src/canvas/Viewport.ts`,
-`infini/electron/main.cjs` (TCP `:9877`).
+`infini/electron/main.cjs` (TCP `:9877`). **The 0.6.0 contract below is target, not shipped** —
+shipped code still speaks `doc_snapshot` and has no inbound change applier.
 
 ## [SRS-IN-07] Session roles and channel binding
 
+<!-- revised: 2026-08-13 — CHL-0008 / ADR-0014 / ADR-0015. Downward traffic narrowed to
+     handshake-gated doc_load + viewport; new inbound doc_change applier; pickables removed.
+     Same id, content revised; no supersession. -->
+
 Parent REQ: [REQ-03](../../prd.md#tablet-sync).
+
+> **Revised 2026-08-13.** Infini is no longer the document authority
+> ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md)). It **loads** the document
+> to the device once, **drives the viewport**, and **applies** the device's published changes to its
+> mirror. The pre-rework rules that pushed `doc_snapshot` after Infini edits, on orientation change,
+> and on reconnect are withdrawn — that reflex is what clobbered device work.
 
 ### Endpoint(s)
 
 Local network session to RM2 (USB Ethernet). Framing: **JSON-lines** over TCP.
 Auth: none in v0 (trusted local link). Default listen: `0.0.0.0:9877`.
 
-### Channels (shipped)
+### Channels (ADR-0015 contract)
 
-| Channel | Owner (writer) | Consumer | Priority |
+| Channel | Owner (writer) | Consumer | Cardinality / priority |
 |---|---|---|---|
-| **Viewport** | Infini | Epaper | High — apply before next pen sample |
-| **Document snapshot** | Infini | Epaper | One-shot / rare — WorldLayer vectors |
-| **Stroke stream** | Epaper | Infini | Normal — panel samples → world paths |
+| **Viewport** | Infini | Epaper | Continuous, ≤30 Hz — apply before next pen sample |
+| **Load** | Infini | Epaper | **Once** per session start / reconnect / explicit resync, handshake-gated |
+| **Change** | Epaper | Infini | One `doc_change` per committed op |
+| **Preview stroke** | Epaper | Infini | Continuous during a stroke — advisory, never persisted |
 
-Target ADR-0009 **op-log** (`doc_op` / `append_ink`) exists in session types +
-`VectorDocument` unit tests; **not** on the live CanvasStage ↔ RM path.
+**Invariant (testable by message type):** after the load completes, Infini sends **0** document
+messages for the rest of the session. Only `viewport` may flow down.
 
 ### Tablet drawing frame (CSS) and `drawingRegion` (world)
 
@@ -86,19 +100,54 @@ Legacy aliases on Epaper ingest: `portrait`→`gutToLeft`, `landscape`→`gutOnT
 | Gesture end / force | `flushViewport` — bypass rate limit; `settle: true` |
 | Wheel settle | ~100 ms debounce then flush |
 
-### Document snapshot (Infini → Epaper)
+### Document load (Infini → Epaper)
 
 ```text
-{ "type": "doc_snapshot", "nodes": [ WorldLayerNode, ... ] }
+{ "type": "doc_load", "document": { … ADR-0010 tree … }, "seq": 0 }
 ```
 
-Node kinds from live WorldLayer: `line` | `rect` | `ellipse` | `path` + `id` +
-`strokeWidth` (world) + geometry fields. **Not** a full ADR-0010 tree dump.
+Renamed from `doc_snapshot` **deliberately** ([ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md)
+§1): a different name for a different guarantee, so no code path can keep the old
+"snapshot is truth, at any time" behaviour by accident.
 
-Sent on: RM connect, first viewport publish, orientation change (and whenever product
-forces a resync). Pan/zoom after that is viewport-only; Epaper re-rasterizes locally.
+| Rule | Value |
+|---|---|
+| Legal when | Session start, reconnect, or explicit resync — **and** only after `queue_empty` (or the device reported `queued: 0`) |
+| Illegal | Unsolicited mid-session; after an Infini-side action; on orientation change. The device rejects these and logs a protocol defect |
+| Effect on device | Wholesale replace; `seq` resets to 0 for the new session epoch |
+| Content | The full tree, not a WorldLayer primitive list — both peers hold the [domain model](../../../../domain/vector-document.md) |
 
-### Stroke stream (Epaper → Infini)
+### Reconnect handshake
+
+```text
+Epaper                                   Infini
+  |-- hello { lastSeq, queued: k } ------->|
+  |<-- drain_ack -------------------------|
+  |-- doc_change × k (in order) ---------->|
+  |-- queue_empty ------------------------>|
+  |<-- doc_load { document, seq: 0 } -----|
+  |-- load_ack --------------------------->|
+```
+
+Draining before loading is what makes "replace the local document" safe. Infini must not offer a
+load while the device reports queued changes.
+
+### Document change (Epaper → Infini)
+
+```text
+{ "type": "doc_change", "seq": n, "opId": "<uuid>", "op": { … }, "baseSeq": n-1 }
+```
+
+| Rule | Value |
+|---|---|
+| Apply | Idempotent by `opId` ([SRS-IN-04](../vector-document/srs-logic.md)); duplicate = no-op |
+| Order | Strict `seq`; `baseSeq` ≠ last applied `seq` ⇒ **gap** |
+| On gap | Mirror is unsafe → request an explicit resync; do **not** guess or reorder |
+| Unknown `op` type | Log, do not crash, mark the mirror **suspect** and surface it. A suspect mirror must not be saved silently |
+| Ops carried | `append_ink`, `create_smart_group`, `set_smart_group_transform`, `set_ink_scale_mode`, `reparent`, `remove`, `restore_snapshot` |
+| Mirror latency | p95 ≤300 ms from device commit to mirror applied ([SRS-IN-08](./srs-quality.md)) |
+
+### Preview stroke stream (Epaper → Infini)
 
 | Message | Fields |
 |---|---|
@@ -106,8 +155,18 @@ forces a resync). Pan/zoom after that is viewport-only; Epaper re-rasterizes loc
 | `stroke_point` | `id`, `x`, `y` (**panel** after Round 19 map), optional `p` |
 | `stroke_end` | `id` |
 
-Infini maps panel→UV→`drawingRegion` world and appends WorldLayer `path` primitives.
-Does **not** call `VectorDocument.append_ink` on the live path today.
+Infini maps panel→UV→`drawingRegion` world and renders a **transient preview path** keyed by stroke
+id, so the desktop keeps its shipped ≤50 ms liveness. The preview is replaced by the real node when
+the `doc_change` carrying it arrives.
+
+| Rule | Value |
+|---|---|
+| Lifetime | `stroke_begin` until the matching `doc_change`, or session drop |
+| Orphaned preview | Dropped on the next load or after a bounded timeout — never persisted |
+| Mirror / save | Preview paths are **never** written to the mirror or serialized |
+| Authority | None. Safe precisely because the previewer is not the writer ([ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) §6) |
+
+`stroke_begin.intent` is **removed** — the device interprets its own stroke ([SRS-IN-13] retired).
 
 ### Stroke paint (Infini)
 
@@ -117,21 +176,26 @@ Per [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md):
 - Canvas: CSS thickness ≈ `strokeWidth_world * viewport.scale`.
 - Zoom in → thicker; zoom out → thinner.
 
-### Closed ids (message types) — shipped
+### Closed ids (message types) — ADR-0015 v1
 
 | id | Channel | Direction |
 |---|---|---|
 | `viewport` | viewport | Infini → Epaper |
-| `doc_snapshot` | document picture (+ `pickables`, [SRS-IN-13](#srs-in-13-tool-intent-transport)) | Infini → Epaper |
-| `stroke_begin` / `stroke_point` / `stroke_end` | stroke (`stroke_begin.intent`) | Epaper → Infini |
-| `tool_intent` | manipulation intent — pilot-scoped | Epaper → Infini |
+| `doc_load` | load — handshake-gated | Infini → Epaper |
+| `drain_ack` | session | Infini → Epaper |
+| `hello` / `queue_empty` / `load_ack` | session | Epaper → Infini |
+| `doc_change` | change | Epaper → Infini |
+| `stroke_begin` / `stroke_point` / `stroke_end` | preview | Epaper → Infini |
 
-### Closed ids — library / future (not live wire)
+### Retired / rejected ids
 
-| id | Notes |
+| id | Status |
 |---|---|
-| `doc_op` | Typed + unit-tested; UI does not emit |
-| `doc_ack` / `hello` | TBD reconnect protocol |
+| `doc_snapshot` | **Retired** — replaced by `doc_load` with a narrower legality rule |
+| `doc_snapshot.pickables` | **Retired** with [SRS-IN-13](#srs-in-13-tool-intent-transport) |
+| `tool_intent` | **Retired** with [SRS-IN-13](#srs-in-13-tool-intent-transport) |
+| `stroke_begin.intent` | **Retired** — the device interprets its own stroke |
+| `doc_op` / `doc_ack` | Superseded by `doc_change`; a later multi-directional ADR may revive `doc_op` |
 | `region_refresh` | Legacy PNG — **do not send**; Epaper ignores |
 
 ### Errors / partial failure
@@ -140,18 +204,39 @@ Per [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md):
 |---|---|
 | No native bridge | Browser-only; no RM sync |
 | Bad JSON line | Log; continue |
-| Unknown host→RM type | Epaper ignores |
-| RM disconnect | Status update; resend snapshot on reconnect |
+| Unknown host→RM type | Epaper ignores and logs a protocol defect |
+| RM disconnect | Status update. **Do not** push a document on reconnect — run the handshake: drain the device queue first, then offer `doc_load` |
+| `doc_change` gap (`baseSeq` mismatch) | Mirror marked suspect; request explicit resync; do not save a suspect mirror |
+| Device reports `queued: k > 0` | Send `drain_ack`, ingest k changes in order, wait for `queue_empty` before any load |
 
 ### Other logic
 
-- Live paint SoT: `InfiniDocument` WorldLayer (demo primitives + RM paths).
-- `TabletSession` may hold a `VectorDocument` for future op sync; structure ops are not
-  on the RM wire yet.
+- Live paint: `InfiniDocument` WorldLayer, fed by applied `doc_change` ops plus transient stroke
+  previews. Infini authors **no** document changes of its own
+  ([REQ-04](../../prd.md#smart-group) deprecated).
+- `TabletSession` holds the mirror `VectorDocument`; persistence serializes that mirror
+  ([SRS-IN-09](../vector-document/srs-data.md)).
 
 ---
 
 ## [SRS-IN-13] Tool intent transport {#srs-in-13-tool-intent-transport}
+
+<!-- lifecycle: retired -->
+<!-- retired: 2026-08-13 — CHL-0008 / ADR-0014 -->
+<!-- superseded-by: [SRS-EP-08], [SRS-EP-11] -->
+
+> **RETIRED 2026-08-13** by [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) and
+> [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md). Nothing inherits this section: the
+> device no longer *asks* what it may touch, it acts on its own document. `stroke_begin.intent`,
+> `doc_snapshot.pickables`, `tool_intent`, and the advisory-ghost authority rule are all gone from
+> the wire. The device-side successors are
+> [SRS-EP-11](../../../epaper/features/ink-box/srs-logic.md) (local hit-test and manipulation) and
+> [SRS-EP-08](../../../epaper/features/device-document/srs-logic.md) (the sync contract).
+>
+> Text preserved below as the record of what was withdrawn — the ghost model in "Authority" is the
+> precise thing [CHL-0006](../../../../../.plan/iter-003/challenges/CHL-0006-live-direct-resize.md)
+> and [CHL-0007](../../../../../.plan/iter-003/challenges/CHL-0007-selection-move-enclose-sync.md)
+> failed on.
 
 **Parent:** [REQ-03](../../prd.md#tablet-sync) · [REQ-04](../../prd.md#smart-group).
 **ADR:** [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md).

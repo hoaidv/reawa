@@ -1,6 +1,6 @@
 ---
 iter: iter-003
-goal: "Ink-box pilot — Infini REQ-04 + Epaper REQ-03 tool modes"
+goal: "Ink-box rework — Epaper owns the document (REQ-04…REQ-07) + Infini REQ-03 one-way sync"
 start: 2026-08-11
 end: 2026-08-25
 capacity: 15
@@ -8,11 +8,17 @@ committed_points: 47
 status: active
 ---
 
-# Iter 003 — Smart Group / ink-box pilot
+# Iter 003 — Smart Group / ink-box pilot → document ownership rework
 
-Pilot shipped; human verify **failed** 2026-08-11. **NOW:** `/dev` EP-006 ∥ IN-019 → re-verify checklist.
+Pilot shipped; human verify **failed** 2026-08-11. [CHL-0008](./challenges/CHL-0008-architecture-rework.md)
+**adopted 2026-08-13**: document ownership inverts to the device.
+**NOW:** `/architect` — ADR-0014 + ADR-0015 + SRS decomposition. No `/dev` until SM re-slices.
 
-## Committed
+The committed list below is the **pilot** plan and is void — every story assumed Infini was the sole
+tree writer. Kept as history; see the [lifecycle map](./lifecycle-map-2026-08-13.md) for what the
+re-slice replaces.
+
+## Committed (void — pilot plan, kept as history)
 
 ### W3a ∥ W3b — prerequisites (ready)
 
@@ -50,6 +56,13 @@ Pilot shipped; human verify **failed** 2026-08-11. **NOW:** `/dev` EP-006 ∥ IN
 
 ## Links
 
-- [REQ-04](../../.docs/modules/infini/prd.md#smart-group) · [REQ-03](../../.docs/modules/epaper/prd.md#tool-modes)
-- [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md) · [ADR-0013](../../.docs/adr/ADR-0013-ink-box-tool-modes.md)
+- Rework (current): epaper [REQ-04](../../.docs/modules/epaper/prd.md#device-document) ·
+  [REQ-05](../../.docs/modules/epaper/prd.md#device-ink-box) ·
+  [REQ-06](../../.docs/modules/epaper/prd.md#device-manipulation) ·
+  [REQ-07](../../.docs/modules/epaper/prd.md#one-way-sync) · infini
+  [REQ-03](../../.docs/modules/infini/prd.md#tablet-sync)
+- Pilot (superseded): [infini REQ-04](../../.docs/modules/infini/prd.md#smart-group) ·
+  [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md) ·
+  [ADR-0013](../../.docs/adr/ADR-0013-ink-box-tool-modes.md)
+- [CHL-0008](./challenges/CHL-0008-architecture-rework.md) · [lifecycle map](./lifecycle-map-2026-08-13.md)
 - [execution-board](./execution-board.md)

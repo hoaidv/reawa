@@ -1,8 +1,13 @@
-@SRS-IN-12
+@SRS-IN-12 @deprecated
 Feature: Snapshot undo ring for vector document
   As Infini creator
   I need structural ops to be undoable via snapshot restore
   So that false Smart Group creates and transforms are safe to try
+
+  # DEPRECATED 2026-08-13 — CHL-0008 / ADR-0014 §5. Undo belongs where editing happens, so
+  # the ring moved to the device: epaper/features/device-document/bdd/undo-ring.feature
+  # (@SRS-EP-07). Mechanism and depth are inherited verbatim. Kept as the acceptance
+  # evidence for STORY-IN-014.
 
   # STORY-IN-014 — SRS-IN-12
 

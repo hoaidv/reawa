@@ -1,8 +1,12 @@
-@SRS-IN-16
+@SRS-IN-16 @deprecated
 Feature: Selection create requires surround stroke
   As Infini Selection tool
   I need Smart Group create from selection only when a surround stroke qualifies
   So that AABB-only groups are refused
+
+  # DEPRECATED 2026-08-13 — CHL-0008 / ADR-0014. Re-homed to the device; the live spec is
+  # epaper/features/ink-box/bdd/selection-create-surround.feature (@SRS-EP-10).
+  # Kept as the acceptance evidence for STORY-IN-017.
 
   # STORY-IN-017 — SRS-IN-16
 

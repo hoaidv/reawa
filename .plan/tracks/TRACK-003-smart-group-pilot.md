@@ -3,10 +3,10 @@ id: TRACK-003
 slug: smart-group-pilot
 kind: planned
 status: paused
-paused_reason: "CHL-0008 — human restored code to HEAD; total architecture rework (not more patch waves)"
+paused_reason: "CHL-0008 adopted 2026-08-13 — document ownership inverted to the device; pilot slicing void"
 iter: iter-003
-cursor: "PAUSED — CHL-0008 architecture rework; await PM adopt + /architect"
-goal: "Ink-box pilot: infini REQ-04 + epaper REQ-03 tool modes"
+cursor: "PAUSED — architect design landed (ADR-0014/0015, SRS-EP-07…14); /sm re-slices next"
+goal: "Ink-box rework: epaper REQ-04…REQ-07 (device owns the document) + infini REQ-03 one-way sync"
 owner: sm
 ---
 
@@ -61,3 +61,5 @@ Deliver the ink-box pilot across both ends: Infini
 | 2026-08-11 | PM adopted CHL-0001/2/3 (create_refused, epaper platform, floating ToolChip) |
 | 2026-08-11 | Human verify FAILED — toolbar touch + late connection; sliced EP-006 + IN-019 |
 | 2026-08-11 | **Paused** — CHL-0008 architecture rework; code at HEAD |
+| 2026-08-13 | PM **adopted** CHL-0008 — Epaper owns the document; one-way sync. Pilot slicing void; await architect |
+| 2026-08-13 | Architect delivered ADR-0014 + ADR-0015, the shared domain doc, `SRS-EP-07`…`SRS-EP-14`, device BDD, and both architecture views — [handoff to SM](../iter-003/handoffs/2026-08-13-architect-to-sm-device-document.md) |

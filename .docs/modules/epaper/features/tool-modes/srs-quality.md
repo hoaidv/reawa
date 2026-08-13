@@ -1,7 +1,7 @@
 ---
 feature: tool-modes
 parent_req: [REQ-03]
-version: 0.1.0
+version: 0.2.0
 lifecycle: active
 ---
 
@@ -9,30 +9,42 @@ lifecycle: active
 
 ## [SRS-EP-06] Tool responsiveness and ink-latency protection
 
+<!-- revised: 2026-08-13 — CHL-0008 / ADR-0014. Round-trip budgets replaced by local budgets;
+     ghost-correction scenario retired. Same id, content revised. -->
+
+> **Revised 2026-08-13.** The enclose budget used to be measured "after the Infini op". There is no
+> Infini op. Every budget here is now local, and two scenarios are added that the pilot could not
+> have: **offline parity** and **commit fidelity**.
+
 ### Quality-attribute scenarios
 
 | Scenario | Stimulus | Response measure |
 |---|---|---|
 | Tool switch latency | Finger taps a tool | Active indicator updated **p95 ≤300 ms**; partial refresh only |
-| **Ink latency non-regression** | Draw with `pen` after the toolbar ships | p95 ≤30 ms pen-down → pixel — **equal to the pre-toolbar baseline within measurement error** ([SRS-EP-01](../local-pen-ink/srs-logic.md)) |
-| Tool-independent ink path | Draw the same stroke in `pen` and in `ink_box` | Identical local raster and identical `stroke_point` payloads; only `stroke_begin.intent` differs |
+| **Ink latency non-regression** | Draw with `pen` after the document, recognizer, and undo ring ship | p95 ≤30 ms pen-down → pixel — **equal to the pre-toolbar baseline within measurement error** ([SRS-EP-01](../local-pen-ink/srs-logic.md)) |
+| Tool-independent ink path | Draw the same stroke in `pen` and in `ink_box` | Identical local raster and identical wire payloads while the pen is down; the tools differ only at pen-up |
 | Chrome exclusion | Pen stroke started on the ToolChip bounds | **0** ink pixels drawn there; 0 strokes emitted |
 | Refresh isolation | Switch tools repeatedly | 0 full-panel refreshes attributable to tool switching |
 | Ghosted state legibility | Switch tools while a full refresh trails | Active tool identifiable from shape/fill alone on the un-settled frame |
-| Enclose round trip | Draw an armed enclose over ink | Smart Group visible on panel **p95 ≤500 ms** after the Infini op ([REQ-03](../../prd.md#tool-modes)) |
-| Selection pick feel | Pen down on a pickable | Local selection affordance **≤100 ms** — no network round trip |
-| Ghost correction | Snapshot contradicts the local ghost | Authoritative geometry within one snapshot; no lingering ghost |
+| **Enclose, local** | Draw an armed enclose over ink | Smart Group visible on panel **p95 ≤500 ms after pen-up**, with **0 messages required from the peer** |
+| **Selection pick feel** | Pen down on a box | Selection affordance **≤100 ms**, hit-tested against the local document |
+| **Commit fidelity** | Complete 20 scripted move/resize gestures | Committed geometry = last previewed geometry; **0 px jump, 0 snap-backs** |
+| **Offline parity** | Run the scripted 10-gesture create+manipulate set with the link down | 100% identical results vs the linked run; 0 tools unavailable |
+| **Publish latency** | Commit an op with the link up | Mirror updated **p95 ≤300 ms** ([SRS-IN-08](../../../infini/features/tablet-sync/srs-quality.md)) |
 | Touch fallback | Touch layer unavailable | Device still inks; `pen` forced; the reason is visible, not silent |
-| Session loss | Session drops mid-gesture | No crash, no lost local ink; unavailable tools shown as unavailable |
+| Session loss | Session drops mid-gesture | Gesture completes and commits locally; no crash, no lost ink; change queues |
+
+Retired scenarios: *enclose round trip after the Infini op*, *ghost correction on next snapshot*.
+Both described behaviour this rework deletes.
 
 ### Correctness ties
 
-- Arming `ink_box` changes **only** the emitted `intent`; it must not alter sampling, the
-  Round 19 map, stroke width, or the local paint path.
-- The device never fits a rectangle, tests containment, or mutates a tree
-  ([ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md) §3).
-- `pickables` is treated as advisory cache: a stale entry causes a wasted `tool_intent`, never a
-  wrong local mutation.
+- Arming `ink_box` must not alter sampling, the Round 19 map, stroke width, or the local paint path
+  while the pen is down. It changes only what happens at pen-up.
+- The device **is** the writer: it fits the rectangle, tests containment, and mutates its tree
+  ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §1). ADR-0013 §3 is reversed.
+- No inbound message may alter the document except a handshake-gated `doc_load`
+  ([SRS-EP-08](../device-document/srs-logic.md)).
 
 ### A11y / resilience
 
@@ -41,18 +53,22 @@ lifecycle: active
 - Active state distinguishable without color **and** without motion — 1-bit panel.
 - `pen` is always reachable in ≤1 tap from any state; the creator can never be trapped in a
   non-drawing tool.
-- With no session, the device degrades to today's behaviour (local ink) rather than erroring.
+- With no session, the device keeps **full** function (local ink **and** local editing) rather than
+  degrading — only publishing waits, and that state is visible.
 
 ### Dual-ask table (state → Designer + QA)
 
 | State id | Designer scene / Spec | QA AC / BDD |
 |---|---|---|
 | `tool.pen` | tool-modes package | REQ-03 default + ink latency |
-| `tool.ink_box` | tool-modes package | enclose intent emitted; ink path identical |
+| `tool.ink_box` | tool-modes package | armed; ink path identical while pen is down |
+| `tool.ink_box.rejected` | tool-modes package | stroke stays ink; no banner |
 | `tool.selection.idle` | tool-modes package | pen inert on canvas |
-| `tool.selection.selected` | tool-modes package | bounds + handles from `pickables` |
-| `tool.selection.dragging` | tool-modes package | ghost, then snapshot authority |
-| `tool.selection.empty` | tool-modes package | unavailable, stated |
-| `session.down` | tool-modes package | pen still inks |
+| `tool.selection.selected` | ink-box package | real bounds + handles from the local document |
+| `tool.selection.moving` | ink-box package | real ink follows pen; commit = release |
+| `tool.selection.resizing` | ink-box package | per `inkScaleMode`; UV preserved |
+| `session.pending_changes` | tool-modes package | tools usable; queue visible |
+| `session.reloading` | tool-modes package | load applied only after queue drains |
+| `manipulation.unavailable` | ink-box package | below LOD; 0 accidental transforms |
 | `touch.unavailable` | tool-modes package | fallback to pen; reason visible |
 | `orient.gutOnTop` | tool-modes package | chip on oriented top; exclusion rect follows |

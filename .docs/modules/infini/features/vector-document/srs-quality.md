@@ -1,13 +1,22 @@
 ---
 feature: vector-document
 parent_req: [REQ-02, REQ-04]
-version: 0.3.0
+version: 0.4.0
 lifecycle: active
 ---
 
 # SRS — Vector document (Quality)
 
 ## [SRS-IN-06] Fidelity, structure, and dual-ask
+
+<!-- revised: 2026-08-13 — CHL-0008 / ADR-0014. Desktop authoring scenarios move with SRS-IN-11/14;
+     fidelity and round-trip stay; mirror-replay rows added. Same id, content revised. -->
+
+> **Revised 2026-08-13.** The desktop no longer creates or manipulates Smart Groups, so the
+> interaction rows (enclose, membership, pick-vs-pan, LOD guard, gesture economy) move to
+> [epaper SRS-EP-14](../../../epaper/features/ink-box/srs-quality.md). What stays here is what the
+> desktop still owns: **fidelity, round-trip, and faithful replay of the device's change stream**.
+> The desktop must still *render* every Smart Group correctly — it just does not author one.
 
 ### Quality-attribute scenarios
 
@@ -25,34 +34,34 @@ lifecycle: active
 | `fixedInk` vs `withBounds` | After non-uniform scale: content ink fixed vs scaled; **boundary ink always scales** | Mode-correct |
 | `fixedInk` per-ink UV | Two content inks with distinct UVs; after scale `s`, each UV preserved (±1 px @ 100%); sample sizes unchanged; no cross-ink move | Always |
 | Boundary ink transform | After rotate/scale (any inkScaleMode), boundary ink samples transform with group | Always |
-| Enclose happy path | Contained ink → SmartGroup; enclose stroke kept as boundary ink; bounds = fitted (x,y,w,h) | Fixture pass |
-| Enclose miss / false | Undo or dismiss; ink samples intact | 100% channels |
-| Enclose only when armed | Identical stroke drawn with `intent: ink` | **0** Smart Groups created |
-| Selection create with surround | Open or closed surround among selection; ≥80% of others inside | SmartGroup with that stroke as `boundary` |
-| Selection create refuse | Selection with no surround at ≥80% | **0** Smart Groups; selection unchanged |
-| Draw-into membership | Pen stroke ≥80% inside one SmartGroup | Stroke is `content` of that box; siblings unmoved |
-| Draw-into nested tie-break | Nested SmartGroups both ≥80% / 100% | Membership → highest paint/z order; 0 dual parents |
-| Draw-into miss | Pen stroke <80% inside every SmartGroup | Stroke stays ordinary parent ink |
-| Enclose guards | Fitted rect < 48 world units, or 0 ink inside | 0 creations on the negative fixture set |
-| Enclose first-try rate | 20 scripted intentional enclose gestures | ≥80% create the intended Smart Group first try |
-| Enclose latency | Armed `stroke_end` → Smart Group on canvas | p95 ≤300 ms |
-| Undo exactness | Undo after any structural op | Tree snapshot string equals the pre-op snapshot **exactly** |
-| Undo depth | 21 consecutive structural ops | Oldest drops; undo past the ring is a no-op, not an error |
-| Undo memory | 20 snapshots of a 10k-point document | Advisory ≤50 MB retained on a reference Mac |
-| Pick correctness | Pointer inside overlapping SmartGroup bounds | Topmost (last sibling) selected, 100% |
-| Pick vs pan | Drag inside bounds at scale ≥0.35 | Node moves; viewport translate unchanged (0 px drift) |
-| LOD guard | Drag inside bounds at scale <0.35 | Canvas pans; no node mutated; unavailability is visible |
-| Gesture op economy | One drag of N frames | Exactly **1** `set_smart_transform` emitted (on release) |
-| Rotation not exposed | Any pilot UI surface | 0 rotation affordances (anchors resolve translate+scale only) |
+| Smart Group render fidelity | Device-authored group painted from the mirror | Matches the device panel figure (±1 px @ 100%) |
+| **Mirror replay** | Apply the full change stream of a session from an empty mirror | Tree equals the device's final tree (0 divergent nodes) |
+| **Replay idempotency** | Re-apply every `opId` in the stream a second time | Tree unchanged |
+| **Out-of-order rejection** | A `doc_change` whose `baseSeq` skips | Mirror marked suspect; resync requested; **0** silent saves |
+| **Preview isolation** | Preview strokes during a session | **0** written to the mirror or to disk |
+| **Restore-snapshot apply** | Device undo published as `restore_snapshot` | Mirror equals the device's restored tree |
 | Invalid connector apply | No crash; connector marked invalid | Always |
 | Open failure | Prior tree bytes unchanged in memory | Always |
 | Large ink reopen | 10k-point ink polyline open | ≤ 2 s cold open on reference Mac (advisory) |
+
+Moved to [epaper SRS-EP-14](../../../epaper/features/ink-box/srs-quality.md) and
+[SRS-EP-13](../../../epaper/features/device-document/srs-quality.md): enclose happy path, guards,
+first-try rate and latency, selection-create, draw-into membership and tie-break, undo exactness /
+depth / memory, pick correctness, pick-vs-pan, LOD guard, gesture op economy. They are not weakened
+by the move — several got stricter, because the device can now be held to "0 jump" rather than "one
+snapshot to converge".
+
+`fixedInk`, boundary-transform, and Smart Group round-trip rows **stay**: the desktop must reproduce
+device geometry exactly to save it, which makes this file half of the cross-implementation agreement
+check ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §6).
 
 ### Correctness ties
 
 - Flatten visitor emits every Ink/Text/Primitive/Connector drawable exactly once per paint
   (no duplicate leaves from group walks).
 - Frames at non-root rejected on load (error or skip-with-error — **fail closed**).
+- The mirror is never saved while marked suspect
+  ([ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) §3).
 
 ### Dual-ask table (state → Designer + QA)
 
@@ -63,14 +72,13 @@ lifecycle: active
 | `doc.dirty` | STORY-IN-006 | dirty indicator |
 | `doc.error` | STORY-IN-006 | error + canvas unchanged |
 | tree round-trip | N/A (logic) | SRS-IN-06 scenarios / fixtures |
-| `tool.selection` / `tool.ink_box` | ink-box design package | REQ-04 tool arming |
-| smart_group.created (boundary ink) | ink-box design package | REQ-04 / SRS-IN-10 · SRS-IN-16 |
-| smart_group.select_refuse | ink-box design package | REQ-04 BR-09j |
-| smart_group.selected (handles) | ink-box design package | REQ-04 / SRS-IN-11 |
-| smart_group.dragging | ink-box design package | pick vs pan |
-| smart_group.ink_scale_mode | ink-box design package | `withBounds` vs `fixedInk` + per-ink UV |
-| smart_group.draw_into | ink-box design package (optional beat) | REQ-04 / SRS-IN-15 |
-| manipulation.unavailable (below LOD) | ink-box design package | LOD guard |
+| mirror replay + idempotency | N/A (logic) | SRS-IN-06 replay rows · [SRS-IN-07](../tablet-sync/srs-logic.md) |
+| mirror suspect (sequence gap) | DocChrome — needs a visible state | SRS-IN-06 out-of-order row |
+| smart_group rendered from the mirror | N/A (paint) | render fidelity row |
+
+The `ink-box design package` rows are **removed** with
+[SRS-IN-14](./srs-ui.md#srs-in-14-ink-box-ui): there is no desktop authoring surface to design. The
+device equivalents are in [epaper SRS-EP-12](../../../epaper/features/ink-box/srs-ui.md).
 
 ### A11y / resilience
 

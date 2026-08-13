@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.4.0
+version: 0.5.0
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -17,12 +17,29 @@ code lives in repo-root `epaper/`.
 **Docs rule (2026-08-11):** product docs describe **what ships in the Qt app today**.
 The header-only `regionsync/` library is a tested target shape, not the device runtime.
 
+**Ownership rework (2026-08-13, [CHL-0008](../../../.plan/iter-003/challenges/CHL-0008-architecture-rework.md)).**
+Epaper is no longer an intent courier. It **owns the working document in-session** — it holds the
+tree, ingests its own ink, recognizes and creates ink-boxes, and manipulates them locally. Infini
+becomes viewer, navigator, and persistence home. Sync is one-way per direction
+([REQ-07](#one-way-sync)).
+
 ## Problem & Job-to-be-Done
 
-Artists and note-takers want the reMarkable’s writing feel while using a larger
+Artists and note-takers want the reMarkable's writing feel while using a larger
 synced canvas on the desktop. Relaying every pen sample to the desktop and pushing
-pixels back is too slow for local ink. Epaper owns on-device ink and participates in
-drawing-region sync with Infini.
+pixels back is too slow for local ink.
+
+The 2026-08-11 pilot proved the same is true one level up. Ink was local, but every *edit* was not:
+enclose a cluster and the box came back from the desktop; drag a box and the device drew an advisory
+outline that a peer snapshot later corrected. Four consecutive fix waves
+([CHL-0004](../../../.plan/iter-003/challenges/CHL-0004-fixedink-resize-boundary.md) …
+[CHL-0007](../../../.plan/iter-003/challenges/CHL-0007-selection-move-enclose-sync.md)) failed human
+verify with the same class of symptom — geometry snap-back, selection residue, desync on consecutive
+operations. None were fixable, because the device never held the truth it was drawing.
+
+**The job:** *when I edit on the tablet, the tablet decides, immediately, and the desktop follows.*
+Epaper owns local ink **and** local document editing; the desktop is where the document is kept,
+viewed at scale, and saved.
 
 ## Success Metrics
 
@@ -33,6 +50,12 @@ drawing-region sync with Infini.
 | Drawing-region map latency | Next sample uses Infini viewport (ahead of full refresh) | Manual / EXP S3 |
 | Stroke thickness under zoom | Live + rasterized ink use world × panel scale | Manual |
 | Tool switch (tap → active indicator) | p95 ≤ 300 ms; no measurable ink-latency regression | Manual |
+| Stroke → local document node | p95 ≤ 50 ms after pen-up; 0 strokes lost | Manual / trace |
+| Enclose → Smart Group on panel | p95 ≤ 500 ms after pen-up, **peer not involved** | Manual / trace |
+| Manipulation commit fidelity | Committed geometry = last previewed geometry; 0 px jump on pen-up; 0 snap-backs in a 20-gesture set | Manual QA |
+| Editing works with the link down | 100% of create / move / resize / undo succeed offline | Manual QA |
+| Device change → desktop mirror | p95 ≤ 300 ms after the op; 0 divergent figures after settle | Manual / trace |
+| Inbound document messages after initial load | **0** during a session | Trace |
 
 ## [REQ-01] Local pen-matched ink {#local-pen-ink}
 - **Priority:** Must · **Traces:** [BRD-06]
@@ -49,55 +72,285 @@ drawing-region sync with Infini.
   Then the on-screen stroke is circular (not elliptical) and follows the pen
   direction.
 
-## [REQ-02] Drawing-region sync with Infini {#region-sync}
+## [REQ-02] Drawing-region mapping from Infini {#region-sync}
+<!-- revised: 2026-08-13 — CHL-0008. Document transport moved to [REQ-07]; this REQ is now
+     viewport/world-mapping only. Same id, content revised; no supersession. -->
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: no
-- Epaper streams panel-space stroke samples to Infini (`stroke_*`) and applies Infini’s
-  `viewport` (drawing region + gut `orientation` + optional `settle`) and one-shot
-  vector `doc_snapshot`. Full e-paper refresh may lag; coordinate mapping for new pen
-  input must track Infini with least latency. PNG `region_refresh` is **not** used.
+- Infini owns pan/zoom. Epaper applies Infini's `viewport` (drawing region + gut `orientation` +
+  optional `settle`) so that pen input maps to the right world coordinates. Full e-paper refresh may
+  lag; **coordinate mapping for new pen input must track Infini with least latency.** Epaper
+  re-rasterizes locally from its own document — it does not wait for a picture from the desktop.
+  PNG `region_refresh` is **not** used.
 
 **Acceptance**
-- Given a live Infini session, When the user draws on Epaper, Then stroke samples reach
-  Infini with p95 ≤50 ms after the sample.
 - Given Infini changes pan/zoom, When Epaper receives the drawing region, Then the next
   pen sample (≤100 ms map apply p95) uses that world region even if the panel still
   shows a stale refresh (ghosting allowed).
-- Given a `doc_snapshot` or settle viewport, When Epaper paints the region, Then figures
-  match Infini’s WorldLayer for the same bounds after sharp settle.
+- Given a settle viewport, When Epaper repaints the region, Then figures match the device's own
+  document for those bounds after sharp settle (0 divergent figures).
 - Given zoom-out on Infini, When the user continues drawing, Then live stroke thickness
   matches thinned existing vectors (world width × current panel scale).
 
 ## [REQ-03] On-device tool modes {#tool-modes}
+<!-- revised: 2026-08-13 — CHL-0008. Tools now act on the local document instead of emitting
+     advisory intent to Infini. Same id, content revised; no supersession. -->
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
 - The creator decides **on the device** what the pen does, without reaching for the desktop.
   A minimal, always-visible toolbar offers exactly three tools — **Selection · Pen · Ink-box** —
   switched by **finger touch**, so the pen stays free for content. `Pen` is the default and
   leaves [REQ-01](#local-pen-ink) local ink behaviour unchanged.
-- **Ink-box** arms the next stroke as an *enclose request*: the stroke still streams as ordinary
-  ink samples, and **Infini** performs recognition and grouping
-  ([infini REQ-04](../infini/prd.md#smart-group)). Epaper performs no geometry recognition and
-  holds no document tree.
-- **Selection** lets the creator pick the object under the pen and move or resize it; the
-  resulting document change is owned and applied by Infini.
+- All three tools act on the **device's own document** ([REQ-04](#device-document)): `Pen` adds ink,
+  `Ink-box` arms enclose recognition ([REQ-05](#device-ink-box)), `Selection` picks and manipulates
+  ([REQ-06](#device-manipulation)). No tool depends on a reply from the desktop.
 - Tool state is **local to the device** — Infini neither drives nor mirrors it.
+- The toolbar also carries the **session/publish status** affordance for
+  [REQ-07](#one-way-sync): linked, link down with changes queued, and document reloading.
 
 **Acceptance**
 - Given Epaper is running, When the creator taps a tool with a finger, Then the toolbar shows the
   new active tool with p95 ≤300 ms and the pen's next action uses that tool.
 - Given the `Pen` tool, When the creator draws, Then local ink latency stays within
   [REQ-01](#local-pen-ink) (p95 ≤30 ms pen-down → pixel) — the toolbar costs no ink latency.
-- Given the `Ink-box` tool, When the creator draws an enclosing stroke, Then Infini receives the
-  samples marked as an enclose request, and the resulting Smart Group appears on the panel after
-  settle with p95 ≤500 ms after the op.
+- Given any tool and no session, When the creator uses it, Then it behaves identically to the
+  linked case (0 tools disabled by link state) and the status affordance shows changes are queued.
 - Given any tool, When the pen passes over the floating ToolChip, Then no ink is drawn there
   (0 stray strokes inside the chip exclusion rect; InkSurface stays full-bleed).
 - Given a full-panel refresh is in flight, When the creator switches tools, Then the active-tool
   indicator is still legible (partial refresh of the chip, no dependence on the settled frame).
 - **UI states / journeys to design:** default `Pen`; switching tools; `Selection` with nothing
   selected; `Selection` with a Smart Group selected (handles); `Ink-box` armed; enclose rejected
-  (too small / no ink inside); ToolChip during a trailing panel refresh; orientation-top placement.
+  (too small / no ink inside); ToolChip during a trailing panel refresh; orientation-top placement;
+  link down with queued changes; document reloading after reconnect.
+
+## [REQ-04] On-device working document {#device-document}
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: no
+- **Outcome:** the creator's document lives on the device while they work on it. Epaper holds the
+  document tree, turns its own finished strokes into document nodes, and paints the panel **from
+  that document** — so the picture on the panel never waits for, or is overruled by, a peer message.
+- The device is the **only writer** of its document during a session. The desktop contributes
+  exactly one document input: the initial full load ([REQ-07](#one-way-sync)).
+- Node semantics are shared with Infini (Ink, SmartGroup roles, `inkScaleMode`, `layoutOffset`) so a
+  document means the same thing on both ends — see [ADR-0011](../../adr/ADR-0011-smart-group.md) and
+  [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md).
+- **Undo** is on the device, because editing is on the device: a bounded history of structural ops
+  with one entry per completed gesture.
+- The document is **in memory only** this iter. On-device persistence, offline work across restarts,
+  and sync-any-moment are deferred (Non-Goals).
+
+**Acceptance**
+- Given Epaper is running with no session, When the creator draws 20 strokes, Then all 20 exist as
+  Ink nodes in the local document and the panel paints them from that document (0 strokes lost,
+  0 dependence on a peer message).
+- Given a stroke ends, When the device ingests it, Then the node is in the local document with p95
+  ≤50 ms after pen-up, and the *next* stroke still meets [REQ-01](#local-pen-ink) p95 ≤30 ms
+  pen-down → pixel (ingestion costs no ink latency).
+- Given the device receives an initial full-document load, When it applies it, Then the local
+  document equals the loaded document (0 divergent nodes) and becomes the base for local edits.
+- Given any structural op (create box, move, resize, draw-into), When the creator undoes it, Then
+  the local document returns to the exact pre-op state (geometry ±1 px @ 100% zoom) with no peer
+  involvement, for at least the last 20 structural ops.
+- Given the panel repaints for any reason (settle, viewport change, refresh), When it paints, Then
+  it paints the local document (0 repaints sourced from an inbound peer picture).
+
+## [REQ-05] On-device ink-box creation {#device-ink-box}
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes
+- **Outcome:** a creator who has handwritten a thought can make that cluster behave as **one
+  object** — and it happens **where they drew it**, immediately, with no round trip and no OCR.
+- **Creation A — ink-box tool (enclose).** In `Ink-box` mode the creator draws a shape around ink.
+  The **device** recognizes a roughly rectangular stroke (recognize, do **not** convert to a
+  Primitive), captures every ink whose samples are ≥80% inside, and creates a Smart Group: the
+  enclose stroke is kept as `role: boundary` ink, contained ink is reparented as `role: content`,
+  and `bounds` is the fitted rect. Guards: the fitted rect must be ≥ a fixed minimum size **and**
+  contain ≥1 ink — otherwise the stroke stays ordinary ink. Enclosure is **rectangle-only**.
+- **Creation B — selection (explicit).** In `Selection` mode the creator selects ink and invokes
+  Smart Group. The device must find **one stroke among the selection** that surrounds almost all of
+  the other selected ink (≥80% of each other stroke's samples inside that surround stroke's region).
+  The surround stroke may be **open**; the device builds an **artificial closed path** from it for
+  the containment test only. **If no such surround stroke exists, creation is refused** with a
+  visible reason — no AABB-only Smart Group.
+- **Appearance.** A Smart Group always has boundary ink after a successful create. The creator's
+  surround stroke is the visual frame — never a synthetic ink rectangle.
+- **Draw into an existing box.** When the creator draws with `Pen` and ≥80% of the new stroke's
+  samples fall inside one or more Smart Groups' world bounds, the device parents that stroke as
+  `role: content` of the matching box. If several boxes qualify, pick the one with the **highest
+  paint / z order** (later siblings paint above). Adding ink never reflows, realigns, or shifts
+  existing content — freehand placement as drawn.
+- Recognition is **best-effort plus undo**: a wrong box costs one undo, never a stuck document.
+
+**Acceptance**
+- Given the `Ink-box` tool and ink on the panel, When the creator draws a closed roughly rectangular
+  stroke whose fitted rect is ≥ the minimum size and contains ≥80% of that ink's samples, Then a
+  Smart Group exists in the local document and is visible on the panel with p95 ≤500 ms after
+  pen-up, with **0 messages required from the desktop**.
+- Given the same gesture over empty canvas, or a fitted rect below the minimum size, or the `Pen`
+  tool, When the stroke ends, Then no Smart Group is created and the stroke remains ordinary ink
+  (0 creations on the negative fixture set).
+- Given the `Selection` tool and selected ink that includes a surround stroke containing ≥80% of
+  each other selected stroke's samples (open stroke OK), When the creator invokes Smart Group, Then
+  a Smart Group is created with that stroke as `boundary`, the others as `content`, and `bounds`
+  from the surround stroke's fitted rect (±1 px @ 100% zoom).
+- Given selected ink with **no** surround stroke at the ≥80% bar, When the creator invokes Smart
+  Group, Then no Smart Group is created (0 creations on the negative fixture set), the selection is
+  unchanged, and the UI states the reason.
+- Given the `Pen` tool and an existing Smart Group, When the creator draws a stroke with ≥80% of
+  samples inside that box's world bounds, Then the stroke becomes `role: content` of that box within
+  300 ms and no other content ink is translated or reflowed.
+- Given nested Smart Groups that each contain ≥80% of a new `Pen` stroke, When the stroke ends, Then
+  the stroke parents under the qualifying box with the highest paint/z order (0 dual-parent outcomes).
+- Given **no session**, When the creator performs any creation path above, Then the result is
+  identical to the linked case (100% parity across a scripted 10-gesture set).
+- Given any successful create, When the creator undoes once, Then the previous document is restored
+  exactly (geometry ±1 px @ 100% zoom).
+- Given 10 consecutive enclose gestures, When each completes, Then each produces exactly one Smart
+  Group with correct membership (0 desync, 0 lost boxes) — regression bar from
+  [CHL-0007](../../../.plan/iter-003/challenges/CHL-0007-selection-move-enclose-sync.md).
+- **UI states / journeys to design:** `Ink-box` armed; enclose accepted; enclose rejected (too small
+  / no ink inside); `Selection` → Smart Group with surround stroke; create refused (no surround);
+  draw-into an existing box; nested membership; undo of a create.
+
+## [REQ-06] On-device ink-box manipulation {#device-manipulation}
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes
+- **Outcome:** manipulating a box on the tablet feels like moving paper, not like filing a request.
+  What the creator sees under the pen **is** the document — no advisory ghost, no peer correction,
+  no snap-back.
+- **Pilot scope.** Select by pressing a Smart Group; move by dragging inside the bounds (no prior
+  selection needed); resize via handles after explicit selection; toggle `inkScaleMode`
+  (`withBounds` | `fixedInk`); deselect by pressing empty canvas. **Rotation and connector
+  attachment are out of scope this iter** — they arrive with [REQ-08](#node-manipulation).
+- **`inkScaleMode` feel.** `withBounds`: content scales with the box. `fixedInk`: each content ink
+  keeps its sample size fixed and tracks the box via **its own** relative offset / UV inside the box,
+  so a newly drawn stroke never moves older content. Boundary ink always transforms with the frame.
+- **Live and direct.** Feedback during a drag mutates the real ink within the e-paper partial-refresh
+  budget. A slow refresh is acceptable; a picture that later jumps is not.
+- **Below the LOD cutoff** manipulation is unavailable and the UI says so; the gesture does not
+  silently do something else.
+- **Forward compatibility (binding).** This REQ ships as a **conforming subset** of
+  [REQ-08](#node-manipulation): SmartGroup declares `{select, move, resize, set-ink-scale-mode}`
+  through the same per-node-kind capability descriptor, uses the same selection model and gizmo
+  geometry, and emits a transform op whose envelope already carries a **rotation field that stays
+  unset** this iter. See
+  [node-manipulation](./features/node-manipulation/srs-product.md).
+
+**Acceptance**
+- Given a Smart Group and a viewport scale ≥ the LOD cutoff, When the creator drags inside its
+  bounds, Then the **actual ink** follows the pen (not an outline stand-in), and on pen-up the
+  committed geometry equals the last previewed geometry (0 px jump; 0 snap-backs across a scripted
+  20-gesture set) — regression bar from
+  [CHL-0006](../../../.plan/iter-003/challenges/CHL-0006-live-direct-resize.md) /
+  [CHL-0007](../../../.plan/iter-003/challenges/CHL-0007-selection-move-enclose-sync.md).
+- Given a selected Smart Group under `fixedInk`, When the creator drags a resize handle, Then
+  `bounds` follow the handle, each content ink's sample size changes ≤1 px, **each** content ink's
+  own UV/offset in the box is preserved (±1 px @ 100% zoom), unrelated content inks do not move, and
+  the boundary ink still transforms with the frame — regression bar from
+  [CHL-0004](../../../.plan/iter-003/challenges/CHL-0004-fixedink-resize-boundary.md) /
+  [CHL-0005](../../../.plan/iter-003/challenges/CHL-0005-tablet-fixedink-resize-ghost.md).
+- Given `withBounds`, When the creator resizes, Then content ink scales with the bounds
+  (geometry ±1 px @ 100% zoom against the expected transform).
+- Given a drag in progress, When the device renders feedback, Then it updates at ≥5 Hz using partial
+  refresh only (0 full-panel invalidations during the gesture) and the UI never freezes for >200 ms.
+- Given any completed manipulation gesture, When the creator undoes once, Then exactly that gesture
+  is reverted (1 undo entry per gesture; 0 partial reverts).
+- Given a selected Smart Group, When the creator presses empty canvas, Then selection clears and the
+  next settled frame shows 0 residual selection pixels — regression bar from
+  [CHL-0007](../../../.plan/iter-003/challenges/CHL-0007-selection-move-enclose-sync.md).
+- Given a viewport scale below the LOD cutoff, When the creator presses a Smart Group, Then no
+  manipulation starts (0 accidental transforms) and the UI shows manipulation is unavailable.
+- Given **no session**, When the creator performs any manipulation above, Then the result is
+  identical to the linked case (100% parity across a scripted 10-gesture set).
+- Given the [REQ-08](#node-manipulation) capability descriptor, When SmartGroup is registered under
+  it, Then its declared verbs are exactly `{select, move, resize, set-ink-scale-mode}` and the
+  transform op validates against the shared envelope with `rotation` unset (0 bespoke op shapes).
+- **UI states / journeys to design:** `Selection` idle; Smart Group selected with handles; move in
+  progress; resize in progress (both ink-scale modes); `inkScaleMode` toggle; deselect; manipulation
+  unavailable below LOD; undo of a manipulation.
+
+## [REQ-07] One-way document sync {#one-way-sync}
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: no *(status affordances are designed under [REQ-03](#tool-modes))*
+- **Outcome:** the session is stable because each direction carries exactly one kind of traffic, and
+  neither end has to reconcile the other's edits.
+- **Desktop → Tablet — only two things:**
+  1. an **initial full-document load**, at session start, on reconnect, or on an explicit resync;
+  2. **pan/zoom viewport events** ([REQ-02](#region-sync)).
+  Nothing else crosses. No post-edit picture push, no pickable list, no correction of a gesture in
+  flight.
+- **Tablet → Desktop — document changes.** The device publishes what it did to the document; the
+  desktop applies them to its mirror and persists ([infini REQ-02](../infini/prd.md#vector-document)).
+- **Live ink preview.** The device may keep streaming in-progress stroke samples so the desktop feels
+  live; that stream is a **preview only**. The authoritative node arrives with the document change at
+  pen-up, and preview never flows back to the device.
+- **Load safety.** A full load **replaces** the local document, so it is only accepted at session
+  start or on an explicit resync, and only after queued changes have been published. The desktop
+  must not send an unsolicited load mid-session.
+- **Link down is a normal state.** Editing continues locally ([REQ-04](#device-document)); changes
+  queue in order and publish on reconnect.
+- **Deferred by name:** a modern document-synchronization algorithm enabling multi-directional sync,
+  on-device storage, and working offline then syncing at any moment. Not this iter (Non-Goals).
+
+**Acceptance**
+- Given a live session, When the creator pans or zooms on the desktop for ≥5 s, Then the tablet
+  receives viewport messages only (**0** document messages) and the next pen sample uses the new
+  region with p95 ≤100 ms.
+- Given a live session after the initial load, When anything happens on the desktop, Then the tablet
+  receives **0** inbound document messages for the rest of the session (desktop authoring is
+  deprecated — [infini REQ-04](../infini/prd.md#smart-group)).
+- Given the creator creates, moves, or resizes on the tablet, When the op commits, Then the desktop
+  mirror shows the same result with p95 ≤300 ms after the op, and 0 divergent figures for that
+  region after settle.
+- Given the creator is drawing on the tablet, When samples arrive, Then Infini shows the in-progress
+  path with p95 ≤50 ms after the sample, and at pen-up the preview is replaced by the published node
+  (0 duplicate or orphaned preview paths).
+- Given the link drops, When the creator performs 10 document operations, Then all 10 succeed
+  locally and all 10 reach the desktop in order on reconnect (0 lost ops, 0 reordered ops).
+- Given queued unpublished changes at reconnect, When the desktop offers a full load, Then the load
+  is applied only after the queue drains (0 changes discarded by a load).
+- Given a completed reconnect load, When both ends settle, Then the tablet document equals the
+  desktop document (0 divergent nodes) and the tablet resumes publishing.
+
+## [REQ-08] Direct manipulation of any document node {#node-manipulation}
+- **Priority:** Should · **Traces:** [BRD-07] · **Campaign:** distinct iteration — thickened now,
+  designed and built after the [REQ-04](#device-document)…[REQ-07](#one-way-sync) wave is verified
+- Needs design: yes
+- **Outcome:** anything the creator can see on the panel, they can manipulate — with one coherent
+  vocabulary, so learning to move a Smart Group teaches them how to move text, a primitive, a frame,
+  or a connector. The bar is the depth of a modern vector drawing app, not a one-off box handler.
+- **Shared verbs.** ~99% of node kinds support the same base set: select, multi-select, marquee,
+  enter/exit group, move, resize (corner and side, aspect lock), **rotate with snap increments**,
+  nudge, duplicate, delete, z-order, align/distribute, transform origin, snapping and guides,
+  modifier constraints.
+- **Distinct tools.** Some kinds add their own: Ink (ink-scale mode, simplify, split), Text (edit
+  content, resize vs reflow, baseline), Primitive (endpoints, corner radius), Connector (re-anchor
+  endpoints, routing), Frame (artboard resize, clip), SmartGroup (boundary vs content, enter/exit).
+- **Extensibility contract.** Each node kind declares, through a **capability descriptor**, which
+  shared verbs it supports and which bespoke tools it adds. The manipulation host reads the
+  descriptor; adding a node kind must not require editing the host.
+- Full product depth — verb semantics, per-kind tools, gesture grammar, e-ink constraints, and the
+  descriptor schema — lives in
+  [features/node-manipulation/srs-product.md](./features/node-manipulation/srs-product.md).
+- [REQ-06](#device-manipulation) is the first conforming citizen of this model and must not require
+  rework when this REQ lands.
+
+**Acceptance**
+- Given the capability descriptor, When a new node kind is registered declaring the shared verbs,
+  Then it gains selection, move, and resize with **0 changes** to the manipulation host.
+- Given any two node kinds that both declare `move` / `resize` / `rotate`, When the creator
+  manipulates either, Then the gesture grammar and gizmo vocabulary are identical (1 shared model;
+  0 per-kind special cases for shared verbs).
+- Given the node kinds in the document model, When this REQ ships, Then ≥90% support the full shared
+  verb set and every exception is documented with its reason in the capability descriptor.
+- Given SmartGroup as shipped under [REQ-06](#device-manipulation), When this REQ lands, Then
+  SmartGroup requires 0 changes to its declared capabilities and 0 changes to its transform op shape.
+- Given a node with `rotate`, When the creator rotates with snapping active, Then the angle lands on
+  the snap increment within ±0.5° and one undo restores the previous transform exactly.
+- **UI states / journeys to design:** multi-select and marquee; enter/exit group; rotate with snap;
+  per-kind tool surface for a selected node; align/distribute on a multi-selection; nudge; delete
+  and duplicate; snapping guides; manipulation unavailable below LOD; conflicting capabilities in a
+  mixed multi-selection.
 
 ---
 
@@ -106,8 +359,22 @@ drawing-region sync with Infini.
 - **On-device pan / zoom / pinch** on the Epaper UI (deferred).
 - Acting as a Reawa-style mouse/stylus driver for other Mac apps.
 - Cloud sync or multi-peer sessions.
-- **Smart Group recognition / geometry on-device** — Epaper contributes tool intent and pen
-  samples only; Infini recognizes, groups, and owns the tree ([REQ-03](#tool-modes)).
+- **On-device persistence, offline work across app restarts, and sync-at-any-moment** — the device
+  document is in memory for the session; the desktop is the persistence home
+  ([REQ-07](#one-way-sync)).
+- **Multi-directional sync / modern document-synchronization algorithm / CRDT** — explicitly deferred
+  to a later campaign; this iter is one-way per direction.
+- **Desktop-authored document changes reaching the tablet mid-session** — the only inbound document
+  message is the initial full load.
+- **Rotation and connector attachment on a Smart Group this iter** — they arrive with
+  [REQ-08](#node-manipulation).
+- **In-box content alignment / reflow** (left/center/right, baseline snap, auto-padding when
+  appending ink) — freehand placement and `fixedInk` UV tracking only.
+- **OCR / handwriting-to-Text** — the ink-box captures **any** ink inside the enclosure; there is no
+  "is this text?" gate.
+- **Automatic (unprompted) ink-box creation** — every Smart Group comes from an explicit tool mode or
+  an explicit selection command.
+- Non-rectangular enclosure shapes (ellipse, lasso) — `bounds` is axis-aligned.
 - A general on-device tool palette — the toolbar is exactly the three tools in
   [REQ-03](#tool-modes); no brushes, colors, layers, or document browser.
 - Production use of `regionsync/` `append_ink` NetSink until wired into the Qt binary
@@ -115,22 +382,37 @@ drawing-region sync with Infini.
 
 ## Assumptions & Dependencies
 
-- Infini [REQ-01]–[REQ-03] define the desktop side of the session.
-- Consistency: [ADR-0009](../../adr/ADR-0009-shared-document-viewport.md) (target) with
-  interim `doc_snapshot` + `stroke_*` per architect amendment.
+- Infini [REQ-01]–[REQ-03] define the desktop side of the session; Infini is viewer + navigator +
+  persistence home, and its own ink-box authoring is deprecated
+  ([infini REQ-04](../infini/prd.md#smart-group)).
+- Node semantics are shared with Infini: [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md) tree,
+  [ADR-0011](../../adr/ADR-0011-smart-group.md) Smart Group. Where recognition and writes happen is
+  re-decided by the architect under CHL-0008 (ADR-0014 / ADR-0015 pending).
+- Consistency: [ADR-0009](../../adr/ADR-0009-shared-document-viewport.md) is amended by the
+  ownership inversion — the device is the sole in-session writer.
 - Stroke paint: [ADR-0012](../../adr/ADR-0012-world-stroke-viewport-parity.md).
+- RM2 capacitive touch is reachable from the Qt app (verified by the STORY-EP-004 spike).
+- The device has enough memory and CPU headroom to hold the document and hit-test it without
+  regressing [REQ-01](#local-pen-ink) ink latency — **architect to confirm before the first
+  [REQ-04](#device-document) story.**
 
 ## Open Questions
 
-- Wire Qt app to `regionsync/` / `doc_op` vs keep `stroke_*` — **owner:** architect
-- Soft (interim) vs sharp settle visual quality on e-ink — **owner:** qa / human
-- Is the RM2 capacitive touch surface usable from the Qt app — **owner:** architect —
-  **needed by:** before the first [REQ-03](#tool-modes) story. The app handles pen events only
-  today (`tabletappfilter`); if touch is unavailable, the fallback (pen-on-toolbar or a hardware
-  button) changes the design.
-- Does `Selection` pick on device — **owner:** architect — **needed by:** before the first
-  [REQ-03](#tool-modes) story. Hit-test against the last `doc_snapshot` locally, or relay the
-  pick to Infini.
+- Undo depth and affordance on the device — **owner:** pm with designer — **needed by:** first
+  [REQ-06](#device-manipulation) design story. [REQ-04](#device-document) sets a floor of 20
+  structural ops, but how the creator reaches undo without a fourth tool is unspecified.
+- Document-change granularity on the wire (op log vs coalesced change set) — **owner:** architect —
+  **needed by:** ADR-0015. Affects the ≤300 ms mirror target and the reconnect queue.
+- Manual "reload document to tablet" control — **owner:** pm — **needed by:** first
+  [REQ-07](#one-way-sync) story. Does the desktop keep one, and what does it do to unpublished
+  tablet changes?
+- Multi-document / document switching on the device — **owner:** pm — assumed out of scope this
+  iter; confirm before [REQ-04](#device-document) is sliced.
+- Minimum fitted-rect size for enclose — **owner:** architect with qa evidence — **needed by:** first
+  [REQ-05](#device-ink-box) build. World units vs screen px, and the value itself.
+- LOD cutoff for on-device manipulation — **owner:** architect — **needed by:** first
+  [REQ-06](#device-manipulation) story. The desktop pilot used 0.35 viewport scale; the device may
+  need a different bar given panel resolution.
 
 ## Linked Modules
 

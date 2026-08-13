@@ -1,8 +1,13 @@
-@SRS-IN-10
+@SRS-IN-10 @deprecated
 Feature: Tool-armed enclose recognition
   As Infini with Ink-box armed
   I need enclose strokes to create Smart Groups immediately when guards pass
   So that arming the tool is the confirmation (no propose/accept)
+
+  # DEPRECATED 2026-08-13 — CHL-0008 / ADR-0014. Recognition re-homed to the device;
+  # the live spec is epaper/features/ink-box/bdd/enclose-recognition.feature (@SRS-EP-10).
+  # Kept as the acceptance evidence for STORY-IN-010 and as the return path if desktop
+  # authoring comes back with multi-directional sync. Do not run in the device suite.
 
   # STORY-IN-010 — SRS-IN-10 (rewritten)
 

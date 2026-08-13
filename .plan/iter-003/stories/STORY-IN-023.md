@@ -4,7 +4,8 @@ title: fixedInk resize via scale+translate
 kind: implement
 parent_srs: [SRS-IN-11]
 parent_req: [REQ-04]
-status: in-review
+status: blocked
+blocked_reason: "CHL-0008 adopted 2026-08-13 — assumes desktop tree authority; behaviour re-specified under epaper REQ-06. Not scheduled; SM re-slices."
 priority: P1
 iter: iter-003
 estimate: 3

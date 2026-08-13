@@ -9,7 +9,15 @@ lifecycle: active
 
 Architect-owned tree rules for [REQ-02](../../prd.md#vector-document).
 Structural decision: [ADR-0010](../../../../adr/ADR-0010-tree-of-vectors.md).
-Session sync: [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md).
+Ownership: [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md).
+Session sync: [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md).
+**Shared semantics: [domain/vector-document](../../../../domain/vector-document.md)** — node kinds,
+roles, transforms, ops, and invariants are defined there for both peers; this file binds Infini's
+implementation to them.
+
+**Ownership (2026-08-13, CHL-0008).** Infini holds a **mirror**, not the working document. Its job
+is: apply published device changes idempotently, paint them, serialize them. It authors no document
+changes. The sections below that describe *authoring* are deprecated per element — see each banner.
 
 **Implementation status (code SoT, 2026-08-11)**
 
@@ -19,17 +27,25 @@ Session sync: [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md).
 | Live canvas paint | `InfiniDocument` WorldLayer primitives — **not** tree-driven yet |
 | Live RM ink | Appended as WorldLayer `path`s — does **not** `append_ink` into the tree |
 | Doc open/save chrome | Not shipped |
-| Smart Group UI / enclose | Ops apply in library; no CanvasStage UX |
-| Selection / hit-testing / handles | **Not shipped** — pointer drag is pan ([SRS-IN-11](#srs-in-11-selection-manipulation)) |
-| Undo history | **Not shipped** — no history anywhere in `infini/src` ([SRS-IN-12](#srs-in-12-undo-history)) |
-| Live `doc_op` wire | Not shipped (see tablet-sync interim) |
+| Inbound `doc_change` applier | **Not shipped** — the main new desktop work ([SRS-IN-07](../tablet-sync/srs-logic.md)) |
+| Smart Group authoring UI | **Deprecated** — [SRS-IN-14](./srs-ui.md#srs-in-14-ink-box-ui) |
+| Live `doc_op` wire | Superseded by `doc_change` (ADR-0015 §2) |
 
-**Critical prerequisite.** `CanvasStage.rebuildWithRmInk` turns `stroke_*` into flat WorldLayer
-`path` primitives; no ink enters `VectorDocument`, so SRS-IN-10/11 have nothing to operate on.
-Tree-backed ink ingestion (`append_ink` on the live stroke path + paint from `tree.flatten()`
-via the existing `syncFromVectorDoc`) must land before any REQ-04 slice.
+**Critical prerequisite (revised).** `CanvasStage.rebuildWithRmInk` turns `stroke_*` into flat
+WorldLayer `path` primitives, and nothing enters `VectorDocument`. Under the rework the desktop's
+paint source must become the **mirror tree** fed by `doc_change`, with `stroke_*` demoted to a
+transient preview layer. That inversion — not enclose recognition — is now the first desktop slice.
 
 ## [SRS-IN-04] Tree model and three representations
+
+<!-- revised: 2026-08-13 — CHL-0008 / ADR-0014. Semantics lifted to the shared domain doc; this
+     section now binds Infini's implementation to it. Same id, content revised. -->
+
+> **Revised 2026-08-13.** Node kinds, roles, invariants, and op meanings now live in
+> [domain/vector-document](../../../../domain/vector-document.md) because **both peers implement
+> them**. This section keeps Infini's representations (in-memory, SVG profile, transmit) and must
+> not restate or drift from the domain doc. Idempotent-apply-by-`opId` is load-bearing for the
+> mirror ([SRS-IN-07](../tablet-sync/srs-logic.md)) and stays here.
 
 ### Endpoint(s)
 
@@ -233,6 +249,20 @@ Anchor = {
 
 ## [SRS-IN-10] Enclose recognition (Smart Group pilot)
 
+<!-- lifecycle: deprecated -->
+<!-- deprecated: 2026-08-13 — CHL-0008 / ADR-0014 -->
+<!-- superseded-by: [SRS-EP-10] -->
+
+> **DEPRECATED 2026-08-13** — re-homed to the device by
+> [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md). The **rules below are
+> correct and are inherited verbatim** by
+> [SRS-EP-10](../../../epaper/features/ink-box/srs-logic.md); only the host changed. The one clause
+> that dies with this section is the trigger: there is no `intent: enclose` on the wire, because the
+> device evaluates its own stroke at pen-up.
+>
+> Kept active-in-text for the desktop's read path (it must still *render* SmartGroups) and as the
+> return path if desktop authoring comes back with multi-directional sync.
+
 **Parent:** [REQ-04](../../prd.md#smart-group).
 **ADR:** [ADR-0011](../../../../adr/ADR-0011-smart-group.md) as amended by
 [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md).
@@ -260,6 +290,14 @@ Quality targets live in [srs-quality](./srs-quality.md).
 
 ## [SRS-IN-16] Selection create — surround stroke required {#srs-in-16-selection-create-surround}
 
+<!-- lifecycle: deprecated -->
+<!-- deprecated: 2026-08-13 — CHL-0008 / ADR-0014 -->
+<!-- superseded-by: [SRS-EP-10] -->
+
+> **DEPRECATED 2026-08-13** — re-homed to the device
+> ([SRS-EP-10](../../../epaper/features/ink-box/srs-logic.md)). Rules inherited verbatim, including
+> the even-odd artificial-closed-path test and the refuse-without-surround guard.
+
 **Parent:** [REQ-04](../../prd.md#smart-group). **ADR:** [ADR-0011](../../../../adr/ADR-0011-smart-group.md) §4B.
 
 Explicit Smart Group from a multi-ink selection (Solution 3 / `Selection` tool).
@@ -280,6 +318,15 @@ no geometry clean-up).
 ---
 
 ## [SRS-IN-15] Draw-into membership (existing Smart Group) {#srs-in-15-draw-into-membership}
+
+<!-- lifecycle: deprecated -->
+<!-- deprecated: 2026-08-13 — CHL-0008 / ADR-0014 -->
+<!-- superseded-by: [SRS-EP-10] -->
+
+> **DEPRECATED 2026-08-13** — re-homed to the device
+> ([SRS-EP-10](../../../epaper/features/ink-box/srs-logic.md)). The ≥80% containment rule, the
+> highest-paint-order tiebreak, and the never-reflow guarantee are inherited verbatim. Only the
+> "runs on Infini" line dies.
 
 **Parent:** [REQ-04](../../prd.md#smart-group). **ADR:** [ADR-0011](../../../../adr/ADR-0011-smart-group.md) §7.
 
@@ -315,6 +362,16 @@ Canonical field: [SRS-IN-09](./srs-data.md) `{ u, v }`.
 ---
 
 ## [SRS-IN-11] Selection, hit-testing, and Smart Group manipulation {#srs-in-11-selection-manipulation}
+
+<!-- lifecycle: deprecated -->
+<!-- deprecated: 2026-08-13 — CHL-0008 / ADR-0014 -->
+<!-- superseded-by: [SRS-EP-11] -->
+
+> **DEPRECATED 2026-08-13** — re-homed to the device
+> ([SRS-EP-11](../../../epaper/features/ink-box/srs-logic.md)). The gesture table, the LOD cutoff
+> rule, and **one op per completed gesture** are inherited. The desktop tool table dies with
+> [infini REQ-04](../../prd.md#smart-group); the `TILE_LOD_SCALE` value **0.35** is a desktop
+> constant and the device must derive its own (open question, architect).
 
 **Parent:** [REQ-04](../../prd.md#smart-group). **ADR:** ADR-0013.
 
@@ -361,6 +418,16 @@ quiet.
 ---
 
 ## [SRS-IN-12] Undo history {#srs-in-12-undo-history}
+
+<!-- lifecycle: deprecated -->
+<!-- deprecated: 2026-08-13 — CHL-0008 / ADR-0014 -->
+<!-- superseded-by: [SRS-EP-07] -->
+
+> **DEPRECATED 2026-08-13** — undo belongs where editing happens, so the ring moves to the device
+> ([SRS-EP-07](../../../epaper/features/device-document/srs-logic.md)). Mechanism, depth 20, and
+> "not covered" list are inherited verbatim ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §5).
+> The **"Remote ops … one shared timeline"** row dies: there is one writer now, so there is nothing
+> remote to interleave. Infini keeps no undo stack — it authors nothing.
 
 **Parent:** [REQ-04](../../prd.md#smart-group). **ADR:** ADR-0013 §5.
 

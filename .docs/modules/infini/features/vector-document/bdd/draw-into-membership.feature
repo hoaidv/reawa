@@ -1,8 +1,12 @@
-@SRS-IN-15
+@SRS-IN-15 @deprecated
 Feature: Draw-into membership for existing Smart Groups
   As Infini session SoT
   I need ordinary ink drawn into a Smart Group to join as content
   So that free layout membership works without expanding bounds
+
+  # DEPRECATED 2026-08-13 — CHL-0008 / ADR-0014. Membership re-homed to the device;
+  # the live spec is epaper/features/ink-box/bdd/draw-into-membership.feature (@SRS-EP-10).
+  # Kept as the acceptance evidence for STORY-IN-016.
 
   # STORY-IN-016 — SRS-IN-15
 

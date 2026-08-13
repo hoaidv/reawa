@@ -1,7 +1,7 @@
 ---
 feature: vector-document
 parent_req: [REQ-02, REQ-04]
-version: 0.3.0
+version: 0.4.0
 lifecycle: active
 needs_design: true
 ---
@@ -13,8 +13,23 @@ canvas. Companion surface: [infinity-canvas SRS-IN-02](../infinity-canvas/srs-ui
 
 ## [SRS-IN-05] Document chrome (open / save / tree hints)
 
+<!-- revised: 2026-08-13 — CHL-0008 / ADR-0014. Unchanged in substance; scope note and two session
+     states added. Same id, content revised. -->
+
+> **Revised 2026-08-13.** Substance unchanged, but the stakes changed: with desktop authoring
+> withdrawn ([SRS-IN-14](#srs-in-14-ink-box-ui) deprecated), this is now the **only** desktop
+> document surface. Two states it must gain, from
+> [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md):
+>
+> - **mirror suspect** — a sequence gap was detected; saving in this state must not look routine.
+> - **loading the tablet** — the epoch handshake is in progress and a `doc_load` is being sent.
+>
+> Both are session facts with document consequences, which is why they land on DocChrome rather than
+> on a sync widget.
+
 **Logic:** [SRS-IN-04](./srs-logic.md). **Quality:** [SRS-IN-06](./srs-quality.md).
 **Experience:** [srs-experience](./srs-experience.md). **Product:** [srs-product](./srs-product.md).
+**Session:** [SRS-IN-07](../tablet-sync/srs-logic.md).
 
 ---
 
@@ -199,6 +214,20 @@ Desktop targets ≥24 px for chrome buttons.
 ---
 
 ## [SRS-IN-14] Ink-box tools and selection overlay (Infini) {#srs-in-14-ink-box-ui}
+
+<!-- lifecycle: deprecated -->
+<!-- deprecated: 2026-08-13 — CHL-0008 / ADR-0014 -->
+<!-- superseded-by: [SRS-EP-12] -->
+
+> **DEPRECATED 2026-08-13** — desktop ink-box authoring is withdrawn
+> ([infini REQ-04](../../prd.md#smart-group)), so this ToolStrip and SelectionOverlay have nothing
+> to drive. The device UI [SRS-EP-12](../../../epaper/features/ink-box/srs-ui.md) is **not** a port
+> of it — an e-paper panel with a floating chip is a different surface with a different refresh
+> budget. What transfers is the *intent*: show what a press will do, and make extent, selection, and
+> scale mode manipulable without a properties panel.
+>
+> The design package [ink-box-ui](../../../../../.plan/iter-003/design/ink-box-ui/) deprecates with
+> this section.
 
 **Parent:** [REQ-04](../../prd.md#smart-group). **Logic:** [SRS-IN-11](./srs-logic.md#srs-in-11-selection-manipulation).
 **Decision:** [ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md).

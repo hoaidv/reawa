@@ -4,7 +4,8 @@ title: Live resize tool_intent + undo origin
 kind: implement
 parent_srs: [SRS-IN-13]
 parent_req: [REQ-03]
-status: in-review
+status: blocked
+blocked_reason: "CHL-0008 adopted 2026-08-13 — tool_intent transport retires with SRS-IN-13. Not scheduled; SM re-slices."
 priority: P1
 iter: iter-003
 estimate: 3

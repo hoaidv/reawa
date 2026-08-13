@@ -1,28 +1,41 @@
 ---
 feature: region-sync
 parent_req: [REQ-02]
-version: 0.4.0
+version: 0.5.0
 lifecycle: active
 ---
 
 # SRS — Region sync Epaper (Logic)
 
-Epaper side of [ADR-0009](../../../../adr/ADR-0009-shared-document-viewport.md)
-(interim wire) and [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md).
+Epaper side of the viewport channel under
+[ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) /
+[ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md), with stroke paint parity from
+[ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md).
 Sibling: [infini/tablet-sync](../../../infini/features/tablet-sync/srs-logic.md).
 Local ink: [SRS-EP-01](../local-pen-ink/srs-logic.md).
+Document + sync contract: [SRS-EP-07 / SRS-EP-08](../device-document/srs-logic.md).
 
 **Code SoT (2026-08-11):** `epaper/tabletcanvasitem.cpp`, `epaper/strokesync.cpp`.
 Header-only `epaper/regionsync/` is **unit-tested**, not linked into the device binary.
 
 ## [SRS-EP-02] Viewport map, vector picture, panel refresh
 
+<!-- revised: 2026-08-13 — CHL-0008 / ADR-0014. The local document is authoritative for paint;
+     doc_snapshot replace-on-arrival is withdrawn. Same id, content revised. -->
+
 Parent REQ: [REQ-02](../../prd.md#region-sync).
+
+> **Revised 2026-08-13.** This section owns the **map**, not the picture. The picture comes from the
+> device's own document ([SRS-EP-07](../device-document/srs-logic.md)); the only inbound document
+> message is the handshake-gated `doc_load`, handled by
+> [SRS-EP-08](../device-document/srs-logic.md). "Replace `m_vectorNodes` on every `doc_snapshot`" is
+> **withdrawn** — that reflex is what let a peer overwrite the creator's work mid-session.
 
 ### Endpoint(s)
 
 JSON-lines TCP to Infini (`RM_SYNC_HOST`, typically Mac USB `10.11.99.12:9877`).
-Epaper **produces** `stroke_*` and **consumes** `viewport` + `doc_snapshot`.
+Epaper **produces** `stroke_*` (preview) + `doc_change`, and **consumes** `viewport` + one
+`doc_load` per session epoch.
 
 ### Digitizer → panel (always)
 
@@ -64,43 +77,52 @@ Applies to **live** `emitSegment` and **vector** `drawVectorNode`. Wire
 1. Update `drawingRegion`, `orientation`, `seq` **immediately** (map before next pen).
 2. Read `settle` bool → `scheduleVectorRasterize(settle)`.
 
-### On `doc_snapshot`
+### On `doc_load`
 
-1. Replace local `m_vectorNodes` from `nodes[]`.
-2. Sharp rasterize immediately.
+Delegated to [SRS-EP-08](../device-document/srs-logic.md): legal only at a session epoch boundary
+and only after the change queue has drained. On acceptance the local document is replaced wholesale
+and a sharp rasterize follows. **This section never mutates the document.**
+
+An unsolicited `doc_load` mid-session is a protocol defect: reject, log, surface in the status line
+([SRS-EP-05](../tool-modes/srs-ui.md)). Do not apply it.
 
 ### On `region_refresh`
 
-**Ignore** (legacy bitmap). Log once; use `doc_snapshot` + local rasterize.
+**Ignore** (legacy bitmap). Log once; rasterize from the local document.
 
 ### On local pen
 
 1. Ink locally with current map + world×`s_panel` width.
-2. Stream `stroke_*` (panel x/y).
-3. On stroke end, append a world `path` node into local vector list (for later redraws).
+2. Stream `stroke_*` (panel x/y) as a **preview** for the desktop
+   ([ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) §6).
+3. On stroke end, hand the stroke to [SRS-EP-07](../device-document/srs-logic.md) for ingestion into
+   the local document, which is what later redraws paint from.
 
 ### Region refresh coalesce
 
 | Mode | Behavior |
 |---|---|
 | Soft (`settle=false`) | Coalesce to ≥ **250 ms** between soft rasterizes |
-| Sharp (`settle=true` or `doc_snapshot`) | Immediate full redraw; antialiasing on for sharp |
+| Sharp (`settle=true`, accepted `doc_load`, or a committed local op) | Immediate full redraw; antialiasing on for sharp |
+| During a manipulation gesture | **Partial refresh only** — no full-panel invalidation ([SRS-EP-11](../ink-box/srs-logic.md)) |
 
 Soft may look faded on e-ink; settle must sharpen.
 
 ### Paint pass
 
-- Clear + redraw all vector nodes through `worldToPanel` (gut-aware).
-- Coherent `(nodes, drawingRegion, orientation)` per paint.
+- Clear + redraw from the **local document** through `worldToPanel` (gut-aware).
+- Coherent `(document, drawingRegion, orientation)` per paint.
 - Ghosting OK; divergent content for the region after settle is not.
+- **0 repaints sourced from an inbound peer picture** ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §2).
 
-### Emit matrix (Qt app — shipped)
+### Emit matrix (target — ADR-0015 v1)
 
 | Message | Emit? |
 |---|---|
-| `stroke_begin` / `stroke_point` / `stroke_end` | **yes** |
-| `append_ink` / `doc_op` | **no** (library only) |
-| Structure / Smart Group | **no** |
+| `stroke_begin` / `stroke_point` / `stroke_end` | **yes** — preview only |
+| `doc_change` | **yes** — one per committed op ([SRS-EP-08](../device-document/srs-logic.md)) |
+| `hello` / `queue_empty` / `load_ack` | **yes** — handshake |
+| `stroke_begin.intent` / `tool_intent` | **no** — retired with [SRS-IN-13](../../../infini/features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport) |
 
 ### `regionsync/` library (not device runtime)
 

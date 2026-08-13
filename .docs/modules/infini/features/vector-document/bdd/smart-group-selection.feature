@@ -1,8 +1,13 @@
-@SRS-IN-11
+@SRS-IN-11 @deprecated
 Feature: Smart Group selection hit-test move resize and fixedInk UV
   As Infini Selection tool
   I need to pick Smart Groups, move/resize them, and honour inkScaleMode
   So that ink-box manipulation matches SRS-IN-11
+
+  # DEPRECATED 2026-08-13 — CHL-0008 / ADR-0014. Manipulation re-homed to the device; the
+  # live spec is epaper/features/ink-box/bdd/smart-group-selection.feature (@SRS-EP-11),
+  # which drops the ghost and the pan-below-LOD fallback. Kept as the acceptance evidence
+  # for STORY-IN-015 — and as the record of a model that failed human verify four times.
 
   # STORY-IN-015 — SRS-IN-11
 

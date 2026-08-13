@@ -4,7 +4,8 @@ title: "Push doc_snapshot after Smart Group mutations"
 kind: implement
 parent_srs: [SRS-IN-11]
 parent_req: [REQ-04]
-status: in-review
+status: blocked
+blocked_reason: "CHL-0008 adopted 2026-08-13 — assumes desktop tree authority + doc_snapshot push, both withdrawn. Not scheduled; SM re-slices."
 priority: P0
 iter: iter-003
 estimate: 2

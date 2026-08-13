@@ -1,8 +1,11 @@
 @SRS-IN-07
-Feature: Infini tablet session viewport and document channel
-  As Infini in an ADR-0009 session (interim wire)
-  I publish viewport and doc_snapshot and ingest Epaper strokes
-  So that drawing region and region picture stay in sync
+Feature: Infini tablet session viewport load and change channels
+  As Infini in an ADR-0014 session
+  I publish viewport, send exactly one document load per epoch, and apply device changes
+  So that the drawing region stays in sync and the mirror follows the device
+
+  # Revised 2026-08-13 — CHL-0008 / ADR-0014 / ADR-0015. doc_snapshot pushes are gone:
+  # the desktop sends one handshake-gated doc_load per epoch and otherwise only viewport.
 
   # Shipped wire — STORY-IN-009 / IN-011
 
@@ -14,20 +17,44 @@ Feature: Infini tablet session viewport and document channel
     And the message includes type "viewport", translate, scale, drawingRegion AABB, orientation, and monotonic seq
 
   @SRS-IN-07
-  Scenario: Epaper stroke stream becomes WorldLayer path
+  Scenario: Epaper stroke stream renders as a transient preview
     Given a live session and Infini WorldLayer
     When Epaper sends stroke_begin with world brush width then stroke_point panel samples then stroke_end
     Then Infini maps panel coords through gut UV into drawingRegion world space
-    And a path primitive appears on WorldLayer with that world stroke width
+    And a preview path appears keyed by stroke id with that world stroke width
+    And the preview is not written into the mirror
 
   @SRS-IN-07
-  Scenario: Initial sync pushes vector doc_snapshot not bitmap
-    Given a live session and Infini has world primitives under the tablet frame
-    When the Epaper client connects or Infini first publishes viewport
-    Then Infini sends a doc_snapshot with vector nodes (line rect ellipse path)
+  Scenario: Connect sends one document load after the queue drains
+    Given the Epaper client connects and reports queued changes
+    When Infini completes the handshake
+    Then Infini sends drain_ack first
+    And Infini applies every inbound doc_change in seq order
+    And Infini sends doc_load only after queue_empty
     And Infini does not push a region_refresh PNG for that content
     When Infini later pans or zooms
     Then only viewport messages are required for Epaper to re-rasterize locally
+
+  @SRS-IN-07
+  Scenario: No document message follows the load
+    Given a session that has completed its initial load
+    When Infini edits nothing and the session is traced
+    Then zero outbound document messages other than that load are observed
+
+  @SRS-IN-07
+  Scenario: Applied change replaces the preview
+    Given a preview path exists for stroke "s_9"
+    When the doc_change carrying that stroke's node applies to the mirror
+    Then the preview is removed
+    And the mirror node paints in its place
+
+  @SRS-IN-07
+  Scenario: Sequence gap marks the mirror suspect
+    Given the mirror last applied seq 12
+    When a doc_change arrives with baseSeq 15
+    Then the mirror is marked suspect
+    And Infini requests an explicit resync
+    And Infini does not save a suspect mirror silently
 
   @SRS-IN-07
   Scenario: Drawing-region marker hidden when idle
@@ -86,19 +113,19 @@ Feature: Infini tablet session viewport and document channel
     Then CSS line width halves when scale halves
     And relative thickness lineWidth_css / F_css stays consistent with ADR-0012
 
-  # Library / future op-log — not live CanvasStage wire
+  # Library / applier helpers — not live CanvasStage wire
 
   @SRS-IN-07 @future
   Scenario: append_ink from Epaper updates tree and WorldLayer
     Given VectorDocument session helpers under unit test
-    When Epaper-shaped doc_op append_ink with opId "ink_1" is applied
+    When an Epaper-shaped doc_change carrying append_ink with opId "ink_1" is applied
     Then the materialised tree contains the new Ink node
     When the same opId "ink_1" is applied again
     Then the tree is unchanged (idempotent)
 
   @SRS-IN-07 @future
-  Scenario: Infini structure emit respects in-flight Epaper stroke
-    Given session queue helpers for structure ops
-    And an Epaper stroke is in flight
-    When Infini would emit a structure or create_smart_group op
-    Then Infini does not race the in-flight stroke (pause or queue)
+  Scenario: Infini authors no document ops during a session
+    Given a live session and desktop interaction with the canvas
+    When outbound messages are observed for the whole session
+    Then Infini emits zero document ops
+    And the only outbound document message is the epoch's doc_load
