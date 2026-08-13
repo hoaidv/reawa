@@ -1,12 +1,12 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-13T13:49:14+00:00",
+  "generated_at": "2026-08-13T15:23:56+00:00",
   "current_iter": "iter-003",
   "by_status": {
     "draft": 5,
     "ready": 0,
     "in-progress": 0,
-    "in-review": 1,
+    "in-review": 3,
     "done": 95,
     "blocked": 13
   },
@@ -17,19 +17,19 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 20,
+      "total": 21,
       "done": 10,
-      "in_review": 1
+      "in_review": 2
     },
     "infini": {
-      "total": 28,
+      "total": 29,
       "done": 19,
-      "in_review": 0
+      "in_review": 1
     }
   },
   "open_challenges": 0,
   "resolved_challenges_this_iter": 9,
-  "sync_orphans": 16,
+  "sync_orphans": 19,
   "master_plan": true,
   "tracks": [
     {
@@ -50,7 +50,7 @@
       "id": "TRACK-003",
       "kind": "planned",
       "status": "active",
-      "cursor": "W10 STOP \u2014 EP-016 in-review host PASS; WAIT human RM2 draw; EP-017 draft",
+      "cursor": "W10b Device Log \u2014 IN-029 \u2225 EP-021 in-review; WAIT USB deploy; EP-016 stays in-review",
       "iter": "iter-003"
     }
   ]

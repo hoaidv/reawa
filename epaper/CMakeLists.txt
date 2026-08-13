@@ -13,6 +13,7 @@ qt_add_executable(epaper_bin
     tabletappfilter.cpp
     strokesync.cpp
     epaperbridge.cpp
+    debuglog/debug_log_ship.cpp
 )
 qt_add_qml_module(epaper_bin
     URI epaper

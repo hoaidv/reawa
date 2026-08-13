@@ -11,6 +11,7 @@
 #include "tabletwindow.h"
 #include "tabletappfilter.h"
 #include "epaperbridge.h"
+#include "debuglog/debug_log_ship.h"
 #include "latencyprobe/stub_document.hpp"
 
 namespace {
@@ -32,6 +33,10 @@ int main(int argc, char *argv[])
 #endif
 
     QGuiApplication app(argc, argv);
+
+    // Sidecar :9878 — worker thread; env-gated. Before QML so paint never installs it.
+    auto *debugShip = new DebugLogShip(&app);
+    debugShip->startIfEnabled();
 
     // Resolve libqsgepaper symbols once the QPA/epaper plugins are loaded.
     EpaperBridge *bridge = EpaperBridge::instance();

@@ -81,7 +81,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph desktop["Infini Electron"]
-    main["Main: window + TCP :9877"]
+    main["Main: window + TCP :9877 + debug :9878"]
     ui["React: CanvasStage + marker"]
     applier["doc_change applier (idempotent by opId)"]
     tree["VectorDocument — mirror + SVG"]
@@ -101,6 +101,7 @@ flowchart TB
   end
   pub -->|"doc_change / stroke preview"| main
   main -->|"viewport / doc_load"| doc
+  logs["debug ship :9878"] -.->|"debug_log (when requested)"| main
 ```
 
 ## Crosscutting concepts
@@ -114,7 +115,9 @@ flowchart TB
 - **Parity:** stroke width world units × scale ([ADR-0012](../../adr/ADR-0012-world-stroke-viewport-parity.md)).
 - **Orientation:** four gut poses; default `gutToLeft`.
 - **Observability:** optional latency traces (`RM_INK_TRACE`); message-type counts make the
-  "0 inbound document messages" invariant checkable without judgement.
+  "0 inbound document messages" invariant checkable without judgement. Device console shipping
+  is a **sidecar** TCP `:9878` ([SRS-IN-17](./features/tablet-sync/srs-logic.md#srs-in-17-debug-log-channel)),
+  never mixed into `:9877` / ADR-0015.
 - **Trust boundary:** local USB network only in v0.
 
 ## Decisions
@@ -128,6 +131,7 @@ flowchart TB
 - [ADR-0014](../../adr/ADR-0014-document-ownership-inversion.md) — the device owns the working document
 - [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md) — one-way sync contract v1
 - Sync bind: [tablet-sync SRS-IN-07](./features/tablet-sync/srs-logic.md) shipped wire + change applier
+- Debug sidecar: [tablet-sync SRS-IN-17](./features/tablet-sync/srs-logic.md#srs-in-17-debug-log-channel) TCP `:9878` (not ADR-0015)
 - Device bind: [epaper SRS-EP-08](../epaper/features/device-document/srs-logic.md) the other end of the contract
 
 ## Risks & technical debt

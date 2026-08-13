@@ -4,6 +4,7 @@
 #include "latencyprobe/stub_document.hpp"
 #include "document/ingest_stroke.hpp"
 #include "document/recognize_enclose.hpp"
+#include "debuglog/debug_log_format.hpp"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -537,6 +538,23 @@ void TabletCanvasItem::ingestCurrentStroke()
     else if (m_strokeArmedTool == QLatin1String("selection"))
         armed = StrokeArmedTool::Selection;
     const EncloseIngestTiming t = ingestStrokeAtPenUp(m_document, stroke, map, armed);
+    {
+        std::string armedName = "other";
+        if (m_strokeArmedTool == QLatin1String("ink_box"))
+            armedName = "ink_box";
+        else if (m_strokeArmedTool == QLatin1String("pen"))
+            armedName = "pen";
+        else if (m_strokeArmedTool == QLatin1String("selection"))
+            armedName = "selection";
+        std::string kindName = "Skipped";
+        if (t.result.kind == EncloseKind::Created)
+            kindName = "Created";
+        else if (t.result.kind == EncloseKind::OrdinaryInk)
+            kindName = "OrdinaryInk";
+        const std::string line = epaper::debuglog::formatEncloseLog(
+            armedName, kindName, t.result.reason, t.result.smartGroupId);
+        qInfo().noquote() << QString::fromStdString(line);
+    }
     m_ingestNs.push_back(t.ns);
     if (t.apply.applied)
         ++m_ingestApplied;

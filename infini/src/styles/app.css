@@ -281,3 +281,146 @@ body,
   margin-bottom: 4px;
   color: var(--color-ink);
 }
+
+/* @implements [SRS-IN-18] Device Log button + overlay — WindowFrame, not WorldLayer */
+.c-device-log-btn {
+  position: absolute;
+  top: var(--space-md);
+  left: 5.75rem;
+  z-index: 6;
+  border: 1px solid var(--color-border);
+  background: var(--color-chrome);
+  color: var(--color-ink);
+  font: 600 var(--font-caption)/1.2 var(--font-sans);
+  letter-spacing: 0.02em;
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.c-device-log-btn:hover {
+  background: var(--color-surface-elevated);
+}
+
+.c-device-log-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.c-device-log-btn[aria-pressed="true"] {
+  border-color: var(--color-focus);
+}
+
+.c-device-log-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.c-device-log-overlay[hidden] {
+  display: none;
+}
+
+.c-device-log-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-chrome);
+}
+
+.c-device-log-toolbar h2 {
+  margin: 0;
+  font: 600 var(--font-body)/1.2 var(--font-sans);
+  flex: 0 0 auto;
+}
+
+.c-device-log-toolbar label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.c-device-log-toolbar input[type="search"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-elevated);
+  color: var(--color-ink);
+  font: var(--font-body)/1.3 var(--font-sans);
+}
+
+.c-device-log-toolbar input[type="search"]:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.c-device-log-toolbar button {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-elevated);
+  color: var(--color-ink);
+  font: 600 var(--font-caption)/1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+.c-device-log-toolbar button:hover {
+  background: #fff;
+}
+
+.c-device-log-toolbar button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.c-device-log-stream {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-md);
+  font-size: var(--font-caption);
+  line-height: 1.45;
+}
+
+.c-device-log-stream p {
+  margin: 0 0 var(--space-sm);
+  color: var(--color-ink-muted);
+}
+
+.c-device-log-line {
+  display: flex;
+  gap: var(--space-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.c-device-log-level {
+  flex: 0 0 4.5rem;
+  color: var(--color-ink-muted);
+}
+
+.c-device-log-msg {
+  flex: 1 1 auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

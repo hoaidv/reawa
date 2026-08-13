@@ -26,7 +26,11 @@ Env:
   RM_REMOTE_PATH   default /home/root/epaper
 
 App env forwarded to the device when set locally:
-  RM_SYNC_HOST     macOS IP for stroke sync
+  RM_SYNC_HOST     macOS USB IP for stroke sync + debug (e.g. 10.11.99.12).
+                   NEVER the tablet address 10.11.99.1 — epaper must dial the Mac.
+  EPAPER_DEBUG_LOG 1|true|on|yes — ship Qt/stdio logs to Infini :9878 (STORY-EP-021)
+  EPAPER_DEBUG_PORT override debug sidecar port (default 9878)
+  INFINI_DEBUG_PORT fallback debug port if EPAPER_DEBUG_PORT unset
   RM_INK_MODE      painted (default) | pool
   RM_INK_BEACON    1 (default) | 0 — render-path probe squares
   RM_INK_TRACE     1 — latency instrumentation
@@ -93,13 +97,20 @@ scp -i "$KEY" -o StrictHostKeyChecking=no "$BIN" "$HOST:$REMOTE"
 
 FORWARDED=(RM_SYNC_HOST RM_INK_MODE RM_INK_BEACON RM_INK_TRACE RM_EP_SWAP
            RM_EP_SCREEN_MODE RM_EP_CONTENT_TYPE
-           RM_DOC_PROBE RM_DOC_PROBE_SYNTH RM_DOC_PROBE_EVERY_SAMPLE)
+           RM_DOC_PROBE RM_DOC_PROBE_SYNTH RM_DOC_PROBE_EVERY_SAMPLE
+           EPAPER_DEBUG_LOG EPAPER_DEBUG_PORT INFINI_DEBUG_PORT)
 APP_ENV=""
 for name in "${FORWARDED[@]}"; do
   if [[ -n "${!name:-}" ]]; then
     APP_ENV+="export $name=$(printf '%q' "${!name}")"$'\n'
   fi
 done
+
+# Guard: tablet must dial the Mac, not itself.
+if [[ "${RM_SYNC_HOST:-}" == "10.11.99.1" ]]; then
+  echo "ERROR: RM_SYNC_HOST=10.11.99.1 is the tablet. Use the Mac USB IP (usually 10.11.99.12)." >&2
+  exit 1
+fi
 
 echo "Launching (stops xochitl) ..."
 ssh_rm bash -s <<EOF

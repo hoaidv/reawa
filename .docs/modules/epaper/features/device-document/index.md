@@ -19,11 +19,16 @@ inherits semantics from the deprecated infini sections listed in the
   [REQ-07 one-way document sync](../../prd.md#one-way-sync)
 - Product depth: [srs-product.md](./srs-product.md) — PM-owned
 - Logic: [srs-logic.md](./srs-logic.md) — [SRS-EP-07](./srs-logic.md#srs-ep-07-device-document) device document, ingestion, undo ·
-  [SRS-EP-08](./srs-logic.md#srs-ep-08-one-way-sync) one-way sync (load handshake, publish queue)
+  [SRS-EP-08](./srs-logic.md#srs-ep-08-one-way-sync) one-way sync (load handshake, publish queue) ·
+  [SRS-EP-15](./srs-logic.md#srs-ep-15-debug-log-ship) debug-log ship TCP `:9878` (not a document channel)
 - Data: [srs-data.md](./srs-data.md) — [SRS-EP-09] device structures + wire binding; the grammar
   itself stays canonical in [infini SRS-IN-09](../../../infini/features/vector-document/srs-data.md)
 - Quality: [srs-quality.md](./srs-quality.md) — [SRS-EP-13] ingestion budget, publish latency,
-  offline parity, round-trip fidelity
+  offline parity, round-trip fidelity · [SRS-EP-16] debug-log ink-path isolation
+- BDD: [bdd/ingest-stroke.feature](./bdd/ingest-stroke.feature) ·
+  [bdd/undo-ring.feature](./bdd/undo-ring.feature) ·
+  [bdd/one-way-sync.feature](./bdd/one-way-sync.feature) ·
+  [bdd/debug-log-ship.feature](./bdd/debug-log-ship.feature)
 - Shared node semantics: [domain/vector-document](../../../../domain/vector-document.md) ·
   [ADR-0010](../../../../adr/ADR-0010-tree-of-vectors.md) ·
   [ADR-0011](../../../../adr/ADR-0011-smart-group.md)

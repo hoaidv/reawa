@@ -30,4 +30,32 @@ contextBridge.exposeInMainWorld("infiniNative", {
     ipcRenderer.on("rm-client", handler);
     return () => ipcRenderer.removeListener("rm-client", handler);
   },
+  /** @implements [SRS-IN-17] debug sidecar IPC — not the :9877 document channel */
+  onDebugLog: (cb) => {
+    const handler = (_event, payload) => {
+      try {
+        cb(payload);
+      } catch (e) {
+        console.error("onDebugLog handler", e);
+      }
+    };
+    ipcRenderer.on("debug-log", handler);
+    return () => ipcRenderer.removeListener("debug-log", handler);
+  },
+  onDebugClient: (cb) => {
+    const handler = (_event, payload) => {
+      try {
+        cb(payload);
+      } catch (e) {
+        console.error("onDebugClient handler", e);
+      }
+    };
+    ipcRenderer.on("debug-client", handler);
+    return () => ipcRenderer.removeListener("debug-client", handler);
+  },
+  debugPort: () => ipcRenderer.invoke("debug-port"),
+  debugClientCount: () => ipcRenderer.invoke("debug-client-count"),
+  debugLogSnapshot: () => ipcRenderer.invoke("debug-log-snapshot"),
+  sendDebugControl: (type) => ipcRenderer.invoke("debug-send", type),
+  setDebugPanelOpen: (open) => ipcRenderer.invoke("debug-set-panel-open", open),
 });

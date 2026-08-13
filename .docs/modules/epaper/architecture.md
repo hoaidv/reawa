@@ -102,6 +102,7 @@ flowchart TB
     manip["Hit-test + transforms — SRS-EP-11"]
     paint["Rasterize from document — SRS-EP-02"]
     sync["Session: queue, publisher, load handshake — SRS-EP-08"]
+    dlog["Debug ship worker — SRS-EP-15"]
     input --> ink
     input --> tools
     ink --> doc
@@ -113,6 +114,7 @@ flowchart TB
     doc --> sync
   end
   sync <-->|"TCP JSON-lines :9877"| infini["Infini"]
+  dlog -.->|"TCP JSON-lines :9878 debug_*"| infini
 ```
 
 The single arrow worth staring at is `doc --> paint`. In the pilot that arrow came from the wire.
@@ -133,7 +135,8 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
   expensive.
 - **Observability:** message-type counts at the transport make the "0 inbound document messages"
   invariant checkable; op-commit timestamps drive the publish-latency budget. Instrumentation stays
-  out of the paint loop.
+  out of the paint loop. Console shipping to Infini is env-gated TCP `:9878`
+  ([SRS-EP-15](./features/device-document/srs-logic.md#srs-ep-15-debug-log-ship)) — never on `:9877`.
 
 ## Decisions
 

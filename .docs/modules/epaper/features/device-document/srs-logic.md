@@ -1,7 +1,7 @@
 ---
 feature: device-document
 parent_req: [REQ-04, REQ-07]
-version: 0.1.0
+version: 0.2.0
 lifecycle: active
 ---
 
@@ -193,6 +193,7 @@ Every inbound message is classified by `type` before any document mutation.
 | `pickables` (field or message) | **Reject** — retired with [SRS-IN-13](../../../infini/features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport) |
 | `tool_intent` | **Reject** — retired with SRS-IN-13 |
 | `region_refresh` | Ignore (legacy PNG); log once; paint stays on the local tree |
+| `debug_request` / `debug_start` / `debug_stop` / `debug_log` | **Reject on this socket** — debug family is TCP `:9878` ([SRS-EP-15](#srs-ep-15-debug-log-ship)). Same as unknown type. **Not** in [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) |
 | anything else | Reject, log as a protocol defect, surface in the status line |
 
 After a session has **accepted** its initial `doc_load`, inbound document-bearing messages
@@ -286,6 +287,119 @@ While a stroke is in progress the device may stream `stroke_begin` / `stroke_poi
 | Load mid-gesture | Gesture commits; its change publishes; then handshake may accept |
 | Session drop mid-gesture | Gesture completes and commits locally; change queued |
 | App restart | Queue lost with the tree; next load restores previously published work |
+
+---
+
+## [SRS-EP-15] Debug-log ship (TCP :9878) {#srs-ep-15-debug-log-ship}
+
+Parent REQ: [REQ-07](../../prd.md#one-way-sync) (session/debug of the live link — not a
+new REQ). Desktop peer: [SRS-IN-17](../../../infini/features/tablet-sync/srs-logic.md#srs-in-17-debug-log-channel).
+Quality: [SRS-EP-16](./srs-quality.md#srs-ep-16-debug-log-ship-quality).
+
+Ship Qt console (and stdout/stderr when captured) to Infini **when requested**, on a
+**sidecar** JSON-lines TCP `:9878`. **Not** a document channel. **Not** `doc_change`.
+**Not** Smart Group. Does **not** amend
+[ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md). Does **not** change
+[SRS-EP-10](../ink-box/srs-logic.md) recognition.
+
+### Endpoint(s)
+
+| Role | Bind / connect | Gate |
+|---|---|---|
+| Infini | listen `:9878` | [SRS-IN-17](../../../infini/features/tablet-sync/srs-logic.md#srs-in-17-debug-log-channel) |
+| Epaper | connect `{RM_SYNC_HOST}:{port}` | Env `EPAPER_DEBUG_LOG` in `{1,true,on,yes}` (case-insensitive). **Default off** |
+
+Port: `EPAPER_DEBUG_PORT` if set, else `INFINI_DEBUG_PORT` if present in the process
+environment, else **9878**. Document session stays on `:9877` ([SRS-EP-08](#srs-ep-08-one-way-sync)).
+
+Env off: **0** connects to `:9878`, **0** debug sockets, Qt default handler may still
+print locally. Env on: connect when `RM_SYNC_HOST` is known; wait idle until `debug_start`.
+
+### Closed ids — :9878 only
+
+Same four types as [SRS-IN-17](../../../infini/features/tablet-sync/srs-logic.md#srs-in-17-debug-log-channel):
+`debug_request`, `debug_start`, `debug_stop` (inbound), `debug_log` (outbound). Envelope
+canonical there — do not fork.
+
+| Rule | Value |
+|---|---|
+| Shipping | Off until `debug_start`; off after `debug_stop`; both idempotent |
+| `:9877` | **0** `debug_*` sent or accepted as traffic. If a `debug_*` `type` arrives on the document socket, reject as protocol defect (classification table above) |
+| Document | **0** `debug_log` lines applied to `DeviceDocument`. **0** enqueue as `doc_change` |
+
+### Worker thread / queued connection
+
+All `:9878` reads and writes run on a **worker thread** (or Qt queued connection to a
+socket-owning object that is **not** the GUI/render thread).
+
+```text
+qInfo / qWarning / qCritical  ─┐
+stdout / stderr capture       ─┼─→ wait-free / try-lock enqueue → worker → TCP :9878
+[enclose] qInfo (below)       ─┘
+```
+
+| Rule | Value |
+|---|---|
+| Message handler | Custom `qInstallMessageHandler` when env on. The handler **returns without blocking on I/O**. Enqueue or drop |
+| GUI / render / ink thread | **0** `write()` / `flush()` / waiting socket syscalls |
+| `ingestPoint` / paint | **0** log I/O ([SRS-EP-16](./srs-quality.md#srs-ep-16-debug-log-ship-quality)) |
+| Queue | Bounded **512** records. Overflow drops **oldest**, increments the next `debug_log.dropped` |
+| Qt queued connection | Allowed for "handler → worker"; **not** allowed as a blocking wait from paint |
+
+### Sources shipped
+
+| Source | `logger` | `level` | Required |
+|---|---|---|---|
+| `qInfo` | `qt` | `info` | **yes** when shipping |
+| `qWarning` | `qt` | `warning` | **yes** |
+| `qCritical` / `qFatal` | `qt` | `critical` | **yes** (`qFatal` still aborts after enqueue attempt) |
+| stdout | `stdio` | `stdout` | **yes, if fd redirect succeeds** |
+| stderr | `stdio` | `stderr` | **yes, if fd redirect succeeds** |
+
+Stdout/stderr: attempt to capture process fds when env on (pipe + reader on the worker,
+or equivalent). If redirect **fails**, continue shipping Qt messages and emit **one**
+`debug_log` `{ logger: "qt", msg: "[debug] stdio capture unavailable" }`. Do not crash.
+Do not install a handler that writes the debug socket from the ink thread as a fallback.
+
+### `[enclose]` log source (not a recognizer change)
+
+After **pen-up ingest dispatch** returns ([SRS-EP-07](#srs-ep-07-device-document) steps 4–5
+and the [SRS-EP-10](../ink-box/srs-logic.md) trigger table), emit **exactly one** `qInfo`
+whose `msg` starts with `[enclose]`.
+
+This is a **log source**. It must not alter `recognize_enclose`, `create_smart_group`,
+membership, guards, or any published op. Facts already known to the dispatch are enough.
+
+| Token | Meaning |
+|---|---|
+| `armed` | Latched tool at pen-down: `ink_box` \| `pen` \| `selection` \| other |
+| `outcome` | `created` \| `stayed_ink` \| `not_evaluated` |
+| `guard` | `none` \| `size` \| `content` \| `already_grouped` — only when enclose ran and did not create |
+| `captured` | Integer count of ink that became (or would have been) content; `0` if not evaluated |
+| `bounds` | Fitted AABB if enclose ran; omitted otherwise |
+
+Example (informative):
+
+```text
+[enclose] armed=ink_box outcome=stayed_ink guard=size captured=0
+```
+
+| Rule | Value |
+|---|---|
+| When | Once per pen-up that ran ingest **or** enclose evaluation. Selection-only pen-up (no ink) may emit `outcome=not_evaluated` or skip — pick one and keep it stable |
+| Path | `qInfo` → the same handler/queue as every other Qt log. **Not** a `:9877` message |
+| Recognizer | **0** behaviour change. Adding this line is not an [SRS-EP-10](../ink-box/srs-logic.md) edit |
+
+### Errors / partial failure
+
+| Case | Behavior |
+|---|---|
+| Env off | No debug client. Local Qt logging unchanged |
+| Infini not listening | Connect fails; retry with backoff on the worker; **0** effect on ink / document / `:9877` |
+| `debug_stop` | Stop emitting; keep the socket if up |
+| Backpressure | Drop oldest; never block paint; next emitted line carries `dropped` |
+| Unknown inbound `:9878` type | Drop |
+| ADR-0015 type on `:9878` | Drop; **0** apply to `DeviceDocument` |
 
 ---
 

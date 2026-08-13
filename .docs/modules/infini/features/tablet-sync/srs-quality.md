@@ -1,7 +1,7 @@
 ---
 feature: tablet-sync
 parent_req: [REQ-03]
-version: 0.5.0
+version: 0.6.0
 lifecycle: active
 ---
 
@@ -41,4 +41,41 @@ Parent REQ: [REQ-03](../../prd.md#tablet-sync).
 
 REQ-03 Needs design: no — marker is a gesture affordance. The **device** carries the session /
 publish status affordance ([SRS-EP-05](../../../epaper/features/tool-modes/srs-ui.md)), because that
-is where unpublished work lives.
+is where unpublished work lives. Device Log ([SRS-IN-18](./srs-ui.md#srs-in-18-device-log-panel))
+is desktop debug chrome, also `needs_design: false`.
+
+---
+
+## [SRS-IN-19] Debug-log isolation and backpressure {#srs-in-19-debug-log-isolation}
+
+Parent REQ: [REQ-03](../../prd.md#tablet-sync).
+Constrains: [SRS-IN-17](./srs-logic.md#srs-in-17-debug-log-channel), [SRS-IN-18](./srs-ui.md#srs-in-18-device-log-panel).
+Device peer: [SRS-EP-16](../../../epaper/features/device-document/srs-quality.md#srs-ep-16-debug-log-ship-quality).
+
+Prioritised for this slice: **(1)** document/paint isolation **(2)** bounded memory
+**(3)** overlay must not stall pan/zoom.
+
+| Field | Value |
+|---|---|
+| Source | Infini paint / viewport flush / `doc_change` apply |
+| Stimulus | Device Log panel open and `debug_log` arriving at ≥200 lines/s |
+| Artifact | Canvas paint, viewport publish, VectorDocument applier |
+| Environment | Normal session + debug sidecar both live |
+| Response | Paint and ingest paths do **no** debug-port I/O; logs land on a side queue |
+| Response measure | **0** TCP reads/writes on `:9878` from the canvas paint stack, viewport flush, or VectorDocument apply; p95 pan/zoom frame budget unchanged vs panel closed ([SRS-IN-03](../infinity-canvas/srs-quality.md) / [SRS-IN-08](#srs-in-08) viewport ≤30 Hz) |
+
+| Scenario | Metric | Target |
+|---|---|---|
+| `:9878` line applied to `VectorDocument` | Mutations | **0** |
+| ADR-0015 types arriving on `:9878` | Applied to mirror or viewport | **0** — dropped |
+| `debug_*` arriving on `:9877` | Applied as document / viewport | **0** — protocol defect, existing unknown-type path |
+| In-memory buffer | Cap | **10_000**; overflow drops oldest; **0** unbounded growth |
+| Drop under backpressure (Infini) | Process crash / paint stall | **0**; oldest dropped |
+| Overlay open / close | p95 click → overlay visible / hidden | ≤100 ms |
+| Filter | Device messages sent | **0** — client-side only |
+
+---
+
+## Superseded
+
+_None. SRS-IN-19 is additive._

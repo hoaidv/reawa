@@ -1,7 +1,7 @@
 ---
 feature: tablet-sync
 parent_req: [REQ-03]
-version: 0.6.0
+version: 0.7.0
 lifecycle: active
 ---
 
@@ -197,6 +197,7 @@ Per [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md):
 | `stroke_begin.intent` | **Retired** — the device interprets its own stroke |
 | `doc_op` / `doc_ack` | Superseded by `doc_change`; a later multi-directional ADR may revive `doc_op` |
 | `region_refresh` | Legacy PNG — **do not send**; Epaper ignores |
+| `debug_request` / `debug_start` / `debug_stop` / `debug_log` | **Rejected on :9877** — sidecar TCP `:9878` ([SRS-IN-17](#srs-in-17-debug-log-channel)). Arriving here is a protocol defect like any unknown type. **Not** in [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) |
 
 ### Errors / partial failure
 
@@ -216,6 +217,118 @@ Per [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md):
   ([REQ-04](../../prd.md#smart-group) deprecated).
 - `TabletSession` holds the mirror `VectorDocument`; persistence serializes that mirror
   ([SRS-IN-09](../vector-document/srs-data.md)).
+
+---
+
+## [SRS-IN-17] Device debug-log channel (TCP :9878) {#srs-in-17-debug-log-channel}
+
+Parent REQ: [REQ-03](../../prd.md#tablet-sync).
+Peer: [SRS-EP-15](../../../epaper/features/device-document/srs-logic.md#srs-ep-15-debug-log-ship).
+UI: [SRS-IN-18](./srs-ui.md#srs-in-18-device-log-panel). Quality: [SRS-IN-19](./srs-quality.md#srs-in-19-debug-log-isolation).
+
+Sidecar **observability** for a live tablet session so a human can inspect device
+console output (EP-012…016 enclose / ingest / sync) without touching the document
+channel. **Not** a document channel. **Not** `doc_change`. **Not** Smart Group.
+Does **not** amend [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md).
+
+### Endpoint(s)
+
+JSON-lines over TCP. Auth: none in v0 (trusted local link).
+
+| Role | Bind / connect | Default |
+|---|---|---|
+| Infini | listen `0.0.0.0:9878` | `INFINI_DEBUG_PORT` (default **9878**) |
+| Epaper | connect `{RM_SYNC_HOST}:9878` when env-gated | [SRS-EP-15](../../../epaper/features/device-document/srs-logic.md#srs-ep-15-debug-log-ship) |
+
+Document session remains `INFINI_STROKE_PORT` / `:9877` ([SRS-IN-07](#srs-in-07)). **Two sockets,
+two decoders.** Sharing a listen port, a parser, or a `type` switch with `:9877` is a spec defect.
+
+### Closed ids (message types) — :9878 only
+
+| id | Direction | Meaning |
+|---|---|---|
+| `debug_request` | Infini → Epaper | Desktop wants a debug session (panel opening or already open at connect) |
+| `debug_start` | Infini → Epaper | Begin shipping `debug_log` |
+| `debug_stop` | Infini → Epaper | Stop shipping; connection may stay up |
+| `debug_log` | Epaper → Infini | One log record |
+
+No other `type` values are legal on `:9878`. Handshake types from ADR-0015 (`viewport`,
+`doc_load`, `doc_change`, `hello`, `stroke_*`, …) arriving here are **dropped** — never
+forwarded to the `:9877` decoder, never applied to `VectorDocument`.
+
+### Control sequence
+
+```text
+Infini listen :9878
+Epaper (env on) connect
+  |<-- debug_request ----------------|   (on connect, and when the panel opens)
+  |<-- debug_start ------------------|   (panel open — shipping on)
+  |-- debug_log × n ---------------->|
+  |<-- debug_stop -------------------|   (panel closed — shipping off)
+```
+
+| Rule | Value |
+|---|---|
+| Shipping default | **Off** until `debug_start`. Idle TCP is allowed; idle is not a stream |
+| `debug_request` | Does not start shipping. Device may no-op if already connected |
+| `debug_start` while already shipping | Idempotent |
+| `debug_stop` while already stopped | Idempotent |
+| Panel closed | Send `debug_stop`. Infini **keeps** its in-memory buffer |
+| Panel reopened | Send `debug_request` then `debug_start`; buffer still there |
+| Device never connects | UI `disconnected` ([SRS-IN-18](./srs-ui.md#srs-in-18-device-log-panel)). **0** retries that touch `:9877` |
+| Process restart | Buffer gone. Device env off → no connect ([SRS-EP-15](../../../epaper/features/device-document/srs-logic.md#srs-ep-15-debug-log-ship)) |
+
+### `debug_log` envelope
+
+```text
+{ "type": "debug_log",
+  "ts": <epoch_ms>,
+  "level": "info" | "warning" | "critical" | "stdout" | "stderr",
+  "logger": "qt" | "stdio",
+  "msg": "<text>",
+  "dropped": <int ≥ 0> }
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `type` | yes | `debug_log` |
+| `ts` | yes | Device clock, milliseconds since epoch (monotonic-enough for ordering in a session) |
+| `level` | yes | Qt `qInfo` → `info`; `qWarning` → `warning`; `qCritical`/`qFatal` → `critical`; captured stdout → `stdout`; stderr → `stderr` |
+| `logger` | yes | `qt` for Qt handler; `stdio` for fd capture |
+| `msg` | yes | Log text, including any `[tag]` prefix (e.g. `[enclose]`). May be truncated at **4 KiB** |
+| `dropped` | yes | Count of records discarded to backpressure **since the previous emitted** `debug_log` (0 if none) |
+
+Unknown extra fields: keep, display as text if needed, **never** interpret as document ops.
+
+### Isolation from the document (testable)
+
+| Rule | Value |
+|---|---|
+| Apply to `VectorDocument` | **0** mutations from any `:9878` line |
+| Mirror / save / preview | Debug records are **never** persisted, never preview strokes, never `doc_change` |
+| Decoder | Dedicated debug decoder. The `:9877` `type` switch must not grow `debug_*` cases |
+| Cross-port leak | A `debug_log` on `:9877` is an unknown type (protocol defect). A `doc_change` on `:9878` is dropped |
+
+### Infini buffer
+
+In-memory ring on the desktop process (Electron main or renderer — implementer's choice,
+one owner).
+
+| Rule | Value |
+|---|---|
+| Cap | **10_000** records. Overflow drops **oldest** |
+| Lifetime | Process memory only. Panel close does **not** clear. App quit clears |
+| Filter | Client-side only ([SRS-IN-18](./srs-ui.md#srs-in-18-device-log-panel)). Device is not asked to filter |
+| Backpressure toward device | Infini never ACKs per line. Device drops under its own queue ([SRS-EP-15](../../../epaper/features/device-document/srs-logic.md#srs-ep-15-debug-log-ship)) |
+
+### Errors / partial failure
+
+| Case | Behavior |
+|---|---|
+| Bad JSON line on :9878 | Drop the line; keep the socket |
+| Unknown `:9878` `type` | Drop; do not apply; do not send on `:9877` |
+| Socket drop mid-stream | UI `disconnected`; buffer retained; on reconnect send `debug_request` and `debug_start` if the panel is still open |
+| Browser-only (no Electron) | No listen; button still present; panel `disconnected` |
 
 ---
 

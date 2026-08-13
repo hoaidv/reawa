@@ -1,7 +1,7 @@
 ---
 feature: device-document
 parent_req: [REQ-04, REQ-07]
-version: 0.1.0
+version: 0.2.0
 lifecycle: active
 ---
 
@@ -102,8 +102,42 @@ The product claim is that the link is irrelevant to editing
 
 ---
 
+## [SRS-EP-16] Debug-log ship: ink-path isolation {#srs-ep-16-debug-log-ship-quality}
+
+Parent REQ: [REQ-07](../../prd.md#one-way-sync).
+Constrains: [SRS-EP-15](./srs-logic.md#srs-ep-15-debug-log-ship).
+Desktop peer: [SRS-IN-19](../../../infini/features/tablet-sync/srs-quality.md#srs-in-19-debug-log-isolation).
+
+Subordinate to [SRS-EP-01](../local-pen-ink/srs-logic.md) **p95 ≤30 ms** and to
+[SRS-EP-13](#srs-ep-13-device-document-quality) ingestion contention **0**. If shipping
+logs cannot fit under those ceilings, the shipper changes — not the ink budget.
+
+| Field | Value |
+|---|---|
+| Source | Digitizer sample / `ingestPoint` / panel paint |
+| Stimulus | Debug shipping on; Qt + stdio producing ≥200 lines/s; worker socket slow or blocked |
+| Artifact | GUI/render/ink thread |
+| Environment | Peak (enclose + ingest + live stroke) |
+| Response | Sample still paints; enqueue or drop; worker owns the socket |
+| Response measure | **0** log I/O (socket `write`/`flush`, blocking mutex, fd redirect read) on paint and on `ingestPoint`; pen-down → pixel still p95 ≤30 ms vs env-off baseline |
+
+| Scenario | Metric | Target |
+|---|---|---|
+| Paint / `ingestPoint` | Debug-port or handler I/O on that stack | **0** |
+| Backpressure | Paint stall / dropped pen samples caused by the shipper | **0**; oldest log records dropped |
+| Device ship queue | Cap | **512**; overflow drops oldest |
+| `debug_log` applied to `DeviceDocument` | Mutations / queued `doc_change` | **0** |
+| `debug_*` on `:9877` | Sent by this feature | **0** |
+| Env off | Connects to `:9878` | **0** |
+| Stdio capture fail | Process abort | **0** — Qt logs still ship; one notice line |
+| `[enclose]` source | Lines per pen-up ingest | **≤1**; recognizer verdict unchanged vs no-log build (shared enclose fixtures still 100%) |
+
+---
+
 ## Superseded
 
-New section. Replaces, for the device, the round-trip-shaped budgets formerly in
+SRS-EP-13: new section. Replaces, for the device, the round-trip-shaped budgets formerly in
 [SRS-EP-06](../tool-modes/srs-quality.md) and the snapshot-parity row of
 [SRS-EP-03](../region-sync/srs-quality.md).
+
+SRS-EP-16: additive — debug sidecar isolation; does not supersede SRS-EP-13.

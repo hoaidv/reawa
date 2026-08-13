@@ -92,7 +92,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
-| TRACK-003 | planned | **active** | W10 auto — EP-016 enclose; STOP for human draw | [track](./tracks/TRACK-003-smart-group-pilot.md) |
+| TRACK-003 | planned | **active** | W10b Device Log IN-029 ∥ EP-021 | [track](./tracks/TRACK-003-smart-group-pilot.md) |
 
 ### Open challenges / blocked
 
@@ -120,7 +120,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 
 ### Execution board(s)
 
-- [iter-003 execution-board](./iter-003/execution-board.md) — **W10** EP-016 enclose; human stop after
+- [iter-003 execution-board](./iter-003/execution-board.md) — **W10b** Device Log; EP-016 in-review
 - [iter-002 board (final)](./iter-002/execution-board.md) — frozen
 
 ### Freeze notes
@@ -133,7 +133,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 ## Forward
 
 - **Done 2026-08-13:** `/architect` design + `/sm` re-slice (EP-012…020, IN-027…028)
-- **Now:** W10 **STOP** — [STORY-EP-016](./iter-003/stories/STORY-EP-016.md) host PASS, **`in-review`**. Human RM2 drawing check. EP-017 stays `draft`.
+- **Now:** W10b in-review — restart Infini for Device Log; WAIT USB (`10.11.99.12` on `en7`) then `EPAPER_DEBUG_LOG=1` deploy. [STORY-EP-016](./iter-003/stories/STORY-EP-016.md) stays **`in-review`**. EP-017 stays `draft`.
 - **Next campaign:** epaper `[REQ-08]` direct manipulation of any document node — thickened in
   [node-manipulation](../.docs/modules/epaper/features/node-manipulation/), designed and built in a
   distinct iteration

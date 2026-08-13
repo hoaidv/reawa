@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-13T13:49:14+00:00
+generated_at: 2026-08-13T15:23:56+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -27,6 +27,7 @@ generated_at: 2026-08-13T13:49:14+00:00
 | [STORY-EP-018](./iter-003/stories/STORY-EP-018.md) | On-device selection-create surround | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | draft | iter-003 | 3 |
 | [STORY-EP-019](./iter-003/stories/STORY-EP-019.md) | On-device live manipulation and REQ-08 conformance | implement | dev | epaper | [SRS-EP-11], [SRS-EP-14] | draft | iter-003 | 5 |
 | [STORY-EP-020](./iter-003/stories/STORY-EP-020.md) | Device one-way sync handshake and publish queue | implement | dev | epaper | [SRS-EP-08] | draft | iter-003 | 5 |
+| [STORY-EP-021](./iter-003/stories/STORY-EP-021.md) | Ship device console logs on :9878 | implement | dev | epaper | [SRS-EP-15], [SRS-EP-16] | in-review | iter-003 | 3 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |
@@ -55,6 +56,7 @@ generated_at: 2026-08-13T13:49:14+00:00
 | [STORY-IN-026](./iter-003/stories/STORY-IN-026.md) | Live resize tool_intent + undo origin | implement | dev | infini | [SRS-IN-13] | blocked | iter-003 | 3 |
 | [STORY-IN-027](./iter-003/stories/STORY-IN-027.md) | Desktop doc_change applier | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | done | iter-003 | 5 |
 | [STORY-IN-028](./iter-003/stories/STORY-IN-028.md) | Desktop handshake-gated doc_load | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | draft | iter-003 | 3 |
+| [STORY-IN-029](./iter-003/stories/STORY-IN-029.md) | Device Log panel and :9878 listener | implement | dev | infini | [SRS-IN-17], [SRS-IN-18], [SRS-IN-19] | in-review | iter-003 | 3 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |
 | [STORY-RW-003](./iter-000/stories/STORY-RW-003.md) | Accessibility permission gate | implement | dev | reawa | [SRS-RW-03] | done | iter-000 | 1 |

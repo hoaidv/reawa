@@ -37,6 +37,16 @@ export type RmDocChangeMsg = {
 
 export type RmInboundMsg = RmStrokeMsg | RmToolIntentMsg | RmDocChangeMsg;
 
+/** @implements [SRS-IN-17] inbound debug_log from Epaper on :9878 */
+export type DebugLogRecord = {
+  type: "debug_log";
+  ts: number;
+  level: string;
+  logger: string;
+  msg: string;
+  dropped: number;
+};
+
 export interface InfiniNative {
   onRmStroke: (cb: (msg: RmInboundMsg) => void) => () => void;
   onRmToolIntent?: (cb: (msg: RmToolIntentMsg) => void) => () => void;
@@ -44,6 +54,13 @@ export interface InfiniNative {
   sendToRm?: (obj: unknown) => Promise<number>;
   rmClientCount?: () => Promise<number>;
   onRmClient?: (cb: (ev: { type: "connected" | "closed" | "sync"; n: number }) => void) => () => void;
+  onDebugLog?: (cb: (msg: DebugLogRecord) => void) => () => void;
+  onDebugClient?: (cb: (ev: { type: "connected" | "closed" | "sync"; n: number }) => void) => () => void;
+  debugPort?: () => Promise<number>;
+  debugClientCount?: () => Promise<number>;
+  debugLogSnapshot?: () => Promise<DebugLogRecord[]>;
+  sendDebugControl?: (type: "debug_request" | "debug_start" | "debug_stop") => Promise<number>;
+  setDebugPanelOpen?: (open: boolean) => Promise<boolean>;
 }
 
 declare global {

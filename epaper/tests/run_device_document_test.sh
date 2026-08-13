@@ -7,3 +7,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/device_document_test.cpp -o /tmp/devi
 /tmp/device_document_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/enclose_test.cpp -o /tmp/enclose_test
 /tmp/enclose_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/debug_log_test.cpp -o /tmp/debug_log_test
+/tmp/debug_log_test
