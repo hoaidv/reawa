@@ -5,7 +5,7 @@ track: TRACK-003
 owner: sm
 date: 2026-08-13
 lock: vertical · verified · epaper/{device-document, ink-box, tool-modes} + infini/tablet-sync — re-locked 2026-08-13
-verdict: "W11a NOW — EP-022 design ready (selection-enclose). EP-018 draft until design done. W10 done."
+verdict: "W11a — EP-022 design done. EP-018 ready → /dev. UI-EP-03 shipped."
 wave: W11a
 ---
 
@@ -37,8 +37,8 @@ modules: epaper, infini
 features: epaper/device-document; epaper/ink-box; epaper/tool-modes; infini/tablet-sync
 personas: /designer EP-022; then /qa→/dev EP-018
 forbidden: /dev EP-018 before EP-022 done; fourth ToolChip; nested enclose; undo chrome invent
-NOW: W11a — STORY-EP-022 ready
-cursor: /designer
+NOW: W11a — STORY-EP-018 ready
+cursor: /dev EP-018
 ```
 
 ## Waves

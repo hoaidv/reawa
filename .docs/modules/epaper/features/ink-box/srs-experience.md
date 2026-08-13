@@ -104,7 +104,7 @@ somewhere else, or ink that settles somewhere other than where the hand released
 |---|---|---|---|
 | 1 | Taps `Selection` | `tool.selection` | |
 | 2 | Pen-down + move — thin dotted rubber-band follows tip | `sel.marquee` | |
-| 3 | Pen-up — dotted rect around selected document nodes + 6 anchors; Enclose visible | `sel.nodes_selected` | Not ink-only |
+| 3 | Pen-up — dotted rect **tightly** around selected nodes’ AABBs + 6 anchors; icon-only Enclose | `sel.nodes_selected` | 0 extra padding in the rect |
 | 4 | Taps **Enclose** | `tool.selection.create_pending` | Explicit CTA — no silent invent |
 | 5 | Surround stroke becomes the frame; the rest becomes content | `sel.selected` | ±1 px bounds fidelity |
 

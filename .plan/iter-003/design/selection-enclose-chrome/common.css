@@ -1,0 +1,527 @@
+/* device-selection-chrome — 1-bit panel + composed ToolChip + SelectionOverlay */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: #52525b;
+}
+[data-region="DeviceScreen"] {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: var(--color-paper);
+  overflow: hidden;
+  border: 1px solid var(--color-ink);
+}
+
+/* ── InkSurface (full-bleed; the ink is the feedback) ── */
+[data-region="InkSurface"] {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--color-paper);
+}
+
+.ink-stroke {
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ink-boundary {
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Content-space cluster — tracks pan/zoom and drag (not pinned chrome) */
+.ink-cluster {
+  position: absolute;
+  left: 22%;
+  top: 28%;
+  width: 36%;
+  height: 38%;
+  z-index: 1;
+}
+.ink-cluster svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Live manipulation: real ink moves/scales — never a ghost/marquee */
+.ink-cluster.is-moving {
+  left: 30%;
+  top: 36%;
+}
+.ink-cluster.is-resizing-with-bounds {
+  left: 18%;
+  top: 22%;
+  width: 48%;
+  height: 50%;
+}
+/* UV 0.5,0.5 of the enlarged box — same sample size, centroid follows */
+.ink-cluster.is-resizing-fixed-ink {
+  left: 24%;
+  top: 28%;
+  width: 36%;
+  height: 38%;
+}
+.ink-cluster.is-tiny {
+  left: 44%;
+  top: 42%;
+  width: calc(var(--lod-min-axis) * 0.7);
+  height: calc(var(--lod-min-axis) * 0.55);
+}
+
+/* ── SelectionOverlay — above InkSurface, below ToolChip; content-space ── */
+[data-region="SelectionOverlay"] {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+}
+[data-region="SelectionOverlay"].is-hidden {
+  display: none;
+}
+
+.c-bounds.pos-default { left: 22%; top: 28%; width: 36%; height: 38%; }
+.c-bounds.pos-moving { left: 30%; top: 36%; width: 36%; height: 38%; }
+.c-bounds.pos-resized { left: 18%; top: 22%; width: 48%; height: 50%; }
+.c-bounds.pos-tiny {
+  left: 44%;
+  top: 42%;
+  width: calc(var(--lod-min-axis) * 0.7);
+  height: calc(var(--lod-min-axis) * 0.55);
+}
+
+.c-bounds {
+  position: absolute;
+  pointer-events: auto;
+  background: transparent;
+  /* Double-rail: 3px outer black, paper gap, 1px inner — not a single ink stroke */
+  border: var(--bounds-outer) solid var(--color-ink);
+  box-shadow: none;
+}
+.c-bounds::before {
+  content: "";
+  position: absolute;
+  inset: var(--bounds-gap);
+  border: var(--bounds-inner) solid var(--color-ink);
+  pointer-events: none;
+}
+
+.c-handle {
+  position: absolute;
+  width: var(--handle-hit);
+  height: var(--handle-hit);
+  margin: calc(var(--handle-hit) / -2) 0 0 calc(var(--handle-hit) / -2);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: none;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+}
+.c-handle::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--handle-visual);
+  height: var(--handle-visual);
+  margin: calc(var(--handle-visual) / -2) 0 0 calc(var(--handle-visual) / -2);
+  background: var(--color-ink);
+  border: 2px solid var(--color-ink);
+}
+.c-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  background: var(--color-paper);
+  pointer-events: none;
+}
+.c-handle:active::before,
+.c-handle.is-pressed::before {
+  background: var(--color-paper);
+  border-color: var(--color-ink);
+}
+.c-handle:active::after,
+.c-handle.is-pressed::after {
+  background: var(--color-ink);
+}
+.c-handle[aria-disabled="true"],
+.c-handle:disabled {
+  display: none;
+}
+
+.c-handle.nw { left: 0; top: 0; }
+.c-handle.n  { left: 50%; top: 0; }
+.c-handle.ne { left: 100%; top: 0; }
+.c-handle.e  { left: 100%; top: 50%; }
+.c-handle.se { left: 100%; top: 100%; }
+.c-handle.s  { left: 50%; top: 100%; }
+.c-handle.sw { left: 0; top: 100%; }
+.c-handle.w  { left: 0; top: 50%; }
+
+/* Mode toggle + current-mode indicator — on the selection, not the chip */
+.c-mode-toggle {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--mode-toggle-h);
+  padding: 0 8px 0 4px;
+  border: 2px solid var(--color-ink);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-paper),
+    var(--color-paper) 3px,
+    var(--color-ink) 3px,
+    var(--color-ink) 4px
+  );
+  color: var(--color-ink);
+  font-size: var(--font-label);
+  line-height: 1;
+  pointer-events: auto;
+  cursor: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.c-mode-toggle img {
+  width: 20px;
+  height: 20px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-ink);
+  pointer-events: none;
+}
+.c-mode-toggle:active,
+.c-mode-toggle.is-pressed {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.c-mode-toggle:active img,
+.c-mode-toggle.is-pressed img {
+  filter: invert(1);
+}
+.c-mode-toggle[hidden],
+.c-mode-toggle.is-hidden {
+  display: none;
+}
+.c-mode-current {
+  background: var(--color-paper);
+  border: 1px solid var(--color-ink);
+  padding: 2px 6px;
+  font-size: var(--font-label);
+  white-space: nowrap;
+}
+
+/* Refuse / unavailable — hatch chips, text not color */
+.c-indicator {
+  position: absolute;
+  z-index: var(--z-overlay);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 16rem;
+  padding: 6px 8px;
+  border: 2px solid var(--color-ink);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-paper),
+    var(--color-paper) 3px,
+    var(--color-ink) 3px,
+    var(--color-ink) 4px
+  );
+  font-size: var(--font-label);
+  line-height: 1.25;
+  pointer-events: none;
+}
+.c-indicator img {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-ink);
+}
+.c-indicator__copy {
+  background: var(--color-paper);
+  border: 1px solid var(--color-ink);
+  padding: 2px 6px;
+}
+.c-indicator[hidden],
+.c-indicator.is-hidden {
+  display: none;
+}
+
+/* ── ToolChip — composed from UI-EP-01, not redesigned ── */
+[data-region="ToolStrip"],
+.c-tool-chip {
+  position: absolute;
+  z-index: var(--z-chip);
+  display: inline-flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--chip-gap);
+  height: auto;
+  width: auto;
+  max-width: calc(100% - 2 * var(--chip-inset));
+  padding: var(--chip-pad);
+  background: var(--color-paper);
+  border: 1px solid var(--color-ink);
+  border-radius: var(--chip-radius);
+  box-shadow: none;
+  overflow: hidden;
+}
+[data-orientation="gutToLeft"] .c-tool-chip,
+[data-orientation="gutToRight"] .c-tool-chip,
+[data-orientation="gutAtBottom"] .c-tool-chip {
+  top: var(--chip-inset);
+  left: 50%;
+  transform: translateX(-50%);
+}
+[data-orientation="gutOnTop"] .c-tool-chip {
+  bottom: var(--chip-inset);
+  top: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.c-tool-btn {
+  box-sizing: border-box;
+  width: var(--chip-btn);
+  height: var(--chip-btn);
+  min-width: var(--chip-btn);
+  min-height: var(--chip-btn);
+  aspect-ratio: 1;
+  flex: 0 0 var(--chip-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-right: 1px solid var(--color-ink);
+  border-radius: var(--chip-radius);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: 0;
+  line-height: 0;
+  cursor: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.c-tool-btn:last-child { border-right: 0; }
+.c-tool-btn img {
+  width: var(--chip-icon);
+  height: var(--chip-icon);
+  pointer-events: none;
+}
+.c-tool-btn[aria-pressed="true"] {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.c-tool-btn[aria-pressed="true"] img { filter: invert(1); }
+.c-tool-btn:active,
+.c-tool-btn.is-pressed {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.c-tool-btn:active img,
+.c-tool-btn.is-pressed img { filter: invert(1); }
+.c-tool-btn:disabled,
+.c-tool-btn[aria-disabled="true"] {
+  cursor: none;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-paper),
+    var(--color-paper) 2px,
+    var(--color-ink) 2px,
+    var(--color-ink) 3px
+  );
+}
+
+[data-region="StatusLine"] {
+  position: absolute;
+  z-index: 4;
+  top: calc(var(--chip-btn) + var(--chip-inset) + 4px);
+  left: var(--chip-inset);
+  right: var(--chip-inset);
+  font-size: var(--font-caption);
+  pointer-events: none;
+}
+[data-orientation="gutOnTop"] [data-region="StatusLine"] {
+  top: var(--chip-inset);
+}
+
+.scene-caption {
+  position: absolute;
+  z-index: 3;
+  left: var(--chip-inset);
+  right: var(--chip-inset);
+  bottom: var(--chip-inset);
+  font-size: var(--font-caption);
+  pointer-events: none;
+}
+.scene-caption a {
+  pointer-events: auto;
+  color: var(--color-ink);
+  cursor: none;
+}
+.orient-tag {
+  position: absolute;
+  z-index: 3;
+  right: var(--chip-inset);
+  bottom: calc(var(--chip-inset) + 1.2em);
+  font-size: 10px;
+  border: 1px solid var(--color-ink);
+  padding: 2px 6px;
+  background: var(--color-paper);
+  pointer-events: none;
+}
+
+/* Empty-canvas deselect hop (invisible hit, relative scene link) */
+.hop-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: auto;
+}
+.hop-box {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: auto;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ── Creation B: rubber-band + 6 anchors + Enclose CTA (UI-EP-03) ── */
+.c-marquee {
+  position: absolute;
+  pointer-events: none;
+  border: var(--marquee-stroke) dotted var(--color-ink);
+  background: transparent;
+  box-shadow: none;
+}
+.c-marquee.pos-drag {
+  left: 24%;
+  top: 32%;
+  width: 38%;
+  height: 34%;
+}
+
+.c-nodes-bounds {
+  position: absolute;
+  pointer-events: none;
+  border: var(--marquee-stroke) dotted var(--color-ink);
+  background: transparent;
+}
+.c-nodes-bounds.pos-union {
+  left: 22%;
+  top: 30%;
+  width: 34%;
+  height: 36%;
+}
+
+.c-select-anchor {
+  position: absolute;
+  width: var(--anchor-hit);
+  height: var(--anchor-hit);
+  margin: calc(var(--anchor-hit) / -2) 0 0 calc(var(--anchor-hit) / -2);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none; /* visual only — events later */
+}
+.c-select-anchor::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--anchor-visual);
+  height: var(--anchor-visual);
+  margin: calc(var(--anchor-visual) / -2) 0 0 calc(var(--anchor-visual) / -2);
+  background: var(--color-paper);
+  border: 2px solid var(--color-ink);
+}
+.c-select-anchor.nw { left: 0; top: 0; }
+.c-select-anchor.n  { left: 50%; top: 0; }
+.c-select-anchor.ne { left: 100%; top: 0; }
+.c-select-anchor.sw { left: 0; top: 100%; }
+.c-select-anchor.s  { left: 50%; top: 100%; }
+.c-select-anchor.se { left: 100%; top: 100%; }
+
+.c-enclose {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  width: var(--chip-btn);
+  height: var(--chip-btn);
+  min-width: var(--chip-btn);
+  min-height: var(--chip-btn);
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-ink);
+  border-radius: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: 0;
+  line-height: 0;
+  pointer-events: auto;
+  cursor: none;
+  -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+}
+.c-enclose img {
+  width: var(--chip-icon);
+  height: var(--chip-icon);
+  pointer-events: none;
+  background: transparent;
+  border: 0;
+}
+.c-enclose:active,
+.c-enclose.is-pressed {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.c-enclose:active img,
+.c-enclose.is-pressed img { filter: invert(1); }
+.c-enclose[hidden] { display: none; }
+
+.ink-cluster.scatter-nodes {
+  left: 22%;
+  top: 30%;
+  width: 34%;
+  height: 36%;
+}
+.pen-tip {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 2px solid var(--color-ink);
+  background: var(--color-paper);
+  pointer-events: none;
+  z-index: 3;
+}
+.pen-tip.pos-marquee { left: 62%; top: 66%; }

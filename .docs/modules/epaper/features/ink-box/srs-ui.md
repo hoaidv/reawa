@@ -53,9 +53,9 @@ through a drag. It is not pinned chrome.
 | `ovl.selection_bounds` | Selected box bounds outline (SmartGroup) | SelectionOverlay |
 | `ovl.resize_handles` | Resize handles — **no rotation handle** (SmartGroup) | SelectionOverlay |
 | `ovl.marquee` | Thin dotted rubber-band while pen-down+move | SelectionOverlay |
-| `ovl.nodes_bounds` | Thin dotted selection rect = union AABB of selected document nodes | SelectionOverlay |
+| `ovl.nodes_bounds` | Thin dotted selection rect = **tight** union AABB of selected document nodes (**0** extra padding) | SelectionOverlay |
 | `ovl.select_anchors` | **6** square anchors on `ovl.nodes_bounds` (visual only; events later) | SelectionOverlay |
-| `cta.enclose` | Create Smart Group from selection (Creation B) | SelectionOverlay |
+| `cta.enclose` | Create Smart Group from selection (Creation B) — **icon only**, primary-button size | SelectionOverlay |
 | `tgl.ink_scale_mode` | `withBounds` ↔ `fixedInk` | SelectionOverlay |
 | `ind.mode_current` | Which mode is active right now | SelectionOverlay |
 | `ind.manipulation_unavailable` | Below the LOD cutoff | SelectionOverlay or ToolChip |
@@ -109,7 +109,7 @@ No hover, no focus, no cursor on this platform — do not design them.
 | `ovl.marquee` | hidden | drawn during pen-down+move marquee | — | — |
 | `ovl.nodes_bounds` | hidden | drawn when ≥1 document node selected via marquee / multi | — | — |
 | `ovl.select_anchors` | hidden | 6 squares on `ovl.nodes_bounds` | — | events deferred — not pressable this campaign |
-| `cta.enclose` | hidden | visible when selection non-empty under Selection tool | brief invert | hidden when selection empty |
+| `cta.enclose` | hidden | visible when selection non-empty under Selection tool; **icon-only**, size = ToolChip primary (64 du); **no** context-toolbar chrome | brief invert | hidden when selection empty |
 | `tgl.ink_scale_mode` | hidden | drawn when SmartGroup selected; reflects current mode | brief invert | hidden when nothing is selected |
 | `ind.manipulation_unavailable` | hidden | visible below the cutoff | — | — |
 
@@ -157,7 +157,8 @@ a creator unable to tell which mode they were resizing in until after they relea
 - Full-panel refresh to show selection, deselection, or drag feedback.
 - Handles sized for a mouse. The pen's pointing error, not a desktop's 8 px, sets the tolerance.
 - An error banner when an enclose guard declines.
-- Chrome that swallows pen input outside its own controls.
+- A selection rect with empty padding around the selected nodes — `ovl.nodes_bounds` must be the
+  tight union AABB (0 extra padding).
 
 ### Out of scope (UI)
 

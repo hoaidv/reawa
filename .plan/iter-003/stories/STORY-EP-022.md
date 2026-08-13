@@ -4,7 +4,7 @@ title: Design selection rubber-band and Enclose CTA
 kind: design
 parent_srs: [SRS-EP-12, SRS-EP-10, SRS-EP-11]
 parent_req: [REQ-05, REQ-06]
-status: ready
+status: done
 priority: P1
 iter: iter-003
 estimate: 3
@@ -16,9 +16,13 @@ acceptance_criteria:
   - "Given platform epaper-device, When ui-spec-gate runs, Then it passes; ui_spec + scenes + hifi are set on this story and copied to EP-018."
   - "Given refuse path, When no surround qualifies, Then ind.create_refused_no_surround is visible and selection chrome is unchanged."
 design_package: ".plan/iter-003/design/selection-enclose-chrome/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-003/design/selection-enclose-chrome/ui-spec.md"
+scenes:
+  - ".plan/iter-003/design/selection-enclose-chrome/selection-enclose-chrome-sel-none.html"
+  - ".plan/iter-003/design/selection-enclose-chrome/selection-enclose-chrome-sel-marquee.html"
+  - ".plan/iter-003/design/selection-enclose-chrome/selection-enclose-chrome-sel-nodes-selected.html"
+  - ".plan/iter-003/design/selection-enclose-chrome/selection-enclose-chrome-sel-create-refused.html"
+hifi: ".plan/iter-003/design/selection-enclose-chrome/selection-enclose-chrome-sel-nodes-selected.html"
 wireframe: ""
 ---
 

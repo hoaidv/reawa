@@ -4,7 +4,7 @@ slug: smart-group-pilot
 kind: planned
 status: active
 iter: iter-003
-cursor: "W11a — EP-022 design ready → /designer; EP-018 waits; W10 done"
+cursor: "W11a — EP-022 done; EP-018 ready → /dev"
 goal: "Ink-box rework: epaper REQ-04…REQ-07 (device owns the document) + infini REQ-03 one-way sync"
 owner: sm
 ---
@@ -32,8 +32,8 @@ Pilot ADRs [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md) (semantics) and
 | [STORY-IN-029](../iter-003/stories/STORY-IN-029.md) | implement | **done** | W10b — Device Log; human accepted |
 | [STORY-EP-021](../iter-003/stories/STORY-EP-021.md) | implement | **done** | W10b — log shipper; human accepted |
 | [STORY-EP-017](../iter-003/stories/STORY-EP-017.md) | implement | **done** | W10 — draw-into membership (host PASS) |
-| [STORY-EP-022](../iter-003/stories/STORY-EP-022.md) | design | **ready** | W11a — rubber-band + 6 anchors + Enclose CTA |
-| [STORY-EP-018](../iter-003/stories/STORY-EP-018.md) | implement | **draft** | waits EP-022; CHL-0013 adopted |
+| [STORY-EP-022](../iter-003/stories/STORY-EP-022.md) | design | **done** | W11a — UI-EP-03 marquee + Enclose |
+| [STORY-EP-018](../iter-003/stories/STORY-EP-018.md) | implement | **ready** | W11a — waits /dev after QA BDD |
 | [STORY-EP-019](../iter-003/stories/STORY-EP-019.md) | implement | **draft** | W11b — 28/56/96 du locked |
 | [STORY-EP-020](../iter-003/stories/STORY-EP-020.md) | implement | **draft** | W12 — device sync |
 | [STORY-IN-028](../iter-003/stories/STORY-IN-028.md) | implement | **draft** | W12 — desktop `doc_load` |

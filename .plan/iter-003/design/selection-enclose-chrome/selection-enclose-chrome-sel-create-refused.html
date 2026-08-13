@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sel.create_refused — selection enclose chrome</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    .c-tool-btn:active, .c-enclose:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-enclose:active img { filter: invert(1); }
+  </style>
+</head>
+<body data-state="sel.create_refused">
+  <div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="ink-cluster scatter-nodes">
+        <svg viewBox="36 42 280 136" aria-hidden="true">
+          <path class="ink-stroke" d="M40 50c80-20 140 10 200-8"/>
+          <path class="ink-stroke" d="M48 100c90 8 140-12 200 4"/>
+          <path class="ink-stroke" d="M48 168c90-10 150 16 220-4"/>
+        </svg>
+      </div>
+      <div data-region="SelectionOverlay">
+        <div class="c-nodes-bounds pos-union" id="ovl.nodes_bounds">
+          <span class="c-select-anchor nw"></span>
+          <span class="c-select-anchor n"></span>
+          <span class="c-select-anchor ne"></span>
+          <span class="c-select-anchor sw"></span>
+          <span class="c-select-anchor s"></span>
+          <span class="c-select-anchor se"></span>
+          <button type="button" class="c-enclose" id="cta.enclose" data-interactive aria-label="Enclose">
+            <img src="../system/assets/icon-epaper-enclose.svg" alt="" />
+          </button>
+        </div>
+        <div class="c-indicator" id="ind.create_refused_no_surround" role="status" style="left: 22%; top: 18%;">
+          <img src="../system/assets/icon-epaper-refused.svg" alt="" />
+          <span class="c-indicator__copy">No surrounding stroke</span>
+        </div>
+      </div>
+      <p class="scene-caption">sel.create_refused — selection chrome kept; refuse visible; 0 AABB box.
+        <a href="./selection-enclose-chrome-sel-nodes-selected.html">Back</a> ·
+        <a href="./selection-enclose-chrome-sel-none.html">Deselect</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolStrip" role="toolbar" aria-label="Tools">
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection"><img src="../system/assets/icon-epaper-selection.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Ink box"><img src="../system/assets/icon-epaper-ink-box.svg" alt="" /></button>
+    </div>
+    <p data-region="StatusLine">sel.create_refused · chrome kept</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

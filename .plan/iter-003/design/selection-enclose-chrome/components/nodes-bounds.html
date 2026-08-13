@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>NodesBounds — self-contained</title>
+  <style>
+    body { margin: 1rem; font-family: system-ui; background: #ddd; }
+    .c-nodes-bounds { position: relative; width: 260px; height: 160px; border: 1px dotted #000; }
+    .c-select-anchor { position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 0; background: transparent; pointer-events: none; }
+    .c-select-anchor::before { content: ""; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; background: #fff; border: 2px solid #000; }
+    .nw { left: 0; top: 0; } .n { left: 50%; top: 0; } .ne { left: 100%; top: 0; }
+    .sw { left: 0; top: 100%; } .s { left: 50%; top: 100%; } .se { left: 100%; top: 100%; }
+  </style>
+</head>
+<body>
+  <p>ovl.nodes_bounds + 6 anchors (nw n ne sw s se). Visual only.</p>
+  <div class="c-nodes-bounds" id="ovl.nodes_bounds">
+    <span class="c-select-anchor nw"></span>
+    <span class="c-select-anchor n"></span>
+    <span class="c-select-anchor ne"></span>
+    <span class="c-select-anchor sw"></span>
+    <span class="c-select-anchor s"></span>
+    <span class="c-select-anchor se"></span>
+  </div>
+</body>
+</html>

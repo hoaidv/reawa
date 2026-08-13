@@ -168,9 +168,11 @@ viewed at scale, and saved.
   contain ≥1 ink — otherwise the stroke stays ordinary ink. Enclosure is **rectangle-only**.
 - **Creation B — selection (explicit).** In `Selection` mode the creator rubber-band selects
   **document nodes** (visible feedback: thin dotted boundary while dragging; on pen-up a thin
-  dotted selection rect + **6 square anchors**). They invoke Smart Group via an on-panel
-  **Enclose** control on the selection overlay ([ADR-0016](../../adr/ADR-0016-selection-create-enclose-cta.md)
-  — not a fourth tool chip). The device must find **one stroke among the selected free ink** that
+  dotted selection rect that **tightly** fits the selected nodes’ world AABBs (union AABB, **0**
+  extra padding — empty space inside the rect would read as “more selected”) + **6 square anchors**.
+  They invoke Smart Group via an **icon-only Enclose** control on the selection overlay
+  ([ADR-0016](../../adr/ADR-0016-selection-create-enclose-cta.md) — not a fourth tool chip; no
+  context-toolbar chrome; size matches primary tool buttons). The device must find **one stroke among the selected free ink** that
   surrounds almost all of the other selected free ink (≥80% of each other stroke's samples inside
   that surround stroke's region). The surround stroke may be **open**; the device builds an
   **artificial closed path** from it for the containment test only. **If no such surround stroke
@@ -195,8 +197,9 @@ viewed at scale, and saved.
   tool, When the stroke ends, Then no Smart Group is created and the stroke remains ordinary ink
   (0 creations on the negative fixture set).
 - Given the `Selection` tool, When the creator pens down and moves, Then a thin dotted rubber-band
-  follows the pen tip; on pen-up a thin dotted selection rect appears around the selected document
-  nodes with **6** square anchors, and an **Enclose** control is available on the selection overlay.
+  follows the pen tip; on pen-up a thin dotted selection rect **tightly** equals the union AABB of
+  the selected document nodes (**0** extra padding) with **6** square anchors, and an **icon-only
+  Enclose** control (primary-button size, no toolbar chrome) is available on the selection overlay.
 - Given the `Selection` tool and selected free ink that includes a surround stroke containing ≥80% of
   each other selected stroke's samples (open stroke OK), When the creator taps **Enclose**, Then
   a Smart Group is created with that stroke as `boundary`, the others as `content`, and `bounds`

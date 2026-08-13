@@ -77,7 +77,7 @@ activates `cta.enclose` on SelectionOverlay — never from pen-up alone.
 | Step | Rule |
 |---|---|
 | Select (marquee) | `selection` tool armed. Pen-down + move on the canvas draws a **rubber-band** (axis-aligned, thin dotted) that follows the pen tip. On pen-up, every document node whose **world AABB intersects** the rubber-band AABB is added to the selection set (see [SRS-EP-11](./srs-logic.md#srs-ep-11-device-manipulation) pickable set for marquee). |
-| Select (feedback) | Selection chrome: thin dotted **selection rect** = union AABB of selected nodes; **6 square anchors** on that rect (visual only this campaign — no anchor drag events yet). |
+| Select (feedback) | Selection chrome: thin dotted **selection rect** = **tight** union AABB of selected nodes’ world bounds (**0** extra padding — no meaningless empty space); **6 square anchors** on that rect (visual only this campaign — no anchor drag events yet). |
 | Input for create | Free top-level `Ink` nodes in the selection (≥2), or ≥1 content-role ink + 1 candidate surround ink. **SmartGroup in selection → refuse** (no nesting — [CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)). Non-ink non-SG selected nodes are ignored by the surround algorithm (not captured). |
 | Surround candidate | For each selected free ink `S`, build an **artificial closed path** if `S` is open (append edge first→last **for the test only** — never mutate stored samples). Point-in-polygon uses the **even-odd** fill rule. A candidate qualifies when ≥80% of the samples of **every other** selected free ink lie inside |
 | Winner | The qualifying candidate; if several qualify, the highest paint/z order (later sibling) |

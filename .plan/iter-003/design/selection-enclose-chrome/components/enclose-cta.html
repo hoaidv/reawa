@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>EncloseCta — self-contained</title>
+  <style>
+    :root { --chip-btn: 64px; --chip-icon: 24px; --color-ink: #000; --color-paper: #fff; }
+    body { margin: 1rem; font-family: system-ui; background: #ddd; }
+    .c-enclose {
+      box-sizing: border-box;
+      width: var(--chip-btn); height: var(--chip-btn);
+      padding: 0; border: 1px solid var(--color-ink); border-radius: 0;
+      background: var(--color-paper);
+      display: flex; align-items: center; justify-content: center;
+      cursor: none; -webkit-tap-highlight-color: transparent;
+    }
+    .c-enclose img { width: var(--chip-icon); height: var(--chip-icon); pointer-events: none; }
+    .c-enclose:active, .c-enclose.is-pressed { background: var(--color-ink); }
+    .c-enclose:active img, .c-enclose.is-pressed img { filter: invert(1); }
+  </style>
+</head>
+<body>
+  <p>cta.enclose — icon only, 64×64 like ToolChip primary. No hatch toolbar. aria-label Enclose.</p>
+  <button type="button" class="c-enclose" id="cta.enclose" data-interactive aria-label="Enclose">
+    <img src="../../system/assets/icon-epaper-enclose.svg" alt="" />
+  </button>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

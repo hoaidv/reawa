@@ -4,7 +4,7 @@ title: "On-device selection-create surround"
 kind: implement
 parent_srs: [SRS-EP-10, SRS-EP-11, SRS-EP-12, SRS-EP-14]
 parent_req: [REQ-05]
-status: draft
+status: ready
 priority: P1
 iter: iter-003
 estimate: 5
@@ -12,15 +12,18 @@ owner: dev
 depends_on: [STORY-EP-012, STORY-EP-016, STORY-EP-022]
 acceptance_criteria:
   - "Given Selection tool and pen-down+move, When the gesture runs, Then ovl.marquee (thin dotted) follows the pen tip until pen-up."
-  - "Given pen-up after marquee, When nodes intersect the rubber-band, Then ovl.nodes_bounds + 6 square anchors appear around those document nodes and cta.enclose is visible."
+  - "Given pen-up after marquee, When nodes intersect the rubber-band, Then ovl.nodes_bounds tightly equals the union AABB of those document nodes (0 extra padding) with 6 square anchors, and cta.enclose is an icon-only 64 du control on SelectionOverlay with no context-toolbar chrome."
   - "Given ≥2 selected free inks where one stroke surrounds ≥80% of every other, When the user taps cta.enclose, Then the winner is role boundary, others are role content with layoutOffset UV, and bounds equal the winner AABB."
   - "Given an open surround stroke, When containment is tested, Then the artificial closed path (even-odd) may qualify and stored samples are unchanged."
   - "Given no qualifying surround or a SmartGroup in the selection, When cta.enclose is tapped, Then 0 boxes are created, selection is unchanged, and ind.create_refused_no_surround is visible."
   - "Given ToolChip, When Enclose is available, Then the chip still has exactly three tools (ADR-0016)."
 design_package: ".plan/iter-003/design/selection-enclose-chrome/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-003/design/selection-enclose-chrome/ui-spec.md"
+scenes:
+  - ".plan/iter-003/design/selection-enclose-chrome/selection-enclose-chrome-sel-marquee.html"
+  - ".plan/iter-003/design/selection-enclose-chrome/selection-enclose-chrome-sel-nodes-selected.html"
+  - ".plan/iter-003/design/selection-enclose-chrome/selection-enclose-chrome-sel-create-refused.html"
+hifi: ".plan/iter-003/design/selection-enclose-chrome/selection-enclose-chrome-sel-nodes-selected.html"
 wireframe: ""
 ---
 
@@ -32,8 +35,8 @@ with chrome from [SRS-EP-12](../../../.docs/modules/epaper/features/ink-box/srs-
 BDD: [selection-create-surround.feature](../../../.docs/modules/epaper/features/ink-box/bdd/selection-create-surround.feature)
 (QA extends for marquee + Enclose CTA).
 
-**Unfrozen for design.** Implement stays `draft` until [STORY-EP-022](./STORY-EP-022.md) is
-`done` (ui_spec / scenes / hifi copied here). Do **not** invent chrome.
+**Design done (EP-022).** Implement from [UI-EP-03](../design/selection-enclose-chrome/ui-spec.md).
+Do **not** invent chrome. ToolChip stays three tools.
 
 ## Kind
 
