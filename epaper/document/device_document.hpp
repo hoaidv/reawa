@@ -1,15 +1,18 @@
 #pragma once
 /**
- * In-memory device document tree + SRS-IN-09 op apply.
- * @implements [SRS-EP-07] DeviceDocument tree and op apply
+ * In-memory device document tree + SRS-IN-09 op apply + snapshot undo ring.
+ * @implements [SRS-EP-07] DeviceDocument tree, op apply, undo ring
  * @implements [SRS-EP-09] device-local tree; double coords; sample retention
  *
- * Undo ring and publish queue are not here (STORY-EP-015 / STORY-EP-020).
+ * Publish queue is in-memory only (STORY-EP-020 owns TCP / handshake).
  */
 
 #include "json_value.hpp"
 
 #include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <deque>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -112,6 +115,52 @@ struct ApplyResult {
     bool applied = false;
     std::string reason;
 };
+
+/** @implements [SRS-EP-07] undo ring depth 20 */
+constexpr int kUndoRingDepth = 20;
+
+/**
+ * Whole-document pre-op snapshot.
+ * @implements [SRS-EP-09] undo ring entry { snapshot, opId, kind }
+ */
+struct UndoRingEntry {
+    std::vector<DocNode> snapshot;
+    std::string status;
+    std::set<std::string> appliedOpIds;
+    std::string opId;
+    std::string kind;
+};
+
+/**
+ * In-memory doc_change (not TCP).
+ * @implements [SRS-EP-09] publish queue entry
+ */
+struct DocChange {
+    int seq = 0;
+    int baseSeq = 0;
+    std::string opId;
+    DocOp op;
+    std::int64_t committedAtMs = 0;
+};
+
+struct UndoResult {
+    bool restored = false;
+    bool latched = false;
+    bool noop = false;
+};
+
+/**
+ * Device-authored structural ops plus fixture create_* used by host tests.
+ * Viewport / tool / selection are not in this set.
+ * @implements [SRS-EP-07] structural op set for the undo ring
+ */
+inline bool isStructuralOp(const std::string &type)
+{
+    return type == "append_ink" || type == "create_smart_group" || type == "set_smart_transform"
+        || type == "set_ink_scale_mode" || type == "reparent" || type == "remove_node"
+        || type == "create_frame" || type == "create_group" || type == "create_text"
+        || type == "create_primitive" || type == "create_connector";
+}
 
 inline Style defaultStyle()
 {
@@ -257,6 +306,154 @@ public:
         return {true, {}};
     }
 
+    /**
+     * Gesture-commit path: snapshot then apply; enqueue one doc_change.
+     * @implements [SRS-EP-07] undo-aware apply
+     */
+    ApplyResult commitOp(const DocOp &op)
+    {
+        const bool structural = isStructuralOp(op.type);
+        const bool didPush = structural;
+        if (structural) {
+            if (static_cast<int>(m_undoRing.size()) == kUndoRingDepth)
+                m_undoRing.pop_front();
+            UndoRingEntry e;
+            e.snapshot = rootChildren;
+            e.status = status;
+            e.appliedOpIds = m_applied;
+            e.opId = op.opId;
+            e.kind = op.type;
+            m_undoRing.push_back(std::move(e));
+        }
+        const ApplyResult r = applyOp(op);
+        if (!r.applied) {
+            if (didPush)
+                m_undoRing.pop_back();
+            return r;
+        }
+        if (structural)
+            enqueueChange(op);
+        m_intermediateFrames = 0;
+        m_gestureInFlight = false;
+        if (m_undoLatched) {
+            m_undoLatched = false;
+            undoNow();
+        }
+        return r;
+    }
+
+    /**
+     * @implements [SRS-EP-07] undo restores pre-op snapshot
+     */
+    UndoResult undo()
+    {
+        if (m_gestureInFlight) {
+            m_undoLatched = true;
+            return {false, true, false};
+        }
+        return undoNow();
+    }
+
+    /** @implements [SRS-EP-07] mid-gesture latch — gesture in flight */
+    void beginGesture()
+    {
+        m_gestureInFlight = true;
+        m_intermediateFrames = 0;
+    }
+
+    /**
+     * End an uncommitted gesture. Runs a latched undo once the gesture is gone.
+     * @implements [SRS-EP-07] mid-gesture undo deferred until not in flight
+     */
+    void abortGesture()
+    {
+        m_gestureInFlight = false;
+        m_intermediateFrames = 0;
+        if (m_undoLatched) {
+            m_undoLatched = false;
+            undoNow();
+        }
+    }
+
+    /**
+     * Local-paint manipulation frame — does not push the ring or mutate the tree.
+     * @implements [SRS-EP-07] one completed gesture is one ring entry
+     */
+    void previewManipulationFrame() { ++m_intermediateFrames; }
+
+    int intermediateFrameCount() const { return m_intermediateFrames; }
+    bool gestureInFlight() const { return m_gestureInFlight; }
+    bool undoLatched() const { return m_undoLatched; }
+    std::size_t undoDepth() const { return m_undoRing.size(); }
+
+    const UndoRingEntry *oldestEntry() const
+    {
+        return m_undoRing.empty() ? nullptr : &m_undoRing.front();
+    }
+    const UndoRingEntry *newestEntry() const
+    {
+        return m_undoRing.empty() ? nullptr : &m_undoRing.back();
+    }
+
+    std::string entrySnapshotString(const UndoRingEntry &e) const
+    {
+        JsonValue::Object o;
+        o.emplace_back("version", JsonValue::number(1));
+        o.emplace_back("status", JsonValue::string(e.status));
+        JsonValue::Array kids;
+        for (const auto &c : e.snapshot)
+            kids.push_back(nodeToJson(c));
+        o.emplace_back("rootChildren", JsonValue::array(std::move(kids)));
+        return stringify(JsonValue::object(std::move(o)));
+    }
+
+    const std::vector<DocChange> &publishQueue() const { return m_publishQueue; }
+    void clearPublishQueue() { m_publishQueue.clear(); }
+
+    /**
+     * Viewport / tool / selection are not document state and must not push.
+     * @implements [SRS-EP-07] viewport tool and selection do not push undo
+     */
+    void applyViewportPan(double dx, double dy)
+    {
+        m_panX += dx;
+        m_panY += dy;
+    }
+    void applyToolSwitch(std::string tool) { m_tool = std::move(tool); }
+    void applySelectionChange(std::optional<std::string> nodeId)
+    {
+        m_selectedNodeId = std::move(nodeId);
+    }
+    double viewportPanX() const { return m_panX; }
+    double viewportPanY() const { return m_panY; }
+    const std::string &uiTool() const { return m_tool; }
+    const std::optional<std::string> &selectionId() const { return m_selectedNodeId; }
+
+    /**
+     * Accepted load empties the ring. Handshake/TCP is STORY-EP-020.
+     * @implements [SRS-EP-07] accepted doc_load clears the ring
+     */
+    void onAcceptedDocLoad()
+    {
+        m_undoRing.clear();
+        m_undoLatched = false;
+        m_gestureInFlight = false;
+        m_intermediateFrames = 0;
+    }
+
+    void onAcceptedDocLoad(const JsonValue &document)
+    {
+        rootChildren.clear();
+        m_applied.clear();
+        status = document.getString("status", "open");
+        const JsonValue *kids = document.get("rootChildren");
+        if (kids && kids->isArray()) {
+            for (const auto &c : kids->asArray())
+                rootChildren.push_back(nodeFromJson(c));
+        }
+        onAcceptedDocLoad();
+    }
+
     const DocNode *find(const std::string &id) const { return findMut(id); }
 
     int inkCount() const
@@ -308,6 +505,53 @@ public:
 
 private:
     std::set<std::string> m_applied;
+    std::deque<UndoRingEntry> m_undoRing;
+    std::vector<DocChange> m_publishQueue;
+    int m_lastSeq = 0;
+    bool m_gestureInFlight = false;
+    bool m_undoLatched = false;
+    int m_intermediateFrames = 0;
+    double m_panX = 0;
+    double m_panY = 0;
+    std::string m_tool = "pen";
+    std::optional<std::string> m_selectedNodeId;
+
+    void enqueueChange(const DocOp &op)
+    {
+        DocChange ch;
+        ch.seq = ++m_lastSeq;
+        ch.baseSeq = ch.seq - 1;
+        ch.opId = op.opId;
+        ch.op = op;
+        ch.committedAtMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now().time_since_epoch())
+                               .count();
+        m_publishQueue.push_back(std::move(ch));
+    }
+
+    /**
+     * @implements [SRS-EP-07] pop newest, replace tree, enqueue restore_snapshot
+     */
+    UndoResult undoNow()
+    {
+        if (m_undoRing.empty())
+            return {false, false, true};
+        UndoRingEntry e = std::move(m_undoRing.back());
+        m_undoRing.pop_back();
+        rootChildren = std::move(e.snapshot);
+        status = e.status;
+        m_applied = std::move(e.appliedOpIds);
+
+        DocOp rst;
+        rst.opId = std::string("restore_snapshot:") + e.opId;
+        rst.type = "restore_snapshot";
+        rst.source = "epaper";
+        JsonValue::Object payload;
+        payload.emplace_back("document", toJSON());
+        rst.payload = JsonValue::object(std::move(payload));
+        enqueueChange(rst);
+        return {true, false, false};
+    }
 
     template <typename Fn>
     static void walk(const std::vector<DocNode> &nodes, Fn &&fn)
@@ -499,10 +743,45 @@ private:
         insertUnder(parentIdOf(p), std::move(n));
     }
 
+    /**
+     * Detach free ink (root / frame / group only — not inside a SmartGroup).
+     * @implements [SRS-EP-10] reparent capture into Smart Group
+     */
+    bool detachInk(const std::string &id, DocNode *out)
+    {
+        return detachInkFrom(rootChildren, id, out);
+    }
+
+    static bool detachInkFrom(std::vector<DocNode> &nodes, const std::string &id, DocNode *out)
+    {
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            if (nodes[i].kind == NodeKind::Ink && nodes[i].id == id) {
+                if (out)
+                    *out = std::move(nodes[i]);
+                nodes.erase(nodes.begin() + static_cast<std::ptrdiff_t>(i));
+                return true;
+            }
+            if (nodes[i].kind == NodeKind::Frame || nodes[i].kind == NodeKind::Group) {
+                if (detachInkFrom(nodes[i].children, id, out))
+                    return true;
+            }
+        }
+        return false;
+    }
+
     void opCreateSmartGroup(const JsonValue &p)
     {
         const std::string id = requireId(p);
         assertUniqueId(id);
+        if (const JsonValue *ids = p.get("captureIds"); ids && ids->isArray()) {
+            for (const auto &idv : ids->asArray()) {
+                if (!idv.isString())
+                    throw std::runtime_error("capture_id_not_string");
+                DocNode discarded;
+                if (!detachInk(idv.asString(), &discarded))
+                    throw std::runtime_error(std::string("capture_missing:") + idv.asString());
+            }
+        }
         DocNode n;
         n.id = id;
         n.kind = NodeKind::SmartGroup;
@@ -522,19 +801,8 @@ private:
         // Infini apply fallback is fixedInk when the field is omitted.
         n.inkScaleMode = p.getString("inkScaleMode", "fixedInk");
         if (const JsonValue *ch = p.get("children"); ch && ch->isArray()) {
-            for (const auto &c : ch->asArray()) {
-                DocNode ink;
-                ink.id = c.getString("id");
-                ink.kind = NodeKind::Ink;
-                ink.style = styleFromJson(c.get("style"));
-                if (const JsonValue *role = c.get("role"); role && role->isString())
-                    ink.role = role->asString();
-                if (const JsonValue *samples = c.get("samples"); samples && samples->isArray()) {
-                    for (const auto &s : samples->asArray())
-                        ink.samples.push_back(sampleFromJson(s));
-                }
-                n.children.push_back(std::move(ink));
-            }
+            for (const auto &c : ch->asArray())
+                n.children.push_back(nodeFromJson(c));
         }
         insertUnder(parentIdOf(p), std::move(n));
     }
@@ -607,6 +875,126 @@ private:
         return false;
     }
 
+    static NodeKind kindFromString(const std::string &k)
+    {
+        if (k == "ink")
+            return NodeKind::Ink;
+        if (k == "text")
+            return NodeKind::Text;
+        if (k == "primitive")
+            return NodeKind::Primitive;
+        if (k == "group")
+            return NodeKind::Group;
+        if (k == "frame")
+            return NodeKind::Frame;
+        if (k == "connector")
+            return NodeKind::Connector;
+        return NodeKind::SmartGroup;
+    }
+
+    static DocNode nodeFromJson(const JsonValue &j)
+    {
+        DocNode n;
+        n.id = j.getString("id");
+        n.kind = kindFromString(j.getString("kind"));
+        switch (n.kind) {
+        case NodeKind::Ink: {
+            if (const JsonValue *samples = j.get("samples"); samples && samples->isArray()) {
+                for (const auto &s : samples->asArray())
+                    n.samples.push_back(sampleFromJson(s));
+            }
+            n.style = styleFromJson(j.get("style"));
+            if (const JsonValue *role = j.get("role"); role && role->isString())
+                n.role = role->asString();
+            if (const JsonValue *lo = j.get("layoutOffset"); lo && lo->isObject())
+                n.layoutOffset = {lo->getNumber("u"), lo->getNumber("v")};
+            break;
+        }
+        case NodeKind::Text: {
+            n.box = aabbFromJson(j.get("box"));
+            n.style = styleFromJson(j.get("style"));
+            if (const JsonValue *runs = j.get("runs"); runs && runs->isArray()) {
+                for (const auto &r : runs->asArray()) {
+                    TextRun tr;
+                    tr.text = r.getString("text");
+                    const JsonValue *b = r.get("bold");
+                    tr.bold = b && b->isBool() && b->asBool();
+                    n.runs.push_back(tr);
+                }
+            }
+            break;
+        }
+        case NodeKind::Primitive: {
+            n.style = styleFromJson(j.get("style"));
+            const JsonValue *geom = j.get("geom");
+            if (geom && geom->isObject()) {
+                const std::string gk = geom->getString("kind");
+                if (gk == "line") {
+                    n.geomKind = PrimitiveKind::Line;
+                    n.x1 = geom->getNumber("x1");
+                    n.y1 = geom->getNumber("y1");
+                    n.x2 = geom->getNumber("x2");
+                    n.y2 = geom->getNumber("y2");
+                } else if (gk == "ellipse") {
+                    n.geomKind = PrimitiveKind::Ellipse;
+                    n.cx = geom->getNumber("cx");
+                    n.cy = geom->getNumber("cy");
+                    n.rx = geom->getNumber("rx");
+                    n.ry = geom->getNumber("ry");
+                } else {
+                    n.geomKind = PrimitiveKind::Rect;
+                    n.gx = geom->getNumber("x");
+                    n.gy = geom->getNumber("y");
+                    n.gw = geom->getNumber("w");
+                    n.gh = geom->getNumber("h");
+                }
+            }
+            break;
+        }
+        case NodeKind::Group:
+        case NodeKind::Frame: {
+            if (n.kind == NodeKind::Frame)
+                n.bounds = aabbFromJson(j.get("bounds"));
+            if (const JsonValue *ch = j.get("children"); ch && ch->isArray()) {
+                for (const auto &c : ch->asArray())
+                    n.children.push_back(nodeFromJson(c));
+            }
+            break;
+        }
+        case NodeKind::Connector: {
+            if (const JsonValue *from = j.get("from"); from && from->isObject())
+                n.fromNodeId = from->getString("nodeId");
+            if (const JsonValue *to = j.get("to"); to && to->isObject())
+                n.toNodeId = to->getString("nodeId");
+            if (const JsonValue *inv = j.get("invalid"); inv && inv->isBool())
+                n.connectorInvalid = inv->asBool();
+            break;
+        }
+        case NodeKind::SmartGroup: {
+            if (const JsonValue *b = j.get("bounds"); b && b->isObject()) {
+                n.smartBounds.x = b->getNumber("x");
+                n.smartBounds.y = b->getNumber("y");
+                n.smartBounds.width = b->getNumber("width");
+                n.smartBounds.height = b->getNumber("height");
+            }
+            if (const JsonValue *t = j.get("transform"); t && t->isObject()) {
+                n.transform.x = t->getNumber("x");
+                n.transform.y = t->getNumber("y");
+                n.transform.rotation = t->getNumber("rotation");
+                n.transform.scaleX = t->has("scaleX") ? t->getNumber("scaleX") : 1;
+                n.transform.scaleY = t->has("scaleY") ? t->getNumber("scaleY") : 1;
+            }
+            n.inkScaleMode = j.getString("inkScaleMode", "fixedInk");
+            if (const JsonValue *ch = j.get("children"); ch && ch->isArray()) {
+                for (const auto &c : ch->asArray())
+                    n.children.push_back(nodeFromJson(c));
+            }
+            break;
+        }
+        }
+        return n;
+    }
+
     static JsonValue nodeToJson(const DocNode &n)
     {
         JsonValue::Object o;
@@ -621,6 +1009,12 @@ private:
             o.emplace_back("style", styleToJson(n.style));
             if (n.role)
                 o.emplace_back("role", JsonValue::string(*n.role));
+            if (n.layoutOffset) {
+                JsonValue::Object lo;
+                lo.emplace_back("u", JsonValue::number(n.layoutOffset->first));
+                lo.emplace_back("v", JsonValue::number(n.layoutOffset->second));
+                o.emplace_back("layoutOffset", JsonValue::object(std::move(lo)));
+            }
             break;
         }
         case NodeKind::Text: {

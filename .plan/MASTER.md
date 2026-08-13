@@ -92,15 +92,15 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
-| TRACK-003 | planned | **active** | W9 — EP-015 undo ring `ready` | [track](./tracks/TRACK-003-smart-group-pilot.md) |
+| TRACK-003 | planned | **active** | W10 auto — EP-016 enclose; STOP for human draw | [track](./tracks/TRACK-003-smart-group-pilot.md) |
 
 ### Open challenges / blocked
 
 - **CHL-0008 resolved (adopted 2026-08-13)** — document ownership inverted to the device. Architect
   design landed the same day; SM re-sliced 2026-08-13.
 - **CHL-0009 resolved (adopted 2026-08-13)** — `device-document/srs-logic.md` landed
-  (`[SRS-EP-07]` / `[SRS-EP-08]`). IN-027 **done**. EP-014 **done** (RM2 ingest p95=231 µs).
-  EP-015 **ready**. EP-020 stays `draft`. Verdict: READY-WITH-CONCERNS (op-type aliases — use SRS-IN-09 transmit names).
+  (`[SRS-EP-07]` / `[SRS-EP-08]`). IN-027 **done**. EP-014 **done**. EP-015 **done**.
+  EP-020 stays `draft`. Verdict: READY-WITH-CONCERNS (op-type aliases — use SRS-IN-09 transmit names).
 - **CHL-0010 deferred (2026-08-13)** — no on-panel undo; no selection-create CTA. Enclose-with-Ink-box
   is the create path. EP-018 frozen at `draft`. EP-015 ring still ships (no chrome). Handle **28/56 du**
   and LOD **96 du** accepted as EP-019 implement locks.
@@ -120,7 +120,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 
 ### Execution board(s)
 
-- [iter-003 execution-board](./iter-003/execution-board.md) — **W9** EP-015 undo ring `ready`
+- [iter-003 execution-board](./iter-003/execution-board.md) — **W10** EP-016 enclose; human stop after
 - [iter-002 board (final)](./iter-002/execution-board.md) — frozen
 
 ### Freeze notes
@@ -133,7 +133,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 ## Forward
 
 - **Done 2026-08-13:** `/architect` design + `/sm` re-slice (EP-012…020, IN-027…028)
-- **Now:** W9 — [STORY-EP-014](./iter-003/stories/STORY-EP-014.md) **done**. [STORY-EP-015](./iter-003/stories/STORY-EP-015.md) **ready** (ring, no chrome). Next `/qa` then `/dev`. IN-027 **done**.
+- **Now:** W10 **STOP** — [STORY-EP-016](./iter-003/stories/STORY-EP-016.md) host PASS, **`in-review`**. Human RM2 drawing check. EP-017 stays `draft`.
 - **Next campaign:** epaper `[REQ-08]` direct manipulation of any document node — thickened in
   [node-manipulation](../.docs/modules/epaper/features/node-manipulation/), designed and built in a
   distinct iteration

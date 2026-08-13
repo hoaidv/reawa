@@ -1,0 +1,35 @@
+{
+  "id": "pen_armed",
+  "seedOps": [
+    {
+      "opId": "seed_ink_in",
+      "type": "append_ink",
+      "source": "epaper",
+      "payload": {
+        "id": "ink_in",
+        "samples": [
+          { "x": 60, "y": 60, "t": 0 },
+          { "x": 80, "y": 70, "t": 1 },
+          { "x": 70, "y": 90, "t": 2 }
+        ],
+        "style": { "stroke": "#1C2430", "strokeWidth": 2 }
+      }
+    }
+  ],
+  "stroke": {
+    "id": "pen_1",
+    "armed": "pen",
+    "width": 2,
+    "points": [
+      { "x": 40, "y": 40 },
+      { "x": 160, "y": 40 },
+      { "x": 160, "y": 160 },
+      { "x": 40, "y": 160 },
+      { "x": 40, "y": 40 }
+    ]
+  },
+  "expected": {
+    "verdict": "ordinary_ink",
+    "fittedBounds": { "x": 40, "y": 40, "width": 120, "height": 120 }
+  }
+}

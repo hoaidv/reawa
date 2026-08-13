@@ -1,6 +1,6 @@
 /**
- * Host tests for STORY-EP-014 / [SRS-EP-07] [SRS-EP-09] — device tree + stroke ingest.
- * Maps ingest-stroke.feature. No Qt. Shared ops/ fixtures vs Infini apply semantics.
+ * Host tests for STORY-EP-014 / STORY-EP-015 / [SRS-EP-07] [SRS-EP-09].
+ * Maps ingest-stroke.feature and undo-ring.feature. No Qt.
  *
  * Build: ./tests/run_device_document_test.sh
  */
@@ -10,6 +10,7 @@
 #include "latencyprobe/stub_document.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <string>
@@ -41,6 +42,59 @@ static DigitizerSample samp(double x, double y, double pressure)
     s.panelY = y;
     s.pressure = pressure;
     return s;
+}
+
+static DocOp makeAppendInkOp(const std::string &id, double x = 10, double y = 20)
+{
+    const std::string json = std::string("{\"opId\":\"op-") + id + "\",\"type\":\"append_ink\","
+                                                                  "\"source\":\"epaper\",\"payload\":{\"id\":\""
+                             + id + "\",\"samples\":[{\"x\":" + std::to_string(x) + ",\"y\":"
+                             + std::to_string(y) + "},{\"x\":" + std::to_string(x + 2) + ",\"y\":"
+                             + std::to_string(y + 2)
+                             + "}],\"style\":{\"stroke\":\"#1C2430\",\"strokeWidth\":2}}}";
+    return opFromJson(parseJson(json));
+}
+
+static bool geomNear(double a, double b, double eps = 1.0)
+{
+    return std::abs(a - b) <= eps;
+}
+
+static bool nodesEqualGeom(const DocNode &a, const DocNode &b)
+{
+    if (a.id != b.id || a.kind != b.kind || a.children.size() != b.children.size())
+        return false;
+    if (a.samples.size() != b.samples.size())
+        return false;
+    for (size_t i = 0; i < a.samples.size(); ++i) {
+        if (!geomNear(a.samples[i].x, b.samples[i].x) || !geomNear(a.samples[i].y, b.samples[i].y))
+            return false;
+    }
+    if (!geomNear(a.transform.x, b.transform.x) || !geomNear(a.transform.y, b.transform.y)
+        || !geomNear(a.transform.rotation, b.transform.rotation)
+        || !geomNear(a.transform.scaleX, b.transform.scaleX)
+        || !geomNear(a.transform.scaleY, b.transform.scaleY))
+        return false;
+    if (!geomNear(a.smartBounds.x, b.smartBounds.x) || !geomNear(a.smartBounds.y, b.smartBounds.y)
+        || !geomNear(a.smartBounds.width, b.smartBounds.width)
+        || !geomNear(a.smartBounds.height, b.smartBounds.height))
+        return false;
+    for (size_t i = 0; i < a.children.size(); ++i) {
+        if (!nodesEqualGeom(a.children[i], b.children[i]))
+            return false;
+    }
+    return true;
+}
+
+static bool treesEqualGeom(const DeviceDocument &a, const std::vector<DocNode> &snap)
+{
+    if (a.rootChildren.size() != snap.size())
+        return false;
+    for (size_t i = 0; i < snap.size(); ++i) {
+        if (!nodesEqualGeom(a.rootChildren[i], snap[i]))
+            return false;
+    }
+    return true;
 }
 
 static std::string fixturePath(const char *name)
@@ -244,6 +298,251 @@ static void test_ingest_not_on_press_path()
     CHECK(doc.inkCount() == 40);
 }
 
+/** @SRS-EP-07 Structural op pushes a snapshot before apply */
+static void test_undo_structural_op_pushes_pre_op_snapshot()
+{
+    DeviceDocument doc;
+    CHECK(doc.undoDepth() == 0);
+    const std::string pre = doc.snapshotString();
+    CHECK(doc.commitOp(makeAppendInkOp("ink_a")).applied);
+    CHECK(doc.undoDepth() == 1);
+    CHECK(doc.newestEntry());
+    CHECK(doc.newestEntry()->kind == "append_ink");
+    CHECK(doc.newestEntry()->opId == "op-ink_a");
+    CHECK(doc.entrySnapshotString(*doc.newestEntry()) == pre);
+    CHECK(doc.publishQueue().size() == 1);
+    CHECK(doc.publishQueue()[0].op.type == "append_ink");
+
+    // Raw applyOp (fixtures) does not push.
+    DeviceDocument raw;
+    CHECK(raw.applyOp(makeAppendInkOp("raw")).applied);
+    CHECK(raw.undoDepth() == 0);
+    CHECK(raw.publishQueue().empty());
+
+    // Rejected structural op: ring and queue unchanged.
+    DeviceDocument rej;
+    DocOp bad;
+    bad.opId = "bad";
+    bad.type = "append_ink";
+    bad.payload = JsonValue::object({{"id", JsonValue::string("x")}});
+    CHECK(!rej.commitOp(bad).applied);
+    CHECK(rej.undoDepth() == 0);
+    CHECK(rej.publishQueue().empty());
+    CHECK(rej.nodeCount() == 0);
+}
+
+/** @SRS-EP-07 Undo restores the prior tree exactly */
+static void test_undo_restores_prior_tree_exactly()
+{
+    DeviceDocument doc;
+    const std::string pre = doc.snapshotString();
+    CHECK(doc.commitOp(makeAppendInkOp("ink_b", 3, 4)).applied);
+    CHECK(doc.find("ink_b"));
+    std::vector<DocNode> preSnap;
+    CHECK(doc.newestEntry());
+    preSnap = doc.newestEntry()->snapshot;
+    const UndoResult u = doc.undo();
+    CHECK(u.restored);
+    CHECK(!u.latched);
+    CHECK(!u.noop);
+    CHECK(doc.snapshotString() == pre);
+    CHECK(treesEqualGeom(doc, preSnap));
+    CHECK(!doc.find("ink_b"));
+    CHECK(doc.undoDepth() == 0);
+
+    const std::size_t q = doc.publishQueue().size();
+    const UndoResult empty = doc.undo();
+    CHECK(empty.noop);
+    CHECK(!empty.restored);
+    CHECK(doc.snapshotString() == pre);
+    CHECK(doc.publishQueue().size() == q);
+}
+
+/** @SRS-EP-07 One completed gesture is one undo entry */
+static void test_undo_one_gesture_one_entry()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitOp(opFromJson(parseJson(R"({
+      "opId": "sg-1",
+      "type": "create_smart_group",
+      "source": "epaper",
+      "payload": {
+        "id": "sg_1",
+        "bounds": { "x": 0, "y": 0, "width": 40, "height": 40 },
+        "transform": { "x": 0, "y": 0, "rotation": 0, "scaleX": 1, "scaleY": 1 },
+        "inkScaleMode": "withBounds",
+        "children": [{
+          "id": "ink_sg",
+          "samples": [{"x": 1, "y": 1}, {"x": 2, "y": 2}],
+          "style": { "stroke": "#1C2430", "strokeWidth": 2 }
+        }]
+      }
+    })")))
+              .applied);
+    const std::size_t depthBefore = doc.undoDepth();
+    const std::string preMove = doc.snapshotString();
+    const DocNode *sg0 = doc.find("sg_1");
+    CHECK(sg0 && geomNear(sg0->transform.x, 0));
+
+    doc.beginGesture();
+    for (int i = 0; i < 40; ++i)
+        doc.previewManipulationFrame();
+    CHECK(doc.intermediateFrameCount() == 40);
+    CHECK(doc.undoDepth() == depthBefore);
+    CHECK(doc.snapshotString() == preMove);
+
+    CHECK(doc.commitOp(opFromJson(parseJson(R"({
+      "opId": "mv-1",
+      "type": "set_smart_transform",
+      "source": "epaper",
+      "payload": {
+        "id": "sg_1",
+        "transform": { "x": 50, "y": 10, "rotation": 0, "scaleX": 1, "scaleY": 1 }
+      }
+    })")))
+              .applied);
+    CHECK(doc.undoDepth() == depthBefore + 1);
+    const DocNode *sg1 = doc.find("sg_1");
+    CHECK(sg1 && geomNear(sg1->transform.x, 50) && geomNear(sg1->transform.y, 10));
+
+    CHECK(doc.undo().restored);
+    CHECK(doc.snapshotString() == preMove);
+    const DocNode *sg2 = doc.find("sg_1");
+    CHECK(sg2 && geomNear(sg2->transform.x, 0) && geomNear(sg2->transform.y, 0));
+}
+
+/** @SRS-EP-07 Viewport tool and selection do not push undo */
+static void test_undo_viewport_tool_selection_do_not_push()
+{
+    DeviceDocument doc;
+    CHECK(doc.undoDepth() == 0);
+    doc.applyViewportPan(12, -4);
+    doc.applyToolSwitch("ink_box");
+    doc.applySelectionChange(std::string("sg_1"));
+    CHECK(doc.undoDepth() == 0);
+    CHECK(doc.publishQueue().empty());
+    CHECK(doc.viewportPanX() == 12);
+    CHECK(doc.uiTool() == "ink_box");
+    CHECK(doc.selectionId() && *doc.selectionId() == "sg_1");
+}
+
+/** @SRS-EP-07 Ring overflow drops the oldest entry */
+static void test_undo_ring_overflow_drops_oldest()
+{
+    DeviceDocument doc;
+    const std::string t0 = doc.snapshotString();
+    for (int i = 0; i < 20; ++i)
+        CHECK(doc.commitOp(makeAppendInkOp(std::string("n") + std::to_string(i), double(i), 0))
+                  .applied);
+    CHECK(doc.undoDepth() == 20);
+    CHECK(doc.oldestEntry());
+    CHECK(doc.entrySnapshotString(*doc.oldestEntry()) == t0);
+
+    CHECK(doc.commitOp(makeAppendInkOp("n20", 20, 0)).applied);
+    CHECK(doc.undoDepth() == 20);
+    CHECK(doc.oldestEntry());
+    CHECK(doc.entrySnapshotString(*doc.oldestEntry()) != t0);
+    CHECK(doc.find("n0"));
+    CHECK(doc.find("n20"));
+}
+
+/** @SRS-EP-07 Undo requested mid-gesture is deferred */
+static void test_undo_mid_gesture_is_deferred()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitOp(makeAppendInkOp("keep")).applied);
+    const std::string t1 = doc.snapshotString();
+    const int inkBefore = doc.inkCount();
+
+    doc.beginGesture();
+    for (int i = 0; i < 8; ++i)
+        doc.previewManipulationFrame();
+    CHECK(doc.gestureInFlight());
+    const UndoResult latched = doc.undo();
+    CHECK(latched.latched);
+    CHECK(!latched.restored);
+    CHECK(doc.undoLatched());
+    CHECK(doc.snapshotString() == t1);
+    CHECK(doc.inkCount() == inkBefore);
+    CHECK(doc.find("keep"));
+
+    CHECK(doc.commitOp(makeAppendInkOp("temp")).applied);
+    CHECK(!doc.gestureInFlight());
+    CHECK(!doc.undoLatched());
+    CHECK(doc.snapshotString() == t1);
+    CHECK(doc.find("keep"));
+    CHECK(!doc.find("temp"));
+    CHECK(doc.undoDepth() == 1);
+    CHECK(doc.publishQueue().back().op.type == "restore_snapshot");
+}
+
+/** @SRS-EP-07 Undo publishes as a change */
+static void test_undo_publishes_restore_snapshot()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitOp(makeAppendInkOp("pub")).applied);
+    const std::size_t q0 = doc.publishQueue().size();
+    CHECK(q0 == 1);
+
+    std::vector<std::int64_t> ns;
+    ns.reserve(20);
+    for (int i = 0; i < 20; ++i) {
+        CHECK(doc.commitOp(makeAppendInkOp(std::string("lat") + std::to_string(i), double(i), 1))
+                  .applied);
+        const auto t0 = std::chrono::steady_clock::now();
+        CHECK(doc.undo().restored);
+        const auto t1 = std::chrono::steady_clock::now();
+        ns.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count());
+    }
+    const auto p = summarizeNs(ns);
+    std::cout << "undo request→restored n=" << p.n << " p50=" << p.p50Ns << "ns p95=" << p.p95Ns
+              << "ns (p95=" << nsToUs(p.p95Ns) << "us host analog, bar 500ms)\n";
+    CHECK(p.p95Ns <= 500000000); // 500 ms host analog — not device p95
+
+    CHECK(doc.undo().restored); // undo the original "pub"
+    CHECK(doc.publishQueue().size() > q0);
+    const DocChange &last = doc.publishQueue().back();
+    CHECK(last.op.type == "restore_snapshot");
+    const JsonValue *document = last.op.payload.get("document");
+    CHECK(document);
+    CHECK(stringify(*document) == doc.snapshotString());
+    CHECK(doc.inkCount() == 0);
+}
+
+/** @SRS-EP-07 An accepted document load clears the ring */
+static void test_undo_accepted_doc_load_clears_ring()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitOp(makeAppendInkOp("pre1")).applied);
+    CHECK(doc.commitOp(makeAppendInkOp("pre2", 5, 5)).applied);
+    const std::string preLoad = doc.snapshotString();
+    CHECK(doc.undoDepth() == 2);
+    doc.clearPublishQueue();
+    CHECK(doc.publishQueue().empty());
+
+    const JsonValue loaded = parseJson(R"({
+      "version": 1,
+      "status": "open",
+      "rootChildren": [{
+        "id": "loaded",
+        "kind": "ink",
+        "samples": [{"x": 9, "y": 9}, {"x": 10, "y": 10}],
+        "style": {"stroke": "#1C2430", "strokeWidth": 2}
+      }]
+    })");
+    doc.onAcceptedDocLoad(loaded);
+    CHECK(doc.undoDepth() == 0);
+    CHECK(doc.find("loaded"));
+    CHECK(!doc.find("pre1"));
+    CHECK(!doc.find("pre2"));
+
+    const UndoResult u = doc.undo();
+    CHECK(u.noop);
+    CHECK(doc.find("loaded"));
+    CHECK(!doc.find("pre1"));
+    CHECK(doc.snapshotString() != preLoad);
+}
+
 int main()
 {
     test_append_ink_fixture_needs_parent();
@@ -255,6 +554,14 @@ int main()
     test_unknown_op_rejected();
     test_ingest_after_pixels_timing();
     test_ingest_not_on_press_path();
+    test_undo_structural_op_pushes_pre_op_snapshot();
+    test_undo_restores_prior_tree_exactly();
+    test_undo_one_gesture_one_entry();
+    test_undo_viewport_tool_selection_do_not_push();
+    test_undo_ring_overflow_drops_oldest();
+    test_undo_mid_gesture_is_deferred();
+    test_undo_publishes_restore_snapshot();
+    test_undo_accepted_doc_load_clears_ring();
 
     if (g_fails) {
         std::cerr << g_fails << " check(s) failed\n";

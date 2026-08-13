@@ -4,7 +4,7 @@ title: "Device undo ring"
 kind: implement
 parent_srs: [SRS-EP-07]
 parent_req: [REQ-04]
-status: ready
+status: done
 priority: P0
 iter: iter-003
 estimate: 3
@@ -49,3 +49,15 @@ this story is the ring itself, with **no on-panel chrome**.
 - No EP-020 handshake / Infini edits; `restore_snapshot` is queued locally
 
 **SM 2026-08-13:** EP-014 **done** (RM2 ingest p95=231 µs). This story is **ready**. BDD already lives in `undo-ring.feature` — QA reviews, does not rewrite.
+
+## QA (2026-08-13)
+
+**PASS** — host harnesses only (no RM2 undo p95; no on-panel control). [Handoff](../handoffs/2026-08-13-qa-to-sm-ep-015.md). EP-016 **not** flipped.
+
+| Metric | Host (this session) | Bar |
+|---|---|---|
+| undo request → restored p95 | **2 µs** (n=20) | ≤500 ms ([SRS-EP-13]); **host analog, not device p95** |
+| ingest pen-up → node p95 | **25 µs** (n=40) | ≤50 ms |
+| EP-013 re-run | dropped=0, paint-loop-hits=0, hit-test p95=1 µs | 0 drops |
+
+Eight `@SRS-EP-07` undo-ring scenarios mapped to `device_document_test` — all green. CHL-0010 held (3-tile ToolChip, no undo button). `infini/` not edited.

@@ -1,0 +1,21 @@
+{
+  "id": "too_small",
+  "seedOps": [],
+  "stroke": {
+    "id": "tiny",
+    "armed": "ink_box",
+    "width": 2,
+    "points": [
+      { "x": 0, "y": 0 },
+      { "x": 20, "y": 0 },
+      { "x": 20, "y": 20 },
+      { "x": 0, "y": 20 },
+      { "x": 0, "y": 0 }
+    ]
+  },
+  "expected": {
+    "verdict": "ordinary_ink",
+    "reason": "too_small",
+    "fittedBounds": { "x": 0, "y": 0, "width": 20, "height": 20 }
+  }
+}

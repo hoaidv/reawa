@@ -4,7 +4,7 @@ slug: smart-group-pilot
 kind: planned
 status: active
 iter: iter-003
-cursor: "W9 — EP-015 undo ring ready; /qa then /dev; no chrome (CHL-0010)"
+cursor: "W10 STOP — EP-016 in-review host PASS; WAIT human RM2 draw; EP-017 draft"
 goal: "Ink-box rework: epaper REQ-04…REQ-07 (device owns the document) + infini REQ-03 one-way sync"
 owner: sm
 ---
@@ -26,9 +26,9 @@ Pilot ADRs [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md) (semantics) and
 | [STORY-EP-012](../iter-003/stories/STORY-EP-012.md) | design | **done** | W8 — `[UI-EP-02]`; CHL-0010 + du confirm remain |
 | [STORY-EP-013](../iter-003/stories/STORY-EP-013.md) | implement | **done** | W8 — RM2 latency gate passed |
 | [STORY-EP-014](../iter-003/stories/STORY-EP-014.md) | implement | **done** | W9 — RM2 ingest p95=231 µs; arrival→flush 1392 µs |
-| [STORY-EP-015](../iter-003/stories/STORY-EP-015.md) | implement | **ready** | W9 — undo ring, no chrome (CHL-0010) |
+| [STORY-EP-015](../iter-003/stories/STORY-EP-015.md) | implement | **done** | W9 — snapshot ring depth 20; no chrome (CHL-0010) |
 | [STORY-IN-027](../iter-003/stories/STORY-IN-027.md) | implement | **done** | W9 — desktop applier; WorldLayer from mirror |
-| [STORY-EP-016](../iter-003/stories/STORY-EP-016.md) | implement | **draft** | W10 — enclose |
+| [STORY-EP-016](../iter-003/stories/STORY-EP-016.md) | implement | **ready** | W10 — enclose only; human stop after for RM2 draw |
 | [STORY-EP-017](../iter-003/stories/STORY-EP-017.md) | implement | **draft** | W10 — membership |
 | [STORY-EP-018](../iter-003/stories/STORY-EP-018.md) | implement | **draft (frozen)** | CHL-0010 deferred — enclose is the create path |
 | [STORY-EP-019](../iter-003/stories/STORY-EP-019.md) | implement | **draft** | W11 — 28/56/96 du locked; after EP-016 |
@@ -77,3 +77,6 @@ Pilot stories (IN-010…019, EP-003…006) remain **done** as history. Residue E
 | 2026-08-13 | EP-014 **in-review** — DeviceDocument + pen-up `append_ink`; host ingest p95 ~12 µs; `ops/` 100% vs Infini. Cursor → `/qa`. EP-015 stays draft. |
 | 2026-08-13 | EP-014 QA **HOLD** — host PASS (p95=15 µs); RM2 `10.11.99.1` unreachable. Status stays in-review. Do not flip EP-015. Re-run `/qa` when tablet is on USB. |
 | 2026-08-13 | EP-014 **done** — RM2 USB via `en7`: ingest p95=231 µs, ink_nodes=40, arrival→flush p95=1392 µs, dropped=0. SM flipped EP-015 `draft` → `ready`. Cursor → `/qa` then `/dev`. No chrome (CHL-0010). IN-028 / EP-016+ stay draft. |
+| 2026-08-13 | W9 **auto** — QA walk READY-FOR-DEV; Dev shipped `commitOp` + depth-20 ring; QA verify **PASS** (undo p95=2 µs host). EP-015 **done**. W9 complete. EP-016 stays `draft`. |
+| 2026-08-13 | W10 **auto** opened — EP-016 `ready` only. Human stop after ship for RM2 drawing check. EP-017 stays draft. |
+| 2026-08-13 | EP-016 **in-review** — host PASS (enclose + fixtures 100% vs Infini). Non-synth epaper pid 5532 on RM2. **STOP** for human draw. EP-017 draft. |

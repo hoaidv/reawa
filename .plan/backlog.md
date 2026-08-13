@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-13T13:12:18+00:00
+generated_at: 2026-08-13T13:49:14+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -21,8 +21,8 @@ generated_at: 2026-08-13T13:12:18+00:00
 | [STORY-EP-012](./iter-003/stories/STORY-EP-012.md) | Design device selection overlay and manipulation chrome | design | designer | epaper | [SRS-EP-12] | done | iter-003 | 5 |
 | [STORY-EP-013](./iter-003/stories/STORY-EP-013.md) | Measure ink latency with a resident document | implement | dev | epaper | [SRS-EP-13] | done | iter-003 | 3 |
 | [STORY-EP-014](./iter-003/stories/STORY-EP-014.md) | Device document tree and stroke ingestion | implement | dev | epaper | [SRS-EP-07], [SRS-EP-09] | done | iter-003 | 5 |
-| [STORY-EP-015](./iter-003/stories/STORY-EP-015.md) | Device undo ring | implement | dev | epaper | [SRS-EP-07] | ready | iter-003 | 3 |
-| [STORY-EP-016](./iter-003/stories/STORY-EP-016.md) | On-device enclose recognition | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | draft | iter-003 | 5 |
+| [STORY-EP-015](./iter-003/stories/STORY-EP-015.md) | Device undo ring | implement | dev | epaper | [SRS-EP-07] | done | iter-003 | 3 |
+| [STORY-EP-016](./iter-003/stories/STORY-EP-016.md) | On-device enclose recognition | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | in-review | iter-003 | 5 |
 | [STORY-EP-017](./iter-003/stories/STORY-EP-017.md) | On-device draw-into membership | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | draft | iter-003 | 3 |
 | [STORY-EP-018](./iter-003/stories/STORY-EP-018.md) | On-device selection-create surround | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | draft | iter-003 | 3 |
 | [STORY-EP-019](./iter-003/stories/STORY-EP-019.md) | On-device live manipulation and REQ-08 conformance | implement | dev | epaper | [SRS-EP-11], [SRS-EP-14] | draft | iter-003 | 5 |

@@ -3,6 +3,7 @@
 #include "epaperbridge.h"
 #include "latencyprobe/stub_document.hpp"
 #include "document/ingest_stroke.hpp"
+#include "document/recognize_enclose.hpp"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -17,6 +18,8 @@
 #include <QTimer>
 #include <QPen>
 #include <cstdio>
+#include <string>
+#include <vector>
 
 namespace {
 
@@ -254,19 +257,20 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
         break;
     case QEvent::TabletMove:
     case QEvent::MouseMove:
+        // @implements [SRS-EP-10] mid-stroke tool switch does not change the latch
         // @implements [SRS-EP-04] selection mode never inks (STORY-EP-007)
         // @implements [SRS-EP-07] Selection armed → no stroke, no Ink node
-        if (m_selectionGesture)
-            updateSelectionGesture(canvasPos);
-        else if (m_toolMode != QLatin1String("selection"))
+        if (m_strokeActive)
             appendPoint(canvasPos, bounded);
+        else if (m_selectionGesture)
+            updateSelectionGesture(canvasPos);
         break;
     case QEvent::TabletRelease:
     case QEvent::MouseButtonRelease:
-        if (m_selectionGesture)
-            endSelectionGesture();
-        else if (m_toolMode != QLatin1String("selection"))
+        if (m_strokeActive)
             endStroke();
+        else if (m_selectionGesture)
+            endSelectionGesture();
         break;
     default:
         break;
@@ -395,6 +399,10 @@ void TabletCanvasItem::beginStroke(const QPointF &canvasPos, const IngestChannel
 {
     // Cancel pending settle follow-up so it cannot white-clear mid-stroke.
     ++m_settleFollowUpToken;
+    // @implements [SRS-EP-07] stroke is one undo gesture from pen-down
+    m_document.beginGesture();
+    // @implements [SRS-EP-10] latch armed tool at pen-down
+    m_strokeArmedTool = m_toolMode;
 
     m_current.clear();
     m_activeStrokeId = QStringLiteral("s-%1").arg(++m_strokeSeq);
@@ -453,10 +461,18 @@ void TabletCanvasItem::endStroke()
 
     if (m_current.size() >= 2)
         ingestCurrentStroke();
+    // Safety net: commitOp already ended a successful gesture; this aborts an empty one.
+    m_document.abortGesture();
 
     m_current.clear();
     m_hasEmitted = false;
     m_strokeActive = false;
+
+    // Rasterize after enclose so group-local ink is visible (not in paint()).
+    if (m_needEncloseRasterize) {
+        m_needEncloseRasterize = false;
+        rasterizeVectors(true);
+    }
 
     // Run any viewport/snapshot refresh that was deferred while the pen was down.
     if (m_rasterizeDeferredSharp) {
@@ -481,6 +497,7 @@ void TabletCanvasItem::endStroke()
 }
 
 /** @implements [SRS-EP-07] finished stroke → append_ink at pen-up */
+/** @implements [SRS-EP-10] Ink-box latch → enclose; Pen → ordinary ink */
 void TabletCanvasItem::ingestCurrentStroke()
 {
     using namespace epaper::document;
@@ -514,12 +531,19 @@ void TabletCanvasItem::ingestCurrentStroke()
         *wx = w.x();
         *wy = w.y();
     };
-    const IngestTiming t = ingestFinishedStrokeTimed(m_document, stroke, map);
+    StrokeArmedTool armed = StrokeArmedTool::Pen;
+    if (m_strokeArmedTool == QLatin1String("ink_box"))
+        armed = StrokeArmedTool::InkBox;
+    else if (m_strokeArmedTool == QLatin1String("selection"))
+        armed = StrokeArmedTool::Selection;
+    const EncloseIngestTiming t = ingestStrokeAtPenUp(m_document, stroke, map, armed);
     m_ingestNs.push_back(t.ns);
-    if (t.result.applied)
+    if (t.apply.applied)
         ++m_ingestApplied;
     else
         ++m_ingestRejected;
+    if (t.result.kind == EncloseKind::Created)
+        m_needEncloseRasterize = true;
 }
 
 void TabletCanvasItem::syncBegin()
@@ -1000,10 +1024,13 @@ QPointF TabletCanvasItem::panelToWorld(const QPointF &panel) const
     return QPointF(m_drawingRegion.minX + u * rw, m_drawingRegion.minY + v * rh);
 }
 
-void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode &node)
+void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode &node,
+                                   const epaper::document::DocNode *smartParent)
 {
     using epaper::document::NodeKind;
     using epaper::document::PrimitiveKind;
+    using epaper::document::inkSamplesCentroid;
+    using epaper::document::smartLocalToWorld;
     if (node.kind != NodeKind::Ink && node.kind != NodeKind::Primitive)
         return;
 
@@ -1023,10 +1050,24 @@ void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode 
     if (node.kind == NodeKind::Ink) {
         if (int(node.samples.size()) < 2)
             return;
+        const std::string role = node.role ? *node.role : std::string("content");
+        epaper::document::Vec2 centroid{};
+        const epaper::document::Vec2 *centroidPtr = nullptr;
+        if (smartParent && role == "content" && smartParent->inkScaleMode == "fixedInk") {
+            centroid = inkSamplesCentroid(node.samples);
+            centroidPtr = &centroid;
+        }
+        auto toPanel = [&](double x, double y) {
+            if (smartParent) {
+                const auto w = smartLocalToWorld(x, y, *smartParent, role, node.layoutOffset, centroidPtr);
+                return worldToPanel(w.x, w.y);
+            }
+            return worldToPanel(x, y);
+        };
         QPainterPath path;
-        path.moveTo(worldToPanel(node.samples[0].x, node.samples[0].y));
+        path.moveTo(toPanel(node.samples[0].x, node.samples[0].y));
         for (size_t i = 1; i < node.samples.size(); ++i)
-            path.lineTo(worldToPanel(node.samples[i].x, node.samples[i].y));
+            path.lineTo(toPanel(node.samples[i].x, node.samples[i].y));
         p.drawPath(path);
         return;
     }
@@ -1048,9 +1089,23 @@ void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode 
     }
 }
 
+void TabletCanvasItem::drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
+                                const epaper::document::DocNode *smartParent)
+{
+    using epaper::document::NodeKind;
+    for (const auto &node : nodes) {
+        if (node.kind == NodeKind::SmartGroup)
+            drawTree(p, node.children, &node);
+        else if (node.kind == NodeKind::Frame || node.kind == NodeKind::Group)
+            drawTree(p, node.children, nullptr);
+        else
+            drawDocNode(p, node, smartParent);
+    }
+}
+
 void TabletCanvasItem::rasterizeVectors(bool sharp)
 {
-    if (!m_paintsInk || !m_drawingRegion.valid)
+    if (!m_paintsInk)
         return;
     ensureImage();
     if (m_image.isNull())
@@ -1060,7 +1115,7 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
     // Full white clear + local-tree redraw. Never an inbound peer picture (SRS-EP-07).
     p.fillRect(m_image.rect(), Qt::white);
     p.setRenderHint(QPainter::Antialiasing, sharp);
-    m_document.forEachPaintNode([&](const epaper::document::DocNode &node) { drawDocNode(p, node); });
+    drawTree(p, m_document.rootChildren, nullptr);
     p.end();
 
     stampStaticBeacon();

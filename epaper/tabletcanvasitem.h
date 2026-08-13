@@ -148,7 +148,10 @@ private:
     void rasterizeVectors(bool sharp);
     QPointF worldToPanel(double wx, double wy) const;
     QPointF panelToWorld(const QPointF &panel) const;
-    void drawDocNode(QPainter &p, const epaper::document::DocNode &node);
+    void drawDocNode(QPainter &p, const epaper::document::DocNode &node,
+                     const epaper::document::DocNode *smartParent = nullptr);
+    void drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
+                  const epaper::document::DocNode *smartParent);
     double panelScale() const;
     qreal worldStrokeWidth(qreal pressure) const;
     void panelToFrameUv(double localX, double localY, double *u, double *v) const;
@@ -186,6 +189,9 @@ private:
     bool m_loggedRetiredSnapshot = false;
     QJsonArray m_pickables;
     QString m_toolMode = QStringLiteral("pen");
+    /** Tool armed at pen-down for this stroke — latch, not live toolMode (SRS-EP-10). */
+    QString m_strokeArmedTool;
+    bool m_needEncloseRasterize = false;
     QRectF m_toolChipRect;
     QString m_selectedPickableId;
     QString m_gesturePickableId;

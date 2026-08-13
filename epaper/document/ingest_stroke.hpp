@@ -48,8 +48,8 @@ inline PanelToWorld identityWorldMap()
 }
 
 /**
- * Map panel samples to world, store every reported channel, apply append_ink.
- * Failure leaves the tree unchanged (0 half-inserted nodes).
+ * Map panel samples to world, store every reported channel, commit append_ink
+ * through the undo-aware path. Failure leaves the tree unchanged (0 half-inserted nodes).
  * @implements [SRS-EP-07] pen-up ingest as append_ink
  */
 inline ApplyResult ingestFinishedStroke(DeviceDocument &doc, const FinishedStroke &stroke,
@@ -106,7 +106,7 @@ inline ApplyResult ingestFinishedStroke(DeviceDocument &doc, const FinishedStrok
     op.type = "append_ink";
     op.source = stroke.source;
     op.payload = JsonValue::object(std::move(payload));
-    return doc.applyOp(op);
+    return doc.commitOp(op);
 }
 
 struct IngestTiming {

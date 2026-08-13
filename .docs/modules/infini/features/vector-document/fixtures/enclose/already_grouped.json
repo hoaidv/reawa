@@ -1,0 +1,60 @@
+{
+  "id": "already_grouped",
+  "seedOps": [
+    {
+      "opId": "sg0",
+      "type": "create_smart_group",
+      "source": "epaper",
+      "payload": {
+        "id": "sg_old",
+        "bounds": { "x": 0, "y": 0, "width": 50, "height": 50 },
+        "transform": { "x": 0, "y": 0, "rotation": 0, "scaleX": 1, "scaleY": 1 },
+        "inkScaleMode": "fixedInk",
+        "children": [
+          {
+            "id": "already",
+            "kind": "ink",
+            "role": "content",
+            "samples": [
+              { "x": 10, "y": 10, "t": 0 },
+              { "x": 20, "y": 20, "t": 1 }
+            ],
+            "style": { "stroke": "#1C2430", "strokeWidth": 2 }
+          }
+        ]
+      }
+    },
+    {
+      "opId": "seed_free",
+      "type": "append_ink",
+      "source": "epaper",
+      "payload": {
+        "id": "free",
+        "samples": [
+          { "x": 70, "y": 70, "t": 0 },
+          { "x": 80, "y": 80, "t": 1 }
+        ],
+        "style": { "stroke": "#1C2430", "strokeWidth": 2 }
+      }
+    }
+  ],
+  "stroke": {
+    "id": "enclose_mix",
+    "armed": "ink_box",
+    "width": 2,
+    "points": [
+      { "x": 0, "y": 0 },
+      { "x": 120, "y": 0 },
+      { "x": 120, "y": 120 },
+      { "x": 0, "y": 120 },
+      { "x": 0, "y": 0 }
+    ]
+  },
+  "expected": {
+    "verdict": "created",
+    "fittedBounds": { "x": 0, "y": 0, "width": 120, "height": 120 },
+    "capturedIds": ["free"],
+    "skippedIds": ["already"],
+    "boundaryId": "enclose_mix"
+  }
+}

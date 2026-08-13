@@ -4,7 +4,7 @@ title: "On-device enclose recognition"
 kind: implement
 parent_srs: [SRS-EP-10, SRS-EP-14]
 parent_req: [REQ-05]
-status: draft
+status: in-review
 priority: P0
 iter: iter-003
 estimate: 5
@@ -42,3 +42,13 @@ BDD: [enclose-recognition.feature](../../../.docs/modules/epaper/features/ink-bo
 ## Done when
 
 - `@SRS-EP-10` enclose scenarios green; `enclose/` fixtures agree
+- No peer round trip inside the gesture; no membership (EP-017); no selection-create (EP-018 frozen)
+
+**SM 2026-08-13:** W10 opened for this story only. Human stop after ship — check drawing on RM2.
+Do not flip EP-017.
+
+## QA (2026-08-13)
+
+**HOST-PASS / WAIT-HUMAN-DRAW** — story stays **`in-review`**. Do not flip `done`.
+[Handoff](../handoffs/2026-08-13-qa-to-sm-ep-016.md). No `DEF-*` for the pending eye check.
+EP-017 still **`draft`**. Non-synth epaper still running on RM2 (pid **5532**). Do not `--restore` xochitl.

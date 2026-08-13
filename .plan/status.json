@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-13T13:12:18+00:00",
+  "generated_at": "2026-08-13T13:49:14+00:00",
   "current_iter": "iter-003",
   "by_status": {
-    "draft": 6,
-    "ready": 1,
+    "draft": 5,
+    "ready": 0,
     "in-progress": 0,
-    "in-review": 0,
-    "done": 94,
+    "in-review": 1,
+    "done": 95,
     "blocked": 13
   },
   "by_module": {
@@ -18,8 +18,8 @@
     },
     "epaper": {
       "total": 20,
-      "done": 9,
-      "in_review": 0
+      "done": 10,
+      "in_review": 1
     },
     "infini": {
       "total": 28,
@@ -50,7 +50,7 @@
       "id": "TRACK-003",
       "kind": "planned",
       "status": "active",
-      "cursor": "W9 \u2014 EP-015 undo ring ready; /qa then /dev; no chrome (CHL-0010)",
+      "cursor": "W10 STOP \u2014 EP-016 in-review host PASS; WAIT human RM2 draw; EP-017 draft",
       "iter": "iter-003"
     }
   ]
