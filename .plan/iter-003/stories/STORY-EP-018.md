@@ -4,7 +4,7 @@ title: "On-device selection-create surround"
 kind: implement
 parent_srs: [SRS-EP-10, SRS-EP-11, SRS-EP-12, SRS-EP-14]
 parent_req: [REQ-05]
-status: ready
+status: in-review
 priority: P1
 iter: iter-003
 estimate: 5
@@ -38,7 +38,7 @@ BDD: [selection-create-surround.feature](../../../.docs/modules/epaper/features/
 (QA extends for marquee + Enclose CTA).
 
 **Design done (EP-022).** Implement from [UI-EP-03](../design/selection-enclose-chrome/ui-spec.md).
-Do **not** invent chrome. ToolChip stays three tools.
+Do **not** invent chrome. ToolChip is four tools (ADR-0017). Enclose is overlay-only.
 
 ## Kind
 
@@ -51,4 +51,4 @@ Do **not** invent chrome. ToolChip stays three tools.
 ## Done when
 
 - `@SRS-EP-10` selection-create scenarios green (incl. marquee + CTA)
-- UI matches EP-022 package; ToolChip remains three tools
+- UI matches EP-022 package; ToolChip is four tools; Enclose is not a chip

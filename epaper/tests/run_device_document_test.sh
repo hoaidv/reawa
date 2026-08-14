@@ -9,5 +9,7 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/enclose_test.cpp -o /tmp/enclose_test
 /tmp/enclose_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/membership_test.cpp -o /tmp/membership_test
 /tmp/membership_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/surround_create_test.cpp -o /tmp/surround_create_test
+/tmp/surround_create_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/debug_log_test.cpp -o /tmp/debug_log_test
 /tmp/debug_log_test

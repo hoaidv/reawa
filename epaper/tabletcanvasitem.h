@@ -11,6 +11,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QString>
+#include <QStringList>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -33,10 +34,12 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(bool paintsInk READ paintsInk CONSTANT)
     Q_PROPERTY(QPointF lastPoint READ lastPoint NOTIFY debugChanged)
     Q_PROPERTY(QString debugInfo READ debugInfo NOTIFY debugChanged)
-    /** Device-local tool: pen | ink_box | selection — never synced (SRS-EP-04). */
+    /** Device-local tool: sel_rect | sel_freeform | pen | ink_box — never synced (SRS-EP-04 / ADR-0017). */
     Q_PROPERTY(QString toolMode READ toolMode WRITE setToolMode NOTIFY toolModeChanged)
     Q_PROPERTY(QRectF toolChipRect READ toolChipRect NOTIFY toolChipRectChanged)
-    Q_PROPERTY(int pickableCount READ pickableCount NOTIFY pickablesChanged)
+    Q_PROPERTY(QRectF encloseCtaRect READ encloseCtaRect NOTIFY selectionChromeChanged)
+    Q_PROPERTY(bool encloseVisible READ encloseVisible NOTIFY selectionChromeChanged)
+    Q_PROPERTY(QString encloseRefuseReason READ encloseRefuseReason NOTIFY selectionChromeChanged)
 
 public:
     explicit TabletCanvasItem(QQuickItem *parent = nullptr);
@@ -48,7 +51,10 @@ public:
     QString toolMode() const { return m_toolMode; }
     void setToolMode(const QString &mode);
     QRectF toolChipRect() const { return m_toolChipRect; }
-    int pickableCount() const { return m_pickables.size(); }
+    QRectF encloseCtaRect() const { return m_encloseCtaRect; }
+    bool encloseVisible() const { return m_encloseVisible; }
+    QString encloseRefuseReason() const { return m_encloseRefuseReason; }
+    Q_INVOKABLE void encloseSelection();
 
     /** Digitizer channels reported on this sample (SRS-EP-09). Unset = not reported. */
     struct IngestChannels {
@@ -82,6 +88,7 @@ signals:
     void toolModeChanged();
     void toolChipRectChanged();
     void pickablesChanged();
+    void selectionChromeChanged();
     void segmentDrawn(qreal x1, qreal y1, qreal x2, qreal y2, qreal lineWidth);
 
 protected:
@@ -136,7 +143,13 @@ private:
     void applyDocSnapshot(const QJsonObject &obj);
     void updateToolChipRect();
     bool pointInToolChip(const QPointF &canvasPos) const;
+    bool pointInEncloseCta(const QPointF &canvasPos) const;
     QString toolModeAtChipPos(const QPointF &canvasPos) const;
+    bool isSelectionTool() const;
+    void beginMarqueeOrLasso(const QPointF &canvasPos);
+    void finishMarqueeOrLasso();
+    void refreshSelectionChrome();
+    QString hitLocalSmartGroup(const QPointF &world) const;
     QString hitPickable(const QPointF &world) const;
     void beginSelectionGesture(const QPointF &canvasPos);
     void updateSelectionGesture(const QPointF &canvasPos);
@@ -194,6 +207,14 @@ private:
     bool m_needEncloseRasterize = false;
     QRectF m_toolChipRect;
     QString m_selectedPickableId;
+    QStringList m_selectedIds;
+    QVector<QPointF> m_lassoPanel;
+    QPointF m_marqueeStartPanel;
+    QPointF m_marqueeEndPanel;
+    enum class SelGesture { None, Move, Marquee, Lasso } m_selGesture = SelGesture::None;
+    QRectF m_encloseCtaRect;
+    bool m_encloseVisible = false;
+    QString m_encloseRefuseReason;
     QString m_gesturePickableId;
     QPointF m_gestureStartWorld;
     QPointF m_gestureLastWorld;

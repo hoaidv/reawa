@@ -5,6 +5,7 @@
 #include "document/ingest_stroke.hpp"
 #include "document/recognize_enclose.hpp"
 #include "document/membership.hpp"
+#include "document/surround_create.hpp"
 #include "debuglog/debug_log_format.hpp"
 
 #include <QPainter>
@@ -18,7 +19,8 @@
 #include <QByteArray>
 #include <QTransform>
 #include <QTimer>
-#include <QPen>
+#include <QLineF>
+#include <algorithm>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -252,7 +254,11 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
     switch (type) {
     case QEvent::TabletPress:
     case QEvent::MouseButtonPress:
-        if (m_toolMode == QLatin1String("selection"))
+        if (pointInEncloseCta(canvasPos)) {
+            encloseSelection();
+            return;
+        }
+        if (isSelectionTool())
             beginSelectionGesture(canvasPos);
         else
             beginStroke(canvasPos, bounded);
@@ -674,8 +680,10 @@ void TabletCanvasItem::applyDocSnapshot(const QJsonObject &obj)
 void TabletCanvasItem::setToolMode(const QString &mode)
 {
     QString next = mode;
+    if (next == QLatin1String("selection"))
+        next = QStringLiteral("sel_rect");
     if (next != QLatin1String("pen") && next != QLatin1String("ink_box")
-        && next != QLatin1String("selection")) {
+        && next != QLatin1String("sel_rect") && next != QLatin1String("sel_freeform")) {
         next = QStringLiteral("pen");
     }
     if (m_toolMode == next)
@@ -702,8 +710,8 @@ QString TabletCanvasItem::toolModeAtChipPos(const QPointF &canvasPos) const
     if (tileW <= 0.0)
         return {};
     const qreal relX = canvasPos.x() - m_toolChipRect.x();
-    const int tile = qBound(0, int(relX / tileW), 2);
-    static const char *const kModes[] = {"selection", "pen", "ink_box"};
+    const int tile = qBound(0, int(relX / tileW), 3);
+    static const char *const kModes[] = {"sel_rect", "sel_freeform", "pen", "ink_box"};
     return QString::fromLatin1(kModes[tile]);
 }
 
@@ -721,7 +729,7 @@ void TabletCanvasItem::updateToolChipRect()
     // UI-EP-01 amended (human verify 2026-08-11): ≥64px tiles (was 32).
     // @implements [SRS-EP-05] floating ToolChip hit bounds
     const qreal chipH = 64.0;
-    const qreal chipW = 64.0 * 3.0;
+    const qreal chipW = 64.0 * 4.0;
     const qreal inset = 8.0;
     qreal top = inset;
     // gutOnTop → oriented top is opposite short edge (bottom of panel coords).
@@ -738,6 +746,163 @@ void TabletCanvasItem::updateToolChipRect()
 bool TabletCanvasItem::pointInToolChip(const QPointF &canvasPos) const
 {
     return m_toolChipRect.contains(canvasPos);
+}
+
+bool TabletCanvasItem::isSelectionTool() const
+{
+    return m_toolMode == QLatin1String("sel_rect") || m_toolMode == QLatin1String("sel_freeform");
+}
+
+bool TabletCanvasItem::pointInEncloseCta(const QPointF &canvasPos) const
+{
+    return m_encloseVisible && m_encloseCtaRect.contains(canvasPos);
+}
+
+QString TabletCanvasItem::hitLocalSmartGroup(const QPointF &world) const
+{
+    using namespace epaper::document;
+    std::vector<const DocNode *> pick;
+    collectPickable(m_document.rootChildren, pick);
+    for (int i = int(pick.size()) - 1; i >= 0; --i) {
+        const DocNode *n = pick[size_t(i)];
+        if (!n || n->kind != NodeKind::SmartGroup)
+            continue;
+        SmartBounds b;
+        if (!nodeWorldAabb(*n, b))
+            continue;
+        if (world.x() >= b.x && world.x() <= b.x + b.width && world.y() >= b.y
+            && world.y() <= b.y + b.height)
+            return QString::fromStdString(n->id);
+    }
+    return {};
+}
+
+void TabletCanvasItem::refreshSelectionChrome()
+{
+    using namespace epaper::document;
+    m_encloseRefuseReason.clear();
+    SmartBounds unionB;
+    std::vector<std::string> ids;
+    for (const QString &id : m_selectedIds)
+        ids.push_back(id.toStdString());
+    QRectF bounds;
+    if (!ids.empty() && unionAabbOfIds(m_document, ids, unionB)) {
+        const QPointF tl = worldToPanel(unionB.x, unionB.y);
+        const QPointF br = worldToPanel(unionB.x + unionB.width, unionB.y + unionB.height);
+        bounds = QRectF(tl, br).normalized();
+    }
+    m_encloseVisible = isSelectionTool() && !m_selectedIds.isEmpty()
+        && m_selGesture != SelGesture::Marquee && m_selGesture != SelGesture::Lasso;
+    if (m_encloseVisible && !bounds.isEmpty())
+        m_encloseCtaRect = QRectF(bounds.center().x() - 32.0, bounds.bottom() + 8.0, 64.0, 64.0);
+    else
+        m_encloseCtaRect = QRectF();
+    m_selectionChromeDirty = bounds.united(m_encloseCtaRect).adjusted(-12, -12, 12, 12);
+    emit selectionChromeChanged();
+    update();
+}
+
+void TabletCanvasItem::encloseSelection()
+{
+    // @implements [SRS-EP-10] cta.enclose selection-create (never on pen-up)
+    using namespace epaper::document;
+    if (!m_encloseVisible)
+        return;
+    std::vector<std::string> ids;
+    for (const QString &id : m_selectedIds)
+        ids.push_back(id.toStdString());
+    const SelectionCreateResult r = createSmartGroupFromSelection(m_document, ids);
+    // @fix leftover selection chrome after cta.enclose (stale pickable AABB)
+    if (!r.created) {
+        m_encloseRefuseReason = r.reason == "smartgroup_in_selection"
+            ? QStringLiteral("Cannot enclose a Smart Group")
+            : QStringLiteral("No surrounding stroke");
+        const std::string line = epaper::debuglog::formatEncloseLog(
+            "OrdinaryInk", r.reason, "", {});
+        qInfo().noquote() << QString::fromStdString(line);
+        m_debugInfo = QString::fromStdString(line);
+        emit debugChanged();
+        emit selectionChromeChanged();
+        update();
+        return;
+    }
+    const std::string line = epaper::debuglog::formatEncloseLog(
+        "Created", "", r.smartGroupId, r.childIds);
+    qInfo().noquote() << QString::fromStdString(line);
+    m_debugInfo = QString::fromStdString(line);
+    emit debugChanged();
+    m_selectedIds.clear();
+    m_selectedPickableId.clear();
+    m_gesturePickableId.clear();
+    m_encloseVisible = false;
+    m_encloseCtaRect = QRectF();
+    m_encloseRefuseReason.clear();
+    m_selGesture = SelGesture::None;
+    m_selectionGesture = false;
+    refreshSelectionChrome();
+    m_needEncloseRasterize = true;
+    scheduleVectorRasterize(true);
+}
+
+void TabletCanvasItem::beginMarqueeOrLasso(const QPointF &canvasPos)
+{
+    m_selectionGesture = true;
+    m_marqueeStartPanel = canvasPos;
+    m_marqueeEndPanel = canvasPos;
+    m_lassoPanel.clear();
+    m_lassoPanel.append(canvasPos);
+    m_selGesture = m_toolMode == QLatin1String("sel_freeform") ? SelGesture::Lasso
+                                                              : SelGesture::Marquee;
+    m_encloseVisible = false;
+    emit selectionChromeChanged();
+    update();
+}
+
+void TabletCanvasItem::finishMarqueeOrLasso()
+{
+    using namespace epaper::document;
+    m_selectionGesture = false;
+    const qreal drag = QLineF(m_marqueeStartPanel, m_marqueeEndPanel).length();
+    if (drag < 8.0) {
+        m_selectedIds.clear();
+        m_selectedPickableId.clear();
+        m_selGesture = SelGesture::None;
+        m_lassoPanel.clear();
+        refreshSelectionChrome();
+        return;
+    }
+    std::vector<std::string> ids;
+    if (m_selGesture == SelGesture::Lasso) {
+        std::vector<InkSample> poly;
+        poly.reserve(size_t(m_lassoPanel.size()));
+        for (const QPointF &p : m_lassoPanel) {
+            const QPointF w = panelToWorld(p);
+            InkSample s;
+            s.x = w.x();
+            s.y = w.y();
+            poly.push_back(s);
+        }
+        ids = selectByFreeform(m_document, poly);
+    } else {
+        const QPointF a = panelToWorld(m_marqueeStartPanel);
+        const QPointF b = panelToWorld(m_marqueeEndPanel);
+        SmartBounds rect;
+        rect.x = std::min(a.x(), b.x());
+        rect.y = std::min(a.y(), b.y());
+        rect.width = std::abs(a.x() - b.x());
+        rect.height = std::abs(a.y() - b.y());
+        ids = selectByRect(m_document, rect);
+    }
+    m_lassoPanel.clear();
+    m_selGesture = SelGesture::None;
+    m_selectedIds.clear();
+    for (const auto &id : ids)
+        m_selectedIds.append(QString::fromStdString(id));
+    if (!m_selectedIds.isEmpty())
+        m_selectedPickableId = m_selectedIds.first();
+    else
+        m_selectedPickableId.clear();
+    refreshSelectionChrome();
 }
 
 QString TabletCanvasItem::hitPickable(const QPointF &world) const
@@ -758,32 +923,41 @@ QString TabletCanvasItem::hitPickable(const QPointF &world) const
 
 void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
 {
-    if (m_pickables.isEmpty())
-        return;
+    m_encloseRefuseReason.clear();
     const QPointF world = panelToWorld(canvasPos);
-    const QString id = hitPickable(world);
-    if (id.isEmpty()) {
-        if (!m_selectedPickableId.isEmpty()) {
-            m_selectedPickableId.clear();
-            m_selectionChromeDirty = QRectF();
-            update(); // clear chrome
-        }
+    const QString sg = hitLocalSmartGroup(world);
+    const QString hostId = hitPickable(world);
+    const QString id = !sg.isEmpty() ? sg : hostId;
+    if (!id.isEmpty()) {
+        m_selectedPickableId = id;
+        m_gesturePickableId = id;
+        m_gestureStartWorld = world;
+        m_gestureLastWorld = world;
+        m_selectionGesture = true;
+        m_selGesture = SelGesture::Move;
+        m_selectedIds = QStringList{id};
+        m_selectionGhostClock.restart();
+        refreshSelectionChrome();
         return;
     }
-    m_selectedPickableId = id;
-    m_gesturePickableId = id;
-    m_gestureStartWorld = world;
-    m_gestureLastWorld = world;
-    m_selectionGesture = true;
-    m_selectionGhostClock.restart();
-    m_selectionChromeDirty = pickablePanelRect(id).adjusted(-8, -8, 8, 8);
-    update(m_selectionChromeDirty.toAlignedRect());
+    beginMarqueeOrLasso(canvasPos);
 }
 
 void TabletCanvasItem::updateSelectionGesture(const QPointF &canvasPos)
 {
     if (!m_selectionGesture)
         return;
+    if (m_selGesture == SelGesture::Marquee) {
+        m_marqueeEndPanel = canvasPos;
+        update();
+        return;
+    }
+    if (m_selGesture == SelGesture::Lasso) {
+        m_lassoPanel.append(canvasPos);
+        m_marqueeEndPanel = canvasPos;
+        update();
+        return;
+    }
     m_gestureLastWorld = panelToWorld(canvasPos);
     // Soft region refresh ≥20 Hz — chrome only, not full vector redraw (SRS-EP-04 ghost).
     if (m_selectionGhostClock.isValid()
@@ -803,7 +977,12 @@ void TabletCanvasItem::endSelectionGesture()
 {
     if (!m_selectionGesture)
         return;
+    if (m_selGesture == SelGesture::Marquee || m_selGesture == SelGesture::Lasso) {
+        finishMarqueeOrLasso();
+        return;
+    }
     m_selectionGesture = false;
+    m_selGesture = SelGesture::None;
     const double dx = m_gestureLastWorld.x() - m_gestureStartWorld.x();
     const double dy = m_gestureLastWorld.y() - m_gestureStartWorld.y();
     ++m_toolIntentSeq;
@@ -848,51 +1027,79 @@ QRectF TabletCanvasItem::pickablePanelRect(const QString &id, double dxWorld, do
 
 void TabletCanvasItem::paintSelectionChrome(QPainter *painter) const
 {
-    if (m_toolMode != QLatin1String("selection"))
-        return;
-    if (m_selectedPickableId.isEmpty() && !m_selectionGesture)
-        return;
-
-    const QString id = m_selectionGesture ? m_gesturePickableId : m_selectedPickableId;
-    if (id.isEmpty())
-        return;
-
-    double dx = 0;
-    double dy = 0;
-    if (m_selectionGesture) {
-        dx = m_gestureLastWorld.x() - m_gestureStartWorld.x();
-        dy = m_gestureLastWorld.y() - m_gestureStartWorld.y();
-    }
-    const QRectF r = pickablePanelRect(id, dx, dy);
-    if (r.isEmpty())
+    if (!isSelectionTool())
         return;
 
     painter->save();
-    QPen pen(Qt::black);
-    pen.setWidthF(2.0);
-    if (m_selectionGesture && (qAbs(dx) > 0.5 || qAbs(dy) > 0.5))
-        pen.setStyle(Qt::DashLine);
-    else
-        pen.setStyle(Qt::SolidLine);
-    painter->setPen(pen);
+    QPen dotted(Qt::black);
+    dotted.setWidthF(3.0);
+    dotted.setStyle(Qt::DotLine);
     painter->setBrush(Qt::NoBrush);
+
+    if (m_selGesture == SelGesture::Marquee) {
+        painter->setPen(dotted);
+        painter->drawRect(QRectF(m_marqueeStartPanel, m_marqueeEndPanel).normalized());
+        painter->restore();
+        return;
+    }
+    if (m_selGesture == SelGesture::Lasso && m_lassoPanel.size() >= 2) {
+        painter->setPen(dotted);
+        QPainterPath path;
+        path.moveTo(m_lassoPanel.first());
+        for (int i = 1; i < m_lassoPanel.size(); ++i)
+            path.lineTo(m_lassoPanel.at(i));
+        painter->drawPath(path);
+        painter->restore();
+        return;
+    }
+
+    if (m_selectedIds.isEmpty() && m_selectedPickableId.isEmpty() && !m_selectionGesture) {
+        painter->restore();
+        return;
+    }
+
+    using namespace epaper::document;
+    std::vector<std::string> ids;
+    for (const QString &id : m_selectedIds)
+        ids.push_back(id.toStdString());
+    if (ids.empty() && !m_selectedPickableId.isEmpty())
+        ids.push_back(m_selectedPickableId.toStdString());
+
+    SmartBounds unionB;
+    QRectF r;
+    if (m_selGesture == SelGesture::Move && !m_selectedPickableId.isEmpty()) {
+        double dx = 0, dy = 0;
+        if (m_selectionGesture) {
+            dx = m_gestureLastWorld.x() - m_gestureStartWorld.x();
+            dy = m_gestureLastWorld.y() - m_gestureStartWorld.y();
+        }
+        r = pickablePanelRect(m_selectedPickableId, dx, dy);
+    } else if (unionAabbOfIds(m_document, ids, unionB)) {
+        const QPointF tl = worldToPanel(unionB.x, unionB.y);
+        const QPointF br = worldToPanel(unionB.x + unionB.width, unionB.y + unionB.height);
+        r = QRectF(tl, br).normalized();
+    }
+    if (r.isEmpty()) {
+        painter->restore();
+        return;
+    }
+
+    painter->setPen(dotted);
     painter->drawRect(r);
 
-    // Corner + edge anchors (8 handles) — feedback only; resize stays Infini for now.
-    const qreal h = 10.0;
-    const QPointF pts[8] = {
+    const qreal h = 16.0;
+    const QPointF pts[6] = {
         r.topLeft(),
         QPointF(r.center().x(), r.top()),
         r.topRight(),
-        QPointF(r.right(), r.center().y()),
-        r.bottomRight(),
-        QPointF(r.center().x(), r.bottom()),
         r.bottomLeft(),
-        QPointF(r.left(), r.center().y()),
+        QPointF(r.center().x(), r.bottom()),
+        r.bottomRight(),
     };
     painter->setBrush(Qt::white);
-    pen.setStyle(Qt::SolidLine);
-    painter->setPen(pen);
+    QPen solid(Qt::black);
+    solid.setWidthF(4.0);
+    painter->setPen(solid);
     for (const QPointF &c : pts)
         painter->drawRect(QRectF(c.x() - h * 0.5, c.y() - h * 0.5, h, h));
     painter->restore();

@@ -27,10 +27,16 @@ qt_add_resources(epaper_bin "epaper_tool_icons"
     FILES
         icons/icon-epaper-selection.png
         icons/icon-epaper-selection-inv.png
+        icons/icon-epaper-sel-rect.png
+        icons/icon-epaper-sel-rect-inv.png
+        icons/icon-epaper-sel-freeform.png
+        icons/icon-epaper-sel-freeform-inv.png
         icons/icon-epaper-pen.png
         icons/icon-epaper-pen-inv.png
         icons/icon-epaper-ink-box.png
         icons/icon-epaper-ink-box-inv.png
+        icons/icon-epaper-enclose.png
+        icons/icon-epaper-enclose-inv.png
 )
 
 target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network ${CMAKE_DL_LIBS})

@@ -62,7 +62,8 @@ TabletWindow {
 
             Repeater {
                 model: [
-                    { id: "selection", icon: "icon-epaper-selection" },
+                    { id: "sel_rect", icon: "icon-epaper-sel-rect" },
+                    { id: "sel_freeform", icon: "icon-epaper-sel-freeform" },
                     { id: "pen", icon: "icon-epaper-pen" },
                     { id: "ink_box", icon: "icon-epaper-ink-box" }
                 ]
@@ -93,6 +94,41 @@ TabletWindow {
                 }
             }
         }
+    }
+
+    Rectangle {
+        id: encloseCta
+        z: 21
+        visible: drawCanvas.encloseVisible
+        x: drawCanvas.encloseCtaRect.x
+        y: drawCanvas.encloseCtaRect.y
+        width: 64
+        height: 64
+        color: "white"
+        border.color: "black"
+        border.width: 1
+        Image {
+            anchors.centerIn: parent
+            width: parent.width * 0.62
+            height: parent.height * 0.62
+            fillMode: Image.PreserveAspectFit
+            smooth: false
+            source: "qrc:/icons/icons/icon-epaper-enclose.png"
+        }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: drawCanvas.encloseSelection()
+        }
+    }
+
+    Text {
+        z: 21
+        visible: drawCanvas.encloseRefuseReason.length > 0
+        x: encloseCta.visible ? encloseCta.x : 24
+        y: encloseCta.visible ? encloseCta.y + encloseCta.height + 6 : 80
+        font.pixelSize: 16
+        color: "black"
+        text: drawCanvas.encloseRefuseReason
     }
 
     Repeater {

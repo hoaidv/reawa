@@ -78,8 +78,13 @@ Feature: Selection create requires a surround stroke on the device
     When create Smart Group runs
     Then the later sibling wins as boundary
 
-  @SRS-EP-10
-  Scenario: Undo restores the prior tree after success
+  @SRS-EP-10 @SRS-EP-12 @SRS-EP-05
+  Scenario: ToolChip has four tools and Enclose is not a fifth chip
+    Given the ToolChip is visible
+    Then it has exactly the tools sel_rect, sel_freeform, pen, ink_box
+    And cta.enclose is not a ToolChip tile
+    When a selection is non-empty under sel_rect or sel_freeform
+    Then cta.enclose is visible on SelectionOverlay
     Given a successful selection create
     When undo runs
     Then the prior snapshot restores
