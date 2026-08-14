@@ -4,7 +4,7 @@ title: "Device one-way sync handshake and publish queue"
 kind: implement
 parent_srs: [SRS-EP-08]
 parent_req: [REQ-07]
-status: draft
+status: ready
 priority: P0
 iter: iter-003
 estimate: 5

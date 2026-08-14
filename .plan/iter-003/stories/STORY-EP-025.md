@@ -4,7 +4,7 @@ title: "Selection chrome CanvasLayer / ToolCanvasLayer / ToolLayer"
 kind: implement
 parent_srs: [SRS-EP-12, SRS-EP-14]
 parent_req: [REQ-06]
-status: in-review
+status: done
 priority: P0
 iter: iter-003
 estimate: 3
@@ -51,4 +51,4 @@ after W11b verify. **Do not** change surround-create or manipulation ops.
 
 - Lasso/marquee in flight uses ToolCanvas **Pen**; pen-up settled + move/resize uses **Mono**
 - Host tests for EP-018 / EP-019 still PASS
-- `@implements [ADR-0019]` on the overlay item; `@fix [CHL-0017]` on the removed full `update()`
+- Human PASS 2026-08-14 (option 1 live node on ToolCanvas; mid-gesture ghosting allowed — CHL-0018)

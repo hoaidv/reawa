@@ -92,7 +92,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
-| TRACK-003 | planned | **active** | W11c EP-025 ready → `/dev` | [track](./tracks/TRACK-003-smart-group-pilot.md) |
+| TRACK-003 | planned | **active** | W12 EP-020 ∥ IN-028 → `/qa` | [track](./tracks/TRACK-003-smart-group-pilot.md) |
 
 ### Open challenges / blocked
 
@@ -100,7 +100,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
   design landed the same day; SM re-sliced 2026-08-13.
 - **CHL-0009 resolved (adopted 2026-08-13)** — `device-document/srs-logic.md` landed
   (`[SRS-EP-07]` / `[SRS-EP-08]`). IN-027 **done**. EP-014 **done**. EP-015 **done**.
-  EP-020 stays `draft`. Verdict: READY-WITH-CONCERNS (op-type aliases — use SRS-IN-09 transmit names).
+  EP-020 **ready** (W12). Verdict: READY-WITH-CONCERNS (op-type aliases — use SRS-IN-09 transmit names).
 - **CHL-0010 superseded-in-part (2026-08-14)** — undo **chrome** adopted as actions after a gap
   ([CHL-0016](./iter-003/challenges/CHL-0016-undo-redo-toolbar.md) / [ADR-0018](../.docs/adr/ADR-0018-undo-redo-chip-actions.md)).
   Selection-create invocation remains Enclose CTA (CHL-0013), not a tool.
@@ -127,7 +127,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 
 ### Execution board(s)
 
-- [iter-003 execution-board](./iter-003/execution-board.md) — **W11c** EP-025 → `/dev`
+- [iter-003 execution-board](./iter-003/execution-board.md) — **W12** EP-020 ∥ IN-028 → `/qa`
 - [iter-002 board (final)](./iter-002/execution-board.md) — frozen
 
 ### Freeze notes
@@ -140,8 +140,9 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 ## Forward
 
 - **Done 2026-08-13:** `/architect` design + `/sm` re-slice (EP-012…020, IN-027…028)
-- **Now:** **W11c** — [STORY-EP-025](./iter-003/stories/STORY-EP-025.md) **ready** → `/dev`.
-  W11b (EP-019) **done** (human PASS 2026-08-14).
+- **Now:** **W12** — [STORY-EP-020](./iter-003/stories/STORY-EP-020.md) ∥
+  [STORY-IN-028](./iter-003/stories/STORY-IN-028.md) **ready** → `/qa` then `/dev`.
+  W11c (EP-025) **done** (human PASS 2026-08-14; CHL-0018 option 1).
 - **Next campaign:** epaper `[REQ-08]` direct manipulation of any document node — thickened in
   [node-manipulation](../.docs/modules/epaper/features/node-manipulation/), designed and built in a
   distinct iteration. Also: nested enclose (CHL-0011); ink-box sizing / align-content (CHL-0012);

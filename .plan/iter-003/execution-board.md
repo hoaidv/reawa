@@ -5,22 +5,20 @@ track: TRACK-003
 owner: sm
 date: 2026-08-14
 lock: vertical · verified · epaper/{device-document, ink-box, tool-modes} + infini/tablet-sync — re-locked 2026-08-13
-verdict: "W11b done — EP-019 human PASS. W11c NOW — EP-025 chrome layers → /dev."
-wave: W11c
+verdict: "W11c done — EP-025 human PASS. W12 NOW — EP-020 ∥ IN-028 → /qa then /dev."
+wave: W12
 ---
 
 # Execution board — iter-003
 
-**Canonical board** for [TRACK-003](../tracks/TRACK-003-smart-group-pilot.md) — **active, W11c**.
+**Canonical board** for [TRACK-003](../tracks/TRACK-003-smart-group-pilot.md) — **active, W12**.
 
 ## Summary (as of 2026-08-14)
 
 | Band | Count | Meaning |
 |---|---|---|
-| W0–W11a | **done** | Through selection-create (EP-018 human PASS) |
-| **W11b** | **done** | EP-023 design done; EP-019 live manipulation (human PASS) |
-| **W11c** | **NOW** | EP-025 selection chrome layers (CHL-0017) |
-| W12 | planned | EP-020 ∥ IN-028 |
+| W0–W11c | **done** | Through chrome layers (EP-025 human PASS; CHL-0018 option 1) |
+| **W12** | **NOW** | EP-020 device sync ∥ IN-028 desktop `doc_load` |
 
 ## Lock
 
@@ -31,36 +29,36 @@ autonomy: bounded
 wip: 2
 modules: epaper, infini
 features: epaper/device-document; epaper/ink-box; epaper/tool-modes; infini/tablet-sync
-personas: /dev EP-025
-forbidden: nested enclose; regress EP-018 chip
-NOW: W11c — STORY-EP-025 ready
-cursor: /dev EP-025
+personas: /qa then /dev EP-020 ∥ IN-028
+forbidden: nested enclose; option-2 live node on CanvasLayer; regress EP-018/019/025
+NOW: W12 — STORY-EP-020 ∥ STORY-IN-028 ready
+cursor: /qa W12 BDD walk
 ```
 
 ## Waves
 
 | Wave | Status | Parallel? | What |
 |---|---|---|---|
-| **W11a** | **done** | — | EP-022 + EP-018 |
-| **W11b** | **done** | serial | EP-023 (design) then EP-019 (implement) |
-| **W11c** | **NOW** | serial after W11b | [STORY-EP-025](./stories/STORY-EP-025.md) ToolCanvasLayer / ToolLayer |
-| W12 | planned | **∥ yes** | EP-020 ∥ IN-028 |
+| **W11c** | **done** | serial | [STORY-EP-025](./stories/STORY-EP-025.md) ToolCanvasLayer |
+| **W12** | **NOW** | **∥ yes** | [STORY-EP-020](./stories/STORY-EP-020.md) ∥ [STORY-IN-028](./stories/STORY-IN-028.md) |
 
-### Parallelism rules (W11c)
+### Parallelism rules (W12)
 
 | Lane | Story | Package / writes | Conflicts |
 |---|---|---|---|
-| **A** | [STORY-EP-025](./stories/STORY-EP-025.md) | `epaper/` canvas layers | do not clobber EP-018/019 behaviour |
+| **A** | [STORY-EP-020](./stories/STORY-EP-020.md) | `epaper/` session publish / handshake | wire seq; do not invent op type names |
+| **B** | [STORY-IN-028](./stories/STORY-IN-028.md) | `infini/` `doc_load` handshake | same wire; drain before load |
+
+Use SRS-IN-09 **transmit** names. No SmartGroup logic edits.
 
 ## Full task table (delta)
 
 | Id | Feature | Status | Wave | Next owner |
 |---|---|---|---|---|
-| F-08 | selection-create | **done** | W11a | — |
-| F-09a | four-tool rebase | **done** | **W11b** | — |
-| F-09 | manipulation | **done** | **W11b** | — |
-| F-09b | chrome layers | **ready** | **W11c** | `/dev` |
+| F-09b | chrome layers | **done** | W11c | — |
+| F-10 | device one-way sync | **ready** | **W12** | `/qa` then `/dev` |
+| F-11 | desktop `doc_load` | **ready** | **W12** | `/qa` then `/dev` |
 
 ## Verdict
 
-**Next: `/dev` on EP-025.**
+**Next: `/qa` on EP-020 ∥ IN-028** (BDD walk), then **`/dev`** both lanes.
