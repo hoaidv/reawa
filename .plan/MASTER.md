@@ -3,9 +3,9 @@ updated: 2026-08-14
 current_iter: iter-004
 owner: sm
 
-# Campaign: on-device connectors (REQ-09 + REQ-03 ToolChip). Design first.
+# Campaign: on-device connectors (REQ-09 + REQ-03 ToolChip). Through design → QA → implement.
 execution:
-  direction: horizontal
+  direction: vertical
   scope:
     modules: [epaper, infini]
     features:
@@ -13,9 +13,10 @@ execution:
       - epaper/tool-modes
       - epaper/ink-box
       - infini/vector-document
-  stop_line: design-validated
+  stop_line: verified
   autonomy: bounded
   out_of_scope: backlog
+  wip: 2
   validated_by: ""
 ---
 
@@ -28,12 +29,13 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 | Field | Value | Why |
 |---|---|---|
-| Direction | **horizontal** | ToolChip + connector chrome design together before any implement |
+| Direction | **vertical** | One campaign end-to-end: design → BDD → implement → verify |
 | Scope | `epaper/{connector-ink, tool-modes, ink-box}`, `infini/vector-document` | REQ-09 + the ToolChip split that arms it |
-| Stop line | **design-validated** | Paint EP-026/027; implement stays `draft` |
-| Autonomy | **bounded** | Run inside the lock; stop at the boundary |
+| Stop line | **verified** | `/designer`, `/qa`, `/dev` may all work; campaign ends on human confirm |
+| Autonomy | **bounded** | Run inside the lock; stop at REQ-08 / CHL-0011 / CHL-0012 |
+| WIP | **2** | EP-026 ∥ EP-027 now; later EP-030 ∥ IN-030 |
 
-**Campaign opened 2026-08-14 (human).** Exit criteria for this stop line: both design packages pass `ui-spec-gate`; human accepts ToolChip 3+2+Undo/Redo and connector blink/selection chrome. Then PM records `validated_by` and flips `stop_line` toward `bdd-ready` / `verified`.
+**Re-locked 2026-08-14 (human):** flip horizontal/`design-validated` → vertical/`verified`. Exit criteria: REQ-09 + REQ-03 ToolChip human-confirmed on device; Infini mirror 0 divergent connector nodes; EP-016/017 replay under ADR-0022. EXP-0002 guard corpus (≤2% FP) remains a **ship** gate, not a wave blocker. UI implement still `depends_on` done design stories (EP-026 → EP-028; EP-027 → EP-030).
 
 **Out-of-scope log**
 
@@ -66,7 +68,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 ### Goal & capacity
 
 - Goal: **On-device connectors** (REQ-09) + ToolChip 3 exclusive tools / 2 recognizer toggles / Undo+Redo (REQ-03). Default routing is auto-picked from ink → **Ink / Curve** (no picker at draw time).
-- Capacity: design 6 pts in flight (EP-026 + EP-027); implement 26 pts sliced and **frozen**.
+- Capacity: 32 pts committed. W1 design 6 pts in flight; implement 26 pts gated by `depends_on` + BDD, not by the stop line.
 - Risks: shipping default-on recognizers before the EXP-0002 guard corpus; regressing EP-016 enclose / EP-017 membership / EP-018–025 chrome.
 
 ### Tracks
@@ -92,7 +94,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [iter-004 execution-board](./iter-004/execution-board.md) — **NOW** W1 design
+- [iter-004 execution-board](./iter-004/execution-board.md) — **NOW** W1 design; QA BDD unblocked
 - [iter-003 execution-board](./iter-003/execution-board.md) — **frozen** (campaign closed)
 
 ### Freeze notes
@@ -101,6 +103,6 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ## Forward
 
-- **Now:** `/designer` EP-026 ∥ EP-027. After both `done`, `/pm` `validated_by` then flip stop line → `/qa` then `/dev`.
+- **Now:** `/designer` EP-026 ∥ EP-027. `/qa` may author BDD in parallel from SRS (UI scenarios wait on design packages). `/dev` after BDD, and after the matching design story is `done` for UI.
 - Parked (not committed): epaper `[REQ-08]`, nested enclose (CHL-0011), FREE_FORM / align-content (CHL-0012).
 - Backlog: [backlog.md](./backlog.md)

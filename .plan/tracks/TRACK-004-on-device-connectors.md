@@ -39,7 +39,7 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 |---|---|---|---|
 | [STORY-EP-026](../iter-004/stories/STORY-EP-026.md) | design | **ready** | ToolChip 3+2+Undo/Redo · `toolchip-recognizers` |
 | [STORY-EP-027](../iter-004/stories/STORY-EP-027.md) | design | **ready** | Connector blink + Ink/Curve chrome · `connector-chrome` |
-| [STORY-EP-028](../iter-004/stories/STORY-EP-028.md) | implement | draft | ToolChip inventory — **depends EP-026**; frozen until design-validated |
+| [STORY-EP-028](../iter-004/stories/STORY-EP-028.md) | implement | draft | ToolChip inventory — **depends EP-026** |
 | [STORY-EP-029](../iter-004/stories/STORY-EP-029.md) | implement | draft | ADR-0022 dispatch — depends EP-028 |
 | [STORY-EP-030](../iter-004/stories/STORY-EP-030.md) | implement | draft | UX1/UX2 recognition — depends EP-027, EP-029 |
 | [STORY-EP-031](../iter-004/stories/STORY-EP-031.md) | implement | draft | Ink/Curve warp + live drag — depends EP-030 |
@@ -49,7 +49,7 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 
 **Next:** [STORY-EP-026](../iter-004/stories/STORY-EP-026.md) ∥ [STORY-EP-027](../iter-004/stories/STORY-EP-027.md) · persona `/designer` · skill `execute-design-story`
 
-Implement stories stay `draft`. Do **not** start `/dev` until both design stories are `done` and PM flips `stop_line`.
+`/qa` may author BDD in parallel from SRS. `/dev` after BDD; UI implement waits on the matching design story `done`.
 
 ## Execution board
 
@@ -66,3 +66,4 @@ Implement stories stay `draft`. Do **not** start `/dev` until both design storie
 | Date | Event |
 |---|---|
 | 2026-08-14 | Opened. BS-0001 concluded; REQ-09 + ADR-0020/21/22 adopted. Lock: horizontal · design-validated. Cursor → `/designer` EP-026 ∥ EP-027. |
+| 2026-08-14 | Human flip: **vertical · verified · wip 2**. QA BDD unblocked; implement still `depends_on` design. |

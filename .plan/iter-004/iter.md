@@ -14,7 +14,7 @@ Recognize hand-drawn connectors between SmartGroups and keep them attached when 
 ToolChip becomes **Rect | Freeform | Pen ⟨space⟩ Ink-box recognizer | Connector recognizer ⟨space⟩ Undo | Redo**.
 Default routing is computed from the rest spine → **Ink** (`morph`) or **Curve** (`cubic`).
 
-Lock: **horizontal · design-validated**. Implement stories are sliced and stay `draft`.
+Lock: **vertical · verified · wip 2**. Design first in W1; `/qa` BDD in parallel; implement follows `depends_on` + BDD.
 
 Track: [TRACK-004](../tracks/TRACK-004-on-device-connectors.md) ·
 Board: [execution-board](./execution-board.md)
@@ -26,11 +26,11 @@ Prior campaign (Epaper owns the document, REQ-04…07) **closed** in
 
 - [STORY-EP-026](./stories/STORY-EP-026.md) — design — designer — 3 pts — ToolChip 3+2+Undo/Redo
 - [STORY-EP-027](./stories/STORY-EP-027.md) — design — designer — 3 pts — connector blink + Ink/Curve chrome
-- [STORY-EP-028](./stories/STORY-EP-028.md) — implement — dev — 3 pts — depends_on EP-026 · **frozen**
-- [STORY-EP-029](./stories/STORY-EP-029.md) — implement — dev — 5 pts — depends_on EP-028 · **frozen**
-- [STORY-EP-030](./stories/STORY-EP-030.md) — implement — dev — 5 pts — depends_on EP-027, EP-029 · **frozen**
-- [STORY-EP-031](./stories/STORY-EP-031.md) — implement — dev — 8 pts — depends_on EP-030 · **frozen**
-- [STORY-IN-030](./stories/STORY-IN-030.md) — implement — dev — 5 pts — depends_on EP-030 · **frozen**
+- [STORY-EP-028](./stories/STORY-EP-028.md) — implement — dev — 3 pts — depends_on EP-026
+- [STORY-EP-029](./stories/STORY-EP-029.md) — implement — dev — 5 pts — depends_on EP-028
+- [STORY-EP-030](./stories/STORY-EP-030.md) — implement — dev — 5 pts — depends_on EP-027, EP-029
+- [STORY-EP-031](./stories/STORY-EP-031.md) — implement — dev — 8 pts — depends_on EP-030
+- [STORY-IN-030](./stories/STORY-IN-030.md) — implement — dev — 5 pts — depends_on EP-030
 
 ## Carry-over candidates (not committed)
 

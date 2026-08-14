@@ -9,7 +9,7 @@ iter: iter-004
 
 ## Context
 
-TRACK-004 is **active**. Lock: **horizontal · `design-validated`**. Implement is sliced and frozen.
+TRACK-004 is **active**. Lock: **vertical · `verified` · wip 2**. Design is still W1 NOW; `/qa` may author BDD in parallel; `/dev` waits on BDD and, for UI, a `done` design story.
 
 Pickup **in parallel** (different write sets):
 
@@ -46,5 +46,4 @@ REQ-08, CHL-0011, CHL-0012, arrowheads, squared routing, desktop authoring.
 
 ## Next after you
 
-Human types `/qa` only after PM `validated_by` (or, in parallel, EXP-0002 guard corpus as explore —
-that is a **ship** gate, not this wave). Then `/dev`.
+Copy `ui_spec` / `scenes` / `hifi` onto EP-028 / EP-030 when done. Then `/qa` (if BDD still thin on UI) and `/dev`.

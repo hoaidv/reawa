@@ -26,7 +26,7 @@ wireframe: ""
 
 Implements [SRS-EP-04](../../.docs/modules/epaper/features/tool-modes/srs-logic.md) /
 [SRS-EP-05](../../.docs/modules/epaper/features/tool-modes/srs-ui.md).
-**Blocked on** [STORY-EP-026](./STORY-EP-026.md) (`stop_line: design-validated`).
+**Blocked on** [STORY-EP-026](./STORY-EP-026.md) (`depends_on`; do not set `ready` until that design story is `done`).
 
 ## Kind
 

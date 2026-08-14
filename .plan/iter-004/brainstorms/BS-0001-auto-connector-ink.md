@@ -352,5 +352,5 @@ Sequenced actions (human chose **EXP before campaign lock**, so the lock stays o
 - [x] `/architect` connector-ink geometry ADR (ASR-1) + ADR-0010 §6 amendment (ASR-2, ASR-3) → **[ADR-0020](../../.docs/adr/ADR-0020-connector-ink-geometry.md)**
 - [x] `/architect` supersede **ADR-0017** (ASR-7) → **[ADR-0021](../../.docs/adr/ADR-0021-connector-toolchip.md)**; closure classifier + one-verdict dispatch (ASR-5, ASR-8) → **[ADR-0022](../../.docs/adr/ADR-0022-recognizer-dispatch.md)**
 - [ ] `/designer` ToolChip design story — 3 tools + 2 toggles, active/armed states legible under partial refresh, do-not-regress list for EP-023 / EP-025 → **[STORY-EP-026](../stories/STORY-EP-026.md)** ∥ connector chrome **[STORY-EP-027](../stories/STORY-EP-027.md)**
-- [x] `/pm` + `/sm` flip the MASTER `execution:` lock to this campaign (horizontal · `design-validated` · TRACK-004)
+- [x] `/pm` + `/sm` flip the MASTER `execution:` lock to this campaign (opened horizontal · `design-validated`; **re-locked 2026-08-14 vertical · `verified` · TRACK-004**)
 - [x] `/sm` slice iter-004 stories (EP-026…031, IN-030); implement UI stays `draft` until design is `done`
