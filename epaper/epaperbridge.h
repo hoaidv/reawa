@@ -21,6 +21,7 @@ class EpaperBridge : public QObject
     Q_OBJECT
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(bool penModeAttached READ penModeAttached NOTIFY penModeAttachedChanged)
+    Q_PROPERTY(bool monoModeAttached READ monoModeAttached NOTIFY monoModeAttachedChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
 
 public:
@@ -31,10 +32,17 @@ public:
 
     bool available() const { return m_available; }
     bool penModeAttached() const { return m_penModeItem != nullptr; }
+    bool monoModeAttached() const { return m_monoModeItem != nullptr; }
     QString status() const { return m_status; }
 
     /** Attach an EPScreenModeItem(mode=Pen) as a child covering @p host. */
     Q_INVOKABLE bool attachPenModeRegion(QQuickItem *host);
+    /**
+     * Attach EPScreenModeItem(mode=Mono) covering @p host (ToolCanvasLayer).
+     * @implements [ADR-0019] Mono waveform for selection chrome
+     * Fallback: returns false — caller keeps tight dirty rects (never full-panel GC16).
+     */
+    Q_INVOKABLE bool attachMonoModeRegion(QQuickItem *host);
 
     /** Partial update @p rect with Pen waveform (no-op if unavailable). */
     Q_INVOKABLE void swapPen(const QRect &rect);
@@ -53,13 +61,16 @@ public:
 signals:
     void availableChanged();
     void penModeAttachedChanged();
+    void monoModeAttachedChanged();
     void statusChanged();
 
 private:
     void resolve();
     void setStatus(const QString &s);
     int resolvePenModeValue() const;
+    int resolveModeValue(const char *key) const;
     int resolveContentTypeValue() const;
+    bool attachScreenMode(QQuickItem *host, int mode, void **storage, QQuickItem **item);
 
     using InstanceFn = void *(*)();
     /** Newer SDK: swapBuffers(QRect, EPContentType, EPScreenMode, flags) */
@@ -84,6 +95,7 @@ private:
     void *m_lib = nullptr;
     bool m_available = false;
     int m_penMode = -1;
+    int m_monoMode = -1;
     int m_contentType = 0;
     QString m_status;
 
@@ -91,6 +103,8 @@ private:
     static constexpr int kOpaqueBytes = 4096;
     void *m_penModeStorage = nullptr;
     QQuickItem *m_penModeItem = nullptr;
+    void *m_monoModeStorage = nullptr;
+    QQuickItem *m_monoModeItem = nullptr;
     void *m_blockerStorage = nullptr;
     QObject *m_blocker = nullptr;
 

@@ -9,6 +9,7 @@ qt_standard_project_setup(REQUIRES 6.5)
 qt_add_executable(epaper_bin
     main.cpp
     tabletcanvasitem.cpp
+    toolcanvasitem.cpp
     tabletwindow.cpp
     tabletappfilter.cpp
     strokesync.cpp

@@ -4,7 +4,7 @@ title: "Selection chrome CanvasLayer / ToolCanvasLayer / ToolLayer"
 kind: implement
 parent_srs: [SRS-EP-12, SRS-EP-14]
 parent_req: [REQ-06]
-status: ready
+status: in-review
 priority: P0
 iter: iter-003
 estimate: 3

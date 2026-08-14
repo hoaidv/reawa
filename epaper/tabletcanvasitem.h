@@ -20,6 +20,7 @@
 #include "document/manipulate.hpp"
 
 class StrokeSync;
+class ToolCanvasItem;
 
 /**
  * Pen ink + device document rasterize for the sync region.
@@ -45,6 +46,12 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(QString encloseRefuseReason READ encloseRefuseReason NOTIFY selectionChromeChanged)
     Q_PROPERTY(QString manipulationUnavailable READ manipulationUnavailable NOTIFY selectionChromeChanged)
     Q_PROPERTY(QRectF manipulationUnavailableRect READ manipulationUnavailableRect NOTIFY selectionChromeChanged)
+    Q_PROPERTY(QRectF selectionBoundsRect READ selectionBoundsRect NOTIFY selectionChromeChanged)
+    Q_PROPERTY(int handleCount READ handleCount NOTIFY selectionChromeChanged)
+    Q_PROPERTY(qreal handleSize READ handleSize NOTIFY selectionChromeChanged)
+    Q_PROPERTY(bool modeChipVisible READ modeChipVisible NOTIFY selectionChromeChanged)
+    Q_PROPERTY(QString modeChipLabel READ modeChipLabel NOTIFY selectionChromeChanged)
+    Q_PROPERTY(QRectF modeChipRect READ modeChipRectProp NOTIFY selectionChromeChanged)
 
 public:
     explicit TabletCanvasItem(QQuickItem *parent = nullptr);
@@ -65,7 +72,16 @@ public:
     QString encloseRefuseReason() const { return m_encloseRefuseReason; }
     QString manipulationUnavailable() const { return m_manipUnavailable; }
     QRectF manipulationUnavailableRect() const { return m_manipUnavailableRect; }
+    QRectF selectionBoundsRect() const { return m_selectionBoundsRect; }
+    int handleCount() const { return m_handleCount; }
+    qreal handleSize() const { return m_handleSize; }
+    bool modeChipVisible() const { return m_modeChipVisible; }
+    QString modeChipLabel() const { return m_modeChipLabel; }
+    QRectF modeChipRectProp() const { return m_modeChipRect; }
     Q_INVOKABLE void encloseSelection();
+    void bindToolCanvas(class ToolCanvasItem *overlay);
+    /** @implements [SRS-EP-12] ToolCanvasLayer stroke chrome (no document blit) */
+    void paintToolChrome(QPainter *painter);
 
     /** Digitizer channels reported on this sample (SRS-EP-09). Unset = not reported. */
     struct IngestChannels {
@@ -168,8 +184,10 @@ private:
     void endSelectionGesture();
     void redrawLiveManipRegion();
     void commitLiveManip();
-    /** @implements [SRS-EP-04] local selection bounds + move ghost (not baked into ink) */
-    void paintSelectionChrome(QPainter *painter) const;
+    void damageToolChrome(const QRectF &next);
+    void damageToolChromeSegment(const QRectF &seg);
+    void syncToolCanvasPresence();
+    void paintLiveManipOnToolCanvas(QPainter *painter);
     QRectF pickablePanelRect(const QString &id, double dxWorld = 0, double dyWorld = 0) const;
     void applyHistoryRestore(bool isUndo);
     void pruneSelectionAfterHistory();
@@ -233,6 +251,15 @@ private:
     QPointF m_marqueeStartPanel;
     QPointF m_marqueeEndPanel;
     enum class SelGesture { None, Move, Resize, Marquee, Lasso } m_selGesture = SelGesture::None;
+    ToolCanvasItem *m_toolCanvas = nullptr;
+    QRectF m_toolChromePrev;
+    QRectF m_selectionBoundsRect;
+    int m_handleCount = 0;
+    qreal m_handleSize = 16.0;
+    bool m_modeChipVisible = false;
+    QString m_modeChipLabel;
+    QRectF m_modeChipRect;
+    QRectF m_originPanelRect;
     QRectF m_encloseCtaRect;
     bool m_encloseVisible = false;
     QString m_encloseRefuseReason;

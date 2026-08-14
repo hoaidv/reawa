@@ -44,6 +44,18 @@ TabletWindow {
         onSegmentDrawn: (x1, y1, x2, y2, w) => addSeg(x1, y1, x2, y2, w)
     }
 
+    // @implements [ADR-0019] ToolCanvasLayer — lasso/marquee/AABB, no document blit
+    ToolCanvas {
+        id: toolCanvas
+        z: 1
+        x: 0
+        y: 0
+        width: drawCanvas.width
+        height: drawCanvas.height
+        canvas: drawCanvas
+        visible: false
+    }
+
     // Floating tool chip — 4 exclusive tools + 32du gap + Undo/Redo (ADR-0018).
     Item {
         id: toolChip
@@ -175,6 +187,72 @@ TabletWindow {
         }
     }
 
+    Repeater {
+        id: selectHandles
+        z: 21
+        model: drawCanvas.handleCount
+        delegate: Rectangle {
+            readonly property var _r: drawCanvas.selectionBoundsRect
+            readonly property real _h: drawCanvas.handleSize
+            readonly property point _pt: {
+                var r = _r
+                var n = drawCanvas.handleCount
+                var i = index
+                if (n === 8) {
+                    var p8 = [
+                        Qt.point(r.x, r.y),
+                        Qt.point(r.x + r.width / 2, r.y),
+                        Qt.point(r.x + r.width, r.y),
+                        Qt.point(r.x + r.width, r.y + r.height / 2),
+                        Qt.point(r.x + r.width, r.y + r.height),
+                        Qt.point(r.x + r.width / 2, r.y + r.height),
+                        Qt.point(r.x, r.y + r.height),
+                        Qt.point(r.x, r.y + r.height / 2)
+                    ]
+                    return p8[i]
+                }
+                var p6 = [
+                    Qt.point(r.x, r.y),
+                    Qt.point(r.x + r.width / 2, r.y),
+                    Qt.point(r.x + r.width, r.y),
+                    Qt.point(r.x, r.y + r.height),
+                    Qt.point(r.x + r.width / 2, r.y + r.height),
+                    Qt.point(r.x + r.width, r.y + r.height)
+                ]
+                return p6[i]
+            }
+            x: _pt.x - _h / 2
+            y: _pt.y - _h / 2
+            width: _h
+            height: _h
+            visible: drawCanvas.handleCount > 0 && _r.width > 0 && _r.height > 0
+            color: "white"
+            border.color: "black"
+            border.width: 2
+        }
+    }
+
+    Rectangle {
+        id: inkScaleChip
+        z: 21
+        visible: drawCanvas.modeChipVisible
+        x: drawCanvas.modeChipRect.x
+        y: drawCanvas.modeChipRect.y
+        width: Math.max(120, drawCanvas.modeChipRect.width)
+        height: Math.max(36, drawCanvas.modeChipRect.height)
+        color: "white"
+        border.color: "black"
+        border.width: 2
+        Text {
+            anchors.fill: parent
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.pixelSize: 14
+            color: "black"
+            text: drawCanvas.modeChipLabel
+        }
+    }
+
     Text {
         z: 21
         visible: drawCanvas.encloseRefuseReason.length > 0
@@ -232,6 +310,7 @@ TabletWindow {
         color: "black"
         text: EpaperBridge.status
               + (EpaperBridge.penModeAttached ? " | pen" : "")
+              + (EpaperBridge.monoModeAttached ? " | mono" : "")
               + (drawCanvas.paintsInk ? " | painted" : " | pool " + root.inkNext)
               + " | " + drawCanvas.toolMode
               + " | strokes " + drawCanvas.strokeCount

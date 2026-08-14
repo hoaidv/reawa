@@ -9,6 +9,7 @@
 #include "document/manipulate.hpp"
 #include "document/capability.hpp"
 #include "debuglog/debug_log_format.hpp"
+#include "toolcanvasitem.h"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -326,15 +327,11 @@ void TabletCanvasItem::paint(QPainter *painter)
     m_paintCount.fetchAndAddRelaxed(1);
     painter->drawImage(0, 0, m_image);
     if (m_selectionGesture
-        && (m_selGesture == SelGesture::Move || m_selGesture == SelGesture::Resize)) {
-        using namespace epaper::document;
-        const DocNode *n = m_document.find(m_gesturePickableId.toStdString());
-        if (n && !m_selectionChromeDirty.isEmpty()) {
-            painter->fillRect(m_selectionChromeDirty, Qt::white);
-            drawTree(*painter, n->children, n);
-        }
+        && (m_selGesture == SelGesture::Move || m_selGesture == SelGesture::Resize)
+        && !m_originPanelRect.isEmpty()) {
+        // Punch only the original box — not origin∪live (that wipes a vertical strip).
+        painter->fillRect(m_originPanelRect, Qt::white);
     }
-    paintSelectionChrome(painter);
 }
 
 void TabletCanvasItem::paintSegment(const Point &from, const Point &to, qreal lineWidth)
@@ -367,7 +364,7 @@ void TabletCanvasItem::emitSegment(const Point &from, const Point &to)
     else
         emit segmentDrawn(from.pos.x(), from.pos.y(), to.pos.x(), to.pos.y(), lineW);
 
-    const qreal pad = lineW * 0.5 + 2.0;
+    const qreal pad = lineW * 0.5 + 8.0;
     const QRectF rf = QRectF(from.pos, to.pos).normalized().adjusted(-pad, -pad, pad, pad);
     m_pendingDirty = m_pendingDirty.isNull() ? rf : m_pendingDirty.united(rf);
 }
@@ -715,6 +712,7 @@ void TabletCanvasItem::setToolMode(const QString &mode)
                       .arg(m_toolMode)
                       .arg(m_pickables.size());
     emit debugChanged();
+    syncToolCanvasPresence();
 }
 
 void TabletCanvasItem::armTool(const QString &mode)
@@ -882,8 +880,29 @@ void TabletCanvasItem::refreshSelectionChrome()
     if (ids.size() == 1 && !bounds.isEmpty())
         m_selectionChromeDirty = m_selectionChromeDirty.united(modeChipRect(bounds));
     m_selectionChromeDirty.adjust(-12, -12, 12, 12);
+    m_selectionBoundsRect = bounds;
+    m_handleCount = 0;
+    m_handleSize = 16.0;
+    m_modeChipVisible = false;
+    m_modeChipLabel.clear();
+    m_modeChipRect = QRectF();
+    if (!ids.empty() && !bounds.isEmpty()
+        && m_selGesture != SelGesture::Marquee && m_selGesture != SelGesture::Lasso
+        && m_selGesture != SelGesture::Move && m_selGesture != SelGesture::Resize) {
+        const DocNode *one = ids.size() == 1 ? m_document.find(ids[0]) : nullptr;
+        const bool manipChrome = one && descriptorFor(one->kind).has(Verb::Resize);
+        m_handleCount = manipChrome ? 8 : 6;
+        m_handleSize = manipChrome ? kHandleVisualDu : 16.0;
+        if (manipChrome && one) {
+            m_modeChipVisible = true;
+            m_modeChipLabel = QString::fromStdString(
+                one->inkScaleMode == "fixedInk" ? "Keep size" : "Scale ink");
+            m_modeChipRect = modeChipRect(bounds);
+        }
+    }
     emit selectionChromeChanged();
-    update();
+    syncToolCanvasPresence();
+    damageToolChrome(m_selectionChromeDirty);
 }
 
 void TabletCanvasItem::encloseSelection()
@@ -907,7 +926,7 @@ void TabletCanvasItem::encloseSelection()
         m_debugInfo = QString::fromStdString(line);
         emit debugChanged();
         emit selectionChromeChanged();
-        update();
+        damageToolChrome(m_selectionChromeDirty);
         return;
     }
     const std::string line = epaper::debuglog::formatEncloseLog(
@@ -938,8 +957,12 @@ void TabletCanvasItem::beginMarqueeOrLasso(const QPointF &canvasPos)
     m_selGesture = m_toolMode == QLatin1String("sel_freeform") ? SelGesture::Lasso
                                                               : SelGesture::Marquee;
     m_encloseVisible = false;
+    m_handleCount = 0;
+    m_modeChipVisible = false;
     emit selectionChromeChanged();
-    update();
+    syncToolCanvasPresence();
+    const QRectF live = QRectF(canvasPos, canvasPos).adjusted(-8, -8, 8, 8);
+    damageToolChrome(live);
 }
 
 void TabletCanvasItem::finishMarqueeOrLasso()
@@ -1103,7 +1126,7 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
         else {
             m_manipUnavailable = QStringLiteral("Too far out to move");
             emit selectionChromeChanged();
-            update();
+            damageToolChrome(m_manipUnavailableRect);
         }
         return;
     }
@@ -1134,7 +1157,15 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
         m_selectionGhostClock.invalidate();
         m_liveDirtyPrev = QRectF();
         m_selectionChromeDirty = QRectF();
+        {
+            SmartBounds originWorld;
+            if (boundsOf(*subject, originWorld))
+                m_originPanelRect = worldBoundsToPanel(originWorld).adjusted(-8, -8, 8, 8);
+            else
+                m_originPanelRect = QRectF();
+        }
         refreshSelectionChrome();
+        redrawLiveManipRegion();
         return;
     }
     beginMarqueeOrLasso(canvasPos);
@@ -1146,14 +1177,17 @@ void TabletCanvasItem::updateSelectionGesture(const QPointF &canvasPos)
     if (!m_selectionGesture)
         return;
     if (m_selGesture == SelGesture::Marquee) {
+        const QRectF next = QRectF(m_marqueeStartPanel, canvasPos).normalized();
         m_marqueeEndPanel = canvasPos;
-        update();
+        damageToolChrome(next.adjusted(-8, -8, 8, 8));
         return;
     }
     if (m_selGesture == SelGesture::Lasso) {
+        const QPointF prev = m_lassoPanel.isEmpty() ? canvasPos : m_lassoPanel.last();
         m_lassoPanel.append(canvasPos);
         m_marqueeEndPanel = canvasPos;
-        update();
+        const QRectF seg = QRectF(prev, canvasPos).normalized().adjusted(-8, -8, 8, 8);
+        damageToolChromeSegment(seg);
         return;
     }
     m_gestureLastWorld = panelToWorld(canvasPos);
@@ -1192,16 +1226,27 @@ void TabletCanvasItem::redrawLiveManipRegion()
     using namespace epaper::document;
     SmartBounds wb;
     const DocNode *n = m_document.find(m_gesturePickableId.toStdString());
+    QRectF liveBounds;
     QRectF next;
     if (n && boundsOf(*n, wb)) {
-        const QPointF tl = worldToPanel(wb.x, wb.y);
-        const QPointF br = worldToPanel(wb.x + wb.width, wb.y + wb.height);
-        next = QRectF(tl, br).normalized().adjusted(-48, -48, 48, 80);
+        liveBounds = worldBoundsToPanel(wb);
+        next = liveBounds.adjusted(-12, -12, 12, 48);
     }
-    const QRectF dirty = m_liveDirtyPrev.isNull() ? next : m_liveDirtyPrev.united(next);
+    // CanvasLayer: re-assert the origin hole only. ToolCanvas: origin∪live chrome.
+    if (!m_originPanelRect.isEmpty())
+        update(m_originPanelRect.toAlignedRect());
+    const QRectF toolDirty = m_liveDirtyPrev.isNull()
+        ? next.united(m_originPanelRect)
+        : m_liveDirtyPrev.united(next);
     m_liveDirtyPrev = next;
-    m_selectionChromeDirty = dirty;
-    update(dirty.toAlignedRect());
+    m_selectionChromeDirty = m_originPanelRect;
+    if (!liveBounds.isEmpty())
+        m_selectionBoundsRect = liveBounds;
+    m_handleCount = 0;
+    m_modeChipVisible = false;
+    emit selectionChromeChanged();
+    syncToolCanvasPresence();
+    damageToolChrome(toolDirty);
 }
 
 void TabletCanvasItem::commitLiveManip()
@@ -1216,9 +1261,13 @@ void TabletCanvasItem::commitLiveManip()
         || std::abs(m_liveB.width - m_originB.width) > 0.5;
     m_selectionGesture = false;
     m_selGesture = SelGesture::None;
+    const QRectF punch = m_originPanelRect.united(m_selectionChromeDirty);
+    m_originPanelRect = QRectF();
     if (!moved) {
         m_document.abortGesture();
         m_selectedPickableId = m_gesturePickableId;
+        if (!punch.isEmpty())
+            update(punch.toAlignedRect());
         refreshSelectionChrome();
         notifyHistory();
         return;
@@ -1273,12 +1322,99 @@ QRectF TabletCanvasItem::pickablePanelRect(const QString &id, double dxWorld, do
     return {};
 }
 
-void TabletCanvasItem::paintSelectionChrome(QPainter *painter) const
+void TabletCanvasItem::bindToolCanvas(ToolCanvasItem *overlay)
 {
+    m_toolCanvas = overlay;
+    syncToolCanvasPresence();
+}
+
+void TabletCanvasItem::damageToolChrome(const QRectF &next)
+{
+    QRectF u = m_toolChromePrev.isNull() ? next : m_toolChromePrev.united(next);
+    m_toolChromePrev = next;
+    if (!m_toolCanvas || u.isEmpty())
+        return;
+    m_toolCanvas->update(u.toAlignedRect().adjusted(-8, -8, 8, 8));
+}
+
+void TabletCanvasItem::damageToolChromeSegment(const QRectF &seg)
+{
+    m_toolChromePrev = m_toolChromePrev.united(seg);
+    if (!m_toolCanvas || seg.isEmpty())
+        return;
+    m_toolCanvas->update(seg.toAlignedRect());
+}
+
+void TabletCanvasItem::syncToolCanvasPresence()
+{
+    if (!m_toolCanvas)
+        return;
+    const bool liveManip = m_selGesture == SelGesture::Move || m_selGesture == SelGesture::Resize;
+    const bool strokeChrome = m_selGesture == SelGesture::Marquee || m_selGesture == SelGesture::Lasso;
+    const bool settled = isSelectionTool() && !m_selectedIds.isEmpty() && !liveManip && !strokeChrome;
+    const bool on = isSelectionTool() && (strokeChrome || liveManip || settled);
+    m_toolCanvas->setVisible(on);
+}
+
+void TabletCanvasItem::paintLiveManipOnToolCanvas(QPainter *painter)
+{
+    using namespace epaper::document;
+    const DocNode *n = m_document.find(m_gesturePickableId.toStdString());
+    if (!n)
+        return;
+    drawTree(*painter, n->children, n);
+
+    SmartBounds wb;
+    if (!boundsOf(*n, wb))
+        return;
+    const QRectF r = QRectF(worldToPanel(wb.x, wb.y),
+                            worldToPanel(wb.x + wb.width, wb.y + wb.height)).normalized();
+    QPen dotted(Qt::black);
+    dotted.setWidthF(3.0);
+    dotted.setStyle(Qt::DotLine);
+    painter->setBrush(Qt::NoBrush);
+    painter->setPen(dotted);
+    painter->drawRect(r);
+
+    const qreal h = kHandleVisualDu;
+    const QPointF pts[8] = {
+        r.topLeft(),
+        QPointF(r.center().x(), r.top()),
+        r.topRight(),
+        QPointF(r.right(), r.center().y()),
+        r.bottomRight(),
+        QPointF(r.center().x(), r.bottom()),
+        r.bottomLeft(),
+        QPointF(r.left(), r.center().y()),
+    };
+    painter->setBrush(Qt::white);
+    QPen solid(Qt::black);
+    solid.setWidthF(4.0);
+    painter->setPen(solid);
+    for (const QPointF &pt : pts)
+        painter->drawRect(QRectF(pt.x() - h * 0.5, pt.y() - h * 0.5, h, h));
+    const QRectF chip = modeChipRect(r);
+    painter->fillRect(chip, Qt::white);
+    painter->drawRect(chip);
+    painter->drawText(chip, Qt::AlignCenter,
+                      QString::fromStdString(n->inkScaleMode == "fixedInk" ? "Keep size" : "Scale ink"));
+}
+
+void TabletCanvasItem::paintToolChrome(QPainter *painter)
+{
+    // @implements [SRS-EP-12] ovl.marquee / ovl.lasso / ovl.nodes_bounds
     if (!isSelectionTool())
         return;
 
     painter->save();
+    painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
+
+    if (m_selGesture == SelGesture::Move || m_selGesture == SelGesture::Resize) {
+        paintLiveManipOnToolCanvas(painter);
+        painter->restore();
+        return;
+    }
+
     QPen dotted(Qt::black);
     dotted.setWidthF(3.0);
     dotted.setStyle(Qt::DotLine);
@@ -1327,43 +1463,6 @@ void TabletCanvasItem::paintSelectionChrome(QPainter *painter) const
 
     painter->setPen(dotted);
     painter->drawRect(r);
-
-    const DocNode *one = ids.size() == 1 ? m_document.find(ids[0]) : nullptr;
-    const bool manipChrome = one && descriptorFor(one->kind).has(Verb::Resize);
-    const qreal h = manipChrome ? kHandleVisualDu : 16.0;
-    const QPointF pts8[8] = {
-        r.topLeft(),
-        QPointF(r.center().x(), r.top()),
-        r.topRight(),
-        QPointF(r.right(), r.center().y()),
-        r.bottomRight(),
-        QPointF(r.center().x(), r.bottom()),
-        r.bottomLeft(),
-        QPointF(r.left(), r.center().y()),
-    };
-    const QPointF pts6[6] = {
-        r.topLeft(),
-        QPointF(r.center().x(), r.top()),
-        r.topRight(),
-        r.bottomLeft(),
-        QPointF(r.center().x(), r.bottom()),
-        r.bottomRight(),
-    };
-    painter->setBrush(Qt::white);
-    QPen solid(Qt::black);
-    solid.setWidthF(4.0);
-    painter->setPen(solid);
-    const QPointF *pts = manipChrome ? pts8 : pts6;
-    const int nH = manipChrome ? 8 : 6;
-    for (int i = 0; i < nH; ++i)
-        painter->drawRect(QRectF(pts[i].x() - h * 0.5, pts[i].y() - h * 0.5, h, h));
-    if (manipChrome && one) {
-        const QRectF chip = modeChipRect(r);
-        painter->fillRect(chip, Qt::white);
-        painter->drawRect(chip);
-        painter->drawText(chip, Qt::AlignCenter,
-                          QString::fromStdString(one->inkScaleMode == "fixedInk" ? "Keep size" : "Scale ink"));
-    }
     painter->restore();
 }
 
@@ -1489,7 +1588,6 @@ void TabletCanvasItem::showManipUnavailable(const epaper::document::SmartBounds 
     x = qBound(8.0, x, qMax(8.0, width() - kW - 8.0));
     m_manipUnavailableRect = QRectF(x, y, kW, kH);
     emit selectionChromeChanged();
-    update();
 }
 
 qreal TabletCanvasItem::worldStrokeWidth(qreal pressure) const

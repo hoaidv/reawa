@@ -8,6 +8,7 @@
 #include <csignal>
 
 #include "tabletcanvasitem.h"
+#include "toolcanvasitem.h"
 #include "tabletwindow.h"
 #include "tabletappfilter.h"
 #include "epaperbridge.h"
@@ -42,6 +43,7 @@ int main(int argc, char *argv[])
     EpaperBridge *bridge = EpaperBridge::instance();
 
     qmlRegisterType<TabletCanvasItem>("epaper", 1, 0, "TabletCanvas");
+    qmlRegisterType<ToolCanvasItem>("epaper", 1, 0, "ToolCanvas");
     qmlRegisterType<TabletWindow>("epaper", 1, 0, "TabletWindow");
     qmlRegisterSingletonInstance("epaper", 1, 0, "EpaperBridge", bridge);
 

@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-14T01:43:26+00:00
+generated_at: 2026-08-14T03:00:23+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -31,7 +31,7 @@ generated_at: 2026-08-14T01:43:26+00:00
 | [STORY-EP-022](./iter-003/stories/STORY-EP-022.md) | Design selection rubber-band and Enclose CTA | design | designer | epaper | [SRS-EP-12], [SRS-EP-10], [SRS-EP-11] | done | iter-003 | 3 |
 | [STORY-EP-023](./iter-003/stories/STORY-EP-023.md) | Rebase manipulation chrome onto four-tool chip | design | designer | epaper | [SRS-EP-12] | done | iter-003 | 2 |
 | [STORY-EP-024](./iter-003/stories/STORY-EP-024.md) | Undo and Redo buttons on primary toolbar | implement | dev | epaper | [SRS-EP-05] | done | iter-003 | 3 |
-| [STORY-EP-025](./iter-003/stories/STORY-EP-025.md) | Selection chrome CanvasLayer / ToolCanvasLayer / ToolLayer | implement | dev | epaper | [SRS-EP-12], [SRS-EP-14] | ready | iter-003 | 3 |
+| [STORY-EP-025](./iter-003/stories/STORY-EP-025.md) | Selection chrome CanvasLayer / ToolCanvasLayer / ToolLayer | implement | dev | epaper | [SRS-EP-12], [SRS-EP-14] | in-review | iter-003 | 3 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |

@@ -75,8 +75,10 @@ EpaperBridge::~EpaperBridge()
     // The opaque items are QQuickItems parented to the canvas, so Qt has already
     // destroyed them; freeing the backing storage here would be a double free.
     m_penModeStorage = nullptr;
+    m_monoModeStorage = nullptr;
     m_blockerStorage = nullptr;
     m_penModeItem = nullptr;
+    m_monoModeItem = nullptr;
     m_blocker = nullptr;
     if (m_lib) {
         // Do not dlclose — Qt still owns the plugin for the process lifetime.
@@ -131,6 +133,7 @@ void EpaperBridge::resolve()
     m_available = m_instance && (m_swapBuffers4 || m_swapBuffers3)
                   && m_screenModeCtor && m_screenModeMeta;
     m_penMode = resolvePenModeValue();
+    m_monoMode = resolveModeValue("Mono");
     m_contentType = resolveContentTypeValue();
 
     // Optional overrides for probing waveform/content enums on-device.
@@ -162,14 +165,19 @@ void EpaperBridge::resolve()
 
 int EpaperBridge::resolvePenModeValue() const
 {
-    if (!m_screenModeMeta)
+    return resolveModeValue("Pen");
+}
+
+int EpaperBridge::resolveModeValue(const char *key) const
+{
+    if (!m_screenModeMeta || !key)
         return -1;
     const int idx = m_screenModeMeta->indexOfEnumerator("Mode");
     if (idx < 0)
         return -1;
     const QMetaEnum me = m_screenModeMeta->enumerator(idx);
     bool ok = false;
-    const int v = me.keyToValue("Pen", &ok);
+    const int v = me.keyToValue(key, &ok);
     return ok ? v : -1;
 }
 
@@ -181,27 +189,26 @@ int EpaperBridge::resolveContentTypeValue() const
     return 0;
 }
 
-bool EpaperBridge::attachPenModeRegion(QQuickItem *host)
+bool EpaperBridge::attachScreenMode(QQuickItem *host, int mode, void **storage, QQuickItem **itemOut)
 {
-    if (!m_available || !host)
+    if (!m_available || !host || !storage || !itemOut || mode < 0)
         return false;
-    if (m_penModeItem) {
-        m_penModeItem->setParentItem(host);
-        m_penModeItem->setSize(host->size());
+    if (*itemOut) {
+        (*itemOut)->setParentItem(host);
+        (*itemOut)->setSize(host->size());
         return true;
     }
 
-    m_penModeStorage = calloc(1, kOpaqueBytes);
-    if (!m_penModeStorage)
+    *storage = calloc(1, kOpaqueBytes);
+    if (!*storage)
         return false;
 
-    m_screenModeCtor(m_penModeStorage, host);
-    auto *obj = reinterpret_cast<QObject *>(m_penModeStorage);
+    m_screenModeCtor(*storage, host);
+    auto *obj = reinterpret_cast<QObject *>(*storage);
     auto *item = qobject_cast<QQuickItem *>(obj);
     if (!item) {
-        setStatus(QStringLiteral("EPScreenModeItem ctor did not yield QQuickItem"));
-        free(m_penModeStorage);
-        m_penModeStorage = nullptr;
+        free(*storage);
+        *storage = nullptr;
         return false;
     }
 
@@ -216,15 +223,21 @@ bool EpaperBridge::attachPenModeRegion(QQuickItem *host)
     QObject::connect(host, &QQuickItem::heightChanged, item, [item, host]() {
         item->setHeight(host->height());
     });
+    if (!obj->setProperty("mode", mode))
+        qWarning() << "[epaperbridge] setProperty(mode) failed" << mode;
 
-    if (!obj->setProperty("mode", m_penMode))
-        qWarning() << "[epaperbridge] setProperty(mode, Pen) failed";
+    *itemOut = item;
+    return true;
+}
 
-    m_penModeItem = item;
+bool EpaperBridge::attachPenModeRegion(QQuickItem *host)
+{
+    if (!attachScreenMode(host, m_penMode, &m_penModeStorage, &m_penModeItem))
+        return false;
     emit penModeAttachedChanged();
     qInfo() << "[epaperbridge] Pen-mode region attached to" << host;
 
-    if (m_blockerCtor && m_blockerStart && m_blockerStop) {
+    if (!m_blocker && m_blockerCtor && m_blockerStart && m_blockerStop) {
         m_blockerStorage = calloc(1, kOpaqueBytes);
         if (m_blockerStorage) {
             m_blockerCtor(m_blockerStorage, host);
@@ -238,6 +251,19 @@ bool EpaperBridge::attachPenModeRegion(QQuickItem *host)
             }
         }
     }
+    return true;
+}
+
+bool EpaperBridge::attachMonoModeRegion(QQuickItem *host)
+{
+    if (m_monoMode < 0) {
+        qWarning() << "[epaperbridge] EPScreenModeItem::Mode::Mono not found";
+        return false;
+    }
+    if (!attachScreenMode(host, m_monoMode, &m_monoModeStorage, &m_monoModeItem))
+        return false;
+    emit monoModeAttachedChanged();
+    qInfo() << "[epaperbridge] Mono-mode region attached to" << host << "mode=" << m_monoMode;
     return true;
 }
 
