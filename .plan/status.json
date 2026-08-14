@@ -1,12 +1,12 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-14T00:43:45+00:00",
+  "generated_at": "2026-08-14T00:54:38+00:00",
   "current_iter": "iter-003",
   "by_status": {
     "draft": 2,
-    "ready": 1,
+    "ready": 0,
     "in-progress": 0,
-    "in-review": 0,
+    "in-review": 1,
     "done": 102,
     "blocked": 13
   },
@@ -19,7 +19,7 @@
     "epaper": {
       "total": 23,
       "done": 16,
-      "in_review": 0
+      "in_review": 1
     },
     "infini": {
       "total": 29,
@@ -50,7 +50,7 @@
       "id": "TRACK-003",
       "kind": "planned",
       "status": "active",
-      "cursor": "W11b \u2014 EP-019 ready \u2192 /dev",
+      "cursor": "W11b \u2014 EP-019 in-review \u2192 /qa",
       "iter": "iter-003"
     }
   ]

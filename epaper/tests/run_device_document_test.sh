@@ -13,3 +13,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/surround_create_test.cpp -o /tmp/surr
 /tmp/surround_create_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/debug_log_test.cpp -o /tmp/debug_log_test
 /tmp/debug_log_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/manipulate_test.cpp -o /tmp/manipulate_test
+/tmp/manipulate_test

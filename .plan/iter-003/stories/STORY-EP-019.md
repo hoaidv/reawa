@@ -4,7 +4,7 @@ title: "On-device live manipulation and REQ-08 conformance"
 kind: implement
 parent_srs: [SRS-EP-11, SRS-EP-14]
 parent_req: [REQ-06]
-status: ready
+status: in-review
 priority: P0
 iter: iter-003
 estimate: 5

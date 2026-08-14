@@ -5,7 +5,7 @@ track: TRACK-003
 owner: sm
 date: 2026-08-14
 lock: vertical · verified · epaper/{device-document, ink-box, tool-modes} + infini/tablet-sync — re-locked 2026-08-13
-verdict: "W11b NOW — EP-023 done (four-tool rebase). EP-019 ready → /dev."
+verdict: "W11b in-review — EP-019 host PASS → /qa."
 wave: W11b
 ---
 
@@ -33,7 +33,7 @@ features: epaper/device-document; epaper/ink-box; epaper/tool-modes; infini/tabl
 personas: /dev EP-019
 forbidden: nested enclose; undo chrome invent; regress EP-018 chip
 NOW: W11b — STORY-EP-019 ready
-cursor: /dev EP-019
+cursor: /qa EP-019
 ```
 
 ## Waves
@@ -56,8 +56,8 @@ cursor: /dev EP-019
 |---|---|---|---|---|
 | F-08 | selection-create | **done** | W11a | — |
 | F-09a | four-tool rebase | **done** | **W11b** | — |
-| F-09 | manipulation | **ready** | **W11b** | `/dev` |
+| F-09 | manipulation | **in-review** | **W11b** | `/qa` |
 
 ## Verdict
 
-**Next: `/dev` on EP-019.**
+**Next: `/qa` on EP-019** (host + on-panel).

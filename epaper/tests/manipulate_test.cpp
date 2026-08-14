@@ -1,0 +1,193 @@
+/**
+ * Host tests for STORY-EP-019 / [SRS-EP-11] [SRS-EP-14].
+ * Maps smart-group-selection.feature (descriptor, move, resize, LOD, invert).
+ */
+
+#include "document/capability.hpp"
+#include "document/device_document.hpp"
+#include "document/manipulate.hpp"
+#include "document/recognize_enclose.hpp"
+
+#include <cmath>
+#include <iostream>
+#include <string>
+#include <vector>
+
+using namespace epaper::document;
+
+static int g_fails = 0;
+
+#define CHECK(cond)                                                                            \
+    do {                                                                                       \
+        if (!(cond)) {                                                                         \
+            std::cerr << "FAIL " << __FILE__ << ":" << __LINE__ << " " << #cond << "\n";       \
+            ++g_fails;                                                                         \
+        }                                                                                      \
+    } while (0)
+
+static bool near(double a, double b, double eps = 1e-6)
+{
+    return std::abs(a - b) <= eps;
+}
+
+static DocOp createSg(const std::string &id, const std::string &mode, double bw, double bh)
+{
+    const std::string json = std::string("{\"opId\":\"op-") + id
+        + "\",\"type\":\"create_smart_group\",\"source\":\"epaper\",\"payload\":{"
+          "\"id\":\""
+        + id + "\",\"bounds\":{\"x\":0,\"y\":0,\"width\":" + std::to_string(bw) + ",\"height\":"
+        + std::to_string(bh)
+        + "},\"transform\":{\"x\":0,\"y\":0,\"rotation\":0,\"scaleX\":1,\"scaleY\":1},"
+          "\"inkScaleMode\":\""
+        + mode
+        + "\",\"children\":["
+          "{\"id\":\""
+        + id
+        + "_c\",\"kind\":\"ink\",\"role\":\"content\",\"layoutOffset\":{\"u\":0.25,\"v\":0.4},"
+          "\"samples\":[{\"x\":10,\"y\":10},{\"x\":20,\"y\":10}]},"
+          "{\"id\":\""
+        + id
+        + "_b\",\"kind\":\"ink\",\"role\":\"boundary\",\"samples\":[{\"x\":0,\"y\":0},{\"x\":"
+        + std::to_string(bw) + ",\"y\":0},{\"x\":" + std::to_string(bw) + ",\"y\":"
+        + std::to_string(bh) + "},{\"x\":0,\"y\":" + std::to_string(bh) + "}]}"
+                                                                        "]}}";
+    return opFromJson(parseJson(json));
+}
+
+static void test_descriptor()
+{
+    CHECK(smartGroupVerbsExact(descriptorFor(NodeKind::SmartGroup)));
+    CHECK(descriptorFor(NodeKind::Ink).has(Verb::Select));
+    CHECK(!descriptorFor(NodeKind::Ink).has(Verb::Move));
+}
+
+static void test_router_no_kind_branch()
+{
+    const auto cap = descriptorFor(NodeKind::SmartGroup);
+    CHECK(resolvePress(cap, true, false, false, true) == GestureKind::SelectMove);
+    CHECK(resolvePress(cap, true, true, false, true) == GestureKind::Resize);
+    CHECK(resolvePress(cap, true, false, true, true) == GestureKind::ToggleMode);
+    CHECK(resolvePress(cap, false, false, false, true) == GestureKind::Unavailable);
+    CHECK(resolvePress(cap, true, false, false, false) == GestureKind::Marquee);
+    const auto ink = descriptorFor(NodeKind::Ink);
+    CHECK(resolvePress(ink, true, true, false, true) == GestureKind::SelectMove);
+}
+
+static void test_move_commit_equals_preview()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitOp(createSg("sg_m", "withBounds", 200, 200)).applied);
+    const DocNode *orig = doc.find("sg_m");
+    CHECK(orig);
+    doc.beginGesture();
+    const SmartTransform origin = orig->transform;
+    SmartTransform live = origin;
+    live.x = 40;
+    live.y = 15;
+    live.rotation = 0;
+    DocNode preview = *orig;
+    applyLiveGeometry(preview, live, preview.smartBounds);
+    doc.previewManipulationFrame();
+    CHECK(near(preview.transform.x, 40) && near(preview.transform.y, 15));
+    const DocOp op = makeSetSmartTransformOp("mv1", "sg_m", preview.transform, nullptr);
+    CHECK(op.payload.get("transform")->getNumber("rotation") == 0);
+    CHECK(doc.commitOp(op).applied);
+    const DocNode *done = doc.find("sg_m");
+    CHECK(done && near(done->transform.x, 40) && near(done->transform.y, 15));
+    CHECK(near(done->transform.rotation, 0));
+}
+
+static void test_fixed_ink_resize_keeps_uv_and_sample_size()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitOp(createSg("sg_f", "fixedInk", 100, 80)).applied);
+    const DocNode *c0 = nullptr;
+    for (const auto &ch : doc.find("sg_f")->children) {
+        if (ch.role && *ch.role == "content")
+            c0 = &ch;
+    }
+    CHECK(c0 && c0->layoutOffset);
+    if (!c0 || !c0->layoutOffset)
+        return;
+    const auto uv = *c0->layoutOffset;
+    const double dx = c0->samples[1].x - c0->samples[0].x;
+    const double dy = c0->samples[1].y - c0->samples[0].y;
+    const WorldBox origin = originWorldAabb(doc.find("sg_f")->smartBounds, doc.find("sg_f")->transform);
+    const WorldBox grown = resizeWorldAabbFromHandle(origin, ResizeHandle::Se, origin.maxX + 50,
+                                                     origin.maxY + 40);
+    const auto mapped = smartTransformFromWorldAabb(grown, doc.find("sg_f")->smartBounds,
+                                                    doc.find("sg_f")->transform, "fixedInk");
+    CHECK(doc.commitOp(makeSetSmartTransformOp("rz1", "sg_f", mapped.transform, &mapped.bounds)).applied);
+    const DocNode *c1 = nullptr;
+    for (const auto &ch : doc.find("sg_f")->children) {
+        if (ch.role && *ch.role == "content")
+            c1 = &ch;
+    }
+    CHECK(c1 && c1->layoutOffset);
+    CHECK(near(c1->layoutOffset->first, uv.first) && near(c1->layoutOffset->second, uv.second));
+    CHECK(near(c1->samples[1].x - c1->samples[0].x, dx, 1.0));
+    CHECK(near(c1->samples[1].y - c1->samples[0].y, dy, 1.0));
+    CHECK(near(mapped.transform.scaleX, 1.5, 0.05));
+    const DocNode *sg = doc.find("sg_f");
+    const DocNode *b1 = nullptr;
+    for (const auto &ch : sg->children) {
+        if (ch.role && *ch.role == "boundary")
+            b1 = &ch;
+    }
+    CHECK(b1);
+    const Vec2 cMin = inkSamplesMin(c1->samples);
+    const Vec2 cW = smartLocalToWorld(c1->samples[0].x, c1->samples[0].y, *sg, "content", c1->layoutOffset,
+                                      &cMin);
+    const double worldLeft = sg->transform.x + sg->smartBounds.x * sg->transform.scaleX;
+    const double worldTop = sg->transform.y + sg->smartBounds.y * sg->transform.scaleY;
+    CHECK(near(cW.x, worldLeft, 1.0));
+    CHECK(near(cW.y, worldTop, 1.0));
+    const Vec2 bW0 = smartLocalToWorld(b1->samples[0].x, b1->samples[0].y, *sg, "boundary", {}, nullptr);
+    const Vec2 bW1 = smartLocalToWorld(b1->samples[1].x, b1->samples[1].y, *sg, "boundary", {}, nullptr);
+    CHECK(std::abs(bW1.x - bW0.x) > std::abs(b1->samples[1].x - b1->samples[0].x) + 1.0);
+}
+
+static void test_with_bounds_scales()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitOp(createSg("sg_w", "withBounds", 100, 100)).applied);
+    const WorldBox origin = originWorldAabb(doc.find("sg_w")->smartBounds, doc.find("sg_w")->transform);
+    const WorldBox grown = resizeWorldAabbFromHandle(origin, ResizeHandle::Se, origin.maxX + 100,
+                                                     origin.maxY + 100);
+    const auto mapped = smartTransformFromWorldAabb(grown, doc.find("sg_w")->smartBounds,
+                                                    doc.find("sg_w")->transform, "withBounds");
+    CHECK(near(mapped.transform.scaleX, 2.0, 0.05));
+    CHECK(near(mapped.transform.scaleY, 2.0, 0.05));
+    CHECK(near(mapped.bounds.width, 100));
+}
+
+static void test_inverted_resize_non_negative()
+{
+    WorldBox box{0, 0, 40, 30};
+    const WorldBox n = resizeWorldAabbFromHandle(box, ResizeHandle::Se, -10, -8);
+    CHECK(n.maxX - n.minX >= 1);
+    CHECK(n.maxY - n.minY >= 1);
+}
+
+static void test_lod()
+{
+    CHECK(lodAllows(200, 200, 1.0));
+    CHECK(!lodAllows(50, 200, 1.0));
+}
+
+int main()
+{
+    test_descriptor();
+    test_router_no_kind_branch();
+    test_move_commit_equals_preview();
+    test_fixed_ink_resize_keeps_uv_and_sample_size();
+    test_with_bounds_scales();
+    test_inverted_resize_non_negative();
+    test_lod();
+    if (g_fails) {
+        std::cerr << g_fails << " failed\n";
+        return 1;
+    }
+    std::cout << "manipulate_test ok\n";
+    return 0;
+}

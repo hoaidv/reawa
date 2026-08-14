@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-14T00:43:45+00:00
+generated_at: 2026-08-14T00:54:38+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -25,7 +25,7 @@ generated_at: 2026-08-14T00:43:45+00:00
 | [STORY-EP-016](./iter-003/stories/STORY-EP-016.md) | On-device enclose recognition | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | done | iter-003 | 5 |
 | [STORY-EP-017](./iter-003/stories/STORY-EP-017.md) | On-device draw-into membership | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | done | iter-003 | 3 |
 | [STORY-EP-018](./iter-003/stories/STORY-EP-018.md) | On-device selection-create surround | implement | dev | epaper | [SRS-EP-10], [SRS-EP-11], [SRS-EP-12], [SRS-EP-14] | done | iter-003 | 5 |
-| [STORY-EP-019](./iter-003/stories/STORY-EP-019.md) | On-device live manipulation and REQ-08 conformance | implement | dev | epaper | [SRS-EP-11], [SRS-EP-14] | ready | iter-003 | 5 |
+| [STORY-EP-019](./iter-003/stories/STORY-EP-019.md) | On-device live manipulation and REQ-08 conformance | implement | dev | epaper | [SRS-EP-11], [SRS-EP-14] | in-review | iter-003 | 5 |
 | [STORY-EP-020](./iter-003/stories/STORY-EP-020.md) | Device one-way sync handshake and publish queue | implement | dev | epaper | [SRS-EP-08] | draft | iter-003 | 5 |
 | [STORY-EP-021](./iter-003/stories/STORY-EP-021.md) | Ship device console logs on :9878 | implement | dev | epaper | [SRS-EP-15], [SRS-EP-16] | done | iter-003 | 3 |
 | [STORY-EP-022](./iter-003/stories/STORY-EP-022.md) | Design selection rubber-band and Enclose CTA | design | designer | epaper | [SRS-EP-12], [SRS-EP-10], [SRS-EP-11] | done | iter-003 | 3 |

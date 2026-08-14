@@ -131,6 +131,16 @@ TabletWindow {
         text: drawCanvas.encloseRefuseReason
     }
 
+    Text {
+        z: 21
+        visible: drawCanvas.manipulationUnavailable.length > 0
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: 72
+        font.pixelSize: 16
+        color: "black"
+        text: drawCanvas.manipulationUnavailable
+    }
+
     Repeater {
         id: inkPool
         model: drawCanvas.paintsInk ? 0 : 2000

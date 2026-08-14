@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "document/device_document.hpp"
+#include "document/manipulate.hpp"
 
 class StrokeSync;
 
@@ -25,7 +26,7 @@ class StrokeSync;
  * @implements [SRS-EP-01]
  * @implements [SRS-EP-02] vector ∩ drawingRegion paint (no bitmap push)
  * @implements [SRS-EP-07] local tree paint + stroke ingest
- * @implements [SRS-EP-09] digitizer channels on Ink samples
+ * @implements [SRS-EP-11] live SmartGroup manipulation
  */
 class TabletCanvasItem : public QQuickPaintedItem
 {
@@ -40,6 +41,7 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(QRectF encloseCtaRect READ encloseCtaRect NOTIFY selectionChromeChanged)
     Q_PROPERTY(bool encloseVisible READ encloseVisible NOTIFY selectionChromeChanged)
     Q_PROPERTY(QString encloseRefuseReason READ encloseRefuseReason NOTIFY selectionChromeChanged)
+    Q_PROPERTY(QString manipulationUnavailable READ manipulationUnavailable NOTIFY selectionChromeChanged)
 
 public:
     explicit TabletCanvasItem(QQuickItem *parent = nullptr);
@@ -54,6 +56,7 @@ public:
     QRectF encloseCtaRect() const { return m_encloseCtaRect; }
     bool encloseVisible() const { return m_encloseVisible; }
     QString encloseRefuseReason() const { return m_encloseRefuseReason; }
+    QString manipulationUnavailable() const { return m_manipUnavailable; }
     Q_INVOKABLE void encloseSelection();
 
     /** Digitizer channels reported on this sample (SRS-EP-09). Unset = not reported. */
@@ -154,6 +157,8 @@ private:
     void beginSelectionGesture(const QPointF &canvasPos);
     void updateSelectionGesture(const QPointF &canvasPos);
     void endSelectionGesture();
+    void redrawLiveManipRegion();
+    void commitLiveManip();
     /** @implements [SRS-EP-04] local selection bounds + move ghost (not baked into ink) */
     void paintSelectionChrome(QPainter *painter) const;
     QRectF pickablePanelRect(const QString &id, double dxWorld = 0, double dyWorld = 0) const;
@@ -211,19 +216,26 @@ private:
     QVector<QPointF> m_lassoPanel;
     QPointF m_marqueeStartPanel;
     QPointF m_marqueeEndPanel;
-    enum class SelGesture { None, Move, Marquee, Lasso } m_selGesture = SelGesture::None;
+    enum class SelGesture { None, Move, Resize, Marquee, Lasso } m_selGesture = SelGesture::None;
     QRectF m_encloseCtaRect;
     bool m_encloseVisible = false;
     QString m_encloseRefuseReason;
+    QString m_manipUnavailable;
+    epaper::document::SmartTransform m_originT;
+    epaper::document::SmartTransform m_liveT;
+    epaper::document::SmartBounds m_originB;
+    epaper::document::SmartBounds m_liveB;
+    epaper::document::ResizeHandle m_resizeHandle = epaper::document::ResizeHandle::None;
     QString m_gesturePickableId;
     QPointF m_gestureStartWorld;
     QPointF m_gestureLastWorld;
     bool m_selectionGesture = false;
     /** Last panel-space chrome rect — dirty region for soft update during drag. */
     QRectF m_selectionChromeDirty;
+    QRectF m_liveDirtyPrev;
     int m_toolIntentSeq = 0;
     QElapsedTimer m_selectionGhostClock;
-    static constexpr qint64 kSelectionGhostMinIntervalMs = 50;
+    static constexpr qint64 kSelectionGhostMinIntervalMs = 200;
     bool m_rasterizePending = false;
     bool m_rasterizeSharp = false;
     /** Deferred sharp refresh queued while a stroke was in flight. */

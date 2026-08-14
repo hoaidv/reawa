@@ -385,6 +385,17 @@ public:
      */
     void previewManipulationFrame() { ++m_intermediateFrames; }
 
+    /** Live paint only — not a ring entry. Restore origin before commitOp. */
+    bool applyLiveSmartGeometry(const std::string &id, const SmartTransform &t, const SmartBounds &b)
+    {
+        DocNode *n = findMut(id);
+        if (!n)
+            return false;
+        n->transform = t;
+        n->smartBounds = b;
+        return true;
+    }
+
     int intermediateFrameCount() const { return m_intermediateFrames; }
     bool gestureInFlight() const { return m_gestureInFlight; }
     bool undoLatched() const { return m_undoLatched; }

@@ -111,6 +111,20 @@ inline Vec2 inkSamplesCentroid(const std::vector<InkSample> &samples)
     return {(minX + maxX) / 2.0, (minY + maxY) / 2.0};
 }
 
+inline Vec2 inkSamplesMin(const std::vector<InkSample> &samples)
+{
+    Vec2 m{0, 0};
+    if (samples.empty())
+        return m;
+    m.x = std::numeric_limits<double>::infinity();
+    m.y = std::numeric_limits<double>::infinity();
+    for (const auto &s : samples) {
+        m.x = std::min(m.x, s.x);
+        m.y = std::min(m.y, s.y);
+    }
+    return m;
+}
+
 /** Seed content UV from local AABB centroid vs SmartGroup.bounds. */
 inline std::pair<double, double> seedLayoutOffset(const std::vector<InkSample> &samples,
                                                   const SmartBounds &bounds)
@@ -127,33 +141,26 @@ inline std::pair<double, double> seedLayoutOffset(const std::vector<InkSample> &
  */
 inline Vec2 smartLocalToWorld(double localX, double localY, const DocNode &sg, const std::string &role,
                               const std::optional<std::pair<double, double>> &layoutOffset,
-                              const Vec2 *contentCentroid)
+                              const Vec2 *contentMin)
 {
     const SmartTransform &t = sg.transform;
     double x = localX;
     double y = localY;
     if (role == "content" && sg.inkScaleMode == "fixedInk") {
-        const double u = layoutOffset ? layoutOffset->first : 0.5;
-        const double v = layoutOffset ? layoutOffset->second : 0.5;
+        (void)layoutOffset;
         const SmartBounds &bounds = sg.smartBounds;
-        const double tx = bounds.x + u * bounds.width;
-        const double ty = bounds.y + v * bounds.height;
-        const Vec2 c = contentCentroid ? *contentCentroid : Vec2{localX, localY};
-        x = localX + (tx - c.x);
-        y = localY + (ty - c.y);
-        if (t.rotation != 0) {
-            const double csn = std::cos(t.rotation);
-            const double sn = std::sin(t.rotation);
-            const double rx = x * csn - y * sn;
-            const double ry = x * sn + y * csn;
-            x = rx;
-            y = ry;
-        }
-        return {x + t.x, y + t.y};
+        const double minX = contentMin ? contentMin->x : localX;
+        const double minY = contentMin ? contentMin->y : localY;
+        const double sx = t.scaleX != 0 ? t.scaleX : 1.0;
+        const double sy = t.scaleY != 0 ? t.scaleY : 1.0;
+        // Unscaled samples, pinned to the box's top-left (human verify EP-019).
+        x = t.x + bounds.x * sx + (localX - minX);
+        y = t.y + bounds.y * sy + (localY - minY);
+        return {x, y};
     }
     if (role == "boundary" || sg.inkScaleMode == "withBounds") {
-        x *= t.scaleX;
-        y *= t.scaleY;
+        x *= t.scaleX != 0 ? t.scaleX : 1.0;
+        y *= t.scaleY != 0 ? t.scaleY : 1.0;
     }
     if (t.rotation != 0) {
         const double csn = std::cos(t.rotation);

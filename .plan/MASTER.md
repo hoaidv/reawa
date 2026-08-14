@@ -140,7 +140,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 
 - **Done 2026-08-13:** `/architect` design + `/sm` re-slice (EP-012…020, IN-027…028)
 - **Now:** **W11b** — [STORY-EP-023](./iter-003/stories/STORY-EP-023.md) **done** (four-tool rebase).
-  [STORY-EP-019](./iter-003/stories/STORY-EP-019.md) **ready** → `/dev`.
+  [STORY-EP-019](./iter-003/stories/STORY-EP-019.md) **in-review** → `/qa`.
 - **Next campaign:** epaper `[REQ-08]` direct manipulation of any document node — thickened in
   [node-manipulation](../.docs/modules/epaper/features/node-manipulation/), designed and built in a
   distinct iteration. Also: nested enclose (CHL-0011); ink-box sizing / align-content (CHL-0012);
