@@ -1,0 +1,288 @@
+
+=== EXP-0002 round 2 — connector-ink warp probe (SPIKE, host-only) ===
+canonical from round 1: Hermite magnitude referenced to arc length (T*L'); far-end departure = negated incoming tangent
+recommended defaults in this build: T=0.15  departure stub=k=1.5 relative (k*T*L'), outer handle only  sample parameterization=pre-blend arc  clamp: scale-floor=off d-taper=off
+W5 blend bar: minimum radius of curvature 12.0 world units; middle keeps the round-1 rest-relative turn bar
+
+--- 1. anchor alignment partition (D26: edge facings are never re-selected) ---
+obliquity = angle between the stored facing and the direction toward the peer; >= 90 deg is reversed
+case                      end A             obliq A   end B             obliq B   class
+arc/translate-near        edge:aligned      1.1       edge:aligned      1.1       aligned
+arc/translate-far         edge:aligned      31.5      edge:aligned      31.5      aligned
+arc/chord-flip            edge:REVERSED     170.6     edge:REVERSED     170.6     REVERSED
+arc/rotate-a              edge:aligned      68.6      edge:aligned      16.6      aligned
+arc/resize-a              edge:aligned      7.4       edge:aligned      7.4       aligned
+arc/both-move             edge:aligned      32.6      edge:aligned      32.6      aligned
+arc/degenerate            edge:aligned      0.0       edge:aligned      0.0       aligned
+arc/detour-third-box      edge:aligned      37.6      edge:aligned      37.6      aligned
+arc/chain-3-stroke        edge:aligned      31.3      edge:aligned      31.3      aligned
+arc/centre-clip           centre(derived)   0.0       edge:aligned      25.9      aligned
+wiggle/translate-near     edge:aligned      1.1       edge:aligned      1.1       aligned
+wiggle/translate-far      edge:aligned      31.5      edge:aligned      31.5      aligned
+wiggle/chord-flip         edge:REVERSED     170.6     edge:REVERSED     170.6     REVERSED
+wiggle/rotate-a           edge:aligned      68.6      edge:aligned      16.6      aligned
+wiggle/resize-a           edge:aligned      7.4       edge:aligned      7.4       aligned
+wiggle/both-move          edge:aligned      32.6      edge:aligned      32.6      aligned
+wiggle/degenerate         edge:aligned      0.0       edge:aligned      0.0       aligned
+wiggle/detour-third-box   edge:aligned      37.6      edge:aligned      37.6      aligned
+wiggle/chain-3-stroke     edge:aligned      31.3      edge:aligned      31.3      aligned
+wiggle/centre-clip        centre(derived)   0.0       edge:aligned      25.9      aligned
+aligned 18/20, reversed 2/20 (reversed cases are excluded from the W5 bar and answered by W7)
+
+--- 2. degenerate clamp policies (at the default T and stub) ---
+cost = max |A+C sample - unclamped A+C sample| in u; endErr = |A spine end - anchor| in u (variant A has no blend to repair a detached end)
+case                      rawScale  (i) scale-floor 0.15 cost/endErr(ii) d-taper cost/endErr      (iii) both cost/endErr        
+arc/translate-near        0.886     0.00 / 0.00                   0.01 / 0.00                   0.01 / 0.00                   
+arc/translate-far         1.927     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+arc/chord-flip            1.589     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+arc/rotate-a              1.131     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+arc/resize-a              0.845     0.00 / 0.00                   0.02 / 0.00                   0.02 / 0.00                   
+arc/both-move             2.201     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+arc/degenerate            0.009     40.50 / 46.76                 0.13 / 0.00                   40.48 / 46.76                 
+arc/detour-third-box      1.427     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+arc/chain-3-stroke        1.852     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+arc/centre-clip           1.383     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+wiggle/translate-near     0.886     0.00 / 0.00                   0.12 / 0.00                   0.12 / 0.00                   
+wiggle/translate-far      1.927     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+wiggle/chord-flip         1.589     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+wiggle/rotate-a           1.131     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+wiggle/resize-a           0.845     0.00 / 0.00                   0.17 / 0.00                   0.17 / 0.00                   
+wiggle/both-move          2.201     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+wiggle/degenerate         0.009     38.73 / 46.76                 1.09 / 0.00                   38.85 / 46.76                 
+wiggle/detour-third-box   1.427     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+wiggle/chain-3-stroke     1.852     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+wiggle/centre-clip        1.383     0.00 / 0.00                   0.00 / 0.00                   0.00 / 0.00                   
+
+policy summary (the degenerate cases span a ~3 u chord, so any reach well above that is the spike)
+policy                  worst degenerate reach  worst endpoint detach (A)  worst cost where no clamp is needed
+none                    3.0 u                   0.00 u                     0.00 u
+(i) scale-floor 0.15    43.1 u                  46.76 u                    0.00 u
+(ii) d-taper            3.0 u                   0.00 u                     0.17 u
+(iii) both              43.1 u                  46.76 u                    0.17 u
+
+where the degenerate spike actually lives (reach = max |sample - anchor A|; the new chord is ~3 u)
+case / policy                     max |d| u  A reach     B reach     A+C reach   B+C reach   
+arc / unclamped                   0.1        3.0         69.2        3.0         69.2        
+arc / (ii) d-taper                0.1        3.0         69.1        3.0         69.1        
+arc / (iv) d-taper + aniso taper  0.1        3.0         3.0         3.0         3.0         
+wiggle / unclamped                1.1        3.1         55.3        3.0         55.3        
+wiggle / (ii) d-taper             1.1        3.0         55.3        3.0         55.3        
+wiggle / (iv) d-taper + aniso taper1.1        3.0         3.0         3.0         3.0         
+
+--- 3. blend length T sweep (stub = round-1 canonical T*L'; aligned cases only for cusps/overshoot) ---
+variant T      0-cusp/aligned  blend cusps  min radius u  max facing  face>5  overshoot  mid70 max u  blend mean u
+A+C     0.10   12/18           20           0.2           6.85        7       1          0.00         3.21
+A+C     0.15   15/18           13           0.2           4.41        0       1          0.01         4.98
+A+C     0.25   13/18           19           0.3           2.58        0       3          43.51        8.84
+A+C     0.35   15/18           55           0.2           1.94        0       2          72.44        12.58
+B+C     0.10   12/18           54           1.7           10.27       4       7          0.00         3.05
+B+C     0.15   14/18           66           2.4           6.60        1       7          0.02         4.59
+B+C     0.25   15/18           84           3.9           3.84        0       7          32.24        7.96
+B+C     0.35   15/18           84           0.8           2.96        0       22         59.79        11.48
+
+--- 4a. departure stub, RELATIVE (outer handle = k*T*L') ---
+variant T      k      0-cusp/aligned  min radius u  max facing  overshoot  stub range u        mid70 max u  blend mean u
+A+C     0.10   0.5    5/18            0.1           13.83       0          0.2 .. 46.3         0.00         3.51
+A+C     0.10   1.0    12/18           0.2           6.85        1          0.3 .. 92.6         0.00         3.21
+A+C     0.10   1.5    14/18           0.2           4.54        1          0.5 .. 138.9        0.00         4.86
+A+C     0.10   2.5    7/18            0.1           2.71        0          0.8 .. 231.4        0.00         9.08
+A+C     0.15   0.5    7/18            0.1           8.91        1          0.2 .. 69.4         0.01         5.43
+A+C     0.15   1.0    15/18           0.2           4.41        1          0.5 .. 138.9        0.01         4.98
+A+C     0.15   1.5    17/18           0.3           2.93        1          0.7 .. 208.3        0.02         7.29
+A+C     0.15   2.5    11/18           0.1           1.75        0          1.2 .. 347.1        0.03         13.49
+A+C     0.25   0.5    8/18            0.1           5.19        1          0.4 .. 115.7        48.30        10.03
+A+C     0.25   1.0    13/18           0.3           2.58        3          0.8 .. 231.4        43.51        8.84
+A+C     0.25   1.5    17/18           0.5           1.71        3          1.2 .. 347.1        52.51        12.18
+A+C     0.25   2.5    15/18           0.2           1.03        1          2.1 .. 578.6        72.26        22.11
+A+C     0.35   0.5    11/18           0.1           3.91        1          0.6 .. 162.0        58.80        13.37
+A+C     0.35   1.0    15/18           0.2           1.94        2          1.2 .. 324.0        72.44        12.58
+A+C     0.35   1.5    16/18           0.2           1.29        2          1.7 .. 486.0        86.78        17.53
+A+C     0.35   2.5    14/18           0.1           0.77        2          2.9 .. 810.0        129.18       31.42
+B+C     0.10   0.5    5/18            0.8           19.87       2          6.9 .. 38.2         0.00         3.26
+B+C     0.10   1.0    12/18           1.7           10.27       7          13.8 .. 76.4        0.00         3.05
+B+C     0.10   1.5    14/18           1.7           6.89        7          20.7 .. 114.6       0.00         4.55
+B+C     0.10   2.5    7/18            1.3           4.15        3          34.5 .. 191.0       0.00         8.56
+B+C     0.15   0.5    6/18            1.1           13.01       6          10.4 .. 57.3        0.01         4.98
+B+C     0.15   1.0    14/18           2.4           6.60        7          20.7 .. 114.6       0.02         4.59
+B+C     0.15   1.5    15/18           3.0           4.41        7          31.1 .. 171.9       0.02         6.75
+B+C     0.15   2.5    10/18           2.5           2.65        3          51.8 .. 286.5       0.02         12.64
+B+C     0.25   0.5    10/18           1.8           7.65        7          17.3 .. 95.5        34.33        8.80
+B+C     0.25   1.0    15/18           3.9           3.84        7          34.5 .. 191.0       32.24        7.96
+B+C     0.25   1.5    15/18           4.8           2.57        7          51.8 .. 286.5       38.82        11.35
+B+C     0.25   2.5    15/18           4.7           1.54        2          86.4 .. 477.4       54.01        21.21
+B+C     0.35   0.5    11/18           0.2           5.90        24         24.2 .. 133.7       46.75        12.23
+B+C     0.35   1.0    15/18           0.8           2.96        22         48.4 .. 267.4       59.79        11.48
+B+C     0.35   1.5    15/18           1.7           1.97        20         72.5 .. 401.0       73.17        16.07
+B+C     0.35   2.5    14/18           3.3           1.18        14         120.9 .. 668.4      101.52       29.31
+
+--- 4b. departure stub, ABSOLUTE (outer handle = min(stub, 1.50*T*L') ) ---
+variant T      stub u  0-cusp/aligned  min radius u  max facing  overshoot  stub range u        mid70 max u  blend mean u
+A+C     0.10   6       3/18            0.2           125.78      0          0.5 .. 6.0          0.00         4.32
+A+C     0.10   12      4/18            0.2           34.17       0          0.5 .. 12.0         0.00         4.08
+A+C     0.10   24      6/18            0.2           17.90       0          0.5 .. 24.0         0.00         3.68
+A+C     0.10   48      10/18           0.2           9.54        1          0.5 .. 48.0         0.00         3.47
+A+C     0.15   6       4/18            0.3           133.58      0          0.7 .. 6.0          0.02         6.73
+A+C     0.15   12      5/18            0.3           32.86       0          0.7 .. 12.0         0.02         6.49
+A+C     0.15   24      5/18            0.3           17.65       0          0.7 .. 24.0         0.02         6.04
+A+C     0.15   48      10/18           0.3           9.30        1          0.7 .. 48.0         0.02         5.42
+A+C     0.25   6       3/18            0.3           136.41      0          1.2 .. 6.0          58.68        12.61
+A+C     0.25   12      3/18            0.5           31.94       0          1.2 .. 12.0         58.11        12.34
+A+C     0.25   24      3/18            0.5           17.33       0          1.2 .. 24.0         56.97        11.83
+A+C     0.25   48      8/18            0.5           9.13        1          1.2 .. 48.0         54.70        10.90
+A+C     0.35   6       1/18            0.2           89.97       0          1.7 .. 6.0          64.91        16.43
+A+C     0.35   12      1/18            0.2           39.81       0          1.7 .. 12.0         64.09        16.19
+A+C     0.35   24      2/18            0.2           19.99       0          1.7 .. 24.0         63.41        15.72
+A+C     0.35   48      2/18            0.2           11.01       1          1.7 .. 48.0         62.25        14.87
+B+C     0.10   6       1/18            0.5           124.66      0          6.0 .. 6.0          0.00         4.07
+B+C     0.10   12      1/18            1.0           26.18       4          12.0 .. 12.0        0.00         3.84
+B+C     0.10   24      4/18            1.7           12.08       6          20.7 .. 24.0        0.00         3.49
+B+C     0.10   48      10/18           1.7           6.89        7          20.7 .. 48.0        0.00         3.26
+B+C     0.15   6       1/18            0.3           127.97      0          6.0 .. 6.0          0.01         6.29
+B+C     0.15   12      2/18            0.7           25.10       6          12.0 .. 12.0        0.01         6.05
+B+C     0.15   24      3/18            1.8           13.24       6          24.0 .. 24.0        0.01         5.65
+B+C     0.15   48      8/18            3.0           6.91        7          31.1 .. 48.0        0.01         5.06
+B+C     0.25   6       0/18            0.2           99.05       0          6.0 .. 6.0          41.11        11.31
+B+C     0.25   12      0/18            0.5           24.29       6          12.0 .. 12.0        40.62        11.04
+B+C     0.25   24      1/18            1.2           11.68       6          24.0 .. 24.0        39.68        10.55
+B+C     0.25   48      5/18            3.9           6.45        7          48.0 .. 48.0        37.79        9.73
+B+C     0.35   6       1/18            0.0           85.61       21         6.0 .. 6.0          51.24        15.37
+B+C     0.35   12      1/18            0.0           34.67       24         12.0 .. 12.0        50.46        15.12
+B+C     0.35   24      2/18            0.1           14.68       23         24.0 .. 24.0        48.88        14.67
+B+C     0.35   48      2/18            0.5           8.22        22         48.0 .. 48.0        45.74        13.87
+
+--- 4d. fully ABSOLUTE parameterization: blend span in world units too (T derived, clamped to [0.05, 0.35]) ---
+variant blend u  stub u  0-cusp/aligned  min radius u  max facing  overshoot  mid70 max u  blend mean u
+A+C     40       6       1/18            0.2           117.65      0          0.37         2.84
+A+C     40       12      3/18            0.2           36.08       0          0.37         2.60
+A+C     40       24      4/18            0.2           19.02       0          0.37         2.23
+A+C     40       48      8/18            0.2           10.35       1          0.37         2.42
+A+C     60       6       2/18            0.2           123.75      0          2.15         4.39
+A+C     60       12      2/18            0.2           34.02       0          1.99         4.14
+A+C     60       24      4/18            0.2           18.37       0          1.72         3.70
+A+C     60       48      8/18            0.2           9.80        1          1.50         3.14
+A+C     90       6       1/18            0.2           149.69      0          14.33        6.84
+A+C     90       12      1/18            0.2           32.77       0          13.74        6.57
+A+C     90       24      1/18            0.2           17.86       0          12.56        6.09
+A+C     90       48      7/18            0.2           9.46        1          10.26        5.28
+A+C     130      6       1/18            0.2           120.85      0          25.40        9.89
+A+C     130      12      1/18            0.2           32.06       0          24.77        9.64
+A+C     130      24      1/18            0.2           17.64       0          23.53        9.16
+A+C     130      48      4/18            0.2           9.26        1          21.20        8.30
+B+C     40       6       2/18            0.2           121.31      0          4.81         3.08
+B+C     40       12      2/18            0.8           27.51       6          4.95         2.85
+B+C     40       24      5/18            2.3           12.80       6          5.52         2.52
+B+C     40       48      10/18           4.2           7.18        7          7.39         2.91
+B+C     60       6       1/18            0.0           126.39      15         9.75         4.78
+B+C     60       12      2/18            0.0           25.90       19         9.78         4.53
+B+C     60       24      4/18            0.1           12.27       18         9.85         4.11
+B+C     60       48      11/18           0.4           6.85        18         10.03        3.67
+B+C     90       6       0/18            0.0           128.24      21         14.37        7.24
+B+C     90       12      1/18            0.0           24.90       24         14.39        6.98
+B+C     90       24      1/18            0.1           11.95       23         14.45        6.50
+B+C     90       48      7/18            0.5           6.65        23         14.67        5.76
+B+C     130      6       0/18            0.0           97.58       21         27.41        10.29
+B+C     130      12      0/18            0.0           25.97       24         26.75        10.04
+B+C     130      24      1/18            0.1           14.33       23         25.48        9.58
+B+C     130      48      4/18            0.5           7.46        22         23.06        8.78
+
+--- 4c. does the stub belong on the inner handle too? (A+C, T=0.15) ---
+config                            0-cusp/aligned  min radius u  max facing  overshoot  mid70 max u
+outer only, stub 6u               4/18            0.3           133.58      0          0.02
+outer only, stub 12u              5/18            0.3           32.86       0          0.02
+outer only, stub 24u              5/18            0.3           17.65       0          0.02
+outer only, stub 48u              10/18           0.3           9.30        1          0.02
+outer+inner, stub 6u              2/18            0.2           172.09      0          0.66
+outer+inner, stub 12u             2/18            0.2           52.78       0          0.63
+outer+inner, stub 24u             2/18            0.2           22.84       0          0.57
+outer+inner, stub 48u             7/18            0.2           11.64       1          0.45
+
+--- 4e. sample parameterization: does the blend leak into the middle? (A+C, T=0.15, relative stub) ---
+parameterization                  0-cusp/aligned  max facing  mid70 max u  blend mean u
+blended arc (round 1), k=0.5      7/18            8.91        3.01         2.75
+blended arc (round 1), k=1.0      15/18           4.41        8.48         4.73
+blended arc (round 1), k=1.5      17/18           2.93        15.28        6.97
+blended arc (round 1), k=2.5      11/18           1.75        34.88        11.89
+pre-blend arc (local), k=0.5      7/18            8.91        0.01         5.43
+pre-blend arc (local), k=1.0      15/18           4.41        0.01         4.98
+pre-blend arc (local), k=1.5      17/18           2.93        0.02         7.29
+pre-blend arc (local), k=2.5      11/18           1.75        0.03         13.49
+
+--- 4f. fine grid around the optimum (A+C, relative stub) ---
+T      k      0-cusp/aligned  max facing  overshoot  blend mean u  cases still failing
+0.12   1.2    16/18           4.67        1          4.57          arc/rotate-a, wiggle/rotate-a
+0.12   1.5    17/18           3.72        1          5.88          arc/rotate-a
+0.12   1.8    15/18           3.10        1          7.33          arc/translate-far, arc/rotate-a, arc/both-move
+0.12   2.1    10/18           2.65        1          8.85          arc/translate-far, arc/rotate-a, arc/resize-a, arc/both-move, arc/degenerate, arc/detour-third-box, wiggle/rotate-a, wiggle/degenerate
+0.15   1.2    17/18           3.67        1          5.72          arc/rotate-a
+0.15   1.5    17/18           2.93        1          7.29          arc/rotate-a
+0.15   1.8    17/18           2.44        1          9.07          arc/rotate-a
+0.15   2.1    13/18           2.09        1          10.93         arc/translate-far, arc/rotate-a, arc/both-move, arc/degenerate, wiggle/degenerate
+0.18   1.2    17/18           3.02        1          6.52          arc/rotate-a
+0.18   1.5    17/18           2.41        2          8.40          arc/rotate-a
+0.18   1.8    16/18           2.01        2          10.53         arc/rotate-a, arc/degenerate
+0.18   2.1    13/18           1.72        1          12.78         arc/translate-far, arc/rotate-a, arc/both-move, arc/degenerate, wiggle/degenerate
+0.22   1.2    17/18           2.45        2          8.22          arc/rotate-a
+0.22   1.5    17/18           1.96        2          10.48         arc/rotate-a
+0.22   1.8    15/18           1.63        2          13.06         arc/rotate-a, arc/degenerate, wiggle/degenerate
+0.22   2.1    15/18           1.40        2          15.79         arc/rotate-a, arc/degenerate, wiggle/degenerate
+
+--- 5. W4 / W5 at the recommended defaults ---
+case                      class     obliq   A+C face  B+C face  W5 old A+C  W5 new A+C  W5 new B+C  minR/bar u   stub u   over  mid70 u  blend mean u
+arc/translate-near        aligned   1.1     1.6       1.7       0           0+0         0+0         27.7/12.0    72.7     0     0.00     3.51
+arc/translate-far         aligned   31.5    2.6       2.1       7           0+0         0+0         27.3/12.0    158.1    0     0.01     7.86
+arc/chord-flip            REVERSED  170.6   2.1       1.5       13          9+0         9+0         1.0/12.0     130.4    9     0.01     17.65
+arc/rotate-a              aligned   68.6    2.9       2.9       9           5+0         5+0         6.3/12.0     92.8     1     0.01     6.22
+arc/resize-a              aligned   7.4     1.8       2.1       0           0+0         0+0         22.0/12.0    69.3     0     0.00     3.30
+arc/both-move             aligned   32.6    2.6       2.0       7           0+0         0+0         30.4/12.0    180.6    0     0.01     9.06
+arc/degenerate            aligned   0.0     1.6       4.4       0           0+0         14+6        0.3/0.2      0.7      0     0.00     0.04
+arc/detour-third-box      aligned   37.6    2.6       2.4       6           0+0         0+0         18.0/12.0    125.9    0     0.01     6.63
+arc/chain-3-stroke        aligned   31.3    2.3       1.8       0           0+0         0+0         20.3/12.0    194.7    0     0.00     11.21
+arc/centre-clip           aligned   25.9    0.9       0.7       0           0+0         0+0         76.2/12.0    137.4    0     0.00     4.59
+wiggle/translate-near     aligned   1.1     0.2       0.2       0           0+0         0+0         28.2/12.0    79.1     0     0.00     3.64
+wiggle/translate-far      aligned   31.5    1.5       1.5       0           0+0         0+0         51.2/12.0    172.0    0     0.00     6.26
+wiggle/chord-flip         REVERSED  170.6   0.5       0.5       5           7+0         7+0         0.2/12.0     141.8    10    0.00     20.55
+wiggle/rotate-a           aligned   68.6    2.6       2.7       0           0+0         0+0         14.4/12.0    101.0    0     0.00     6.04
+wiggle/resize-a           aligned   7.4     0.4       0.5       0           0+0         0+0         25.8/12.0    75.4     0     0.00     3.23
+wiggle/both-move          aligned   32.6    1.5       1.6       0           0+0         0+0         58.1/12.0    196.5    0     0.00     7.15
+wiggle/degenerate         aligned   0.0     0.2       2.0       0           0+0         52+3        0.3/0.3      0.8      0     0.00     0.07
+wiggle/detour-third-box   aligned   37.6    2.3       2.2       0           0+0         0+0         22.2/12.0    136.0    0     0.00     7.40
+wiggle/chain-3-stroke     aligned   31.3    2.0       2.0       0           0+0         0+0         21.1/12.0    208.3    0     0.02     16.72
+wiggle/centre-clip        aligned   25.9    0.9       1.0       0           0+0         0+0         53.6/12.0    142.6    0     0.01     4.66
+A     zero-cusp share:  all cases old 20/20 new 20/20   |   ALIGNED ONLY old 18/18 new 18/18 (100%)
+B     zero-cusp share:  all cases old 18/20 new 18/20   |   ALIGNED ONLY old 16/18 new 16/18 (89%)
+A+C   zero-cusp share:  all cases old 14/20 new 17/20   |   ALIGNED ONLY old 14/18 new 17/18 (94%)
+B+C   zero-cusp share:  all cases old 14/20 new 15/20   |   ALIGNED ONLY old 14/18 new 15/18 (83%)
+bar sensitivity (A+C, aligned): radius 8u -> 17/18 clean, 12u -> chosen, 16u -> 16/18 clean
+
+--- 6. W7 centre-bind escape hatch for every REVERSED case ---
+facing is measured at s=0 as briefed; 'vis' is the same angle where the ink leaves the clip boundary, which is what a creator actually sees
+case                      converted   A+C face/vis   B+C face/vis   A+C cusps  B+C cusps  cusps unclipped  ink kept  verdict
+arc/chord-flip            both ends   1.6/26.4       1.5/25.6       0+0        0+0        A+C 0  B+C 0     54%       PASS
+wiggle/chord-flip         both ends   0.2/32.4       0.2/31.8       0+0        0+0        A+C 0  B+C 0     51%       PASS
+W7 verdict: PASS — every reversed case must reach 0 new cusps and <=5 deg facing when the reversed end is switched to a centre bind
+
+--- 7. W2 round-trip drift at the recommended defaults ---
+rest shape  variant  never-re-bake (D5)    re-bake, 20 moves   re-bake, 200 moves
+arc         A        0.000000000 u         0.0043 u            0.0419 u
+arc         B        0.000000000 u         0.0061 u            0.0613 u
+arc         A+C      0.000000000 u         39.4131 u           59.4175 u
+arc         B+C      0.000000000 u         38.3720 u           67.4102 u
+wiggle      A        0.000000000 u         0.1314 u            0.3887 u
+wiggle      B        0.000000000 u         0.1390 u            0.9733 u
+wiggle      A+C      0.000000000 u         45.1022 u           58.1738 u
+wiggle      B+C      0.000000000 u         45.2161 u           58.0356 u
+W2: never-re-bake max 0.000000000 u -> PASS;  re-bake max 45.2161 u / 67.4102 u -> fails as intended
+
+--- W3 determinism at the recommended defaults ---
+same inputs run twice   : PASS (byte-identical)
+case set run in reverse : PASS (byte-identical)
+
+--- W6 cost: 1000 re-warps of a 500-sample connector ---
+variant  p50 (us)    p95 (us)
+A        4.88        4.96
+B        4.71        5.00
+A+C      5.33        6.21
+B+C      5.25        6.62
+bar: p95 <= 2000 us
+
+wrote 20 case SVGs + 2 W7 SVGs + index.html to /Users/howard/.cursor/worktrees/exp0002-warp-a3f19c2d/reawa-6bcab1d3a018/out
