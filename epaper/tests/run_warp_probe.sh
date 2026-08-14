@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# EXP-0002 rounds 1-3 — connector-ink warp probe (SPIKE, host-only, no Qt).
+# EXP-0002 rounds 1-4 — connector-ink warp probe (SPIKE, host-only, no Qt).
 # Throwaway sandbox harness; discarded with the exploration worktree.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
