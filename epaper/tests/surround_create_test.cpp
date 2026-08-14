@@ -216,6 +216,25 @@ int main()
     }
     {
         DeviceDocument doc;
+        std::vector<InkSample> graze;
+        for (int i = 0; i < 20; ++i) {
+            InkSample p;
+            p.x = double(i) * 5.0;
+            p.y = 20;
+            p.t = double(i);
+            graze.push_back(p);
+        }
+        appendInk(doc, "graze", graze);
+        SmartBounds rect;
+        rect.x = 0;
+        rect.y = 0;
+        rect.width = 12;
+        rect.height = 40;
+        const auto ids = selectByRect(doc, rect);
+        CHECK(std::find(ids.begin(), ids.end(), "graze") == ids.end());
+    }
+    {
+        DeviceDocument doc;
         appendInk(doc, "in", box(20, 20, 4, 4));
         appendInk(doc, "out", box(90, 20, 4, 4));
         const auto poly = box(0, 0, 50, 50);

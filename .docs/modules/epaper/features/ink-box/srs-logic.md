@@ -77,8 +77,8 @@ activates `cta.enclose` on SelectionOverlay — never from pen-up alone.
 | Step | Rule |
 |---|---|
 | Select (arm) | Exclusive ToolChip: `sel_rect` or `sel_freeform` ([ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md)). Switching mid-gesture is ignored until pen-up. |
-| Select (rect) | `sel_rect` armed. Pen-down + move draws a thin dotted **axis-aligned rectangle** (rubber-band from down to tip). On pen-up, every pickable node whose **world AABB intersects** that rectangle is selected. One straight drag is enough. |
-| Select (freeform) | `sel_freeform` armed. Pen-down + move appends samples to a thin dotted **polyline**. On pen-up the polyline **closes** (edge last→first for the test; stored samples stay as drawn). Membership: Ink — ≥80% of samples inside the closed polyline (even-odd); SmartGroup — world-bounds **centroid** inside. **Not** AABB-intersect of the gesture. Settled chrome is **not** the polyline — see next row. |
+| Select (rect) | `sel_rect` armed. Pen-down + move draws a thin dotted **axis-aligned rectangle** (rubber-band from down to tip). On pen-up: Ink if **≥80% of samples** lie inside the rectangle; other pickables if **≥80% of their world AABB area** lies inside. A grazing AABB intersect is **not** enough. |
+| Select (freeform) | `sel_freeform` armed. Pen-down + move appends samples to a thin dotted **polyline**. On pen-up the polyline **closes** (edge last→first for the test; stored samples stay as drawn). Membership: Ink — ≥80% of samples inside the closed polyline (even-odd); other nodes — ≥80% of a 5×5 grid on the world AABB inside. **Not** AABB-intersect of the gesture. Settled chrome is **not** the polyline — see next row. |
 | Select (feedback, settled) | After **either** gesture: thin dotted **selection rect** = **tight** union AABB of selected nodes (**0** extra padding); **6 square anchors** (visual only this campaign). The freeform polyline is **gone** once settled. |
 | Input for create | Free top-level `Ink` nodes in the selection (≥2), or ≥1 content-role ink + 1 candidate surround ink. **SmartGroup in selection → refuse** (no nesting — [CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)). Non-ink non-SG selected nodes are ignored by the surround algorithm (not captured). |
 | Surround candidate | For each selected free ink `S`, build an **artificial closed path** if `S` is open (append edge first→last **for the test only** — never mutate stored samples). Point-in-polygon uses the **even-odd** fill rule. A candidate qualifies when ≥80% of the samples of **every other** selected free ink lie inside |
@@ -152,8 +152,8 @@ real ink; `set_smart_transform` publishes at pen-up as a consequence
 | Rule | Value |
 |---|---|
 | Pickable set (single press) | `SmartGroup` nodes, resolved against world `bounds` after transform |
-| Pickable set (rect marquee) | Any document node with a world AABB: free `Ink`, `SmartGroup`, `Text`, `Primitive`, `Frame` (and `Group` union of children). Hit = AABB **intersects** rubber-band. **Not** ToolChip chrome. Child ink of a SmartGroup is **not** independently selected (parent SmartGroup may be) |
-| Pickable set (freeform) | Same node types. Hit = **inside closed polyline** (even-odd): Ink if ≥80% of samples inside; other nodes if world-AABB **centroid** inside. Gesture AABB is **not** the hit-test. Child ink of a SmartGroup is **not** independently selected |
+| Pickable set (rect marquee) | Same node types. Hit = **≥80% inside** the rubber-band: Ink by sample count; other nodes by AABB-area overlap. Grazing AABB intersect does **not** select. **Not** ToolChip chrome. Child ink of a SmartGroup is **not** independently selected (parent SmartGroup may be) |
+| Pickable set (freeform) | Same node types. Hit = **≥80% inside** the closed polyline (even-odd): Ink by samples; other nodes by 5×5 AABB grid. Gesture AABB is **not** the hit-test. Child ink of a SmartGroup is **not** independently selected |
 | Resolution order | Topmost first — later siblings paint above, so they pick first |
 | Hit region | Inside `bounds`, plus a handle tolerance band when selected: visual **28 du**, hit **56 du** (14 du pad beyond visual). 1 du = 1 panel pixel @ 226 dpi. **Not** 8 CSS px |
 | Source | The **local document** — never a peer-supplied list |

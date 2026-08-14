@@ -862,12 +862,23 @@ void TabletCanvasItem::finishMarqueeOrLasso()
 {
     using namespace epaper::document;
     m_selectionGesture = false;
-    const qreal drag = QLineF(m_marqueeStartPanel, m_marqueeEndPanel).length();
-    if (drag < 8.0) {
+    qreal gestureSize = QLineF(m_marqueeStartPanel, m_marqueeEndPanel).length();
+    if (m_selGesture == SelGesture::Lasso && m_lassoPanel.size() >= 2) {
+        qreal pathLen = 0;
+        QRectF bb(m_lassoPanel.first(), m_lassoPanel.first());
+        for (int i = 1; i < m_lassoPanel.size(); ++i) {
+            pathLen += QLineF(m_lassoPanel.at(i - 1), m_lassoPanel.at(i)).length();
+            bb |= QRectF(m_lassoPanel.at(i), m_lassoPanel.at(i));
+        }
+        gestureSize = std::max(pathLen, QLineF(bb.topLeft(), bb.bottomRight()).length());
+    }
+    if (gestureSize < 8.0) {
         m_selectedIds.clear();
         m_selectedPickableId.clear();
         m_selGesture = SelGesture::None;
         m_lassoPanel.clear();
+        m_debugInfo = QStringLiteral("sel=0 (tap)");
+        emit debugChanged();
         refreshSelectionChrome();
         return;
     }
@@ -902,6 +913,10 @@ void TabletCanvasItem::finishMarqueeOrLasso()
         m_selectedPickableId = m_selectedIds.first();
     else
         m_selectedPickableId.clear();
+    m_debugInfo = m_selectedIds.isEmpty()
+        ? QStringLiteral("sel=0 (no nodes ≥80% inside)")
+        : QStringLiteral("sel=%1 %2").arg(m_selectedIds.size()).arg(m_selectedIds.join(QLatin1Char(',')));
+    emit debugChanged();
     refreshSelectionChrome();
 }
 

@@ -172,11 +172,12 @@ viewed at scale, and saved.
   contain ≥1 ink — otherwise the stroke stays ordinary ink. Enclosure is **rectangle-only**.
 - **Creation B — selection (explicit).** The creator arms **Selection rect** or **Selection
   freeform** on the primary ToolChip ([ADR-0017](../../adr/ADR-0017-four-tool-chip.md)):
-  - **Rect:** one straight drag. Thin dotted **rectangle** while dragging. Membership = every
-    document node whose world AABB **intersects** that rectangle.
+  - **Rect:** one straight drag. Thin dotted **rectangle** while dragging. Membership = ink with
+    **≥80% of samples** inside the rectangle (other nodes: ≥80% of AABB area inside). A mere
+    AABB touch does **not** select.
   - **Freeform:** draw around. Thin dotted **polyline** while drawing; pen-up **closes** the
-    polyline. Membership = nodes **inside the closed polyline** (even-odd), **not** the AABB of
-    the gesture.
+    polyline. Membership = ink with **≥80% of samples** inside the closed polyline (even-odd);
+    other nodes ≥80% of AABB grid inside. **Not** the AABB of the gesture.
   After pen-up, chrome is the thin dotted **tight union AABB** of selected nodes (**0** extra
   padding) + **6 square anchors**. They invoke Smart Group via an **icon-only Enclose** control on
   the selection overlay ([ADR-0016](../../adr/ADR-0016-selection-create-enclose-cta.md) — Enclose

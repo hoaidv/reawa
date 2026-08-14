@@ -84,10 +84,49 @@ inline bool qualifiesAsSurround(const DocNode &candidate, const std::vector<cons
     return true;
 }
 
-inline bool aabbIntersects(const SmartBounds &a, const SmartBounds &b)
+inline bool pointInAabb(double x, double y, const SmartBounds &r)
 {
-    return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height
-        && a.y + a.height > b.y;
+    return x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height;
+}
+
+inline double fractionInsideRect(const std::vector<InkSample> &samples, const SmartBounds &r)
+{
+    if (samples.empty())
+        return 0;
+    int n = 0;
+    for (const auto &s : samples) {
+        if (pointInAabb(s.x, s.y, r))
+            ++n;
+    }
+    return static_cast<double>(n) / static_cast<double>(samples.size());
+}
+
+inline double aabbOverlapFraction(const SmartBounds &node, const SmartBounds &sel)
+{
+    const double ix = std::max(0.0, std::min(node.x + node.width, sel.x + sel.width)
+                                       - std::max(node.x, sel.x));
+    const double iy = std::max(0.0, std::min(node.y + node.height, sel.y + sel.height)
+                                       - std::max(node.y, sel.y));
+    const double area = std::max(0.0, node.width) * std::max(0.0, node.height);
+    if (area <= 1e-9)
+        return 0;
+    return (ix * iy) / area;
+}
+
+inline double fractionAabbInsidePolygon(const SmartBounds &b, const std::vector<InkSample> &poly)
+{
+    int hit = 0;
+    int n = 0;
+    for (int gy = 0; gy < 5; ++gy) {
+        for (int gx = 0; gx < 5; ++gx) {
+            const double x = b.x + b.width * (gx + 0.5) / 5.0;
+            const double y = b.y + b.height * (gy + 0.5) / 5.0;
+            ++n;
+            if (pointInPolygonEvenOdd(x, y, poly))
+                ++hit;
+        }
+    }
+    return n == 0 ? 0 : static_cast<double>(hit) / static_cast<double>(n);
 }
 
 inline bool nodeWorldAabb(const DocNode &n, SmartBounds &out)
@@ -149,10 +188,15 @@ inline std::vector<std::string> selectByRect(const DeviceDocument &doc, const Sm
     collectPickable(doc.rootChildren, pick);
     std::vector<std::string> ids;
     for (const DocNode *n : pick) {
+        if (n->kind == NodeKind::Ink) {
+            if (fractionInsideRect(n->samples, rect) >= 0.8)
+                ids.push_back(n->id);
+            continue;
+        }
         SmartBounds b;
         if (!nodeWorldAabb(*n, b))
             continue;
-        if (aabbIntersects(b, rect))
+        if (aabbOverlapFraction(b, rect) >= 0.8)
             ids.push_back(n->id);
     }
     return ids;
@@ -174,9 +218,7 @@ inline std::vector<std::string> selectByFreeform(const DeviceDocument &doc,
         SmartBounds b;
         if (!nodeWorldAabb(*n, b))
             continue;
-        const double cx = b.x + b.width * 0.5;
-        const double cy = b.y + b.height * 0.5;
-        if (pointInPolygonEvenOdd(cx, cy, poly))
+        if (fractionAabbInsidePolygon(b, poly) >= 0.8)
             ids.push_back(n->id);
     }
     return ids;

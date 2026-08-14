@@ -15,10 +15,11 @@ Feature: Selection create requires a surround stroke on the device
     And no Smart Group is created until cta.enclose is tapped
 
   @SRS-EP-10 @SRS-EP-12
-  Scenario: Rect pen-up selects AABB intersection
-    Given a rubber-band that intersects document nodes
+  Scenario: Rect pen-up selects ≥80% inside
+    Given a rubber-band that contains ≥80% of an ink's samples
     When pen-up completes the rect marquee
     Then those nodes are selected
+    And a node whose AABB only grazes the rect is not selected
     And ovl.nodes_bounds is the tight union AABB of those nodes with 0 extra padding
     And six square anchors are drawn on that rect
     And cta.enclose is visible on SelectionOverlay
@@ -35,7 +36,7 @@ Feature: Selection create requires a surround stroke on the device
   Scenario: Freeform pen-up closes polyline and uses inside hit-test
     Given a freeform polyline around some document nodes
     When pen-up closes the polyline
-    Then nodes inside the closed polyline are selected
+    Then inks with ≥80% of samples inside the closed polyline are selected
     And nodes that only intersect the polyline AABB but lie outside the path are not selected
     And ovl.lasso is gone
     And ovl.nodes_bounds is the tight union AABB of the selected nodes with 0 extra padding

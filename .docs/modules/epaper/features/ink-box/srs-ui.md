@@ -87,8 +87,8 @@ them it "failed" would be telling them their ink was a mistake.
 |---|---|---|---|
 | Box bounds | Pen press, no drag | Select SmartGroup | Bounds + handles appear ≤100 ms |
 | Box bounds | Pen press + drag | Move | **The ink moves.** Bounds track the ink at ≥5 Hz |
-| Canvas (`tool.sel_rect`) | Pen-down + move | Rect marquee | `ovl.marquee` AABB follows tip; pen-up → nodes whose AABB intersects; then `ovl.nodes_bounds` + 6 anchors + `cta.enclose` |
-| Canvas (`tool.sel_freeform`) | Pen-down + move | Lasso | `ovl.lasso` polyline follows tip; pen-up closes path, hit-test **inside polyline**; chrome → `ovl.nodes_bounds` (tight AABB) + 6 anchors + `cta.enclose` — **not** a dotted polyline |
+| Canvas (`tool.sel_rect`) | Pen-down + move | Rect marquee | `ovl.marquee` AABB follows tip; pen-up → nodes with ≥80% inside the rect; then `ovl.nodes_bounds` + 6 anchors + `cta.enclose` |
+| Canvas (`tool.sel_freeform`) | Pen-down + move | Lasso | `ovl.lasso` polyline follows tip; pen-up closes path, hit-test ≥80% **inside polyline**; chrome → `ovl.nodes_bounds` (tight AABB) + 6 anchors + `cta.enclose` — **not** a dotted polyline |
 | `tool.sel_rect` / `tool.sel_freeform` | Finger tap on ToolChip | Arm that selection tool | Exclusive invert on primary bar ([ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md)) |
 | `ovl.resize_handles` | Pen drag on a handle | Resize | Real ink resizes per mode; bounds follow the handle |
 | `tgl.ink_scale_mode` | Pen tap | Swap mode | `ind.mode_current` updates; effect visible on the next resize |
