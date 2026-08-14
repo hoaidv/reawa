@@ -148,15 +148,9 @@ inline Vec2 smartLocalToWorld(double localX, double localY, const DocNode &sg, c
     double y = localY;
     if (role == "content" && sg.inkScaleMode == "fixedInk") {
         (void)layoutOffset;
-        const SmartBounds &bounds = sg.smartBounds;
-        const double minX = contentMin ? contentMin->x : localX;
-        const double minY = contentMin ? contentMin->y : localY;
-        const double sx = t.scaleX != 0 ? t.scaleX : 1.0;
-        const double sy = t.scaleY != 0 ? t.scaleY : 1.0;
-        // Unscaled samples, pinned to the box's top-left (human verify EP-019).
-        x = t.x + bounds.x * sx + (localX - minX);
-        y = t.y + bounds.y * sy + (localY - minY);
-        return {x, y};
+        (void)contentMin;
+        // Keep-size: unscaled, stay at local (x,y) in the parent — do not pin to (0,0).
+        return {localX + t.x, localY + t.y};
     }
     if (role == "boundary" || sg.inkScaleMode == "withBounds") {
         x *= t.scaleX != 0 ? t.scaleX : 1.0;

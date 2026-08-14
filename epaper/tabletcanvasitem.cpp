@@ -801,11 +801,12 @@ void TabletCanvasItem::refreshSelectionChrome()
         const QPointF br = worldToPanel(unionB.x + unionB.width, unionB.y + unionB.height);
         bounds = QRectF(tl, br).normalized();
     }
-    m_encloseVisible = isSelectionTool() && !m_selectedIds.isEmpty()
+    m_encloseVisible = isSelectionTool() && m_selectedIds.size() >= 2
         && m_selGesture != SelGesture::Marquee && m_selGesture != SelGesture::Lasso;
-    if (m_encloseVisible && !bounds.isEmpty())
-        m_encloseCtaRect = QRectF(bounds.center().x() - 32.0, bounds.bottom() + 8.0, 64.0, 64.0);
-    else
+    if (m_encloseVisible && !bounds.isEmpty()) {
+        // Below the box — clear of the keep-size / scale-ink chip (bottom-center, 28 du tall).
+        m_encloseCtaRect = QRectF(bounds.center().x() - 32.0, bounds.bottom() + 36.0, 64.0, 64.0);
+    } else
         m_encloseCtaRect = QRectF();
     m_selectionChromeDirty = bounds.united(m_encloseCtaRect).adjusted(-12, -12, 12, 12);
     emit selectionChromeChanged();

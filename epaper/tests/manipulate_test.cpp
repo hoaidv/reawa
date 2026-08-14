@@ -129,19 +129,16 @@ static void test_fixed_ink_resize_keeps_uv_and_sample_size()
     CHECK(near(c1->samples[1].y - c1->samples[0].y, dy, 1.0));
     CHECK(near(mapped.transform.scaleX, 1.5, 0.05));
     const DocNode *sg = doc.find("sg_f");
+    const Vec2 cW = smartLocalToWorld(c1->samples[0].x, c1->samples[0].y, *sg, "content", c1->layoutOffset,
+                                      nullptr);
+    CHECK(near(cW.x, c1->samples[0].x + sg->transform.x, 1e-6));
+    CHECK(near(cW.y, c1->samples[0].y + sg->transform.y, 1e-6));
     const DocNode *b1 = nullptr;
     for (const auto &ch : sg->children) {
         if (ch.role && *ch.role == "boundary")
             b1 = &ch;
     }
     CHECK(b1);
-    const Vec2 cMin = inkSamplesMin(c1->samples);
-    const Vec2 cW = smartLocalToWorld(c1->samples[0].x, c1->samples[0].y, *sg, "content", c1->layoutOffset,
-                                      &cMin);
-    const double worldLeft = sg->transform.x + sg->smartBounds.x * sg->transform.scaleX;
-    const double worldTop = sg->transform.y + sg->smartBounds.y * sg->transform.scaleY;
-    CHECK(near(cW.x, worldLeft, 1.0));
-    CHECK(near(cW.y, worldTop, 1.0));
     const Vec2 bW0 = smartLocalToWorld(b1->samples[0].x, b1->samples[0].y, *sg, "boundary", {}, nullptr);
     const Vec2 bW1 = smartLocalToWorld(b1->samples[1].x, b1->samples[1].y, *sg, "boundary", {}, nullptr);
     CHECK(std::abs(bW1.x - bW0.x) > std::abs(b1->samples[1].x - b1->samples[0].x) + 1.0);
