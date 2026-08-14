@@ -11,10 +11,9 @@ estimate: 3
 owner: dev
 depends_on: [STORY-EP-018, STORY-EP-022, STORY-EP-023]
 acceptance_criteria:
-  - "Given tool.sel_freeform and a lasso in flight, When the pen moves, Then ovl.lasso is painted on ToolCanvasLayer (not CanvasLayer m_image), damage is the last segment AABB (or old∪new path pad), and CanvasLayer is not update()'d with an empty rect — 0 full-panel invalidations (CHL-0017 / ADR-0019 / SRS-EP-14)."
-  - "Given tool.sel_rect and a marquee in flight, When the pen moves, Then ovl.marquee follows the tip on ToolCanvasLayer with old∪new AABB damage only."
-  - "Given pen-up after either gesture with a non-empty selection, When chrome settles, Then ovl.lasso is gone; ovl.nodes_bounds is the tight union AABB on ToolCanvasLayer; ovl.select_anchors (6) or ovl.resize_handles and tgl.ink_scale_mode are ToolLayer QML (not QPainter on CanvasLayer); cta.enclose stays QML."
-  - "Given ToolCanvasLayer, When it paints, Then it does not blit the document image and uses EPScreenMode Mono (or documented fallback: tight bbox under Pen — never full-panel GC16)."
+  - "Given tool.sel_freeform and a lasso in flight, When the pen moves, Then ovl.lasso is painted on ToolCanvasLayer (not CanvasLayer m_image), ToolCanvas waveform is Pen, damage is the last segment AABB, and CanvasLayer is not update()'d with an empty rect — 0 full-panel invalidations (CHL-0017 / ADR-0019 / SRS-EP-14)."
+  - "Given tool.sel_rect and a marquee in flight, When the pen moves, Then ovl.marquee follows the tip on ToolCanvasLayer with Pen waveform and old∪new AABB damage only."
+  - "Given pen-up after either gesture, When chrome settles (AABB / move / resize), Then ToolCanvas waveform is Mono; ovl.lasso is gone; ovl.nodes_bounds is the tight union AABB on ToolCanvasLayer."
   - "Given tool.pen or tool.ink_box, When the pen inks, Then CanvasLayer Pen path is unchanged (p95 ink budget not regressed) and ToolCanvasLayer does not steal samples."
   - "Given enclose / membership / set_smart_transform, When this story ships, Then those code paths are unchanged (0 SmartGroup logic edits except chrome subscription to selectedIds + AABB)."
 design_package: ".plan/iter-003/design/selection-enclose-chrome/"
@@ -50,6 +49,6 @@ after W11b verify. **Do not** change surround-create or manipulation ops.
 
 ## Done when
 
-- Lasso/marquee feel is partial Mono (or tight-bbox fallback) on RM2 — human check
+- Lasso/marquee in flight uses ToolCanvas **Pen**; pen-up settled + move/resize uses **Mono**
 - Host tests for EP-018 / EP-019 still PASS
-- `@implements [ADR-0019]` on the new overlay item; `@fix [CHL-0017]` on the removed full `update()`
+- `@implements [ADR-0019]` on the overlay item; `@fix [CHL-0017]` on the removed full `update()`

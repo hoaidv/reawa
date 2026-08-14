@@ -7,7 +7,7 @@ class TabletCanvasItem;
 /**
  * ToolCanvasLayer — marquee / lasso / settled AABB. Never blits the document.
  * @implements [SRS-EP-12] SelectionOverlay stroke chrome
- * @implements [ADR-0019] ToolCanvasLayer Mono + tight damage
+ * @implements [ADR-0019] ToolCanvasLayer: Pen while lasso/marquee, Mono after pen-up
  */
 class ToolCanvasItem : public QQuickPaintedItem
 {
@@ -19,7 +19,7 @@ public:
 
     TabletCanvasItem *canvas() const { return m_canvas; }
     void setCanvas(TabletCanvasItem *c);
-
+    void setStrokeWaveform(bool penInFlight);
     void paint(QPainter *painter) override;
 
 signals:

@@ -311,6 +311,7 @@ TabletWindow {
         text: EpaperBridge.status
               + (EpaperBridge.penModeAttached ? " | pen" : "")
               + (EpaperBridge.monoModeAttached ? " | mono" : "")
+              + (EpaperBridge.overlayStrokePen ? " | ovlPen" : "")
               + (drawCanvas.paintsInk ? " | painted" : " | pool " + root.inkNext)
               + " | " + drawCanvas.toolMode
               + " | strokes " + drawCanvas.strokeCount

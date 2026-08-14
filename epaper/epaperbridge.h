@@ -22,6 +22,7 @@ class EpaperBridge : public QObject
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(bool penModeAttached READ penModeAttached NOTIFY penModeAttachedChanged)
     Q_PROPERTY(bool monoModeAttached READ monoModeAttached NOTIFY monoModeAttachedChanged)
+    Q_PROPERTY(bool overlayStrokePen READ overlayStrokePen NOTIFY overlayStrokePenChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
 
 public:
@@ -33,7 +34,14 @@ public:
     bool available() const { return m_available; }
     bool penModeAttached() const { return m_penModeItem != nullptr; }
     bool monoModeAttached() const { return m_monoModeItem != nullptr; }
+    bool overlayStrokePen() const { return m_overlayStrokePen; }
     QString status() const { return m_status; }
+
+    /**
+     * Switch ToolCanvasLayer's dedicated EPScreenModeItem between Pen (lasso/marquee in flight)
+     * and Mono (settled + move/resize). Does **not** steal CanvasLayer's Pen region.
+     */
+    Q_INVOKABLE bool setOverlayStrokePen(bool pen);
 
     /** Attach an EPScreenModeItem(mode=Pen) as a child covering @p host. */
     Q_INVOKABLE bool attachPenModeRegion(QQuickItem *host);
@@ -62,6 +70,7 @@ signals:
     void availableChanged();
     void penModeAttachedChanged();
     void monoModeAttachedChanged();
+    void overlayStrokePenChanged();
     void statusChanged();
 
 private:
@@ -98,6 +107,7 @@ private:
     int m_monoMode = -1;
     int m_contentType = 0;
     QString m_status;
+    bool m_overlayStrokePen = false;
 
     // Over-allocated storage for opaque QQuickItem subclasses (size unknown).
     static constexpr int kOpaqueBytes = 4096;

@@ -44,6 +44,11 @@ void ToolCanvasItem::geometryChange(const QRectF &newGeometry, const QRectF &old
         EpaperBridge::instance()->attachMonoModeRegion(this);
 }
 
+void ToolCanvasItem::setStrokeWaveform(bool penInFlight)
+{
+    EpaperBridge::instance()->setOverlayStrokePen(penInFlight);
+}
+
 void ToolCanvasItem::paint(QPainter *painter)
 {
     if (!m_canvas)

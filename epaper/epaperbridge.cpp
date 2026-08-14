@@ -267,6 +267,25 @@ bool EpaperBridge::attachMonoModeRegion(QQuickItem *host)
     return true;
 }
 
+bool EpaperBridge::setOverlayStrokePen(bool pen)
+{
+    if (!m_monoModeItem)
+        return false;
+    const int mode = pen ? m_penMode : m_monoMode;
+    if (mode < 0)
+        return false;
+    if (!m_monoModeItem->setProperty("mode", mode)) {
+        qWarning() << "[epaperbridge] overlay setProperty(mode) failed" << (pen ? "Pen" : "Mono");
+        return false;
+    }
+    if (m_overlayStrokePen == pen)
+        return true;
+    m_overlayStrokePen = pen;
+    emit overlayStrokePenChanged();
+    qInfo() << "[epaperbridge] ToolCanvas waveform" << (pen ? "Pen" : "Mono");
+    return true;
+}
+
 void EpaperBridge::swapPen(const QRect &rect)
 {
     if (!m_available || !m_instance)

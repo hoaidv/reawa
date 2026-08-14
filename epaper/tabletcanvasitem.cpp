@@ -961,6 +961,8 @@ void TabletCanvasItem::beginMarqueeOrLasso(const QPointF &canvasPos)
     m_modeChipVisible = false;
     emit selectionChromeChanged();
     syncToolCanvasPresence();
+    if (m_toolCanvas)
+        m_toolCanvas->setStrokeWaveform(true);
     const QRectF live = QRectF(canvasPos, canvasPos).adjusted(-8, -8, 8, 8);
     damageToolChrome(live);
 }
@@ -968,6 +970,8 @@ void TabletCanvasItem::beginMarqueeOrLasso(const QPointF &canvasPos)
 void TabletCanvasItem::finishMarqueeOrLasso()
 {
     using namespace epaper::document;
+    if (m_toolCanvas)
+        m_toolCanvas->setStrokeWaveform(false);
     m_selectionGesture = false;
     qreal gestureSize = QLineF(m_marqueeStartPanel, m_marqueeEndPanel).length();
     if (m_selGesture == SelGesture::Lasso && m_lassoPanel.size() >= 2) {
@@ -1354,6 +1358,8 @@ void TabletCanvasItem::syncToolCanvasPresence()
     const bool settled = isSelectionTool() && !m_selectedIds.isEmpty() && !liveManip && !strokeChrome;
     const bool on = isSelectionTool() && (strokeChrome || liveManip || settled);
     m_toolCanvas->setVisible(on);
+    if (on && !strokeChrome)
+        m_toolCanvas->setStrokeWaveform(false);
 }
 
 void TabletCanvasItem::paintLiveManipOnToolCanvas(QPainter *painter)
