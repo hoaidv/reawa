@@ -1,24 +1,20 @@
 /**
- * EXP-0002 rounds 1-2 — connector-ink warp probe.
+ * EXP-0002 rounds 1-3 — connector-ink warp probe.
  *
  * SPIKE CODE. Host-only: no Qt, no third-party libraries, no network, no device.
  * Throwaway sandbox artefact for the warp naturalness question (BS-0001 D3/D5/D8/D16/D17/D26).
  * Carries no traceability annotations on purpose: this is not a shipping path and must be
  * re-implemented docs-first if any of it is ever promoted.
  *
- * Stores a drawn connector body as a rest shape in spine coordinates (s, d) and warps it
- * from two endpoint anchors under four variants:
- *   A    similarity (uniform scale + rotation from the chord)
- *   B    anisotropic (chord-only scale, normal offsets untouched)
- *   A+C  A, then a Hermite tangent blend over the first/last T of arc length
- *   B+C  B, then the same blend
+ * Final model (round 3). A drawn connector body is stored as a rest shape in spine
+ * coordinates (s, d) and warped from two endpoint anchors:
+ *   A    similarity warp only — kept as the unblended control
+ *   A+C  similarity warp plus an adaptive Hermite tangent blend at both ends — the candidate
+ * Variant B (anisotropic) was dropped after round 2: it fails the degenerate case in the
+ * spine, where no offset clamp can reach it.
  *
- * Round 2 adds: aligned/reversed anchor partition (D26), the centre-bind escape hatch (W7),
- * degenerate clamp policies, a departure stub decoupled from the blend length, and a W5
- * metric that scores the blend region against an absolute minimum-radius bar.
- *
- * Writes an SVG contact sheet plus index.html at the recommended defaults, and prints the
- * sweeps and W2..W7 to stdout.
+ * Writes an SVG contact sheet plus index.html at the final defaults, and prints the
+ * obliquity characterization and W2..W7 to stdout.
  */
 
 #include <algorithm>
@@ -30,7 +26,6 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -42,33 +37,24 @@ namespace {
 constexpr double kPi = 3.14159265358979323846;
 constexpr double kResampleWorld = 2.0;    // uniform arc-length spacing of the spine
 constexpr double kSpineSigmaWorld = 6.0;  // smoothing sigma used to derive the spine
-constexpr int kVariantCount = 4;
 
-// W5 (round 2). Inside the blend region the spine is a Hermite, not the creator's line, so
-// it is scored against an absolute bar: the warp may not bend the ink tighter than this
-// radius. Outside it, the rest-relative bar from round 1 still applies.
-constexpr double kBlendMinRadiusWorld = 12.0;
-constexpr double kBlendMinRadiusTightWorld = 8.0;   // reported for sensitivity only
-constexpr double kBlendMinRadiusLooseWorld = 16.0;  // reported for sensitivity only
-// A blend spanning S of arc cannot be held to a radius larger than about S/2 (a quarter
-// turn over S already needs radius 0.64*S), so on very short connectors the bar relaxes
-// with the span it is scoring. Without this the ~3 u degenerate case reports ~50 cusps
-// that no parameter choice could remove.
-constexpr double kBlendRadiusSpanFactor = 0.5;
+// --- the four tunables of the final model (product names in CANONICAL-ALGORITHM.md) ---
+constexpr double kBlendLength = 0.15;   // base blend length, fraction of arc per end
+constexpr double kStubRatio = 1.5;      // departure stub ratio, multiples of the blend arc
+constexpr double kTurnFactor = 7.0;     // Hermite concentration factor, from sections 1c/1d
+constexpr double kBlendCap = 0.40;      // blend cap per end, so >=20% of the line is untouched
+constexpr double kMinInkRadius = 12.0;  // minimum ink radius the warp may bend to
+// Diagnostic only: the deadband form of the rejected fractional rule, reported in 1c.
+constexpr double kFreeTurnDeg = 60.0;
 
-// Departure stub cap. The stub lives inside a blend region whose arc length is T*L', so the
-// cap is expressed against that span; at the recommended T = 0.15 this is 0.225 * L'.
-constexpr double kStubCapFactor = 1.5;
-
-// Recommended defaults — set from the round-2 sweeps printed below.
-constexpr double kDefaultT = 0.15;
-constexpr bool kDefaultStubAbsolute = false;
-constexpr double kDefaultStubK = 1.5;
-constexpr double kDefaultStubWorld = 12.0;
-constexpr bool kDefaultLocalParam = true;
-constexpr bool kDefaultScaleFloor = false;
-constexpr double kDefaultScaleFloorValue = 0.15;
-constexpr bool kDefaultDTaper = false;
+constexpr double kMinInkRadiusTight = 8.0;   // reported for bar sensitivity only
+constexpr double kMinInkRadiusLoose = 16.0;  // reported for bar sensitivity only
+// A blend spanning S of arc cannot be held to a radius much larger than S/2, so on very
+// short connectors the bar relaxes with the span it is scoring.
+constexpr double kRadiusSpanFactor = 0.5;
+// Below this the whole connector is shorter than two minimum radii, so no radius bar can be
+// stated for it at all and the cusp count is reported rather than graded.
+constexpr double kScoreableArcWorld = 2.0 * kMinInkRadius;
 
 // ---------------------------------------------------------------- vec2
 
@@ -235,7 +221,7 @@ bool properCross(Vec2 p1, Vec2 p2, Vec2 p3, Vec2 p4)
 
 struct SD {
     double s = 0.0;  // normalized arc-length position along the rest spine, [0,1]
-    double d = 0.0;  // signed perpendicular offset, world units, absolute by default (D8)
+    double d = 0.0;  // signed perpendicular offset, world units, always absolute (D8)
 };
 
 SD projectToSpine(const Poly &S, const std::vector<double> &cum, Vec2 p)
@@ -315,38 +301,38 @@ RestShape buildRestShape(const std::vector<Poly> &strokes)
 // ---------------------------------------------------------------- warp
 
 struct WarpParams {
-    double T = kDefaultT;         // blend span, fraction of arc length
-    bool blendAbsolute = false;   // instead derive T from an absolute blend length
-    double blendWorld = 90.0;
-    bool stubAbsolute = true;     // departure stub in world units vs multiple of T*L'
-    double stubK = 1.0;           // relative mode: outer handle = stubK * T * L'
-    double stubWorld = kDefaultStubWorld;
-    double stubCapFactor = kStubCapFactor;  // outer handle <= stubCapFactor * T * L'
-    bool stubAppliesToInner = false;        // if false the inner handle stays at T*L'
-    // Place samples by the pre-blend arc parameterization, so the blend cannot shift ink
-    // outside its own region through a change in total arc length.
-    bool localParam = kDefaultLocalParam;
-    bool scaleFloor = false;
-    double scaleFloorValue = kDefaultScaleFloorValue;
-    bool dTaper = false;
-    // Variant B keeps the spine's perpendicular extent unscaled, so under compression the
-    // spike lives in the spine, where a d-taper cannot reach it. This is the only policy
-    // tested that can touch it.
-    bool anisoTaper = false;
+    double blendLength = kBlendLength;
+    double stubRatio = kStubRatio;
+    double turnFactor = kTurnFactor;
+    double blendCap = kBlendCap;
+    bool adaptive = true;
+    bool applyCap = true;
+    // Sweep overrides: when > 0 they replace the adaptive multiplier at that end.
+    double forceMul0 = 0.0;
+    double forceMul1 = 0.0;
 };
 
-WarpParams defaultParams()
+// How much extra blend a turn of `turnDeg` earns. Four candidate forms; the one whose
+// implied allowance is flattest across the obliquity sweep is the one we adopt.
+enum class TurnForm { Linear, Versine, Sine, Deadband };
+
+double versine(double turnDeg) { return 0.5 * (1.0 - std::cos(turnDeg * kPi / 180.0)); }
+
+double turnGrowth(double turnDeg, TurnForm form)
 {
-    WarpParams p;
-    p.T = kDefaultT;
-    p.stubAbsolute = kDefaultStubAbsolute;
-    p.stubK = kDefaultStubK;
-    p.stubWorld = kDefaultStubWorld;
-    p.localParam = kDefaultLocalParam;
-    p.scaleFloor = kDefaultScaleFloor;
-    p.dTaper = kDefaultDTaper;
-    return p;
+    switch (form) {
+    case TurnForm::Linear:
+        return turnDeg / 180.0;
+    case TurnForm::Sine:
+        return std::sin(turnDeg * kPi / 180.0);
+    case TurnForm::Versine:
+        return versine(turnDeg);
+    case TurnForm::Deadband:
+    default:
+        return std::max(0.0, versine(turnDeg) - versine(kFreeTurnDeg));
+    }
 }
+
 
 Poly warpSpineSimilarity(const RestShape &rs, Vec2 p0, Vec2 p1, double scale)
 {
@@ -362,23 +348,6 @@ Poly warpSpineSimilarity(const RestShape &rs, Vec2 p0, Vec2 p1, double scale)
     return out;
 }
 
-Poly warpSpineAniso(const RestShape &rs, Vec2 p0, Vec2 p1, double scale, double vFactor)
-{
-    const Vec2 cNew = p1 - p0;
-    const double lNew = vlen(cNew);
-    const Vec2 uh = rs.chordLen > 1e-9 ? rs.chord * (1.0 / rs.chordLen) : Vec2{1.0, 0.0};
-    const Vec2 nh = leftNormal(uh);
-    const Vec2 uh2 = lNew > 1e-9 ? cNew * (1.0 / lNew) : uh;
-    const Vec2 nh2 = leftNormal(uh2);
-    Poly out(rs.spine.size());
-    const Vec2 o = rs.spine.front();
-    for (size_t i = 0; i < rs.spine.size(); ++i) {
-        const Vec2 r = rs.spine[i] - o;
-        out[i] = p0 + uh2 * (dot(r, uh) * scale) + nh2 * (dot(r, nh) * vFactor);
-    }
-    return out;
-}
-
 Vec2 hermite(Vec2 p0, Vec2 m0, Vec2 p1, Vec2 m1, double t)
 {
     const double t2 = t * t;
@@ -387,11 +356,19 @@ Vec2 hermite(Vec2 p0, Vec2 m0, Vec2 p1, Vec2 m1, double t)
         + m1 * (t3 - t2);
 }
 
-// Variant C. Replaces the first and last T of arc length with a cubic Hermite that leaves
-// p0 along f0 and arrives at p1 along -f1. `outerMag` is the departure stub (how straight
-// the line leaves the face); `innerMag` matches the untouched spine's own speed.
-Poly tangentBlend(const Poly &sp, Vec2 p0, Vec2 f0, Vec2 p1, Vec2 f1, double T,
-                  double outerMag, double innerMag)
+struct BlendSpec {
+    double t0 = 0.0, t1 = 0.0;          // blend length per end, fraction of arc
+    double outer0 = 0.0, outer1 = 0.0;  // departure stub per end, world units
+    double inner0 = 0.0, inner1 = 0.0;  // inner handle, matched to the blend arc
+    double turn0 = 0.0, turn1 = 0.0;    // turn each end must absorb, degrees
+    double chord0 = 0.0, chord1 = 0.0;  // angle from the facing to the blend chord, degrees
+    bool capped0 = false, capped1 = false;
+    bool grown0 = false, grown1 = false;  // the turn demand exceeded the base blend
+};
+
+// Variant C. Replaces the first t0 and last t1 of arc length with cubic Hermites that
+// leave p0 along f0 and arrive at p1 along -f1.
+Poly tangentBlend(const Poly &sp, Vec2 p0, Vec2 f0, Vec2 p1, Vec2 f1, const BlendSpec &b)
 {
     if (sp.size() < 6)
         return sp;
@@ -399,30 +376,28 @@ Poly tangentBlend(const Poly &sp, Vec2 p0, Vec2 f0, Vec2 p1, Vec2 f1, double T,
     const double total = cum.back();
     if (total < 1e-9)
         return sp;
-    const Frame fT = frameAtArc(sp, cum, T * total);
-    const Frame fE = frameAtArc(sp, cum, (1.0 - T) * total);
-    const Vec2 m0 = f0 * outerMag;
-    const Vec2 m1 = fT.t * innerMag;
-    const Vec2 n0 = fE.t * innerMag;
-    const Vec2 n1 = f1 * -outerMag;
+    const Frame fT = frameAtArc(sp, cum, b.t0 * total);
+    const Frame fE = frameAtArc(sp, cum, (1.0 - b.t1) * total);
+    const Vec2 m0 = f0 * b.outer0;
+    const Vec2 m1 = fT.t * b.inner0;
+    const Vec2 n0 = fE.t * b.inner1;
+    const Vec2 n1 = f1 * -b.outer1;
     Poly out = sp;
     for (size_t i = 0; i < sp.size(); ++i) {
         const double s = cum[i] / total;
-        if (s < T)
-            out[i] = hermite(p0, m0, fT.p, m1, s / T);
-        else if (s > 1.0 - T)
-            out[i] = hermite(fE.p, n0, p1, n1, (s - (1.0 - T)) / T);
+        if (s < b.t0)
+            out[i] = hermite(p0, m0, fT.p, m1, s / b.t0);
+        else if (s > 1.0 - b.t1)
+            out[i] = hermite(fE.p, n0, p1, n1, (s - (1.0 - b.t1)) / b.t1);
     }
     out.front() = p0;
     out.back() = p1;
     return out;
 }
 
-// `paramSpine` supplies the arc-length parameterization, `geomSpine` the geometry. They are
-// the same array unless localParam is on, in which case the pre-blend spine parameterizes
-// and the blended spine positions — the two share indices, so middle samples are untouched.
-Poly placeSamples(const Poly &paramSpine, const Poly &geomSpine, const std::vector<SD> &sd,
-                  double dFactor)
+// `paramSpine` supplies the arc-length parameterization, `geomSpine` the geometry. They
+// share indices, so parameterizing on the pre-blend spine keeps the blend strictly local.
+Poly placeSamples(const Poly &paramSpine, const Poly &geomSpine, const std::vector<SD> &sd)
 {
     const std::vector<double> cum = arcTable(paramSpine);
     const double total = cum.empty() ? 0.0 : cum.back();
@@ -452,64 +427,88 @@ Poly placeSamples(const Poly &paramSpine, const Poly &geomSpine, const std::vect
             ? geomSpine[lo] + (geomSpine[lo + 1] - geomSpine[lo]) * u
             : (geomSpine.empty() ? Vec2{} : geomSpine[0]);
         const Vec2 t = geomSpine.size() >= 2 ? segTangentAt(geomSpine, lo) : Vec2{1.0, 0.0};
-        out[i] = p + leftNormal(t) * (sd[i].d * dFactor);
+        out[i] = p + leftNormal(t) * sd[i].d;
     }
     return out;
 }
 
-enum Variant { kA = 0, kB = 1, kAC = 2, kBC = 3 };
-const char *variantName(int v)
-{
-    static const char *names[kVariantCount] = {"A", "B", "A+C", "B+C"};
-    return names[v];
-}
-bool variantBlends(int v) { return v == kAC || v == kBC; }
+enum Variant { kA = 0, kAC = 1 };
+constexpr int kVariantCount = 2;
+const char *variantName(int v) { return v == kA ? "A" : "A+C"; }
 
 struct WarpResult {
     Poly spine;
     Poly spineUnblended;
     Poly samples;
     Poly samplesUnblended;
-    double rawScale = 1.0;
-    double usedScale = 1.0;
-    double dFactor = 1.0;
+    double scale = 1.0;
     double lPrime = 0.0;
-    double stubLen = 0.0;
-    double tEff = 0.0;
-    double endpointErr = 0.0;  // |spine.back() - p1|, non-zero only when a clamp detaches it
+    BlendSpec blend;
 };
+
+// Two-pass: the turn each end must absorb is read off the unblended spine at the base
+// blend length, then the blend is given the arc that turn needs. One pass, no iteration,
+// so the result stays a pure function of the rest shape plus the endpoints.
+//
+// The demand is an ABSOLUTE arc, not a fraction of the connector (section 1d): turning
+// `turn` at no less than `kMinInkRadius` needs about kTurnFactor * radius * turn of arc,
+// whatever the connector's length. The base blend is the floor, the cap is the ceiling.
+BlendSpec planBlend(const Poly &spine, Vec2 f0, Vec2 f1, const WarpParams &pm, double lPrime)
+{
+    BlendSpec b;
+    const std::vector<double> cum = arcTable(spine);
+    const double base = pm.blendLength;
+    const Frame q0 = frameAtArc(spine, cum, base * lPrime);
+    const Frame q1 = frameAtArc(spine, cum, (1.0 - base) * lPrime);
+    b.turn0 = angleBetweenDeg(f0, q0.t);
+    b.turn1 = angleBetweenDeg(f1 * -1.0, q1.t);
+    b.chord0 = angleBetweenDeg(f0, q0.p - spine.front());
+    b.chord1 = angleBetweenDeg(f1 * -1.0, spine.back() - q1.p);
+
+    const double baseArc = base * lPrime;
+    double arc0 = baseArc;
+    double arc1 = baseArc;
+    if (pm.adaptive) {
+        arc0 = std::max(arc0, pm.turnFactor * kMinInkRadius * b.turn0 * kPi / 180.0);
+        arc1 = std::max(arc1, pm.turnFactor * kMinInkRadius * b.turn1 * kPi / 180.0);
+    }
+    b.grown0 = arc0 > baseArc * 1.0001;
+    b.grown1 = arc1 > baseArc * 1.0001;
+    if (pm.forceMul0 > 0.0)
+        arc0 = baseArc * pm.forceMul0;
+    if (pm.forceMul1 > 0.0)
+        arc1 = baseArc * pm.forceMul1;
+
+    b.t0 = lPrime > 1e-9 ? arc0 / lPrime : base;
+    b.t1 = lPrime > 1e-9 ? arc1 / lPrime : base;
+    if (pm.applyCap) {
+        b.capped0 = b.t0 > pm.blendCap;
+        b.capped1 = b.t1 > pm.blendCap;
+        b.t0 = std::min(b.t0, pm.blendCap);
+        b.t1 = std::min(b.t1, pm.blendCap);
+    }
+    b.inner0 = b.t0 * lPrime;
+    b.inner1 = b.t1 * lPrime;
+    b.outer0 = pm.stubRatio * b.inner0;
+    b.outer1 = pm.stubRatio * b.inner1;
+    return b;
+}
 
 WarpResult warpConnector(const RestShape &rs, Vec2 p0, Vec2 f0, Vec2 p1, Vec2 f1, int v,
                          const WarpParams &pm, bool wantUnblended = true)
 {
     WarpResult out;
-    out.rawScale = rs.chordLen > 1e-9 ? vlen(p1 - p0) / rs.chordLen : 1.0;
-    out.usedScale = pm.scaleFloor ? std::max(out.rawScale, pm.scaleFloorValue) : out.rawScale;
-    out.dFactor = pm.dTaper ? std::min(1.0, out.usedScale) : 1.0;
-
-    out.spineUnblended = (v == kB || v == kBC)
-        ? warpSpineAniso(rs, p0, p1, out.usedScale,
-                         pm.anisoTaper ? std::min(1.0, out.usedScale) : 1.0)
-        : warpSpineSimilarity(rs, p0, p1, out.usedScale);
+    out.scale = rs.chordLen > 1e-9 ? vlen(p1 - p0) / rs.chordLen : 1.0;
+    out.spineUnblended = warpSpineSimilarity(rs, p0, p1, out.scale);
     out.lPrime = arcTable(out.spineUnblended).back();
-    out.tEff = pm.T;
-
     out.spine = out.spineUnblended;
-    if (variantBlends(v)) {
-        if (pm.blendAbsolute && out.lPrime > 1e-9)
-            out.tEff = std::max(0.05, std::min(0.35, pm.blendWorld / out.lPrime));
-        const double span = out.tEff * out.lPrime;
-        out.stubLen = pm.stubAbsolute ? std::min(pm.stubWorld, pm.stubCapFactor * span)
-                                      : pm.stubK * span;
-        const double inner = pm.stubAppliesToInner ? out.stubLen : span;
-        out.spine = tangentBlend(out.spine, p0, f0, p1, f1, out.tEff, out.stubLen, inner);
+    if (v == kAC) {
+        out.blend = planBlend(out.spineUnblended, f0, f1, pm, out.lPrime);
+        out.spine = tangentBlend(out.spine, p0, f0, p1, f1, out.blend);
     }
-    const Poly &param = pm.localParam ? out.spineUnblended : out.spine;
-    out.samples = placeSamples(param, out.spine, rs.sd, out.dFactor);
+    out.samples = placeSamples(out.spineUnblended, out.spine, rs.sd);
     if (wantUnblended)
-        out.samplesUnblended =
-            placeSamples(out.spineUnblended, out.spineUnblended, rs.sd, out.dFactor);
-    out.endpointErr = vlen(out.spine.back() - p1);
+        out.samplesUnblended = placeSamples(out.spineUnblended, out.spineUnblended, rs.sd);
     return out;
 }
 
@@ -610,7 +609,8 @@ size_t trailingInsideCount(const Poly &pts, const Aabb &b)
     return n;
 }
 
-// D17: a centre-bound end clips the ink at the box boundary.
+// D17: a centre-bound end clips the ink at the box boundary. The full rest shape is kept
+// so a later move or resize re-clips correctly (human decision, round 3).
 void clipEnds(Poly &pts, const Aabb *startBox, const Aabb *endBox)
 {
     if (startBox) {
@@ -772,7 +772,7 @@ Poly strokeThrough(const std::vector<Vec2> &ctrl, double waveAmp, double waves,
 
 struct Case {
     std::string name;
-    std::string flavour;   // "arc" | "wiggle"
+    std::string flavour;
     std::string scenario;
     std::string note;
     std::vector<Poly> strokes;
@@ -793,6 +793,11 @@ Poly flavourStroke(const std::string &flavour, Vec2 p0, Vec2 p1, uint64_t seed)
     return strokeBetween(p0, p1, -30.0, 26.0, 2.7, 7.5, seed, 320);
 }
 
+uint64_t flavourSeed(const std::string &flavour)
+{
+    return flavour == "arc" ? 0xC0FFEEULL : 0xBADCAFEULL;
+}
+
 const char *kScenarios[10] = {"translate-near", "translate-far",    "chord-flip",
                               "rotate-a",       "resize-a",         "both-move",
                               "degenerate",     "detour-third-box", "chain-3-stroke",
@@ -810,7 +815,7 @@ Case makeCase(const std::string &flavour, const std::string &scenario)
     c.b1 = kB0;
     c.anchorA = kAnchorA;
     c.anchorB = kAnchorB;
-    const uint64_t seed = (flavour == "arc") ? 0xC0FFEEULL : 0xBADCAFEULL;
+    const uint64_t seed = flavourSeed(flavour);
 
     if (scenario == "centre-clip")
         c.anchorA = Anchor{AnchorKind::Centre, 0, 0.0};
@@ -826,7 +831,8 @@ Case makeCase(const std::string &flavour, const std::string &scenario)
         c.strokes.push_back(strokeThrough(ctrl, wave, 3.1, noise, seed, 340));
         c.a1 = c.a0;
         c.a1.c = c.a0.c + Vec2{-45.0, 255.0};
-        c.note = "rest ink detours over a third box; the warp drags the detour with it (D12, out of scope)";
+        c.note = "rest ink detours over a third box; the warp drags the detour with it "
+                 "(D12 interior pins are out of scope)";
     } else if (scenario == "chain-3-stroke") {
         const Vec2 w1{455.0, 318.0};
         const Vec2 w2{575.0, 452.0};
@@ -847,7 +853,8 @@ Case makeCase(const std::string &flavour, const std::string &scenario)
         c.strokes.push_back(strokeBetween(p0, p1, bulge, wave, 2.5, noise, seed, 340));
         c.a1 = c.a0;
         c.a1.c = c.a0.c + Vec2{-105.0, 215.0};
-        c.note = "centre-bound start (D17): facing is the ray toward the peer, clipped at A's AABB";
+        c.note = "centre-bound start (D17): facing is the ray toward the peer, clipped at A's "
+                 "AABB; the hidden ink is kept so a later move re-clips correctly";
     } else {
         c.strokes.push_back(flavourStroke(flavour, p0, p1, seed));
         if (scenario == "translate-near") {
@@ -872,7 +879,7 @@ Case makeCase(const std::string &flavour, const std::string &scenario)
             c.note = "both boxes move";
         } else if (scenario == "degenerate") {
             c.a1.c = Vec2{567.0, 386.2};
-            c.note = "endpoints ~3 world units apart; raw similarity scale is ~0.009";
+            c.note = "endpoints ~3 world units apart; similarity scale is ~0.009";
         }
     }
     return c;
@@ -888,14 +895,51 @@ std::vector<Case> buildCases()
     return out;
 }
 
+// Rotation of box A in isolation, for the obliquity characterization.
+Case makeRotationCase(const std::string &flavour, double deg)
+{
+    Case c = makeCase(flavour, "rotate-a");
+    c.a1 = c.a0;
+    c.a1.rot = deg * kPi / 180.0;
+    c.scenario = "rot";
+    c.name = flavour + "/rot-" + std::to_string(static_cast<int>(std::llround(deg)));
+    return c;
+}
+
+// Peer distance sweep, for the case where the adaptive rule runs out of arc.
+Case makeShortCase(const std::string &flavour, double centreGap, double deg)
+{
+    Case c;
+    c.flavour = flavour;
+    c.scenario = "short";
+    c.a0 = kA0;
+    c.b0 = kA0;
+    c.b0.c = kA0.c + Vec2{centreGap, 0.0};
+    c.b0.hw = 40.0;
+    c.b0.hh = 34.0;
+    c.a0.hw = 40.0;
+    c.a0.hh = 34.0;
+    c.anchorA = kAnchorA;
+    c.anchorB = kAnchorB;
+    const Vec2 p0 = anchorPoint(c.a0, c.anchorA);
+    const Vec2 p1 = anchorPoint(c.b0, c.anchorB);
+    const double span = vlen(p1 - p0);
+    c.strokes.push_back(strokeBetween(p0, p1, -0.18 * span, 0.0, 0.0, 0.02 * span,
+                                      flavourSeed(flavour), 220));
+    c.a1 = c.a0;
+    c.b1 = c.b0;
+    c.a1.rot = deg * kPi / 180.0;
+    c.name = flavour + "/short-" + std::to_string(static_cast<int>(std::llround(span))) + "u-"
+        + std::to_string(static_cast<int>(std::llround(deg))) + "deg";
+    return c;
+}
+
 // ---------------------------------------------------------------- ends and alignment
 
 struct Ends {
     Vec2 p0{}, f0{}, p1{}, f1{};
     bool centre0 = false, centre1 = false;
     bool aligned0 = true, aligned1 = true;
-    // How far the stored facing is from the direction toward the peer. This is what the
-    // blend has to absorb; >= 90 deg is the reversed class.
     double obliq0 = 0.0, obliq1 = 0.0;
     Aabb box0{}, box1{};
     bool reversed() const { return !aligned0 || !aligned1; }
@@ -926,64 +970,63 @@ Ends resolveEnds(const Case &c, bool forceCentre0, bool forceCentre1)
     return e;
 }
 
-// ---------------------------------------------------------------- round-2 metrics
+// ---------------------------------------------------------------- metrics
 
-// W5. Blend region against an absolute minimum-radius bar; middle against the round-1
-// rest-relative turn bar. `sLo`/`sHi` restrict scoring to what survives boundary clipping.
 struct CuspScore {
     int blend = 0;
     int middle = 0;
-    int old = 0;       // round-1 reading: rest-relative bar everywhere
-    int blendFull = 0; // same bar, ignoring the boundary-clip window
+    int old = 0;        // round-1 reading: rest-relative bar everywhere
+    int blendFull = 0;  // same bar, ignoring the boundary-clip window
     double minRadiusBlend = 1e9;
-    double bar = 0.0;  // effective minimum-radius bar for this connector
-    int blendTight = 0;  // same count at the 8 u bar
-    int blendLoose = 0;  // same count at the 16 u bar
+    double bar0 = 0.0, bar1 = 0.0;
+    int blendTight = 0;
+    int blendLoose = 0;
     int total() const { return blend + middle; }
 };
 
-double blendRadiusBar(double T, double lPrime, double base)
+double radiusBar(double t, double lPrime, double base)
 {
-    return std::min(base, kBlendRadiusSpanFactor * T * lPrime);
+    return std::min(base, kRadiusSpanFactor * t * lPrime);
 }
 
-CuspScore scoreCusps(const Poly &sp, double T, double lPrime, double restMaxTurnDeg, double sLo,
-                     double sHi)
+CuspScore scoreCusps(const Poly &sp, const BlendSpec &b, double lPrime, double restMaxTurnDeg,
+                     double sLo, double sHi)
 {
     CuspScore cs;
-    cs.bar = blendRadiusBar(T, lPrime, kBlendMinRadiusWorld);
+    cs.bar0 = radiusBar(b.t0, lPrime, kMinInkRadius);
+    cs.bar1 = radiusBar(b.t1, lPrime, kMinInkRadius);
     if (sp.size() < 3)
         return cs;
-    const double barTight = blendRadiusBar(T, lPrime, kBlendMinRadiusTightWorld);
-    const double barLoose = blendRadiusBar(T, lPrime, kBlendMinRadiusLooseWorld);
     const std::vector<double> cum = arcTable(sp);
     const double total = cum.back() > 1e-12 ? cum.back() : 1.0;
     const double oldThr = 1.5 * restMaxTurnDeg + 5.0;
     for (size_t i = 1; i + 1 < sp.size(); ++i) {
         const Vec2 a = sp[i] - sp[i - 1];
-        const Vec2 b = sp[i + 1] - sp[i];
+        const Vec2 c = sp[i + 1] - sp[i];
         const double la = vlen(a);
-        const double lb = vlen(b);
+        const double lb = vlen(c);
         if (la < 1e-10 || lb < 1e-10)
             continue;
         const double s = cum[i] / total;
-        const bool inBlend = (s < T || s > 1.0 - T);
-        const double turn = angleBetweenDeg(a, b);
+        const bool inStart = s < b.t0;
+        const bool inEnd = s > 1.0 - b.t1;
+        const double turn = angleBetweenDeg(a, c);
         const double meanSeg = 0.5 * (la + lb);
         const double radius = turn > 1e-9 ? meanSeg * 180.0 / (kPi * turn) : 1e9;
-        if (inBlend && radius < cs.bar)
+        const double bar = inStart ? cs.bar0 : cs.bar1;
+        if ((inStart || inEnd) && radius < bar)
             ++cs.blendFull;
         if (s < sLo || s > sHi)
             continue;
         if (turn > oldThr)
             ++cs.old;
-        if (inBlend) {
+        if (inStart || inEnd) {
             cs.minRadiusBlend = std::min(cs.minRadiusBlend, radius);
-            if (radius < cs.bar)
+            if (radius < bar)
                 ++cs.blend;
-            if (radius < barTight)
+            if (radius < radiusBar(inStart ? b.t0 : b.t1, lPrime, kMinInkRadiusTight))
                 ++cs.blendTight;
-            if (radius < barLoose)
+            if (radius < radiusBar(inStart ? b.t0 : b.t1, lPrime, kMinInkRadiusLoose))
                 ++cs.blendLoose;
         } else if (turn > oldThr) {
             ++cs.middle;
@@ -992,16 +1035,15 @@ CuspScore scoreCusps(const Poly &sp, double T, double lPrime, double restMaxTurn
     return cs;
 }
 
-// Failure mode of an over-long departure stub: the curve overshoots its target and comes
-// back, or crosses the body. Only meaningful on aligned ends — a reversed edge bind must
-// backtrack, that is the U-turn.
+// Overshoot: the curve passes its target and comes back, or crosses the body. Only
+// meaningful on aligned ends — a reversed edge bind must backtrack, that is the U-turn.
 struct BlendHealth {
     int backtracks = 0;
     int selfIntersect = 0;
     int total() const { return backtracks + selfIntersect; }
 };
 
-BlendHealth blendHealth(const Poly &sp, double T)
+BlendHealth blendHealth(const Poly &sp, const BlendSpec &b)
 {
     BlendHealth h;
     if (sp.size() < 6)
@@ -1013,11 +1055,11 @@ BlendHealth blendHealth(const Poly &sp, double T)
     size_t jT = 0;
     size_t jE = sp.size() - 1;
     for (size_t i = 0; i < sp.size(); ++i) {
-        if (cum[i] / total < T)
+        if (cum[i] / total < b.t0)
             jT = i;
     }
     for (size_t i = sp.size(); i-- > 0;) {
-        if (cum[i] / total > 1.0 - T)
+        if (cum[i] / total > 1.0 - b.t1)
             jE = i;
     }
     if (jT > 1) {
@@ -1041,8 +1083,7 @@ BlendHealth blendHealth(const Poly &sp, double T)
         }
     }
     for (size_t i = 0; i + 1 < sp.size(); ++i) {
-        const bool inBlend = (i <= jT) || (i >= jE);
-        if (!inBlend)
+        if (i > jT && i < jE)
             continue;
         for (size_t j = i + 2; j + 1 < sp.size(); ++j) {
             if (properCross(sp[i], sp[i + 1], sp[j], sp[j + 1]))
@@ -1052,59 +1093,51 @@ BlendHealth blendHealth(const Poly &sp, double T)
     return h;
 }
 
-// What the blend costs in drawn character. Compared against the same variant without C.
+// What the blend costs in drawn character, compared against the unblended warp.
 struct Fidelity {
-    double midMaxSample = 0.0;  // max deviation over the fixed middle 70% of arc length
-    double midMaxSpine = 0.0;   // self-check: exactly 0 while T <= 0.15
+    double midMaxSample = 0.0;   // over the untouched middle, s in [t0, 1-t1]
     double blendMeanSample = 0.0;
+    double blendFrac = 0.0;      // share of arc length spent on the transition
 };
 
 Fidelity fidelity(const RestShape &rs, const Poly &blended, const Poly &plain,
-                  const Poly &blendedSpine, const Poly &plainSpine, double T)
+                  const BlendSpec &b)
 {
     Fidelity f;
-    if (blended.size() == plain.size()) {
-        double acc = 0.0;
-        int n = 0;
-        for (size_t i = 0; i < blended.size(); ++i) {
-            const double s = rs.sd[i].s;
-            const double dev = vlen(blended[i] - plain[i]);
-            if (s >= 0.15 && s <= 0.85)
-                f.midMaxSample = std::max(f.midMaxSample, dev);
-            if (s < T || s > 1.0 - T) {
-                acc += dev;
-                ++n;
-            }
-        }
-        f.blendMeanSample = n ? acc / static_cast<double>(n) : 0.0;
-    }
-    if (blendedSpine.size() == plainSpine.size() && !plainSpine.empty()) {
-        const std::vector<double> cum = arcTable(plainSpine);
-        const double total = cum.back() > 1e-12 ? cum.back() : 1.0;
-        for (size_t i = 0; i < blendedSpine.size(); ++i) {
-            const double s = cum[i] / total;
-            if (s >= 0.15 && s <= 0.85)
-                f.midMaxSpine = std::max(f.midMaxSpine, vlen(blendedSpine[i] - plainSpine[i]));
+    f.blendFrac = b.t0 + b.t1;
+    if (blended.size() != plain.size())
+        return f;
+    double acc = 0.0;
+    int n = 0;
+    for (size_t i = 0; i < blended.size(); ++i) {
+        const double s = rs.sd[i].s;
+        const double dev = vlen(blended[i] - plain[i]);
+        if (s >= b.t0 && s <= 1.0 - b.t1)
+            f.midMaxSample = std::max(f.midMaxSample, dev);
+        else {
+            acc += dev;
+            ++n;
         }
     }
+    f.blendMeanSample = n ? acc / static_cast<double>(n) : 0.0;
     return f;
 }
 
 struct VariantEval {
     Poly spine;
-    Poly samples;           // drawn geometry, clipped for centre-bound ends
+    Poly samples;
     Poly samplesUnclipped;
     double facingStartDeg = 0.0;
     double facingEndDeg = 0.0;
+    double facingVisibleStartDeg = 0.0;
+    double visibleShare = 1.0;
     CuspScore cusps;
     BlendHealth health;
     Fidelity fid;
-    double facingVisibleStartDeg = 0.0;  // for a clipped end: direction where the ink appears
-    double visibleShare = 1.0;           // fraction of drawn samples surviving the clip
-    double stubLen = 0.0;
-    double tEff = 0.0;
-    double endpointErr = 0.0;
-    double worstFacingDeg() const { return std::max(facingStartDeg, facingEndDeg); }
+    BlendSpec blend;
+    // W4 applies to edge-bound ends only; a centre bind is measured at the boundary
+    // crossing and carries no facing bar (round-3 restatement).
+    double facingBarDeg = 0.0;
 };
 
 struct CaseEval {
@@ -1114,9 +1147,8 @@ struct CaseEval {
     Ends ends;
     std::array<VariantEval, kVariantCount> v{};
     Poly restDisplay;
-    double rawScale = 1.0;
+    double scale = 1.0;
     double lPrime = 0.0;
-    double gapAB = 0.0;
 };
 
 Vec2 endTangentStart(const Poly &p)
@@ -1137,19 +1169,12 @@ CaseEval evaluateCase(const Case &c, const WarpParams &pm, bool forceCentre0 = f
     e.rest = buildRestShape(c.strokes);
     e.ends = resolveEnds(c, forceCentre0, forceCentre1);
 
-    // Rest display is clipped the same way the warped output is, so the comparison is fair.
     e.restDisplay = e.rest.raw;
     {
-        Anchor a0 = c.anchorA;
-        if (forceCentre0)
-            a0 = Anchor{AnchorKind::Centre, 0, 0.0};
-        Anchor a1 = c.anchorB;
-        if (forceCentre1)
-            a1 = Anchor{AnchorKind::Centre, 0, 0.0};
         const Aabb ra = c.a0.aabb();
         const Aabb rb = c.b0.aabb();
-        clipEnds(e.restDisplay, a0.kind == AnchorKind::Centre ? &ra : nullptr,
-                 a1.kind == AnchorKind::Centre ? &rb : nullptr);
+        clipEnds(e.restDisplay, e.ends.centre0 ? &ra : nullptr,
+                 e.ends.centre1 ? &rb : nullptr);
     }
 
     for (int v = 0; v < kVariantCount; ++v) {
@@ -1159,10 +1184,8 @@ CaseEval evaluateCase(const Case &c, const WarpParams &pm, bool forceCentre0 = f
         ve.spine = w.spine;
         ve.samplesUnclipped = w.samples;
         ve.samples = w.samples;
-        ve.stubLen = w.stubLen;
-        ve.tEff = w.tEff;
-        ve.endpointErr = w.endpointErr;
-        e.rawScale = w.rawScale;
+        ve.blend = w.blend;
+        e.scale = w.scale;
         e.lPrime = w.lPrime;
 
         double sLo = 0.0;
@@ -1192,15 +1215,19 @@ CaseEval evaluateCase(const Case &c, const WarpParams &pm, bool forceCentre0 = f
             ve.facingVisibleStartDeg =
                 angleBetweenDeg(frameAtArc(ve.spine, spCum, sLo * spCum.back()).t, e.ends.f0);
         }
-        ve.cusps = scoreCusps(ve.spine, w.tEff, w.lPrime, e.rest.restMaxTurnDeg, sLo, sHi);
-        if (variantBlends(v)) {
-            ve.health = blendHealth(ve.spine, w.tEff);
-            ve.fid = fidelity(e.rest, w.samples, w.samplesUnblended, w.spine, w.spineUnblended,
-                              w.tEff);
+        ve.facingBarDeg = 0.0;
+        if (!e.ends.centre0)
+            ve.facingBarDeg = std::max(ve.facingBarDeg, ve.facingStartDeg);
+        if (!e.ends.centre1)
+            ve.facingBarDeg = std::max(ve.facingBarDeg, ve.facingEndDeg);
+
+        ve.cusps = scoreCusps(ve.spine, w.blend, w.lPrime, e.rest.restMaxTurnDeg, sLo, sHi);
+        if (v == kAC) {
+            ve.health = blendHealth(ve.spine, w.blend);
+            ve.fid = fidelity(e.rest, w.samples, w.samplesUnblended, w.blend);
         }
         e.v[static_cast<size_t>(v)] = ve;
     }
-    e.gapAB = maxDeviation(e.v[kA].samplesUnclipped, e.v[kB].samplesUnclipped);
     return e;
 }
 
@@ -1370,10 +1397,9 @@ std::string renderSvg(const Scene &sc, const std::string &title,
     };
     static const LegendItem legend[] = {
         {"rest shape", "#bbbbbb", 3.0, ""},
-        {"A similarity", "#1f77b4", 1.3, ""},
-        {"B anisotropic", "#2ca02c", 1.3, "6,4"},
-        {"A+C blend", "#d62728", 2.8, ""},
-        {"B+C blend", "#7b3fbf", 2.8, "8,5"},
+        {"A similarity (control)", "#1f77b4", 1.3, ""},
+        {"A+C adaptive blend", "#d62728", 2.8, ""},
+        {"blend region ends, departure pull", "#e8a33d", 2.0, "2,3"},
     };
     double lx = 18.0;
     const double lyy = H - 12.0;
@@ -1400,8 +1426,20 @@ std::string endLabel(bool centre, bool aligned)
     return aligned ? "edge:aligned" : "edge:REVERSED";
 }
 
-std::string caseSvg(const Case &c, const CaseEval &e, const WarpParams &pm,
-                    const std::string &titleSuffix, const Poly *ghost)
+// Short tick across the spine marking where the blend region ends.
+void addBlendTick(Scene &sc, const Poly &spine, double s)
+{
+    if (spine.size() < 2 || s <= 0.0 || s >= 1.0)
+        return;
+    const std::vector<double> cum = arcTable(spine);
+    const Frame f = frameAtArc(spine, cum, s * cum.back());
+    const Vec2 n = leftNormal(f.t);
+    Poly tick{f.p - n * 14.0, f.p + n * 14.0};
+    sc.addPoly(tick, "#e8a33d", 2.0, "2,3", 0.95);
+}
+
+std::string caseSvg(const Case &c, const CaseEval &e, const std::string &titleSuffix,
+                    const Poly *ghost)
 {
     Scene sc;
     for (const Box &ob : c.obstacles)
@@ -1425,10 +1463,19 @@ std::string caseSvg(const Case &c, const CaseEval &e, const WarpParams &pm,
     if (ghost)
         sc.addPoly(*ghost, "#f0a6a6", 2.0, "2,4", 1.0);
 
+    // Departure stubs, drawn to the equivalent Bezier control point (handle/3), which is
+    // where the curve is actually pulled toward. The handle itself is a velocity, not a
+    // distance, so drawing it at full length would overstate the reach.
+    const BlendSpec &b = e.v[kAC].blend;
+    Poly stub0{e.ends.p0, e.ends.p0 + e.ends.f0 * (b.outer0 / 3.0)};
+    Poly stub1{e.ends.p1, e.ends.p1 + e.ends.f1 * (b.outer1 / 3.0)};
+    sc.addPoly(stub0, "#e8a33d", 1.0, "1,4", 0.8);
+    sc.addPoly(stub1, "#e8a33d", 1.0, "1,4", 0.8);
+
     sc.addPoly(e.v[kAC].samples, "#d62728", 2.8, "", 0.95);
-    sc.addPoly(e.v[kBC].samples, "#7b3fbf", 2.8, "8,5", 0.95);
     sc.addPoly(e.v[kA].samples, "#1f77b4", 1.3, "", 1.0);
-    sc.addPoly(e.v[kB].samples, "#2ca02c", 1.3, "6,4", 1.0);
+    addBlendTick(sc, e.v[kAC].spine, b.t0);
+    addBlendTick(sc, e.v[kAC].spine, 1.0 - b.t1);
 
     sc.addArrow(e.ends.p0, e.ends.f0, "#e07b00");
     sc.addArrow(e.ends.p1, e.ends.f1, "#e07b00");
@@ -1439,8 +1486,9 @@ std::string caseSvg(const Case &c, const CaseEval &e, const WarpParams &pm,
     lines.push_back(c.note);
     {
         std::ostringstream l;
-        l << "ends: A " << endLabel(e.ends.centre0, e.ends.aligned0) << "   B "
-          << endLabel(e.ends.centre1, e.ends.aligned1)
+        l << "ends: A " << endLabel(e.ends.centre0, e.ends.aligned0) << " obliq "
+          << num(e.ends.obliq0, 1) << "deg   B " << endLabel(e.ends.centre1, e.ends.aligned1)
+          << " obliq " << num(e.ends.obliq1, 1) << "deg"
           << (e.ends.reversed() ? "   -- U-turn is EXPECTED here (D26); see the W7 section"
                                 : "");
         lines.push_back(l.str());
@@ -1448,34 +1496,45 @@ std::string caseSvg(const Case &c, const CaseEval &e, const WarpParams &pm,
     {
         std::ostringstream l;
         l << "rest " << e.rest.raw.size() << " samples, len " << num(e.rest.spineLen, 1)
-          << "u, chord " << num(e.rest.chordLen, 1) << "u   |   warped L' "
-          << num(e.lPrime, 1) << "u, raw scale " << num(e.rawScale, 3) << ", stub "
-          << num(e.v[kAC].stubLen, 1) << "u, T " << num(pm.T, 2);
+          << "u, chord " << num(e.rest.chordLen, 1) << "u   |   warped L' " << num(e.lPrime, 1)
+          << "u, scale " << num(e.scale, 3);
         lines.push_back(l.str());
     }
     {
         std::ostringstream l;
-        l << "W4 facing dev (start/end deg):";
-        for (int v = 0; v < kVariantCount; ++v)
-            l << "  " << variantName(v) << " " << num(e.v[static_cast<size_t>(v)].facingStartDeg, 1)
-              << "/" << num(e.v[static_cast<size_t>(v)].facingEndDeg, 1);
+        l << "blend: turn " << num(b.turn0, 1) << "/" << num(b.turn1, 1) << "deg -> length "
+          << num(b.t0, 3) << "/" << num(b.t1, 3) << " of arc (" << num(b.inner0, 1) << "/"
+          << num(b.inner1, 1) << "u), stub " << num(b.outer0, 1) << "/" << num(b.outer1, 1)
+          << "u" << ((b.capped0 || b.capped1) ? "   [CAPPED]" : "");
         lines.push_back(l.str());
     }
     {
         std::ostringstream l;
-        l << "W5 new cusps blend+middle (min blend radius u):";
-        for (int v = 0; v < kVariantCount; ++v) {
-            const CuspScore &cs = e.v[static_cast<size_t>(v)].cusps;
-            l << "  " << variantName(v) << " " << cs.blend << "+" << cs.middle << " ("
-              << num(std::min(cs.minRadiusBlend, 9999.0), 1) << ")";
-        }
+        l << "W4 facing dev (start/end deg): A " << num(e.v[kA].facingStartDeg, 1) << "/"
+          << num(e.v[kA].facingEndDeg, 1) << "   A+C " << num(e.v[kAC].facingStartDeg, 1) << "/"
+          << num(e.v[kAC].facingEndDeg, 1);
+        if (e.ends.centre0)
+            l << "   (A is a centre bind: boundary crossing " << num(e.v[kAC].facingVisibleStartDeg, 1)
+              << "deg, no facing bar)";
+        lines.push_back(l.str());
+    }
+    {
+        const CuspScore &cs = e.v[kAC].cusps;
+        std::ostringstream l;
+        l << "W5 A+C new cusps blend+middle " << cs.blend << "+" << cs.middle
+          << " (min blend radius "
+          << (cs.minRadiusBlend > 9998.0 ? std::string("n/a, both blend regions are hidden by "
+                                                       "the boundary clip")
+                                         : num(cs.minRadiusBlend, 1) + "u vs bar "
+                      + num(std::min(cs.bar0, cs.bar1), 1) + "u")
+          << ")   |   overshoot " << e.v[kAC].health.total();
         lines.push_back(l.str());
     }
     {
         std::ostringstream l;
-        l << "fidelity A+C: mid-70% " << num(e.v[kAC].fid.midMaxSample, 2)
-          << "u, blend mean " << num(e.v[kAC].fid.blendMeanSample, 2) << "u   |   overshoot "
-          << e.v[kAC].health.total() << "   |   A vs B " << num(e.gapAB, 1) << "u";
+        l << "cost: blend spans " << num(100.0 * e.v[kAC].fid.blendFrac, 0)
+          << "% of arc, mean deviation there " << num(e.v[kAC].fid.blendMeanSample, 2)
+          << "u, untouched middle " << num(e.v[kAC].fid.midMaxSample, 2) << "u";
         if (e.v[kAC].visibleShare < 0.999)
             l << "   |   ink kept after clipping " << num(100.0 * e.v[kAC].visibleShare, 0)
               << "%";
@@ -1602,49 +1661,35 @@ std::string pad(const std::string &s, size_t w)
     return out;
 }
 
-// ---------------------------------------------------------------- sweep aggregation
-
-struct Agg {
-    int alignedCases = 0;
-    int alignedZeroCusp = 0;
-    int alignedBlendCuspTotal = 0;
-    double maxFacingAll = 0.0;
-    int facingOverAll = 0;
-    int allCases = 0;
-    int overshootCases = 0;
-    int overshootTotal = 0;
-    double midMax = 0.0;
-    double blendMeanSum = 0.0;
-    int blendMeanN = 0;
-    double stubMin = 1e300;
-    double stubMax = 0.0;
-    double minRadius = 1e300;
-
-    void add(const CaseEval &e, int variant)
-    {
-        const VariantEval &ve = e.v[static_cast<size_t>(variant)];
-        ++allCases;
-        maxFacingAll = std::max(maxFacingAll, ve.worstFacingDeg());
-        if (ve.worstFacingDeg() > 5.0)
-            ++facingOverAll;
-        stubMin = std::min(stubMin, ve.stubLen);
-        stubMax = std::max(stubMax, ve.stubLen);
-        midMax = std::max(midMax, ve.fid.midMaxSample);
-        blendMeanSum += ve.fid.blendMeanSample;
-        ++blendMeanN;
-        if (!e.ends.reversed()) {
-            ++alignedCases;
-            if (ve.cusps.total() == 0)
-                ++alignedZeroCusp;
-            alignedBlendCuspTotal += ve.cusps.blend;
-            minRadius = std::min(minRadius, ve.cusps.minRadiusBlend);
-            if (ve.health.total() > 0)
-                ++overshootCases;
-            overshootTotal += ve.health.total();
+// Smallest blend-length multiplier at end A that lifts the minimum blend radius to `target`.
+// The cap is disabled here: the question is what the geometry demands, not what we allow.
+double requiredMultiplier(const Case &c, const WarpParams &base, double target, double &radiusAt1,
+                          double *spanOut = nullptr, double *turnOut = nullptr,
+                          double *lPrimeOut = nullptr)
+{
+    radiusAt1 = 0.0;
+    for (int step = 0; step <= 140; ++step) {
+        WarpParams pm = base;
+        pm.applyCap = false;
+        pm.forceMul0 = 1.0 + 0.05 * static_cast<double>(step);
+        pm.forceMul1 = 1.0;
+        const CaseEval e = evaluateCase(c, pm);
+        const double r = std::min(e.v[kAC].cusps.minRadiusBlend, 9999.0);
+        if (step == 0) {
+            radiusAt1 = r;
+            if (turnOut)
+                *turnOut = e.v[kAC].blend.turn0;
+            if (lPrimeOut)
+                *lPrimeOut = e.lPrime;
+        }
+        if (r >= target) {
+            if (spanOut)
+                *spanOut = e.v[kAC].blend.inner0;
+            return pm.forceMul0;
         }
     }
-    double blendMean() const { return blendMeanN ? blendMeanSum / blendMeanN : 0.0; }
-};
+    return -1.0;
+}
 
 }  // namespace
 
@@ -1652,469 +1697,381 @@ int main(int argc, char **argv)
 {
     const std::string outDir = argc > 1 ? std::string(argv[1]) : std::string("out");
     const std::vector<Case> cases = buildCases();
-    const WarpParams def = defaultParams();
+    const WarpParams def;
 
-    std::cout << "\n=== EXP-0002 round 2 — connector-ink warp probe (SPIKE, host-only) ===\n";
-    std::cout << "canonical from round 1: Hermite magnitude referenced to arc length (T*L'); "
-                 "far-end departure = negated incoming tangent\n";
-    std::cout << "recommended defaults in this build: T=" << num(def.T, 2) << "  departure stub="
-              << (def.stubAbsolute
-                      ? num(def.stubWorld, 1) + "u absolute (cap " + num(def.stubCapFactor, 2)
-                          + "*T*L')"
-                      : "k=" + num(def.stubK, 1) + " relative (k*T*L'), outer handle only")
-              << "  sample parameterization="
-              << (def.localParam ? "pre-blend arc" : "blended arc")
-              << "  clamp: scale-floor=" << (def.scaleFloor ? "on" : "off")
-              << " d-taper=" << (def.dTaper ? "on" : "off") << "\n";
-    std::cout << "W5 blend bar: minimum radius of curvature " << num(kBlendMinRadiusWorld, 1)
-              << " world units; middle keeps the round-1 rest-relative turn bar\n";
+    std::cout << "\n=== EXP-0002 round 3 — connector-ink warp probe (SPIKE, host-only) ===\n";
+    std::cout << "final model: variant A (control) and A+C (candidate). Variant B dropped after "
+                 "round 2; no degenerate clamp; pre-blend sample parameterization; relative "
+                 "departure stub on the outer handle only.\n";
+    std::cout << "blend length " << num(kBlendLength, 2) << " of arc | departure stub ratio "
+              << num(kStubRatio, 2) << " | turn factor " << num(kTurnFactor, 2)
+              << " | blend cap " << num(kBlendCap, 2) << " per end | minimum ink radius "
+              << num(kMinInkRadius, 1) << " u\n";
+    std::cout << "adaptive rule: blend arc per end = clamp(max(" << num(kBlendLength, 2)
+              << "*L', " << num(kTurnFactor, 1) << " * " << num(kMinInkRadius, 0)
+              << "u * turn_rad), 0, " << num(kBlendCap, 2) << "*L')\n";
 
-    // ---- 1. alignment partition (D26) ------------------------------------
-    std::cout << "\n--- 1. anchor alignment partition (D26: edge facings are never "
-                 "re-selected) ---\n";
-    std::cout << "obliquity = angle between the stored facing and the direction toward the "
-                 "peer; >= 90 deg is reversed\n";
-    std::cout << pad("case", 26) << pad("end A", 18) << pad("obliq A", 10)
-              << pad("end B", 18) << pad("obliq B", 10) << "class\n";
-    std::vector<size_t> alignedIdx;
-    std::vector<size_t> reversedIdx;
-    for (size_t i = 0; i < cases.size(); ++i) {
-        const Ends en = resolveEnds(cases[i], false, false);
-        std::cout << pad(cases[i].name, 26) << pad(endLabel(en.centre0, en.aligned0), 18)
-                  << pad(num(en.obliq0, 1), 10) << pad(endLabel(en.centre1, en.aligned1), 18)
-                  << pad(num(en.obliq1, 1), 10)
-                  << (en.reversed() ? "REVERSED" : "aligned") << "\n";
-        if (en.reversed())
-            reversedIdx.push_back(i);
-        else
-            alignedIdx.push_back(i);
-    }
-    std::cout << "aligned " << alignedIdx.size() << "/" << cases.size() << ", reversed "
-              << reversedIdx.size() << "/" << cases.size()
-              << " (reversed cases are excluded from the W5 bar and answered by W7)\n";
-
-    // ---- 2. degenerate clamp policies ------------------------------------
-    std::cout << "\n--- 2. degenerate clamp policies (at the default T and stub) ---\n";
-    std::cout << "cost = max |A+C sample - unclamped A+C sample| in u; endErr = |A spine end - "
-                 "anchor| in u (variant A has no blend to repair a detached end)\n";
-    struct Policy {
-        const char *name;
-        bool floor;
-        bool taper;
-    };
-    const Policy policies[4] = {{"none", false, false},
-                                {"(i) scale-floor 0.15", true, false},
-                                {"(ii) d-taper", false, true},
-                                {"(iii) both", true, true}};
-    std::cout << pad("case", 26) << pad("rawScale", 10);
-    for (int p = 1; p < 4; ++p)
-        std::cout << pad(std::string(policies[static_cast<size_t>(p)].name) + " cost/endErr", 30);
-    std::cout << "\n";
-    std::array<double, 4> worstEndErr{};
-    std::array<double, 4> worstCostNormal{};  // cost on cases that do not need a clamp
-    std::array<double, 4> worstSpike{};       // reach of the ink on the cases that need one
-    for (size_t i = 0; i < cases.size(); ++i) {
-        WarpParams p0 = def;
-        p0.scaleFloor = false;
-        p0.dTaper = false;
-        const CaseEval base = evaluateCase(cases[i], p0);
-        const bool needsClamp = base.rawScale < 0.15;
-        worstEndErr[0] = std::max(worstEndErr[0], base.v[kA].endpointErr);
-        if (needsClamp) {
-            double spike = 0.0;
-            for (const Vec2 &q : base.v[kAC].samplesUnclipped)
-                spike = std::max(spike, vlen(q - base.ends.p0));
-            worstSpike[0] = std::max(worstSpike[0], spike);
-        }
-        std::cout << pad(cases[i].name, 26) << pad(num(base.rawScale, 3), 10);
-        for (int p = 1; p < 4; ++p) {
-            WarpParams pp = def;
-            pp.scaleFloor = policies[static_cast<size_t>(p)].floor;
-            pp.dTaper = policies[static_cast<size_t>(p)].taper;
-            const CaseEval ce = evaluateCase(cases[i], pp);
-            const double cost = maxDeviation(ce.v[kAC].samplesUnclipped,
-                                             base.v[kAC].samplesUnclipped);
-            const double endErr = ce.v[kA].endpointErr;
-            worstEndErr[static_cast<size_t>(p)] =
-                std::max(worstEndErr[static_cast<size_t>(p)], endErr);
-            if (!needsClamp)
-                worstCostNormal[static_cast<size_t>(p)] =
-                    std::max(worstCostNormal[static_cast<size_t>(p)], cost);
-            if (needsClamp) {
-                // Spike height = how far the drawn ink strays from the tiny new anchor pair.
-                double spike = 0.0;
-                for (const Vec2 &q : ce.v[kAC].samplesUnclipped)
-                    spike = std::max(spike, vlen(q - ce.ends.p0));
-                worstSpike[static_cast<size_t>(p)] =
-                    std::max(worstSpike[static_cast<size_t>(p)], spike);
-            }
-            std::cout << pad(num(cost, 2) + " / " + num(endErr, 2), 30);
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\npolicy summary (the degenerate cases span a ~3 u chord, so any reach well "
-                 "above that is the spike)\n";
-    std::cout << pad("policy", 24) << pad("worst degenerate reach", 24)
-              << pad("worst endpoint detach (A)", 27) << "worst cost where no clamp is needed\n";
-    for (int p = 0; p < 4; ++p)
-        std::cout << pad(policies[static_cast<size_t>(p)].name, 24)
-                  << pad(num(worstSpike[static_cast<size_t>(p)], 1) + " u", 24)
-                  << pad(num(worstEndErr[static_cast<size_t>(p)], 2) + " u", 27)
-                  << num(worstCostNormal[static_cast<size_t>(p)], 2) << " u\n";
-
-    // Round 1 attributed the ~140 u spike to "the spine collapses while d stays absolute".
-    // Split it per variant and against max |d| so the attribution is checkable.
-    std::cout << "\nwhere the degenerate spike actually lives (reach = max |sample - anchor A|; "
-                 "the new chord is ~3 u)\n";
-    std::cout << pad("case / policy", 34) << pad("max |d| u", 11);
-    for (int v = 0; v < kVariantCount; ++v)
-        std::cout << pad(std::string(variantName(v)) + " reach", 12);
-    std::cout << "\n";
-    struct DegPolicy {
-        const char *name;
-        bool taper;
-        bool aniso;
-    };
-    const DegPolicy degPolicies[3] = {
-        {"unclamped", false, false}, {"(ii) d-taper", true, false},
-        {"(iv) d-taper + aniso taper", true, true}};
+    // ---- 1. obliquity characterization ------------------------------------
+    std::cout << "\n--- 1a. minimum blend radius vs obliquity, across handle/span ratios "
+                 "(non-adaptive, blend length fixed at "
+              << num(kBlendLength, 2) << ") ---\n";
+    std::cout << "handle/span is the departure stub ratio; the blend arc is "
+              << num(kBlendLength, 2) << "*L' at every row, so this isolates the ratio\n";
+    const double ratioGrid[5] = {0.5, 1.0, 1.5, 2.0, 2.5};
+    std::cout << pad("shape", 8) << pad("rotA", 7) << pad("obliq A", 10) << pad("turn A", 9)
+              << pad("span u", 9);
+    for (double r : ratioGrid)
+        std::cout << pad("R@" + num(r, 1), 10);
+    std::cout << "class\n";
     for (const std::string &flavour : {std::string("arc"), std::string("wiggle")}) {
-        const Case dc = makeCase(flavour, "degenerate");
-        double maxD = 0.0;
-        for (const SD &s : buildRestShape(dc.strokes).sd)
-            maxD = std::max(maxD, std::abs(s.d));
-        for (const DegPolicy &dp : degPolicies) {
+        for (int deg = 0; deg <= 180; deg += 15) {
+            const Case rc = makeRotationCase(flavour, static_cast<double>(deg));
             WarpParams pm = def;
-            pm.scaleFloor = false;
-            pm.dTaper = dp.taper;
-            pm.anisoTaper = dp.aniso;
-            const CaseEval ce = evaluateCase(dc, pm);
-            std::cout << pad(flavour + " / " + dp.name, 34) << pad(num(maxD, 1), 11);
-            for (int v = 0; v < kVariantCount; ++v) {
-                double reach = 0.0;
-                for (const Vec2 &q : ce.v[static_cast<size_t>(v)].samplesUnclipped)
-                    reach = std::max(reach, vlen(q - ce.ends.p0));
-                std::cout << pad(num(reach, 1), 12);
+            pm.adaptive = false;
+            const CaseEval probe = evaluateCase(rc, pm);
+            std::cout << pad(flavour, 8) << pad(std::to_string(deg), 7)
+                      << pad(num(probe.ends.obliq0, 1), 10)
+                      << pad(num(probe.v[kAC].blend.turn0, 1), 9)
+                      << pad(num(probe.v[kAC].blend.inner0, 1), 9);
+            for (double r : ratioGrid) {
+                WarpParams p2 = pm;
+                p2.stubRatio = r;
+                const CaseEval e = evaluateCase(rc, p2);
+                std::cout << pad(num(std::min(e.v[kAC].cusps.minRadiusBlend, 9999.0), 1), 10);
+            }
+            std::cout << (probe.ends.reversed() ? "REVERSED" : "aligned") << "\n";
+        }
+    }
+
+    std::cout << "\n--- 1b. the joint grid: blend span x handle/span ratio, at four turns ---\n";
+    std::cout << "each cell is 'min radius / overshoot count'. Growing the span at a fixed ratio "
+                 "also grows the handle, so the ratio is the only thing that can retire "
+                 "overshoot.\n";
+    const double mulGrid[5] = {1.0, 1.5, 2.0, 2.5, 3.0};
+    for (int deg : {30, 45, 60, 75}) {
+        const Case rc = makeRotationCase("arc", static_cast<double>(deg));
+        WarpParams probeP = def;
+        probeP.adaptive = false;
+        const CaseEval probe = evaluateCase(rc, probeP);
+        std::cout << "arc, box A rotated " << deg << " deg: obliquity "
+                  << num(probe.ends.obliq0, 1) << " deg, turn to absorb "
+                  << num(probe.v[kAC].blend.turn0, 1) << " deg, base span "
+                  << num(probe.v[kAC].blend.inner0, 1) << " u ("
+                  << (probe.ends.reversed() ? "REVERSED" : "aligned") << ")\n";
+        std::cout << "  " << pad("span x", 9);
+        for (double r : ratioGrid)
+            std::cout << pad("ratio " + num(r, 1), 14);
+        std::cout << "\n";
+        for (double m : mulGrid) {
+            std::cout << "  " << pad(num(m, 1), 9);
+            for (double r : ratioGrid) {
+                WarpParams p2 = def;
+                p2.adaptive = false;
+                p2.applyCap = false;
+                p2.stubRatio = r;
+                p2.forceMul0 = m;
+                p2.forceMul1 = 1.0;
+                const CaseEval e = evaluateCase(rc, p2);
+                std::cout << pad(num(std::min(e.v[kAC].cusps.minRadiusBlend, 9999.0), 1) + " / "
+                                     + std::to_string(e.v[kAC].health.total()),
+                                 14);
             }
             std::cout << "\n";
         }
     }
 
-    // ---- 3. blend length T sweep ------------------------------------------
-    const double tSweep[4] = {0.10, 0.15, 0.25, 0.35};
-    std::cout << "\n--- 3. blend length T sweep (stub = round-1 canonical T*L'; aligned cases "
-                 "only for cusps/overshoot) ---\n";
-    std::cout << pad("variant", 8) << pad("T", 7) << pad("0-cusp/aligned", 16)
-              << pad("blend cusps", 13) << pad("min radius u", 14) << pad("max facing", 12)
-              << pad("face>5", 8) << pad("overshoot", 11) << pad("mid70 max u", 13)
-              << "blend mean u\n";
-    for (int v : {kAC, kBC}) {
-        for (double T : tSweep) {
+    std::cout << "\n--- 1c. blend length the geometry demands, and the turn allowance it "
+                 "implies ---\n";
+    std::cout << "mul* = smallest multiple of the base blend length that reaches the "
+              << num(kMinInkRadius, 1) << " u bar at the rotated end (cap disabled)\n";
+    std::cout << pad("shape", 8) << pad("rotA", 7) << pad("turn A", 9) << pad("R at mul=1", 12)
+              << pad("mul*", 8) << pad("alpha linear", 14) << pad("alpha versine", 15)
+              << pad("alpha sine", 12) << "alpha deadband" << num(kFreeTurnDeg, 0) << "\n";
+    double worstAlphaDead = 0.0;
+    double worstAlphaDeadAligned = 0.0;
+    for (const std::string &flavour : {std::string("arc"), std::string("wiggle")}) {
+        for (int deg = 0; deg <= 180; deg += 15) {
+            const Case rc = makeRotationCase(flavour, static_cast<double>(deg));
             WarpParams pm = def;
-            pm.T = T;
-            pm.stubAbsolute = false;
-            pm.stubK = 1.0;
-            Agg agg;
-            for (const Case &c : cases)
-                agg.add(evaluateCase(c, pm), v);
-            std::cout << pad(variantName(v), 8) << pad(num(T, 2), 7)
-                      << pad(std::to_string(agg.alignedZeroCusp) + "/"
-                                 + std::to_string(agg.alignedCases),
-                             16)
-                      << pad(std::to_string(agg.alignedBlendCuspTotal), 13)
-                      << pad(num(agg.minRadius, 1), 14) << pad(num(agg.maxFacingAll, 2), 12)
-                      << pad(std::to_string(agg.facingOverAll), 8)
-                      << pad(std::to_string(agg.overshootTotal), 11)
-                      << pad(num(agg.midMax, 2), 13) << num(agg.blendMean(), 2) << "\n";
+            pm.adaptive = false;
+            const CaseEval probe = evaluateCase(rc, pm);
+            const double turn = probe.v[kAC].blend.turn0;
+            double r1 = 0.0;
+            const double mul = requiredMultiplier(rc, pm, kMinInkRadius, r1);
+            auto alphaFor = [&](TurnForm f) {
+                const double g = turnGrowth(turn, f);
+                return (mul > 0.0 && g > 1e-6) ? (mul - 1.0) / g : 0.0;
+            };
+            const double ad = alphaFor(TurnForm::Deadband);
+            worstAlphaDead = std::max(worstAlphaDead, ad);
+            if (!probe.ends.reversed())
+                worstAlphaDeadAligned = std::max(worstAlphaDeadAligned, ad);
+            std::cout << pad(flavour, 8) << pad(std::to_string(deg), 7) << pad(num(turn, 1), 9)
+                      << pad(num(r1, 1), 12)
+                      << pad(mul > 0.0 ? num(mul, 2) : std::string("none<=6"), 8)
+                      << pad(num(alphaFor(TurnForm::Linear), 2), 14)
+                      << pad(num(alphaFor(TurnForm::Versine), 2), 15)
+                      << pad(num(alphaFor(TurnForm::Sine), 2), 12) << num(ad, 2) << "\n";
         }
     }
+    std::cout << "worst implied turn allowance (deadband form): aligned ends "
+              << num(worstAlphaDeadAligned, 2) << ", all ends including reversed "
+              << num(worstAlphaDead, 2) << "\n";
+    std::cout << "no column is constant, so no single allowance fits the multiplicative form; "
+                 "section 1d shows why, and the absolute form replaces it.\n";
 
-    // ---- 4. departure stub sweep -----------------------------------------
-    const double kSweep[4] = {0.5, 1.0, 1.5, 2.5};
-    const double stubSweep[4] = {6.0, 12.0, 24.0, 48.0};
-    std::cout << "\n--- 4a. departure stub, RELATIVE (outer handle = k*T*L') ---\n";
-    std::cout << pad("variant", 8) << pad("T", 7) << pad("k", 7) << pad("0-cusp/aligned", 16)
-              << pad("min radius u", 14) << pad("max facing", 12) << pad("overshoot", 11)
-              << pad("stub range u", 20) << pad("mid70 max u", 13) << "blend mean u\n";
-    for (int v : {kAC, kBC}) {
-        for (double T : tSweep) {
-            for (double k : kSweep) {
-                WarpParams pm = def;
-                pm.T = T;
-                pm.stubAbsolute = false;
-                pm.stubK = k;
-                Agg agg;
-                for (const Case &c : cases)
-                    agg.add(evaluateCase(c, pm), v);
-                std::cout << pad(variantName(v), 8) << pad(num(T, 2), 7) << pad(num(k, 1), 7)
-                          << pad(std::to_string(agg.alignedZeroCusp) + "/"
-                                     + std::to_string(agg.alignedCases),
-                                 16)
-                          << pad(num(agg.minRadius, 1), 14) << pad(num(agg.maxFacingAll, 2), 12)
-                          << pad(std::to_string(agg.overshootTotal), 11)
-                          << pad(num(agg.stubMin, 1) + " .. " + num(agg.stubMax, 1), 20)
-                          << pad(num(agg.midMax, 2), 13) << num(agg.blendMean(), 2) << "\n";
-            }
-        }
-    }
-
-    std::cout << "\n--- 4b. departure stub, ABSOLUTE (outer handle = min(stub, "
-              << num(kStubCapFactor, 2) << "*T*L') ) ---\n";
-    std::cout << pad("variant", 8) << pad("T", 7) << pad("stub u", 8) << pad("0-cusp/aligned", 16)
-              << pad("min radius u", 14) << pad("max facing", 12) << pad("overshoot", 11)
-              << pad("stub range u", 20) << pad("mid70 max u", 13) << "blend mean u\n";
-    for (int v : {kAC, kBC}) {
-        for (double T : tSweep) {
-            for (double s : stubSweep) {
-                WarpParams pm = def;
-                pm.T = T;
-                pm.stubAbsolute = true;
-                pm.stubWorld = s;
-                Agg agg;
-                for (const Case &c : cases)
-                    agg.add(evaluateCase(c, pm), v);
-                std::cout << pad(variantName(v), 8) << pad(num(T, 2), 7) << pad(num(s, 0), 8)
-                          << pad(std::to_string(agg.alignedZeroCusp) + "/"
-                                     + std::to_string(agg.alignedCases),
-                                 16)
-                          << pad(num(agg.minRadius, 1), 14) << pad(num(agg.maxFacingAll, 2), 12)
-                          << pad(std::to_string(agg.overshootTotal), 11)
-                          << pad(num(agg.stubMin, 1) + " .. " + num(agg.stubMax, 1), 20)
-                          << pad(num(agg.midMax, 2), 13) << num(agg.blendMean(), 2) << "\n";
-            }
-        }
-    }
-
-    // 4b showed that a world-unit stub is starved when the blend span it has to fill is a
-    // fraction of arc length: on a 650 u connector the span is ~100 u and a 12 u handle
-    // hairpins. Making the span absolute too is the only way the product vocabulary
-    // "leaves the box straight for N units" can hold across connector lengths.
-    std::cout << "\n--- 4d. fully ABSOLUTE parameterization: blend span in world units too "
-                 "(T derived, clamped to [0.05, 0.35]) ---\n";
-    std::cout << pad("variant", 8) << pad("blend u", 9) << pad("stub u", 8)
-              << pad("0-cusp/aligned", 16) << pad("min radius u", 14) << pad("max facing", 12)
-              << pad("overshoot", 11) << pad("mid70 max u", 13) << "blend mean u\n";
-    const double blendSweep[4] = {40.0, 60.0, 90.0, 130.0};
-    for (int v : {kAC, kBC}) {
-        for (double bw : blendSweep) {
-            for (double s : stubSweep) {
-                WarpParams pm = def;
-                pm.blendAbsolute = true;
-                pm.blendWorld = bw;
-                pm.stubAbsolute = true;
-                pm.stubWorld = s;
-                Agg agg;
-                for (const Case &c : cases)
-                    agg.add(evaluateCase(c, pm), v);
-                std::cout << pad(variantName(v), 8) << pad(num(bw, 0), 9) << pad(num(s, 0), 8)
-                          << pad(std::to_string(agg.alignedZeroCusp) + "/"
-                                     + std::to_string(agg.alignedCases),
-                                 16)
-                          << pad(num(agg.minRadius, 1), 14) << pad(num(agg.maxFacingAll, 2), 12)
-                          << pad(std::to_string(agg.overshootTotal), 11)
-                          << pad(num(agg.midMax, 2), 13) << num(agg.blendMean(), 2) << "\n";
-            }
-        }
-    }
-
-    std::cout << "\n--- 4c. does the stub belong on the inner handle too? (A+C, T=0.15) ---\n";
-    std::cout << pad("config", 34) << pad("0-cusp/aligned", 16) << pad("min radius u", 14)
-              << pad("max facing", 12) << pad("overshoot", 11) << "mid70 max u\n";
-    for (int inner = 0; inner < 2; ++inner) {
-        for (double s : stubSweep) {
+    // ---- 1d. is the requirement a fraction of arc, or an absolute arc? -----
+    std::cout << "\n--- 1d. is the demand a FRACTION of the connector, or an ABSOLUTE arc? ---\n";
+    std::cout << "same question asked at five connector lengths. If the demand were fractional, "
+                 "'mul*' would be constant down a column; if absolute, 'span* u' would be.\n";
+    std::cout << pad("L' u", 9) << pad("turn A", 9) << pad("mul*", 8) << pad("span* u", 10)
+              << pad("span*/(R*turn)", 16) << "note\n";
+    for (int deg : {30, 45, 60}) {
+        std::cout << "-- box A rotated " << deg << " deg --\n";
+        for (double gap : {110.0, 150.0, 220.0, 340.0, 520.0}) {
+            const Case sc2 = makeShortCase("arc", gap, static_cast<double>(deg));
             WarpParams pm = def;
-            pm.T = 0.15;
-            pm.stubAbsolute = true;
-            pm.stubWorld = s;
-            pm.stubAppliesToInner = (inner == 1);
-            Agg agg;
-            for (const Case &c : cases)
-                agg.add(evaluateCase(c, pm), kAC);
-            std::cout << pad(std::string(inner ? "outer+inner" : "outer only") + ", stub "
-                                 + num(s, 0) + "u",
-                             34)
-                      << pad(std::to_string(agg.alignedZeroCusp) + "/"
-                                 + std::to_string(agg.alignedCases),
+            pm.adaptive = false;
+            double r1 = 0.0, span = 0.0, turn = 0.0, lp = 0.0;
+            const double mul = requiredMultiplier(sc2, pm, kMinInkRadius, r1, &span, &turn, &lp);
+            const double theta = turn * kPi / 180.0;
+            std::cout << pad(num(lp, 1), 9) << pad(num(turn, 1), 9)
+                      << pad(mul > 0.0 ? num(mul, 2) : std::string("none"), 8)
+                      << pad(mul > 0.0 ? num(span, 1) : std::string("-"), 10)
+                      << pad(mul > 0.0 && theta > 1e-6
+                                 ? num(span / (kMinInkRadius * theta), 2)
+                                 : std::string("-"),
                              16)
-                      << pad(num(agg.minRadius, 1), 14) << pad(num(agg.maxFacingAll, 2), 12)
-                      << pad(std::to_string(agg.overshootTotal), 11) << num(agg.midMax, 2)
-                      << "\n";
+                      << (mul > 0.0 ? "" : "unreachable within 8x") << "\n";
         }
     }
 
-    std::cout << "\n--- 4e. sample parameterization: does the blend leak into the middle? "
-                 "(A+C, T=0.15, relative stub) ---\n";
-    std::cout << pad("parameterization", 34) << pad("0-cusp/aligned", 16) << pad("max facing", 12)
-              << pad("mid70 max u", 13) << "blend mean u\n";
-    for (int local = 0; local < 2; ++local) {
-        for (double k : kSweep) {
-            WarpParams pm = def;
-            pm.T = 0.15;
-            pm.stubAbsolute = false;
-            pm.stubK = k;
-            pm.localParam = (local == 1);
-            Agg agg;
-            for (const Case &c : cases)
-                agg.add(evaluateCase(c, pm), kAC);
-            std::cout << pad(std::string(local ? "pre-blend arc (local)" : "blended arc (round 1)")
-                                 + ", k=" + num(k, 1),
-                             34)
-                      << pad(std::to_string(agg.alignedZeroCusp) + "/"
-                                 + std::to_string(agg.alignedCases),
-                             16)
-                      << pad(num(agg.maxFacingAll, 2), 12) << pad(num(agg.midMax, 2), 13)
-                      << num(agg.blendMean(), 2) << "\n";
+    // ---- 1e. what the model does when nothing has moved --------------------
+    std::cout << "\n--- 1c. identity check: box A untouched, so the warp is the identity ---\n";
+    std::cout << "the blend still fires, because an edge anchor's facing is the edge normal and "
+                 "the creator's own line does not leave along it\n";
+    std::cout << pad("shape", 8) << pad("drawn departure", 17) << pad("A dev from ink u", 18)
+              << pad("A+C dev from ink u", 20) << pad("blend len", 11) << "min radius u\n";
+    for (const std::string &flavour : {std::string("arc"), std::string("wiggle")}) {
+        const Case rc = makeRotationCase(flavour, 0.0);
+        const CaseEval e = evaluateCase(rc, def);
+        std::cout << pad(flavour, 8) << pad(num(e.v[kAC].blend.turn0, 1) + " deg", 17)
+                  << pad(num(maxDeviation(e.v[kA].samples, e.rest.raw), 3), 18)
+                  << pad(num(maxDeviation(e.v[kAC].samples, e.rest.raw), 3), 20)
+                  << pad(num(e.v[kAC].blend.t0, 3), 11)
+                  << num(std::min(e.v[kAC].cusps.minRadiusBlend, 9999.0), 1) << "\n";
+    }
+
+    // ---- 2. what the adaptation costs -------------------------------------
+    std::cout << "\n--- 2. cost of the adaptive rule as a function of obliquity ---\n";
+    std::cout << pad("shape", 8) << pad("rotA", 7) << pad("obliq A", 10) << pad("turn A", 9)
+              << pad("f0 vs chord", 13) << pad("blend len A", 13) << pad("blend % arc", 13)
+              << pad("mean dev u", 12) << pad("middle dev u", 14) << pad("min radius u", 14)
+              << pad("cusps", 7) << "backtrack\n";
+    for (const std::string &flavour : {std::string("arc"), std::string("wiggle")}) {
+        for (int deg = 0; deg <= 180; deg += 15) {
+            const Case rc = makeRotationCase(flavour, static_cast<double>(deg));
+            const CaseEval e = evaluateCase(rc, def);
+            const BlendSpec &b = e.v[kAC].blend;
+            std::cout << pad(flavour, 8) << pad(std::to_string(deg), 7)
+                      << pad(num(e.ends.obliq0, 1), 10) << pad(num(b.turn0, 1), 9)
+                      << pad(num(b.chord0, 1), 13)
+                      << pad(num(b.t0, 3) + (b.capped0 ? "*" : (b.grown0 ? "+" : " ")), 13)
+                      << pad(num(100.0 * e.v[kAC].fid.blendFrac, 1) + "%", 13)
+                      << pad(num(e.v[kAC].fid.blendMeanSample, 2), 12)
+                      << pad(num(e.v[kAC].fid.midMaxSample, 2), 14)
+                      << pad(num(std::min(e.v[kAC].cusps.minRadiusBlend, 9999.0), 1), 14)
+                      << pad(std::to_string(e.v[kAC].cusps.total()), 7)
+                      << e.v[kAC].health.total() << "\n";
+        }
+    }
+    std::cout << "+ = the turn demand grew the blend past the base; * = the blend cap of "
+              << num(kBlendCap, 2) << " per end is binding\n";
+    std::cout << "'f0 vs chord' is the angle from the required facing to the straight line "
+                 "across the blend region. Past 90 deg the ink must set off away from where it "
+                 "has to arrive, so a backtrack is forced by the anchor, not by the parameters "
+                 "(see the grid in 1b: no cell retires it).\n";
+
+    // ---- 3. when the rule runs out of arc ---------------------------------
+    std::cout << "\n--- 3. short connectors at high obliquity: does the cap degrade or cliff? "
+                 "---\n";
+    std::cout << pad("case", 26) << pad("L' u", 9) << pad("turn A", 9) << pad("wanted len", 12)
+              << pad("used len", 11) << pad("capped", 8) << pad("min radius u", 14)
+              << pad("bar u", 8) << pad("cusps", 7) << pad("overshoot", 11) << "middle left\n";
+    const double gapSweep[5] = {110.0, 150.0, 220.0, 340.0, 520.0};
+    for (double gap : gapSweep) {
+        for (int deg : {0, 45, 90, 135}) {
+            const Case sc2 = makeShortCase("arc", gap, static_cast<double>(deg));
+            WarpParams nocap = def;
+            nocap.applyCap = false;
+            const CaseEval want = evaluateCase(sc2, nocap);
+            const CaseEval e = evaluateCase(sc2, def);
+            const BlendSpec &b = e.v[kAC].blend;
+            std::cout << pad(e.name, 26) << pad(num(e.lPrime, 1), 9) << pad(num(b.turn0, 1), 9)
+                      << pad(num(want.v[kAC].blend.t0, 3), 12) << pad(num(b.t0, 3), 11)
+                      << pad(b.capped0 || b.capped1 ? "yes" : "no", 8)
+                      << pad(num(std::min(e.v[kAC].cusps.minRadiusBlend, 9999.0), 1), 14)
+                      << pad(num(std::min(b.t0 > 0 ? radiusBar(b.t0, e.lPrime, kMinInkRadius)
+                                                   : kMinInkRadius,
+                                          kMinInkRadius),
+                                 1),
+                             8)
+                      << pad(std::to_string(e.v[kAC].cusps.total()), 7)
+                      << pad(std::to_string(e.v[kAC].health.total()), 11)
+                      << num(100.0 * (1.0 - b.t0 - b.t1), 0) << "%\n";
         }
     }
 
-    // The coarse grid tops out at 17/18 aligned cases clean. Refine around the optimum to
-    // see whether any (T, k) reaches the W5 bar, and name what is left over if not.
-    std::cout << "\n--- 4f. fine grid around the optimum (A+C, relative stub) ---\n";
-    std::cout << pad("T", 7) << pad("k", 7) << pad("0-cusp/aligned", 16) << pad("max facing", 12)
-              << pad("overshoot", 11) << pad("blend mean u", 14) << "cases still failing\n";
-    const double tFine[4] = {0.12, 0.15, 0.18, 0.22};
-    const double kFine[4] = {1.2, 1.5, 1.8, 2.1};
-    for (double T : tFine) {
-        for (double k : kFine) {
-            WarpParams pm = def;
-            pm.T = T;
-            pm.stubAbsolute = false;
-            pm.stubK = k;
-            Agg agg;
-            std::string failing;
-            for (const Case &c : cases) {
-                const CaseEval ce = evaluateCase(c, pm);
-                agg.add(ce, kAC);
-                if (!ce.ends.reversed() && ce.v[kAC].cusps.total() != 0)
-                    failing += (failing.empty() ? "" : ", ") + ce.name;
-            }
-            std::cout << pad(num(T, 2), 7) << pad(num(k, 1), 7)
-                      << pad(std::to_string(agg.alignedZeroCusp) + "/"
-                                 + std::to_string(agg.alignedCases),
-                             16)
-                      << pad(num(agg.maxFacingAll, 2), 12)
-                      << pad(std::to_string(agg.overshootTotal), 11)
-                      << pad(num(agg.blendMean(), 2), 14) << (failing.empty() ? "-" : failing)
-                      << "\n";
-        }
-    }
-
-    // ---- 5. results at the recommended defaults ---------------------------
+    // ---- 4. the 20-case set at the final defaults -------------------------
     std::vector<CaseEval> evals;
     evals.reserve(cases.size());
     for (const Case &c : cases)
         evals.push_back(evaluateCase(c, def));
 
-    std::cout << "\n--- 5. W4 / W5 at the recommended defaults ---\n";
-    std::cout << pad("case", 26) << pad("class", 10) << pad("obliq", 8) << pad("A+C face", 10)
-              << pad("B+C face", 10) << pad("W5 old A+C", 12) << pad("W5 new A+C", 12)
-              << pad("W5 new B+C", 12) << pad("minR/bar u", 13) << pad("stub u", 9)
-              << pad("over", 6) << pad("mid70 u", 9) << "blend mean u\n";
+    std::cout << "\n--- 4. the 20-case set at the final defaults ---\n";
+    std::cout << pad("case", 26) << pad("class", 10) << pad("obliq", 8) << pad("f0-chord", 10)
+              << pad("blend len", 12) << pad("A face", 9) << pad("A+C face", 10)
+              << pad("W5 cusps", 10) << pad("minR/bar u", 13) << pad("over", 6)
+              << pad("blend %", 9) << pad("mean dev u", 12) << "middle dev u\n";
     for (const CaseEval &e : evals) {
-        const CuspScore &ac = e.v[kAC].cusps;
-        const CuspScore &bc = e.v[kBC].cusps;
+        const CuspScore &cs = e.v[kAC].cusps;
+        const BlendSpec &b = e.v[kAC].blend;
         std::cout << pad(e.name, 26) << pad(e.ends.reversed() ? "REVERSED" : "aligned", 10)
                   << pad(num(e.ends.obliquity(), 1), 8)
-                  << pad(num(e.v[kAC].worstFacingDeg(), 1), 10)
-                  << pad(num(e.v[kBC].worstFacingDeg(), 1), 10) << pad(std::to_string(ac.old), 12)
-                  << pad(std::to_string(ac.blend) + "+" + std::to_string(ac.middle), 12)
-                  << pad(std::to_string(bc.blend) + "+" + std::to_string(bc.middle), 12)
-                  << pad(num(std::min(ac.minRadiusBlend, 9999.0), 1) + "/" + num(ac.bar, 1), 13)
-                  << pad(num(e.v[kAC].stubLen, 1), 9)
+                  << pad(num(std::max(b.chord0, b.chord1), 1), 10)
+                  << pad(num(b.t0, 2) + "/" + num(b.t1, 2), 12)
+                  << pad(num(e.v[kA].facingBarDeg, 1), 9)
+                  << pad(num(e.v[kAC].facingBarDeg, 1), 10)
+                  << pad(std::to_string(cs.blend) + "+" + std::to_string(cs.middle), 10)
+                  << pad(num(std::min(cs.minRadiusBlend, 9999.0), 1) + "/"
+                             + num(std::min(cs.bar0, cs.bar1), 1),
+                         13)
                   << pad(std::to_string(e.v[kAC].health.total()), 6)
-                  << pad(num(e.v[kAC].fid.midMaxSample, 2), 9)
-                  << num(e.v[kAC].fid.blendMeanSample, 2) << "\n";
+                  << pad(num(100.0 * e.v[kAC].fid.blendFrac, 0) + "%", 9)
+                  << pad(num(e.v[kAC].fid.blendMeanSample, 2), 12)
+                  << num(e.v[kAC].fid.midMaxSample, 2) << "\n";
     }
-    for (int v = 0; v < kVariantCount; ++v) {
-        int zeroOldAll = 0, zeroNewAll = 0, zeroOldAligned = 0, zeroNewAligned = 0, nAligned = 0;
-        for (const CaseEval &e : evals) {
-            const CuspScore &cs = e.v[static_cast<size_t>(v)].cusps;
-            if (cs.old == 0)
-                ++zeroOldAll;
-            if (cs.total() == 0)
-                ++zeroNewAll;
-            if (!e.ends.reversed()) {
-                ++nAligned;
-                if (cs.old == 0)
-                    ++zeroOldAligned;
-                if (cs.total() == 0)
-                    ++zeroNewAligned;
+
+    std::cout << "\nrestated bars (round 3)\n";
+    int alignedN = 0, cuspN = 0, cuspFail = 0, overN = 0, overFail = 0, faceFail = 0;
+    int unscoreable = 0, forcedBacktrack = 0;
+    double worstFace = 0.0, maxAlignedObliq = 0.0, maxScoredTurn = 0.0;
+    std::string cuspFailNames, overFailNames, faceFailNames, unscoreableNames,
+        forcedBacktrackNames;
+    for (const CaseEval &e : evals) {
+        if (!e.ends.centre0 || !e.ends.centre1) {
+            worstFace = std::max(worstFace, e.v[kAC].facingBarDeg);
+            if (e.v[kAC].facingBarDeg > 5.0) {
+                ++faceFail;
+                faceFailNames += (faceFailNames.empty() ? "" : ", ") + e.name;
             }
         }
-        std::cout << pad(variantName(v), 6) << "zero-cusp share:  all cases old " << zeroOldAll
-                  << "/" << evals.size() << " new " << zeroNewAll << "/" << evals.size()
-                  << "   |   ALIGNED ONLY old " << zeroOldAligned << "/" << nAligned << " new "
-                  << zeroNewAligned << "/" << nAligned << " ("
-                  << num(100.0 * zeroNewAligned / std::max(1, nAligned), 0) << "%)\n";
+        if (e.ends.reversed())
+            continue;
+        ++alignedN;
+        maxAlignedObliq = std::max(maxAlignedObliq, e.ends.obliquity());
+        if (e.lPrime < kScoreableArcWorld) {
+            ++unscoreable;
+            unscoreableNames += (unscoreableNames.empty() ? "" : ", ") + e.name + " (L' "
+                + num(e.lPrime, 1) + "u, " + std::to_string(e.v[kAC].cusps.total()) + " cusps)";
+        } else {
+            ++cuspN;
+            maxScoredTurn = std::max(maxScoredTurn,
+                                     std::max(e.v[kAC].blend.turn0, e.v[kAC].blend.turn1));
+            if (e.v[kAC].cusps.total() != 0) {
+                ++cuspFail;
+                cuspFailNames += (cuspFailNames.empty() ? "" : ", ") + e.name;
+            }
+        }
+        const double chordMax = std::max(e.v[kAC].blend.chord0, e.v[kAC].blend.chord1);
+        if (chordMax >= 90.0) {
+            if (e.v[kAC].health.total() != 0) {
+                ++forcedBacktrack;
+                forcedBacktrackNames += (forcedBacktrackNames.empty() ? "" : ", ") + e.name + " ("
+                    + num(chordMax, 0) + " deg, " + std::to_string(e.v[kAC].health.total()) + ")";
+            }
+        } else {
+            ++overN;
+            if (e.v[kAC].health.total() != 0) {
+                ++overFail;
+                overFailNames += (overFailNames.empty() ? "" : ", ") + e.name;
+            }
+        }
     }
+    std::cout << "W4  facing within 5 deg, edge-bound ends only        : max " << num(worstFace, 2)
+              << " deg over " << faceFail << " failing "
+              << (faceFail ? "(" + faceFailNames + ")" : "") << "-> "
+              << (faceFail == 0 ? "PASS" : "FAIL") << "\n";
+    std::cout << "W5  zero new cusps, aligned ends, L' >= "
+              << num(kScoreableArcWorld, 0) << "u          : " << cuspFail << " failing of "
+              << cuspN << " scoreable aligned cases "
+              << (cuspFail ? "(" + cuspFailNames + ")" : "") << "-> "
+              << (cuspFail == 0 ? "PASS" : "FAIL") << "\n";
+    std::cout << "    " << alignedN << " of " << evals.size()
+              << " cases are aligned; obliquity covered up to " << num(maxAlignedObliq, 1)
+              << " deg, turn absorbed up to " << num(maxScoredTurn, 1) << " deg\n";
+    std::cout << "    not scoreable (shorter than two minimum radii, so no radius bar exists): "
+              << unscoreable << (unscoreable ? " -- " + unscoreableNames : "") << "\n";
+    std::cout << "W5b zero backtrack where the facing still faces the chord: " << overFail
+              << " failing of " << overN << " " << (overFail ? "(" + overFailNames + ")" : "")
+              << "-> " << (overFail == 0 ? "PASS" : "FAIL") << "\n";
+    std::cout << "    backtrack forced by the anchor (facing >= 90 deg off the blend chord, no "
+                 "parameter retires it): "
+              << forcedBacktrack << (forcedBacktrack ? " -- " + forcedBacktrackNames : "") << "\n";
     {
-        int tight = 0, loose = 0, nAligned = 0;
+        int tight = 0, loose = 0;
         for (const CaseEval &e : evals) {
-            if (e.ends.reversed())
+            if (e.ends.reversed() || e.lPrime < kScoreableArcWorld)
                 continue;
-            ++nAligned;
             if (e.v[kAC].cusps.blendTight == 0 && e.v[kAC].cusps.middle == 0)
                 ++tight;
             if (e.v[kAC].cusps.blendLoose == 0 && e.v[kAC].cusps.middle == 0)
                 ++loose;
         }
-        std::cout << "bar sensitivity (A+C, aligned): radius 8u -> " << tight << "/" << nAligned
-                  << " clean, 12u -> chosen, 16u -> " << loose << "/" << nAligned << " clean\n";
+        std::cout << "bar sensitivity (scoreable aligned): radius 8u -> " << tight << "/" << cuspN
+                  << " clean, 12u -> " << (cuspN - cuspFail) << "/" << cuspN
+                  << " (chosen), 16u -> " << loose << "/" << cuspN << " clean\n";
     }
 
-    // ---- 6. W7 centre-bind escape hatch -----------------------------------
-    std::cout << "\n--- 6. W7 centre-bind escape hatch for every REVERSED case ---\n";
-    std::cout << "facing is measured at s=0 as briefed; 'vis' is the same angle where the ink "
-                 "leaves the clip boundary, which is what a creator actually sees\n";
-    std::cout << pad("case", 26) << pad("converted", 12) << pad("A+C face/vis", 15)
-              << pad("B+C face/vis", 15) << pad("A+C cusps", 11) << pad("B+C cusps", 11)
-              << pad("cusps unclipped", 17) << pad("ink kept", 10) << "verdict\n";
+    // ---- 5. W7 centre-bind escape hatch -----------------------------------
+    std::cout << "\n--- 5. W7 centre-bind escape hatch for every REVERSED case ---\n";
+    std::cout << "centre binds carry no facing bar; their requirement is no U-turn and no new "
+                 "cusp, measured at the boundary crossing\n";
+    std::cout << pad("case", 26) << pad("converted", 12) << pad("crossing deg", 14)
+              << pad("cusps", 8) << pad("cusps unclipped", 17) << pad("overshoot", 11)
+              << pad("ink kept", 10) << "verdict\n";
     std::vector<std::pair<std::string, std::string>> w7Svgs;
     bool w7Pass = true;
+    std::vector<size_t> reversedIdx;
+    for (size_t i = 0; i < cases.size(); ++i) {
+        if (resolveEnds(cases[i], false, false).reversed())
+            reversedIdx.push_back(i);
+    }
     for (size_t idx : reversedIdx) {
         const Ends orig = resolveEnds(cases[idx], false, false);
         const bool c0 = !orig.aligned0;
         const bool c1 = !orig.aligned1;
         const CaseEval ce = evaluateCase(cases[idx], def, c0, c1);
-        const bool ok = ce.v[kAC].cusps.total() == 0 && ce.v[kAC].worstFacingDeg() <= 5.0
-            && ce.v[kBC].cusps.total() == 0 && ce.v[kBC].worstFacingDeg() <= 5.0;
+        const bool ok = ce.v[kAC].cusps.total() == 0 && ce.v[kAC].health.total() == 0;
         if (!ok)
             w7Pass = false;
-        std::string conv;
-        if (c0 && c1)
-            conv = "both ends";
-        else if (c0)
-            conv = "end A";
-        else
-            conv = "end B";
+        const std::string conv = (c0 && c1) ? "both ends" : (c0 ? "end A" : "end B");
         std::cout << pad(cases[idx].name, 26) << pad(conv, 12)
-                  << pad(num(ce.v[kAC].worstFacingDeg(), 1) + "/"
-                             + num(ce.v[kAC].facingVisibleStartDeg, 1),
-                         15)
-                  << pad(num(ce.v[kBC].worstFacingDeg(), 1) + "/"
-                             + num(ce.v[kBC].facingVisibleStartDeg, 1),
-                         15)
+                  << pad(num(ce.v[kAC].facingVisibleStartDeg, 1), 14)
                   << pad(std::to_string(ce.v[kAC].cusps.blend) + "+"
                              + std::to_string(ce.v[kAC].cusps.middle),
-                         11)
-                  << pad(std::to_string(ce.v[kBC].cusps.blend) + "+"
-                             + std::to_string(ce.v[kBC].cusps.middle),
-                         11)
-                  << pad("A+C " + std::to_string(ce.v[kAC].cusps.blendFull) + "  B+C "
-                             + std::to_string(ce.v[kBC].cusps.blendFull),
-                         17)
+                         8)
+                  << pad(std::to_string(ce.v[kAC].cusps.blendFull), 17)
+                  << pad(std::to_string(ce.v[kAC].health.total()), 11)
                   << pad(num(100.0 * ce.v[kAC].visibleShare, 0) + "%", 10)
                   << (ok ? "PASS" : "FAIL") << "\n";
         const Poly ghost = evals[idx].v[kAC].samples;
         w7Svgs.emplace_back(cases[idx].name,
-                            caseSvg(cases[idx], ce, def, "  [W7: converted to centre bind]",
-                                    &ghost));
+                            caseSvg(cases[idx], ce, "  [W7: converted to centre bind]", &ghost));
     }
-    std::cout << "W7 verdict: " << (w7Pass ? "PASS" : "FAIL")
-              << " — every reversed case must reach 0 new cusps and <=5 deg facing when the "
-                 "reversed end is switched to a centre bind\n";
+    std::cout << "W7 verdict: " << (w7Pass ? "PASS" : "FAIL") << "\n";
 
-    // ---- 7. W2 / W3 / W6 at the defaults ----------------------------------
+    // ---- 6. W2 / W3 / W6 --------------------------------------------------
     struct RtRow {
         std::string label;
         std::array<RoundTrip, kVariantCount> rt;
@@ -2130,7 +2087,7 @@ int main(int argc, char **argv)
                                                             base.anchorB, v, def);
         rtRows.push_back(row);
     }
-    std::cout << "\n--- 7. W2 round-trip drift at the recommended defaults ---\n";
+    std::cout << "\n--- 6. W2 round-trip drift ---\n";
     std::cout << pad("rest shape", 12) << pad("variant", 9) << pad("never-re-bake (D5)", 22)
               << pad("re-bake, 20 moves", 20) << "re-bake, 200 moves\n";
     double worstPure = 0.0, worstRb1 = 0.0, worstRb10 = 0.0;
@@ -2178,7 +2135,7 @@ int main(int argc, char **argv)
         if (!reverseOk)
             break;
     }
-    std::cout << "\n--- W3 determinism at the recommended defaults ---\n";
+    std::cout << "\n--- W3 determinism ---\n";
     std::cout << "same inputs run twice   : "
               << (doubleRunOk ? "PASS (byte-identical)" : "FAIL " + doubleRunMsg) << "\n";
     std::cout << "case set run in reverse : "
@@ -2197,10 +2154,10 @@ int main(int argc, char **argv)
                   << num(timings[static_cast<size_t>(v)].p95, 2) << "\n";
     std::cout << "bar: p95 <= 2000 us\n";
 
-    // ---- 8. contact sheet -------------------------------------------------
+    // ---- 7. contact sheet -------------------------------------------------
     std::vector<std::pair<std::string, std::string>> svgs;
     for (size_t i = 0; i < cases.size(); ++i) {
-        const std::string svg = caseSvg(cases[i], evals[i], def, "", nullptr);
+        const std::string svg = caseSvg(cases[i], evals[i], "", nullptr);
         std::ofstream f(outDir + "/" + fileNameFor(cases[i].name) + ".svg");
         if (!f) {
             std::cerr << "cannot write " << outDir << "\n";
@@ -2216,7 +2173,7 @@ int main(int argc, char **argv)
 
     std::ostringstream html;
     html << "<!doctype html><html><head><meta charset=\"utf-8\">\n";
-    html << "<title>EXP-0002 round 2 — connector-ink warp contact sheet</title>\n";
+    html << "<title>EXP-0002 round 3 — connector-ink warp contact sheet</title>\n";
     html << "<style>body{font:14px/1.5 -apple-system,Helvetica,Arial;margin:32px;color:#111;"
             "background:#fafafa}h1{font-size:22px}h2{font-size:16px;margin-top:38px;"
             "border-top:1px solid #ddd;padding-top:14px}h3{font-size:15px;margin-top:26px}"
@@ -2225,52 +2182,40 @@ int main(int argc, char **argv)
             "monospace;margin:14px 0}td,th{border:1px solid #ddd;padding:4px 9px;"
             "text-align:left}th{background:#f0f0f0}.note{color:#555;margin:6px 0 10px}"
             ".rev{background:#fff6e5}</style></head><body>\n";
-    html << "<h1>EXP-0002 round 2 — connector-ink warp contact sheet</h1>\n";
-    html << "<p class=\"note\">Spike output at the recommended defaults: blend length "
-            "<b>T = "
-         << num(def.T, 2) << "</b> of arc length, departure stub <b>"
-         << (def.stubAbsolute ? num(def.stubWorld, 0) + " world units"
-                              : "k = " + num(def.stubK, 1) + " &times; T &times; L'")
-         << "</b> on the outer handle only, samples placed on the <b>pre-blend</b> arc "
-            "parameterization, degenerate clamp <b>"
-         << (def.dTaper ? "d-taper under compression" : "none")
-         << "</b>. <b>W1 (naturalness) is a human verdict and is not graded here.</b> Look for: "
-            "does each coloured line still read as the same hand as the grey rest shape?</p>\n";
-    html << "<p class=\"note\">Why these values (full sweeps are in the probe's stdout): at "
-            "T=0.15 the departure stub peaks at k=1.5 with 17/18 aligned cases free of new "
-            "cusps and 2.9&deg; worst facing; a world-unit stub cannot compete because the "
-            "blend span it has to fill is itself proportional to L', so a 12 u handle inside a "
-            "~100 u span hairpins at the face (33&deg; measured departure). Placing samples on "
-            "the pre-blend parameterization drops the blend's leakage into the middle 70% from "
-            "15.3 u to 0.02 u at no cost.</p>\n";
+    html << "<h1>EXP-0002 round 3 — connector-ink warp contact sheet</h1>\n";
+    html << "<p class=\"note\"><b>W1 (naturalness) is a human verdict and is not graded "
+            "here.</b> What to look for: does the red line still read as the same hand as the "
+            "grey rest shape it came from? The thin blue line is the same warp without any end "
+            "blending, so the difference between blue and red is exactly what the blend "
+            "costs.</p>\n";
+    html << "<p class=\"note\">Final model: similarity warp, plus a Hermite blend at each end "
+            "whose arc grows with the turn that end has to absorb. Blend length "
+         << num(kBlendLength, 2) << " of arc, departure stub ratio " << num(kStubRatio, 2)
+         << ", turn factor " << num(kTurnFactor, 1) << ", blend cap " << num(kBlendCap, 2)
+         << " per end, minimum ink radius " << num(kMinInkRadius, 1)
+         << " world units. Orange ticks mark where each blend region ends; the orange dotted "
+            "spur at each anchor is the departure stub. Full algorithm in "
+            "<a href=\"CANONICAL-ALGORITHM.md\">CANONICAL-ALGORITHM.md</a>, all sweeps in "
+            "<a href=\"report.txt\">report.txt</a>.</p>\n";
     html << "<p class=\"note\">Per D26 an edge anchor's facing is fixed and may oppose the "
             "chord; those cases are marked <b>REVERSED</b> and their U-turn is expected "
-            "behaviour, not a defect. The remedy is the creator switching that end to a centre "
-            "bind — rendered in the W7 section at the bottom.</p>\n";
-    html << "<table><tr><th>variant</th><th>spine warp</th><th>tangent blend</th><th>stroke</th>"
-            "</tr>\n";
-    html << "<tr><td>A</td><td>similarity (uniform scale + rotate)</td><td>no</td><td>thin solid "
-            "blue</td></tr>\n";
-    html << "<tr><td>B</td><td>anisotropic (chord-only scale)</td><td>no</td><td>thin dashed "
-            "green</td></tr>\n";
-    html << "<tr><td>A+C</td><td>similarity</td><td>yes</td><td>thick solid red</td></tr>\n";
-    html << "<tr><td>B+C</td><td>anisotropic</td><td>yes</td><td>thick dashed purple</td></tr>\n";
-    html << "</table>\n";
+            "behaviour, not a defect. The creator's remedy — switching that end to a centre "
+            "bind — is rendered in the W7 section at the bottom.</p>\n";
 
-    html << "<h2>Summary at the recommended defaults</h2>\n<table><tr><th>case</th><th>class"
-            "</th><th>A+C face</th><th>B+C face</th><th>W5 old A+C</th><th>W5 new A+C</th>"
-            "<th>W5 new B+C</th><th>min blend radius u</th><th>overshoot A+C</th>"
-            "<th>A vs B u</th></tr>\n";
+    html << "<h2>Summary at the final defaults</h2>\n<table><tr><th>case</th><th>class</th>"
+            "<th>obliquity</th><th>blend length A/B</th><th>A+C facing</th><th>new cusps</th>"
+            "<th>min blend radius u</th><th>overshoot</th><th>blend % of arc</th>"
+            "<th>mean deviation u</th></tr>\n";
     for (const CaseEval &e : evals) {
         html << "<tr" << (e.ends.reversed() ? " class=\"rev\"" : "") << "><td>" << esc(e.name)
              << "</td><td>" << (e.ends.reversed() ? "REVERSED" : "aligned") << "</td><td>"
-             << num(e.v[kAC].worstFacingDeg(), 1) << "</td><td>"
-             << num(e.v[kBC].worstFacingDeg(), 1) << "</td><td>" << e.v[kAC].cusps.old
-             << "</td><td>" << e.v[kAC].cusps.blend << "+" << e.v[kAC].cusps.middle
-             << "</td><td>" << e.v[kBC].cusps.blend << "+" << e.v[kBC].cusps.middle
-             << "</td><td>" << num(std::min(e.v[kAC].cusps.minRadiusBlend, 9999.0), 1)
-             << "</td><td>" << e.v[kAC].health.total() << "</td><td>" << num(e.gapAB, 1)
-             << "</td></tr>\n";
+             << num(e.ends.obliquity(), 1) << "</td><td>" << num(e.v[kAC].blend.t0, 2) << " / "
+             << num(e.v[kAC].blend.t1, 2) << "</td><td>" << num(e.v[kAC].facingBarDeg, 1)
+             << "</td><td>" << e.v[kAC].cusps.total() << "</td><td>"
+             << num(std::min(e.v[kAC].cusps.minRadiusBlend, 9999.0), 1) << "</td><td>"
+             << e.v[kAC].health.total() << "</td><td>"
+             << num(100.0 * e.v[kAC].fid.blendFrac, 0) << "%</td><td>"
+             << num(e.v[kAC].fid.blendMeanSample, 2) << "</td></tr>\n";
     }
     html << "</table>\n";
 
@@ -2293,14 +2238,15 @@ int main(int argc, char **argv)
              << num(timings[static_cast<size_t>(v)].p95, 2) << "</td></tr>\n";
     html << "</table>\n";
 
-    html << "<h2>Cases at the recommended defaults</h2>\n";
+    html << "<h2>Cases at the final defaults</h2>\n";
     for (const auto &pair : svgs)
         html << "<h3>" << esc(pair.first) << "</h3>\n" << pair.second;
 
     html << "<h2>W7 — the centre-bind escape hatch for every REVERSED case</h2>\n";
     html << "<p class=\"note\">Same case, same rest ink, with the reversed end(s) switched to a "
-            "centre bind. The faint pink dotted line is the edge-bind A+C result from the "
-            "section above, for comparison.</p>\n";
+            "centre bind. The faint pink dotted line is the edge-bind result from the section "
+            "above, for comparison. The full rest shape is kept and simply hidden by the box, so "
+            "a later move or resize re-clips correctly.</p>\n";
     for (const auto &pair : w7Svgs)
         html << "<h3>" << esc(pair.first) << " — centre bind</h3>\n" << pair.second;
     html << "</body></html>\n";
