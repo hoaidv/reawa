@@ -78,7 +78,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
 | TRACK-003 | planned | **done** | campaign exited 2026-08-14 | [track](./tracks/TRACK-003-smart-group-pilot.md) |
-| TRACK-004 | planned | **active** | EP-026 ∥ EP-027 · `/designer` | [track](./tracks/TRACK-004-on-device-connectors.md) |
+| TRACK-004 | planned | **active** | EP-028 · `/qa` then `/dev` | [track](./tracks/TRACK-004-on-device-connectors.md) |
 
 ### Open challenges / blocked
 
@@ -103,6 +103,6 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ## Forward
 
-- **Now:** `/designer` EP-026 ∥ EP-027. `/qa` may author BDD in parallel from SRS (UI scenarios wait on design packages). `/dev` after BDD, and after the matching design story is `done` for UI.
+- **Now:** `/qa` BDD then `/dev` EP-028. Design EP-026/027 **done**. `/pm` triage [CHL-0019](./iter-004/challenges/CHL-0019-toolchip-tile-size.md).
 - Parked (not committed): epaper `[REQ-08]`, nested enclose (CHL-0011), FREE_FORM / align-content (CHL-0012).
 - Backlog: [backlog.md](./backlog.md)

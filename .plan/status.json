@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-14T13:37:26+00:00",
+  "generated_at": "2026-08-14T13:46:01+00:00",
   "current_iter": "iter-004",
   "by_status": {
     "draft": 5,
-    "ready": 2,
+    "ready": 0,
     "in-progress": 0,
     "in-review": 0,
-    "done": 107,
+    "done": 109,
     "blocked": 13
   },
   "by_module": {
@@ -18,7 +18,7 @@
     },
     "epaper": {
       "total": 31,
-      "done": 20,
+      "done": 22,
       "in_review": 0
     },
     "infini": {
@@ -27,7 +27,7 @@
       "in_review": 0
     }
   },
-  "open_challenges": 0,
+  "open_challenges": 1,
   "resolved_challenges_this_iter": 0,
   "sync_orphans": 98,
   "master_plan": true,
@@ -57,7 +57,7 @@
       "id": "TRACK-004",
       "kind": "planned",
       "status": "active",
-      "cursor": "STORY-EP-026 \u2225 STORY-EP-027 \u00b7 /designer \u00b7 execute-design-story",
+      "cursor": "STORY-EP-028 \u00b7 /qa then /dev (EP-026/027 done)",
       "iter": "iter-004"
     }
   ]

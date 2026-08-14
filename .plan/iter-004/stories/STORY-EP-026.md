@@ -4,7 +4,7 @@ title: Design ToolChip: 3 tools, 2 recognizer toggles, Undo/Redo
 kind: design
 parent_srs: [SRS-EP-05]
 parent_req: [REQ-03]
-status: ready
+status: done
 priority: P0
 iter: iter-004
 estimate: 3
@@ -15,9 +15,14 @@ acceptance_criteria:
   - "Given sel_rect or sel_freeform active, When the chip is shown, Then both recognizer toggles are dimmed and retain armed state."
   - "Given each required state (pen+both armed; a toggle off; selection+dimmed; undo empty no-op), When the package ships, Then there is one scene HTML per state and ui-spec-gate passes."
 design_package: ".plan/iter-004/design/toolchip-recognizers/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-004/design/toolchip-recognizers/ui-spec.md"
+scenes:
+  - ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-pen-armed.html"
+  - ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-connector-off.html"
+  - ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-sel-rect-dimmed.html"
+  - ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-undo-empty.html"
+  - ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-recog-rejected.html"
+hifi: ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-pen-armed.html"
 wireframe: ""
 ---
 

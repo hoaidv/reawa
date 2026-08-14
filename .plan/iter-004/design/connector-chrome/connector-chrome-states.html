@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>Connector chrome — states showcase</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    /* live press — epaper has no hover; gate scans this file for :active */
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
+  </style>
+  <style>
+    html, body { overflow: auto; height: auto; background: #fff; }
+    .show { padding: 16px; display: grid; gap: 24px; }
+    .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+    .cell { display: flex; flex-direction: column; gap: 6px; }
+    .lab { font-size: 11px; }
+    .note { font-size: 12px; max-width: 40rem; }
+    .c-style-chip, .c-end-chip { position: static; }
+    .swatch { width: 72px; height: 48px; border: 3px solid #000; }
+    .swatch.is-blink { background: #000; }
+  </style>
+</head>
+<body>
+  <div class="show">
+    <p class="note">epaper: hover N/A · focus N/A · blink is a static pulse frame (no CSS animation).</p>
+    <section>
+      <strong>ovl.conn_blink (node)</strong>
+      <div class="row">
+        <div class="cell"><span class="lab">idle</span><div class="swatch"></div></div>
+        <div class="cell"><span class="lab">pulse (invert)</span><div class="swatch is-blink"></div></div>
+      </div>
+    </section>
+    <section>
+      <strong>tgl.conn_style</strong>
+      <div class="row">
+        <div class="cell"><span class="lab">Ink selected</span>
+          <div class="c-style-chip">
+            <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink"><img src="../system/assets/icon-epaper-style-ink.svg" alt="" /></button>
+            <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Curve"><img src="../system/assets/icon-epaper-style-curve.svg" alt="" /></button>
+          </div>
+        </div>
+        <div class="cell"><span class="lab">Curve selected</span>
+          <div class="c-style-chip">
+            <button type="button" class="c-tool-btn" aria-pressed="false" aria-label="Ink"><img src="../system/assets/icon-epaper-style-ink.svg" alt="" /></button>
+            <button type="button" class="c-tool-btn" aria-pressed="true" aria-label="Curve"><img src="../system/assets/icon-epaper-style-curve.svg" alt="" /></button>
+          </div>
+        </div>
+        <div class="cell"><span class="lab">pressed</span>
+          <div class="c-style-chip">
+            <button type="button" class="c-tool-btn is-pressed" data-interactive aria-pressed="false" aria-label="Ink"><img src="../system/assets/icon-epaper-style-ink.svg" alt="" /></button>
+            <button type="button" class="c-tool-btn" aria-pressed="false" aria-label="Curve"><img src="../system/assets/icon-epaper-style-curve.svg" alt="" /></button>
+          </div>
+        </div>
+        <div class="cell"><span class="lab">hover — N/A</span>
+          <div class="c-style-chip">
+            <button type="button" class="c-tool-btn" aria-pressed="false" aria-label="Ink"><img src="../system/assets/icon-epaper-style-ink.svg" alt="" /></button>
+            <button type="button" class="c-tool-btn" aria-pressed="false" aria-label="Curve"><img src="../system/assets/icon-epaper-style-curve.svg" alt="" /></button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section>
+      <strong>tgl.conn_end_kind</strong>
+      <div class="row">
+        <div class="cell"><span class="lab">Edge</span>
+          <div class="c-end-chip">
+            <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Edge"><img src="../system/assets/icon-epaper-end-edge.svg" alt="" /></button>
+            <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Centre"><img src="../system/assets/icon-epaper-end-centre.svg" alt="" /></button>
+          </div>
+        </div>
+        <div class="cell"><span class="lab">Centre</span>
+          <div class="c-end-chip">
+            <button type="button" class="c-tool-btn" aria-pressed="false" aria-label="Edge"><img src="../system/assets/icon-epaper-end-edge.svg" alt="" /></button>
+            <button type="button" class="c-tool-btn" aria-pressed="true" aria-label="Centre"><img src="../system/assets/icon-epaper-end-centre.svg" alt="" /></button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup","pointerleave","blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

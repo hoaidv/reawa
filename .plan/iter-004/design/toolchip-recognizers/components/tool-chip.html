@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>ToolChip — 3 tools, 2 toggles, Undo/Redo</title>
+  <style>
+    :root { --chip-btn: 64px; --chip-icon: 24px; --chip-gap: 32px; --color-ink: #000; --color-paper: #fff; }
+    body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; }
+    .c-tool-chip { display: inline-flex; gap: var(--chip-gap); }
+    .c-tool-cluster {
+      display: inline-flex; background: var(--color-paper);
+      border: 1px solid var(--color-ink); overflow: hidden;
+    }
+    .c-publish { width: 12px; flex: 0 0 12px; background: var(--color-ink); border-right: 1px solid var(--color-ink); }
+    .c-tool-btn {
+      width: var(--chip-btn); height: var(--chip-btn); padding: 0; margin: 0;
+      border: 0; border-right: 1px solid var(--color-ink); background: var(--color-paper);
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .c-tool-btn:last-child { border-right: 0; }
+    .c-tool-btn img { width: var(--chip-icon); height: var(--chip-icon); pointer-events: none; }
+    .c-tool-btn[aria-pressed="true"] { background: var(--color-ink); }
+    .c-tool-btn[aria-pressed="true"] img { filter: invert(1); }
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: var(--color-ink); }
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
+    .c-tool-btn.is-dimmed { pointer-events: none; background-image: repeating-linear-gradient(-45deg, transparent, transparent 3px, #000 3px, #000 4px); }
+    .c-tool-btn.is-dimmed[aria-pressed="true"] {
+      background-color: var(--color-ink);
+      background-image: repeating-linear-gradient(-45deg, transparent, transparent 3px, #fff 3px, #fff 4px);
+    }
+    .note { font-size: 12px; max-width: 36rem; }
+  </style>
+</head>
+<body>
+  <p class="note">64×64 squared clusters · 32 px gaps · exclusive tools · independent toggles. Hover/focus N/A on epaper. Press inverts.</p>
+  <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+    <div class="c-tool-cluster" data-cluster="tools">
+      <span class="c-publish" id="ind.publish_status" data-status="linked" title="Linked"></span>
+      <button type="button" class="c-tool-btn" data-interactive data-exclusive="tools" id="tool.sel_rect" aria-pressed="false" aria-label="Selection rect"><img src="../../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive data-exclusive="tools" id="tool.sel_freeform" aria-pressed="false" aria-label="Selection freeform"><img src="../../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive data-exclusive="tools" id="tool.pen" aria-pressed="true" aria-label="Pen"><img src="../../system/assets/icon-epaper-pen.svg" alt="" /></button>
+    </div>
+    <div class="c-tool-cluster" data-cluster="recog">
+      <button type="button" class="c-tool-btn" data-interactive data-toggle="1" id="tgl.recog.ink_box" aria-pressed="true" aria-label="Ink-box recognition"><img src="../../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive data-toggle="1" id="tgl.recog.connector" aria-pressed="true" aria-label="Connector recognition"><img src="../../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+    </div>
+    <div class="c-tool-cluster" data-cluster="history">
+      <button type="button" class="c-tool-btn" data-interactive id="cta.undo" aria-pressed="false" aria-label="Undo"><img src="../../system/assets/icon-epaper-undo.svg" alt="" /></button>
+      <button type="button" class="c-tool-btn" data-interactive id="cta.redo" aria-pressed="false" aria-label="Redo"><img src="../../system/assets/icon-epaper-redo.svg" alt="" /></button>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+    document.querySelectorAll("[data-exclusive]").forEach((el) => {
+      el.addEventListener("click", () => {
+        document.querySelectorAll("[data-exclusive]").forEach((b) => b.setAttribute("aria-pressed", "false"));
+        el.setAttribute("aria-pressed", "true");
+        const sel = el.id !== "tool.pen";
+        document.querySelectorAll("[data-toggle]").forEach((t) => {
+          t.classList.toggle("is-dimmed", sel);
+          t.setAttribute("aria-disabled", sel ? "true" : "false");
+        });
+      });
+    });
+    document.querySelectorAll("[data-toggle]").forEach((el) => {
+      el.addEventListener("click", () => {
+        if (el.classList.contains("is-dimmed")) return;
+        el.setAttribute("aria-pressed", el.getAttribute("aria-pressed") === "true" ? "false" : "true");
+      });
+    });
+  </script>
+</body>
+</html>

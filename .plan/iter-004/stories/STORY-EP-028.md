@@ -16,9 +16,14 @@ acceptance_criteria:
   - "Given a toggle flip mid-stroke, When pen-up runs, Then dispatch uses the latched pen-down tuple (D15)."
   - "Given Pen, When inking, Then REQ-01 p95 ≤30 ms is unchanged and the chip exclusion rect still eats no ink."
 design_package: ".plan/iter-004/design/toolchip-recognizers/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-004/design/toolchip-recognizers/ui-spec.md"
+scenes:
+  - ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-pen-armed.html"
+  - ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-connector-off.html"
+  - ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-sel-rect-dimmed.html"
+  - ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-undo-empty.html"
+  - ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-recog-rejected.html"
+hifi: ".plan/iter-004/design/toolchip-recognizers/toolchip-recognizers-pen-armed.html"
 wireframe: ""
 ---
 

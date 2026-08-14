@@ -7,7 +7,7 @@ iter: iter-004
 goal: "On-device connectors: recognize hand-drawn ink between SmartGroups and keep it attached when a node moves"
 scope: [epaper/connector-ink, epaper/tool-modes, epaper/ink-box, infini/vector-document]
 stories: [STORY-EP-026, STORY-EP-027, STORY-EP-028, STORY-EP-029, STORY-EP-030, STORY-EP-031, STORY-IN-030]
-cursor: "STORY-EP-026 ∥ STORY-EP-027 · /designer · execute-design-story"
+cursor: "STORY-EP-028 · /qa then /dev (EP-026/027 done)"
 paused_reason: ""
 interrupts: []
 ---
@@ -37,8 +37,8 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 
 | ID | Kind | Status | Notes |
 |---|---|---|---|
-| [STORY-EP-026](../iter-004/stories/STORY-EP-026.md) | design | **ready** | ToolChip 3+2+Undo/Redo · `toolchip-recognizers` |
-| [STORY-EP-027](../iter-004/stories/STORY-EP-027.md) | design | **ready** | Connector blink + Ink/Curve chrome · `connector-chrome` |
+| [STORY-EP-026](../iter-004/stories/STORY-EP-026.md) | design | **done** | ToolChip 3+2+Undo/Redo · `toolchip-recognizers` |
+| [STORY-EP-027](../iter-004/stories/STORY-EP-027.md) | design | **done** | Connector blink + Ink/Curve chrome · `connector-chrome` |
 | [STORY-EP-028](../iter-004/stories/STORY-EP-028.md) | implement | draft | ToolChip inventory — **depends EP-026** |
 | [STORY-EP-029](../iter-004/stories/STORY-EP-029.md) | implement | draft | ADR-0022 dispatch — depends EP-028 |
 | [STORY-EP-030](../iter-004/stories/STORY-EP-030.md) | implement | draft | UX1/UX2 recognition — depends EP-027, EP-029 |
@@ -47,9 +47,9 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 
 ## Cursor
 
-**Next:** [STORY-EP-026](../iter-004/stories/STORY-EP-026.md) ∥ [STORY-EP-027](../iter-004/stories/STORY-EP-027.md) · persona `/designer` · skill `execute-design-story`
+**Next:** [STORY-EP-028](../iter-004/stories/STORY-EP-028.md) · `/qa` BDD then `/dev`
 
-`/qa` may author BDD in parallel from SRS. `/dev` after BDD; UI implement waits on the matching design story `done`.
+EP-026 and EP-027 are **done**. UI implement still waits on BDD.
 
 ## Execution board
 
@@ -67,3 +67,4 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 |---|---|
 | 2026-08-14 | Opened. BS-0001 concluded; REQ-09 + ADR-0020/21/22 adopted. Lock: horizontal · design-validated. Cursor → `/designer` EP-026 ∥ EP-027. |
 | 2026-08-14 | Human flip: **vertical · verified · wip 2**. QA BDD unblocked; implement still `depends_on` design. |
+| 2026-08-14 | EP-026 + EP-027 **done**. Cursor → `/qa` then `/dev` EP-028. CHL-0019 open (64 px tiles). |

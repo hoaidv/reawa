@@ -1,0 +1,17 @@
+:root {
+  --color-paper: #ffffff;
+  --color-ink: #000000;
+  --color-rule: #000000;
+  --chip-btn: 64px;
+  --chip-icon: 24px;
+  --chip-gap: 32px;
+  --chip-radius: 0;
+  --chip-inset: 8px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --font-caption: 11px;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --panel-w: 1872px;
+  --panel-h: 1404px;
+}

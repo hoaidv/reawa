@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>ToolChip — sel_rect dimmed toggles</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    /* live press — epaper has no hover; gate scans this file for :active */
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
+  </style>
+  <style>a.c-tool-btn { text-decoration: none; color: inherit; }</style>
+</head>
+<body data-state="tool.sel_rect.idle">
+  <div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <p class="scene-caption">Selection rect armed · recognizer toggles dimmed (still armed) · not tappable</p>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <a class="c-tool-btn" data-interactive href="./toolchip-recognizers-pen-armed.html" aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></a>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">sel_rect · toggles dimmed, armed state kept</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

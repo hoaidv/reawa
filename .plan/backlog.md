@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-14T13:37:26+00:00
+generated_at: 2026-08-14T13:46:01+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -32,8 +32,8 @@ generated_at: 2026-08-14T13:37:26+00:00
 | [STORY-EP-023](./iter-003/stories/STORY-EP-023.md) | Rebase manipulation chrome onto four-tool chip | design | designer | epaper | [SRS-EP-12] | done | iter-003 | 2 |
 | [STORY-EP-024](./iter-003/stories/STORY-EP-024.md) | Undo and Redo buttons on primary toolbar | implement | dev | epaper | [SRS-EP-05] | done | iter-003 | 3 |
 | [STORY-EP-025](./iter-003/stories/STORY-EP-025.md) | Selection chrome CanvasLayer / ToolCanvasLayer / ToolLayer | implement | dev | epaper | [SRS-EP-12], [SRS-EP-14] | done | iter-003 | 3 |
-| [STORY-EP-026](./iter-004/stories/STORY-EP-026.md) | Design ToolChip: 3 tools, 2 recognizer toggles, Undo/Redo | design | designer | epaper | [SRS-EP-05] | ready | iter-004 | 3 |
-| [STORY-EP-027](./iter-004/stories/STORY-EP-027.md) | Design connector blink and Ink/Curve selection chrome | design | designer | epaper | [SRS-EP-19] | ready | iter-004 | 3 |
+| [STORY-EP-026](./iter-004/stories/STORY-EP-026.md) | Design ToolChip: 3 tools, 2 recognizer toggles, Undo/Redo | design | designer | epaper | [SRS-EP-05] | done | iter-004 | 3 |
+| [STORY-EP-027](./iter-004/stories/STORY-EP-027.md) | Design connector blink and Ink/Curve selection chrome | design | designer | epaper | [SRS-EP-19] | done | iter-004 | 3 |
 | [STORY-EP-028](./iter-004/stories/STORY-EP-028.md) | ToolChip inventory: 3 exclusive tools + 2 recognizer toggles | implement | dev | epaper | [SRS-EP-04], [SRS-EP-05] | draft | iter-004 | 3 |
 | [STORY-EP-029](./iter-004/stories/STORY-EP-029.md) | Closure-first recognizer dispatch (ADR-0022) | implement | dev | epaper | [SRS-EP-10], [SRS-EP-17] | draft | iter-004 | 5 |
 | [STORY-EP-030](./iter-004/stories/STORY-EP-030.md) | Recognize single-stroke and chained connectors | implement | dev | epaper | [SRS-EP-17] | draft | iter-004 | 5 |

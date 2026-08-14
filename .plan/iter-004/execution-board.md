@@ -5,8 +5,8 @@ track: TRACK-004
 owner: sm
 date: 2026-08-14
 lock: vertical · verified · wip 2 · epaper/{connector-ink, tool-modes, ink-box} + infini/vector-document
-verdict: "READY — W1 design NOW; QA may author BDD in parallel; implement follows depends_on"
-wave: W1-design
+verdict: "READY — W1 design done; QA BDD then EP-028"
+wave: W2-bdd
 ---
 
 # Execution board — on-device connectors
@@ -20,8 +20,8 @@ MASTER + tracks stay the **guiding spine**; this file is the **operational map**
 
 | Band | Count | Meaning |
 |---|---|---|
-| Design **done** | 0 | EP-026, EP-027 not painted |
-| Wave **NOW** (paint) | 2 | EP-026 ∥ EP-027 |
+| Design **done** | 2 | EP-026, EP-027 |
+| Wave **NOW** | BDD | `/qa` then EP-028 |
 | API-only / no UI paint | 0 | — |
 | Implement gated | 5 | `depends_on` design + BDD — stop line no longer freezes them |
 
@@ -41,8 +41,8 @@ modules: epaper, infini
 features: epaper/connector-ink; epaper/tool-modes; epaper/ink-box; infini/vector-document
 personas: /designer (NOW) · /qa (BDD ∥) · /dev (after BDD + design depends_on)
 forbidden: REQ-08; CHL-0011; CHL-0012; desktop connector authoring; implement UI before its design story is done
-NOW: W1 — STORY-EP-026 ∥ STORY-EP-027
-cursor: /designer execute-design-story
+NOW: W2 — /qa BDD then STORY-EP-028
+cursor: /qa write-bdd then /dev implement-story
 ```
 
 ---
@@ -54,8 +54,8 @@ cursor: /designer execute-design-story
 | Wave | Status | Parallel? | What |
 |---|---|---|---|
 | **W0** | **done** | — | PM REQ-09 + REQ-03; Architect ADR-0020/21/22 + SRS-EP-17…20 |
-| **W1** | **NOW** | **∥ yes** | Design ToolChip + connector chrome; QA may start logic BDD |
-| **W2** | next | serial after EP-026 | ToolChip implement (EP-028) then dispatch (EP-029) |
+| **W1** | **done** | **∥ yes** | Design ToolChip + connector chrome |
+| **W2** | **NOW** | serial | `/qa` BDD; then ToolChip implement (EP-028) |
 | **W3** | next | EP-030 then EP-031 ∥ IN-030 | Recognize, warp, Infini mirror |
 | **W-last** | later | serial | Human verify + `/pm` `validated_by` |
 
@@ -72,8 +72,8 @@ Lanes **∥**. Shared `.docs/DESIGN.md` / tokens: stitch with designer; do not p
 
 | Id | Feature / chore | Pri | Docs | Design story | Status | Wave | Next owner | Parallel group |
 |---|---|---|---|---|---|---|---|---|
-| F-01 | epaper/tool-modes | Must | thick | EP-026 | ready | W1 | `/designer` | A |
-| F-02 | epaper/connector-ink (chrome) | Must | thick | EP-027 | ready | W1 | `/designer` | B |
+| F-01 | epaper/tool-modes | Must | thick | EP-026 | **done** | W1 | `/qa` | — |
+| F-02 | epaper/connector-ink (chrome) | Must | thick | EP-027 | **done** | W1 | `/qa` | — |
 | F-03 | epaper/ink-box (dispatch) | Must | thick | — (logic) | draft | W2 | `/qa` BDD now; `/dev` after EP-028 | — |
 | F-04 | epaper/connector-ink (recognize + warp) | Must | thick | EP-027 | draft | W3 | `/qa` BDD now (logic); UI waits EP-027 | — |
 | F-05 | infini/vector-document | Must | thick | n/a | draft | W3 | `/qa` BDD now; `/dev` after EP-030 | — |
@@ -126,4 +126,4 @@ Lanes **∥**. Shared `.docs/DESIGN.md` / tokens: stitch with designer; do not p
 
 ## Verdict
 
-**READY** — lock is vertical/`verified`. Next serial step is still **`/designer`** on EP-026 ∥ EP-027. `/qa` may author BDD from SRS in parallel (UI scenarios wait on packages). `/dev` after green BDD and, for UI, a `done` design story. Guard corpus remains a ship gate. Do not start REQ-08.
+**READY** — W1 design is **done** ([UI-EP-04](./design/toolchip-recognizers/), [UI-EP-05](./design/connector-chrome/)). Next: **`/qa`** then **`/dev` EP-028**. Open [CHL-0019](./challenges/CHL-0019-toolchip-tile-size.md) for `/pm` (64 px tiles vs SRS 32). Do not start REQ-08.

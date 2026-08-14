@@ -4,7 +4,7 @@ title: Design connector blink and Ink/Curve selection chrome
 kind: design
 parent_srs: [SRS-EP-19]
 parent_req: [REQ-09]
-status: ready
+status: done
 priority: P0
 iter: iter-004
 estimate: 3
@@ -15,9 +15,14 @@ acceptance_criteria:
   - "Given a selected connector, When shown, Then tgl.conn_style is Ink|Curve and each end has Edge|Centre; empty canvas deselects with 0 residual chrome."
   - "Given conn.rejected, When the stroke stays ink, Then no extra chrome (no banner)."
 design_package: ".plan/iter-004/design/connector-chrome/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-004/design/connector-chrome/ui-spec.md"
+scenes:
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-blink.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-selected.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-rejected.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-live-warp.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-orphan.html"
+hifi: ".plan/iter-004/design/connector-chrome/connector-chrome-blink.html"
 wireframe: ""
 ---
 

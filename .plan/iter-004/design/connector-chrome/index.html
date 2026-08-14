@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>connector-chrome — scene navigator</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f5; }
+    .nav-shell { display: flex; min-height: 100vh; }
+    .nav-side {
+      width: 16rem; flex-shrink: 0; padding: 1rem;
+      border-right: 1px solid #d4d4d8; background: #fff;
+    }
+    .nav-side strong { display: block; margin-bottom: 0.75rem; font-size: 14px; }
+    .nav-side a {
+      display: block; padding: 0.4rem 0.5rem; margin: 0.1rem 0;
+      border-radius: 0.35rem; color: inherit; text-decoration: none; font-size: 12px;
+    }
+    .nav-side a:hover, .nav-side a:focus-visible { background: #e4e4e7; outline: none; }
+    .nav-side a[aria-current="page"] { background: #e4e4e7; font-weight: 600; }
+    .nav-main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 1rem; min-width: 0; }
+    .hint { align-self: stretch; margin: 0 0 0.75rem; font-size: 0.875rem; color: #52525b; }
+    .preview-stage { display: flex; justify-content: center; width: 100%; }
+    .preview-scale { position: relative; transform-origin: top center; background: #fff; box-shadow: 0 1px 8px rgb(0 0 0 / 12%); }
+    .preview-scale iframe {
+      position: absolute; inset: 0; display: block; border: 0; width: 100%; height: 100%; background: #52525b;
+    }
+    .preview-stage[data-preview-scale="desktop"] .preview-scale {
+      width: min(1120px, 100%);
+      aspect-ratio: 1872 / 1404;
+      transform: scale(1);
+      border-radius: 0.5rem; overflow: hidden; border: 1px solid #a1a1aa;
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-shell" data-platform="epaper">
+    <nav class="nav-side" aria-label="Scenes">
+      <strong>connector-chrome</strong>
+      <a href="./connector-chrome-blink.html" target="scene-preview" aria-current="page">conn.blink</a>
+      <a href="./connector-chrome-selected.html" target="scene-preview">conn.selected</a>
+      <a href="./connector-chrome-rejected.html" target="scene-preview">conn.rejected</a>
+      <a href="./connector-chrome-live-warp.html" target="scene-preview">conn.live_warp</a>
+      <a href="./connector-chrome-orphan.html" target="scene-preview">conn.orphan</a>
+      <a href="./connector-chrome-states.html" target="scene-preview">States showcase</a>
+    </nav>
+    <main class="nav-main">
+      <p class="hint">RM2 landscape 1872×1404 @ 100% · UI-EP-05 · blink is a static pulse frame (no CSS animation).</p>
+      <div class="preview-stage" data-preview-scale="desktop">
+        <div class="preview-scale">
+          <iframe name="scene-preview" title="Scene preview" src="./connector-chrome-blink.html"></iframe>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    document.querySelectorAll('.nav-side a[target="scene-preview"]').forEach((a) => {
+      a.addEventListener("click", () => {
+        document.querySelectorAll(".nav-side a").forEach((l) => l.removeAttribute("aria-current"));
+        a.setAttribute("aria-current", "page");
+      });
+    });
+  </script>
+</body>
+</html>

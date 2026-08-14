@@ -16,9 +16,14 @@ acceptance_criteria:
   - "Given guards fail or the toggle is off, When pen-up runs, Then the stroke stays ordinary ink and conn.rejected has no banner."
   - "Given create, When chrome runs, Then ovl.conn_blink matches the EP-027 package."
 design_package: ".plan/iter-004/design/connector-chrome/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-004/design/connector-chrome/ui-spec.md"
+scenes:
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-blink.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-selected.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-rejected.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-live-warp.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-orphan.html"
+hifi: ".plan/iter-004/design/connector-chrome/connector-chrome-blink.html"
 wireframe: ""
 ---
 

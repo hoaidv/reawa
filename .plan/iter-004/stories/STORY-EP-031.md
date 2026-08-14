@@ -16,9 +16,14 @@ acceptance_criteria:
   - "Given 200 poses returning to start, When never-re-bake holds, Then drift is 0.000 u on host fixtures (I1)."
   - "Given the bound box is deleted, When the connector is drawn, Then it remains; undo of delete glues the same nodeId back (D39)."
 design_package: ".plan/iter-004/design/connector-chrome/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-004/design/connector-chrome/ui-spec.md"
+scenes:
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-blink.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-selected.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-rejected.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-live-warp.html"
+  - ".plan/iter-004/design/connector-chrome/connector-chrome-orphan.html"
+hifi: ".plan/iter-004/design/connector-chrome/connector-chrome-live-warp.html"
 wireframe: ""
 ---
 
