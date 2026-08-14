@@ -4,7 +4,7 @@ slug: smart-group-pilot
 kind: planned
 status: active
 iter: iter-003
-cursor: "W12 — EP-020 ∥ IN-028 ready → /qa"
+cursor: "W12 done — /pm gate + human campaign verify (REQ-04…07)"
 goal: "Ink-box rework: epaper REQ-04…REQ-07 (device owns the document) + infini REQ-03 one-way sync"
 owner: sm
 ---
@@ -37,8 +37,8 @@ Pilot ADRs [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md) (semantics) and
 | [STORY-EP-019](../iter-003/stories/STORY-EP-019.md) | implement | **done** | W11b — live manip + descriptor |
 | [STORY-EP-023](../iter-003/stories/STORY-EP-023.md) | design | **done** | W11b — UI-EP-02 four-tool rebase |
 | [STORY-EP-025](../iter-003/stories/STORY-EP-025.md) | implement | **done** | W11c — chrome layers; human PASS; CHL-0018 option 1 |
-| [STORY-EP-020](../iter-003/stories/STORY-EP-020.md) | implement | **ready** | W12 — device sync |
-| [STORY-IN-028](../iter-003/stories/STORY-IN-028.md) | implement | **ready** | W12 — desktop `doc_load` |
+| [STORY-EP-020](../iter-003/stories/STORY-EP-020.md) | implement | **done** | W12 — device sync; human confirm 2026-08-14 |
+| [STORY-IN-028](../iter-003/stories/STORY-IN-028.md) | implement | **done** | W12 — desktop `doc_load`; human confirm 2026-08-14 |
 
 Pilot stories (IN-010…019, EP-003…006) remain **done** as history. Residue EP-007…011 / IN-020…026 stays **blocked** — not re-sliced (desktop ink-box authoring is out; device behaviour is the new ids above).
 
@@ -98,3 +98,4 @@ Pilot stories (IN-010…019, EP-003…006) remain **done** as history. Residue E
 | 2026-08-14 | EP-019 **in-review** — descriptor router + live transform; host `manipulate_test` PASS. Cursor → `/qa`. |
 | 2026-08-14 | EP-019 **done** — human RM2 confirm. W11b closed. Cursor → W11c `/dev` EP-025. |
 | 2026-08-14 | EP-025 **done** — human PASS (ToolCanvas Pen in-flight / Mono settled; option 1 live node). CHL-0018 adopted. W11c closed. W12: EP-020 ∥ IN-028 **ready**. Cursor → `/qa`. |
+| 2026-08-14 | W12 **done** — EP-020 ∥ IN-028 QA PASS; human confirm tablet↔desktop (ink-box create / membership / move-resize). Cursor → `/pm` gate + campaign verify. No further implement wave in lock. |

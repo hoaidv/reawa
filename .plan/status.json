@@ -1,6 +1,6 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-14T04:38:41+00:00",
+  "generated_at": "2026-08-14T05:15:59+00:00",
   "current_iter": "iter-003",
   "by_status": {
     "draft": 0,
@@ -50,7 +50,7 @@
       "id": "TRACK-003",
       "kind": "planned",
       "status": "active",
-      "cursor": "W12 \u2014 EP-020 \u2225 IN-028 ready \u2192 /qa",
+      "cursor": "W12 done \u2014 /pm gate + human campaign verify (REQ-04\u202607)",
       "iter": "iter-003"
     }
   ]
