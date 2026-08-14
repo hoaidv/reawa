@@ -1,7 +1,7 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-14T05:15:59+00:00",
-  "current_iter": "iter-003",
+  "generated_at": "2026-08-14T07:28:06+00:00",
+  "current_iter": "iter-004",
   "by_status": {
     "draft": 0,
     "ready": 0,
@@ -28,7 +28,7 @@
     }
   },
   "open_challenges": 0,
-  "resolved_challenges_this_iter": 18,
+  "resolved_challenges_this_iter": 0,
   "sync_orphans": 26,
   "master_plan": true,
   "tracks": [
@@ -49,8 +49,8 @@
     {
       "id": "TRACK-003",
       "kind": "planned",
-      "status": "active",
-      "cursor": "W12 done \u2014 /pm gate + human campaign verify (REQ-04\u202607)",
+      "status": "done",
+      "cursor": "campaign exited 2026-08-14 \u2014 see retro",
       "iter": "iter-003"
     }
   ]

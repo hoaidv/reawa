@@ -22,4 +22,4 @@ lifecycle: active
 | 2026-08-11 | epaper-tool-strip | — | iter-003 | REQ-03 three-tool strip + touch fallback |
 | 2026-08-13 | ink-box-ui | iter-003 | — | Marked deprecated — mouse/ghost; on-device chrome is UI-EP-02 |
 | 2026-08-13 | device-selection-chrome | — | iter-003 | SRS-EP-12 selection overlay (STORY-EP-012) |
-| 2026-08-14 | selection-enclose-chrome | — | iter-003 | SRS-EP-12 Creation B chrome (STORY-EP-022) |
+| 2026-08-14 | System icons (epaper tools / modes) | iter-003 `design/system/assets/` | `.docs/design/system/assets/` | Iter close promote |

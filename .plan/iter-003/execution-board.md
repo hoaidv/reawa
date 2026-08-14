@@ -5,8 +5,8 @@ track: TRACK-003
 owner: sm
 date: 2026-08-14
 lock: vertical · verified · epaper/{device-document, ink-box, tool-modes} + infini/tablet-sync — re-locked 2026-08-13
-verdict: "W12 done — EP-020 ∥ IN-028 QA + human confirm. Campaign committed stories complete → /pm gate + human verify (stop_line)."
-wave: W12-done
+verdict: "FROZEN — W12 done, campaign exited 2026-08-14. See retro."
+wave: closed
 ---
 
 # Execution board — iter-003

@@ -2,9 +2,9 @@
 id: TRACK-003
 slug: smart-group-pilot
 kind: planned
-status: active
+status: done
 iter: iter-003
-cursor: "W12 done — /pm gate + human campaign verify (REQ-04…07)"
+cursor: "campaign exited 2026-08-14 — see retro"
 goal: "Ink-box rework: epaper REQ-04…REQ-07 (device owns the document) + infini REQ-03 one-way sync"
 owner: sm
 ---

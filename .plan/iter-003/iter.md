@@ -5,7 +5,7 @@ start: 2026-08-11
 end: 2026-08-25
 capacity: 15
 committed_points: 45
-status: active
+status: closed
 ---
 
 # Iter 003 — Smart Group / ink-box pilot → document ownership rework
