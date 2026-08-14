@@ -4,7 +4,7 @@ title: "Device one-way sync handshake and publish queue"
 kind: implement
 parent_srs: [SRS-EP-08]
 parent_req: [REQ-07]
-status: ready
+status: done
 priority: P0
 iter: iter-003
 estimate: 5
@@ -30,7 +30,8 @@ wireframe: ""
 
 Implements [SRS-EP-08](../../../.docs/modules/epaper/features/device-document/srs-logic.md)
 per [ADR-0015](../../../.docs/adr/ADR-0015-one-way-sync-contract.md).
-BDD: [one-way-sync.feature](../../../.docs/modules/epaper/features/device-document/bdd/one-way-sync.feature).
+BDD: [one-way-sync.feature](../../../.docs/modules/epaper/features/device-document/bdd/one-way-sync.feature)
+(`@SRS-EP-08`, eight AC scenarios; QA author 2026-08-14). Wire names: SRS-IN-09 transmit set.
 
 Last on the device (architect ask 3): editing works offline by design. Pairs with
 [STORY-IN-027](./STORY-IN-027.md) / [STORY-IN-028](./STORY-IN-028.md).

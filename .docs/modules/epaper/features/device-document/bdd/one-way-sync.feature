@@ -4,89 +4,78 @@ Feature: One-way document sync from the device
   I need exactly one document input and an ordered outbound change stream
   So that no peer can overwrite the creator's work mid-session
 
-  # New 2026-08-13 — CHL-0008 / ADR-0014 / ADR-0015.
-  # Replaces the device half of infini SRS-IN-13 (retired).
+  # STORY-EP-020 — one scenario per AC. Wire ids and op.type are the SRS-IN-09
+  # transmit set (ADR-0015 closed ids). Do not invent a third alias (CHL-0009).
+  # Handshake: hello, drain_ack, doc_change, queue_empty, doc_load, load_ack.
+  # Change envelope: doc_change { seq, opId, op, baseSeq } with
+  # op { opId, type, payload } — type in append_ink | create_smart_group |
+  # set_smart_transform | set_ink_scale_mode | reparent | remove_node |
+  # restore_snapshot. Preview: stroke_begin | stroke_point | stroke_end
+  # (no stroke_begin.intent). Retired inbound: doc_snapshot, pickables, tool_intent.
 
   @SRS-EP-08
-  Scenario: Only viewport and one load ever come down
+  Scenario: After the initial load, only viewport comes down
     Given a session that has completed its initial load
     When the whole session lifetime is traced
-    Then zero inbound document-bearing messages are observed
-    And viewport messages continue to be applied
+    Then 0 inbound document-bearing messages are observed
+    And viewport messages continue to apply
 
   @SRS-EP-08
-  Scenario: Unsolicited doc_load mid-session is rejected
+  Scenario: Unsolicited document inbound is rejected
     Given a live session with a local document
-    When a doc_load arrives without a completed handshake
-    Then the local document is unchanged
-    And the message is logged as a protocol defect
-    And the status line reflects it
-
-  @SRS-EP-08
-  Scenario: Retired message types are rejected, not tolerated
-    Given a live session
-    When a doc_snapshot or pickables or tool_intent message arrives
+    When an unsolicited doc_load, doc_snapshot, pickables, or tool_intent arrives
     Then it is not applied
-    And it is logged once for the session
+    And it is logged
+    And the local document is unchanged
 
   @SRS-EP-08
-  Scenario: Load handshake drains the queue first
-    Given the device has 5 queued changes
+  Scenario: Load handshake drains the queue then starts a new epoch
+    Given 5 queued changes
     When the desktop offers a doc_load
-    Then the device publishes all 5 changes in seq order
-    And sends queue_empty
-    And only then accepts the doc_load
-    And zero queued changes are discarded
-
-  @SRS-EP-08
-  Scenario: Accepted load starts a new epoch
-    Given an accepted doc_load
-    Then the local document is replaced wholesale
+    Then all 5 publish as doc_change in seq order
+    And queue_empty is sent
+    And then the doc_load is accepted
+    And 0 queued changes are discarded
     And seq resets to 0
     And the undo ring is cleared
     And the selection is cleared
     And load_ack is sent
 
   @SRS-EP-08
-  Scenario: Editing continues with the link down
+  Scenario: Editing continues with the session down
     Given the session is down
     When the creator performs 10 document operations
-    Then all 10 are applied locally
-    And all 10 are queued in order
-    And zero tools were unavailable
+    Then all 10 apply locally
+    And all 10 queue in order
+    And 0 tools were unavailable
 
   @SRS-EP-08
-  Scenario: Reconnect publishes the queue in order
-    Given 10 queued changes and a restored link
-    When the handshake completes with drain_ack
-    Then all 10 publish in seq order
-    And zero are lost or reordered
+  Scenario: Reconnect publishes the queue; duplicate opId is a no-op
+    Given a restored link and queued ops
+    When drain_ack arrives
+    Then queued ops publish as doc_change in seq order
+    And 0 are lost
+    And 0 are reordered
+    And a duplicate opId apply is a no-op
 
   @SRS-EP-08
-  Scenario: Duplicate delivery is idempotent
-    Given a published change with opId "op_7"
-    When the same opId is delivered again
-    Then the mirror is unchanged by the second apply
-
-  @SRS-EP-08
-  Scenario: One change per committed op
-    Given a committed structural op
+  Scenario: One doc_change per committed structural op
+    Given a committed structural op whose op.type is an SRS-IN-09 transmit name
     When it publishes
-    Then exactly one doc_change is emitted
-    And it carries seq, opId, op, and baseSeq
-    And the mirror updates within p95 300 ms
+    Then exactly one doc_change {seq, opId, op, baseSeq} is emitted
+    And the mirror updates p95 <= 300 ms
 
   @SRS-EP-08
-  Scenario: Preview strokes are not document changes
+  Scenario: Preview stroke_* is not a document change
     Given a stroke in progress
-    When stroke_begin, stroke_point, and stroke_end are streamed
-    Then no stroke_begin carries an intent field
-    And the authoritative node reaches the desktop only in the doc_change at pen-up
-    And zero preview paths are written to the mirror
+    When stroke_begin, stroke_point, and stroke_end stream
+    Then no stroke_begin carries intent
+    And the node arrives only in the pen-up doc_change
+    And 0 preview paths are written to the mirror
 
   @SRS-EP-08
   Scenario: A load offered mid-gesture is deferred
-    Given a manipulation gesture in progress and an empty queue
+    Given a gesture in progress
     When a doc_load is offered
-    Then the gesture completes and commits first
-    And the change publishes before the load is accepted
+    Then the gesture commits first
+    And the change publishes as doc_change before the load is accepted

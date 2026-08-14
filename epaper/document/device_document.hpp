@@ -434,6 +434,7 @@ public:
 
     const std::vector<DocChange> &publishQueue() const { return m_publishQueue; }
     void clearPublishQueue() { m_publishQueue.clear(); }
+    int lastSeq() const { return m_lastSeq; }
 
     /**
      * Viewport / tool / selection are not document state and must not push.
@@ -465,6 +466,9 @@ public:
         m_historyLatch = HistoryLatch::None;
         m_gestureInFlight = false;
         m_intermediateFrames = 0;
+        m_lastSeq = 0;
+        m_publishQueue.clear();
+        m_selectedNodeId.reset();
     }
 
     void onAcceptedDocLoad(const JsonValue &document)
@@ -1249,6 +1253,40 @@ inline DocOp opFromJson(const JsonValue &j)
         op.payload = *p;
     op.ts = optNumber(j, "ts");
     return op;
+}
+
+/** @implements [SRS-EP-08] closed transmit op envelope */
+inline JsonValue opToJson(const DocOp &op)
+{
+    JsonValue::Object o;
+    o.emplace_back("opId", JsonValue::string(op.opId));
+    o.emplace_back("type", JsonValue::string(op.type));
+    if (!op.source.empty())
+        o.emplace_back("source", JsonValue::string(op.source));
+    o.emplace_back("payload", op.payload);
+    if (op.ts)
+        o.emplace_back("ts", JsonValue::number(*op.ts));
+    return JsonValue::object(std::move(o));
+}
+
+/** @implements [SRS-EP-08] doc_change wire envelope */
+inline JsonValue docChangeToJson(const DocChange &ch)
+{
+    JsonValue::Object o;
+    o.emplace_back("type", JsonValue::string("doc_change"));
+    o.emplace_back("seq", JsonValue::number(ch.seq));
+    o.emplace_back("opId", JsonValue::string(ch.opId));
+    o.emplace_back("op", opToJson(ch.op));
+    o.emplace_back("baseSeq", JsonValue::number(ch.baseSeq));
+    return JsonValue::object(std::move(o));
+}
+
+/** @implements [SRS-EP-08] SRS-IN-09 closed op.type list */
+inline bool isClosedTransmitOp(const std::string &type)
+{
+    return type == "append_ink" || type == "create_smart_group" || type == "join_smart_group"
+        || type == "set_smart_transform" || type == "set_ink_scale_mode" || type == "reparent"
+        || type == "remove_node" || type == "restore_snapshot";
 }
 
 } // namespace document

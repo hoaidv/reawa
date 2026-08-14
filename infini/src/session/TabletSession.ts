@@ -21,10 +21,21 @@ import {
   docChangeToOp,
   messageToDocOp,
   type DocChangeMessage,
+  type DocLoadMessage,
   type DocOpMessage,
+  type HelloMessage,
+  type LoadAckMessage,
+  type QueueEmptyMessage,
   type SessionTransport,
   type ViewportMessage,
 } from "./types";
+
+/** Handshake phase — Infini must not load while the device still has queued changes. */
+export type HandshakePhase =
+  | "awaiting_hello"
+  | "draining"
+  | "awaiting_load_ack"
+  | "live";
 
 /** Max outbound viewport Hz during gesture coalesce. @implements [SRS-IN-07] */
 export const VIEWPORT_PUBLISH_MAX_HZ = 30;
@@ -80,6 +91,9 @@ export class TabletSession {
   private lastPublishAtMs = -Infinity;
   private pendingVp: Viewport | null = null;
   private readonly previews = new Map<string, PreviewStroke>();
+  /** @implements [SRS-IN-07] handshake-gated load */
+  private phase: HandshakePhase = "awaiting_hello";
+  private drainQueued = 0;
 
   /** Last viewport emit timestamp (ms, performance.now) for latency tests. */
   lastViewportEmitAtMs = 0;
@@ -100,11 +114,104 @@ export class TabletSession {
 
   connect(): void {
     this.connected = true;
+    this.phase = "awaiting_hello";
+    this.drainQueued = 0;
   }
 
   disconnect(): void {
     this.connected = false;
+    this.phase = "awaiting_hello";
+    this.drainQueued = 0;
     this.dropAllPreviews();
+  }
+
+  get handshakePhase(): HandshakePhase {
+    return this.phase;
+  }
+
+  /**
+   * Start or resume the reconnect handshake from hello { lastSeq, queued }.
+   * Does not push a document until the device queue is empty.
+   * @implements [SRS-IN-07] reconnect handshake drain then doc_load
+   */
+  receiveHello(msg: HelloMessage): void {
+    if (!this.connected) return;
+    const queued = Math.max(0, Math.floor(msg.queued));
+    const lastSeq = Number.isFinite(msg.lastSeq) ? msg.lastSeq : 0;
+    this.drainQueued = queued;
+    // Renderer remount / missed load_ack: resend the epoch document, do not start a second drain.
+    if (this.phase === "awaiting_load_ack" && queued === 0) {
+      this.resendDocLoad();
+      return;
+    }
+    if (this.phase === "live") return;
+    if (queued > 0) {
+      this.lastAppliedSeq = lastSeq - queued;
+      this.phase = "draining";
+      this.transport.sendDrainAck({ type: "drain_ack" });
+      return;
+    }
+    this.lastAppliedSeq = lastSeq;
+    this.emitDocLoad();
+  }
+
+  /**
+   * Device reports the drain stream is complete — only then is load legal.
+   * @implements [SRS-IN-07] queue_empty then doc_load
+   */
+  receiveQueueEmpty(_msg?: QueueEmptyMessage): void {
+    if (!this.connected) return;
+    if (this.phase !== "draining") return;
+    this.drainQueued = 0;
+    this.emitDocLoad();
+  }
+
+  /**
+   * Device applied the epoch load. Further outbound traffic is viewport-only.
+   * @implements [SRS-IN-07] load_ack completes epoch
+   * @implements [SRS-IN-08] 0 outbound document messages after load
+   */
+  receiveLoadAck(_msg?: LoadAckMessage): void {
+    if (this.phase === "awaiting_load_ack") this.phase = "live";
+  }
+
+  /**
+   * Infini-side canvas / orientation must not emit a document.
+   * @implements [SRS-IN-07] illegal unsolicited doc_load
+   */
+  noteInfiniSideAction(): void {
+    // Viewport-only downward; no document channel.
+  }
+
+  /**
+   * Handshake-gated wholesale load. Illegal while queued > 0.
+   * @implements [SRS-IN-07] doc_load once per epoch
+   * @implements [SRS-IN-09] doc_load { document, seq: 0 }
+   */
+  private emitDocLoad(): DocLoadMessage | null {
+    if (!this.connected) return null;
+    if (this.phase === "awaiting_load_ack" || this.phase === "live") return null;
+    if (this.phase === "draining" && this.drainQueued > 0) return null;
+    const msg: DocLoadMessage = {
+      type: "doc_load",
+      document: this.tree.toJSON() as unknown as Record<string, unknown>,
+      seq: 0,
+    };
+    this.lastAppliedSeq = 0;
+    this.drainQueued = 0;
+    this.phase = "awaiting_load_ack";
+    this.dropAllPreviews();
+    this.transport.sendDocLoad(msg);
+    return msg;
+  }
+
+  private resendDocLoad(): void {
+    const msg: DocLoadMessage = {
+      type: "doc_load",
+      document: this.tree.toJSON() as unknown as Record<string, unknown>,
+      seq: 0,
+    };
+    this.transport.sendDocLoad(msg);
   }
 
   setCssSize(w: number, h: number): void {
@@ -229,6 +336,12 @@ export class TabletSession {
         this.log("idempotent apply mutated tree unexpectedly", op.opId);
       }
       return { applied: false, reason: "duplicate_opId", elapsedMs: this.nowMs() - t0 };
+    }
+
+    // Missed hello after a live device stream (HMR / late subscribe): adopt seq, do not gap-out.
+    if (this.phase === "awaiting_hello" && this.lastAppliedSeq === 0) {
+      this.lastAppliedSeq = msg.baseSeq;
+      this.phase = "live";
     }
 
     if (this.tree.mirrorSuspect) {

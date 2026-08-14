@@ -35,7 +35,18 @@ export type RmDocChangeMsg = {
   baseSeq: number;
 };
 
-export type RmInboundMsg = RmStrokeMsg | RmToolIntentMsg | RmDocChangeMsg;
+/** @implements [SRS-IN-07] hello lastSeq queued */
+export type RmHelloMsg = { type: "hello"; lastSeq: number; queued: number };
+export type RmQueueEmptyMsg = { type: "queue_empty" };
+export type RmLoadAckMsg = { type: "load_ack" };
+
+export type RmInboundMsg =
+  | RmStrokeMsg
+  | RmToolIntentMsg
+  | RmDocChangeMsg
+  | RmHelloMsg
+  | RmQueueEmptyMsg
+  | RmLoadAckMsg;
 
 /** @implements [SRS-IN-17] inbound debug_log from Epaper on :9878 */
 export type DebugLogRecord = {

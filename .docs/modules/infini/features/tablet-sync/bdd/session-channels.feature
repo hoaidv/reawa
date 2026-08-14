@@ -123,7 +123,7 @@ Feature: Infini tablet session viewport load and change channels
     When the same opId "ink_1" is applied again
     Then the tree is unchanged (idempotent)
 
-  @SRS-IN-07 @future
+  @SRS-IN-07
   Scenario: Infini authors no document ops during a session
     Given a live session and desktop interaction with the canvas
     When outbound messages are observed for the whole session

@@ -15,6 +15,7 @@ epoch; apply inbound `doc_change`; render inbound `stroke_*` as transient previe
 - UI: [srs-ui.md](./srs-ui.md) — [SRS-IN-18] Device Log overlay (`needs_design: false`)
 - Quality: [srs-quality.md](./srs-quality.md) — [SRS-IN-08] · [SRS-IN-19] debug isolation
 - BDD: [bdd/session-channels.feature](./bdd/session-channels.feature) ·
+  [bdd/handshake-doc-load.feature](./bdd/handshake-doc-load.feature) (STORY-IN-028) ·
   [bdd/device-log.feature](./bdd/device-log.feature) ·
   [bdd/tool-intent-transport.feature](./bdd/tool-intent-transport.feature) (**retired**, kept for
   history)

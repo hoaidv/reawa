@@ -4,7 +4,7 @@ title: "Desktop handshake-gated doc_load"
 kind: implement
 parent_srs: [SRS-IN-07, SRS-IN-08]
 parent_req: [REQ-03]
-status: ready
+status: done
 priority: P0
 iter: iter-003
 estimate: 3

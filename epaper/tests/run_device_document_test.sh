@@ -15,3 +15,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/debug_log_test.cpp -o /tmp/debug_log_
 /tmp/debug_log_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/manipulate_test.cpp -o /tmp/manipulate_test
 /tmp/manipulate_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/one_way_sync_test.cpp -o /tmp/one_way_sync_test
+/tmp/one_way_sync_test

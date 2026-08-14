@@ -45,7 +45,7 @@ import {
   UndoRing,
 } from "../document";
 import type { SmartGroupNode } from "../document/types";
-import type { DocChangeMessage } from "../session";
+import type { DocChangeMessage, HelloMessage } from "../session";
 
 export interface CanvasStageProps {
   populated?: boolean;
@@ -290,6 +290,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     orientationRef.current = next;
     setOrientation(next);
     sessionRef.current?.setOrientation(next);
+    sessionRef.current?.noteInfiniSideAction();
     syncMarkerDom();
     publishViewportCoalesced(true);
     schedulePaint();
@@ -346,6 +347,18 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     });
 
     const unsub = api.onRmStroke((msg: RmInboundMsg) => {
+      if (msg.type === "hello") {
+        sessionRef.current?.receiveHello(msg as HelloMessage);
+        return;
+      }
+      if (msg.type === "queue_empty") {
+        sessionRef.current?.receiveQueueEmpty();
+        return;
+      }
+      if (msg.type === "load_ack") {
+        sessionRef.current?.receiveLoadAck();
+        return;
+      }
       if (msg.type === "doc_change") {
         sessionRef.current?.receiveDocChange(msg as DocChangeMessage);
         paintMirror();

@@ -1,6 +1,7 @@
 /**
  * Tablet session message shapes (JSON-lines framing).
- * @implements [SRS-IN-07] viewport + doc_change envelopes
+ * @implements [SRS-IN-07] viewport + handshake + doc_change envelopes
+ * @implements [SRS-IN-09] transmit names hello drain_ack doc_load
  */
 
 import type { Aabb, TabletOrientation } from "../canvas/Viewport";
@@ -18,11 +19,46 @@ export interface ViewportMessage {
   settle?: boolean;
 }
 
-/** Infini → Epaper initial / authoritative vector snapshot (not a bitmap). */
+/**
+ * Infini → Epaper handshake-gated load (replaces retired doc_snapshot).
+ * @implements [SRS-IN-07] doc_load envelope
+ * @implements [SRS-IN-09] document-load envelope
+ */
+export interface DocLoadMessage {
+  type: "doc_load";
+  document: Record<string, unknown>;
+  seq: 0;
+}
+
+/**
+ * Infini → Epaper: device may flush its queued doc_change stream.
+ * @implements [SRS-IN-07] drain_ack
+ */
+export interface DrainAckMessage {
+  type: "drain_ack";
+}
+
+/** Epaper → Infini session hello. @implements [SRS-IN-07] hello lastSeq queued */
+export interface HelloMessage {
+  type: "hello";
+  lastSeq: number;
+  queued: number;
+}
+
+/** Epaper → Infini: drain complete. @implements [SRS-IN-07] queue_empty */
+export interface QueueEmptyMessage {
+  type: "queue_empty";
+}
+
+/** Epaper → Infini: load applied. @implements [SRS-IN-07] load_ack */
+export interface LoadAckMessage {
+  type: "load_ack";
+}
+
+/** Retired wire shape — do not emit. Kept for type-level rejection tests. */
 export interface DocSnapshotMessage {
   type: "doc_snapshot";
   nodes: Array<Record<string, unknown>>;
-  /** @implements [SRS-IN-13] pickables for device local hit-test */
   pickables?: Array<{
     id: string;
     kind: "smart_group";
@@ -30,7 +66,7 @@ export interface DocSnapshotMessage {
   }>;
 }
 
-/** Epaper → Infini manipulation intent (pilot). */
+/** Retired wire shape — do not emit. */
 export interface ToolIntentWireMessage {
   type: "tool_intent";
   action: "select" | "move" | "resize";
@@ -71,11 +107,18 @@ export interface DocChangeMessage {
   baseSeq: number;
 }
 
-export type SessionOutbound = ViewportMessage | DocOpMessage;
+export type SessionOutbound =
+  | ViewportMessage
+  | DocLoadMessage
+  | DrainAckMessage
+  | DocOpMessage;
 
-/** Peer transport — tests use in-memory; production wires TCP/JSON-lines later. */
+/** Peer transport — tests use in-memory; production wires TCP/JSON-lines. */
 export interface SessionTransport {
   sendViewport(msg: ViewportMessage): void;
+  sendDrainAck(msg: DrainAckMessage): void;
+  sendDocLoad(msg: DocLoadMessage): void;
+  /** Retired — Infini is a viewer; implementations must no-op. */
   sendDocOp(msg: DocOpMessage): void;
 }
 

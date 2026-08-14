@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-14T04:23:37+00:00
+generated_at: 2026-08-14T04:38:41+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -26,7 +26,7 @@ generated_at: 2026-08-14T04:23:37+00:00
 | [STORY-EP-017](./iter-003/stories/STORY-EP-017.md) | On-device draw-into membership | implement | dev | epaper | [SRS-EP-10], [SRS-EP-14] | done | iter-003 | 3 |
 | [STORY-EP-018](./iter-003/stories/STORY-EP-018.md) | On-device selection-create surround | implement | dev | epaper | [SRS-EP-10], [SRS-EP-11], [SRS-EP-12], [SRS-EP-14] | done | iter-003 | 5 |
 | [STORY-EP-019](./iter-003/stories/STORY-EP-019.md) | On-device live manipulation and REQ-08 conformance | implement | dev | epaper | [SRS-EP-11], [SRS-EP-14] | done | iter-003 | 5 |
-| [STORY-EP-020](./iter-003/stories/STORY-EP-020.md) | Device one-way sync handshake and publish queue | implement | dev | epaper | [SRS-EP-08] | ready | iter-003 | 5 |
+| [STORY-EP-020](./iter-003/stories/STORY-EP-020.md) | Device one-way sync handshake and publish queue | implement | dev | epaper | [SRS-EP-08] | done | iter-003 | 5 |
 | [STORY-EP-021](./iter-003/stories/STORY-EP-021.md) | Ship device console logs on :9878 | implement | dev | epaper | [SRS-EP-15], [SRS-EP-16] | done | iter-003 | 3 |
 | [STORY-EP-022](./iter-003/stories/STORY-EP-022.md) | Design selection rubber-band and Enclose CTA | design | designer | epaper | [SRS-EP-12], [SRS-EP-10], [SRS-EP-11] | done | iter-003 | 3 |
 | [STORY-EP-023](./iter-003/stories/STORY-EP-023.md) | Rebase manipulation chrome onto four-tool chip | design | designer | epaper | [SRS-EP-12] | done | iter-003 | 2 |
@@ -59,7 +59,7 @@ generated_at: 2026-08-14T04:23:37+00:00
 | [STORY-IN-025](./iter-003/stories/STORY-IN-025.md) | Pickables inkScaleMode + members | implement | dev | infini | [SRS-IN-13] | blocked | iter-003 | 2 |
 | [STORY-IN-026](./iter-003/stories/STORY-IN-026.md) | Live resize tool_intent + undo origin | implement | dev | infini | [SRS-IN-13] | blocked | iter-003 | 3 |
 | [STORY-IN-027](./iter-003/stories/STORY-IN-027.md) | Desktop doc_change applier | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | done | iter-003 | 5 |
-| [STORY-IN-028](./iter-003/stories/STORY-IN-028.md) | Desktop handshake-gated doc_load | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | ready | iter-003 | 3 |
+| [STORY-IN-028](./iter-003/stories/STORY-IN-028.md) | Desktop handshake-gated doc_load | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | done | iter-003 | 3 |
 | [STORY-IN-029](./iter-003/stories/STORY-IN-029.md) | Device Log panel and :9878 listener | implement | dev | infini | [SRS-IN-17], [SRS-IN-18], [SRS-IN-19] | done | iter-003 | 3 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |

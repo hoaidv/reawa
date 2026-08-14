@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-14T03:48:51+00:00
+generated_at: 2026-08-14T04:38:41+00:00
 ---
 
 # Sync Report
@@ -50,7 +50,7 @@ _None._
 | [SRS-EP-05] | 4 | covered |
 | [SRS-EP-06] | 1 | covered |
 | [SRS-EP-07] | 15 | covered |
-| [SRS-EP-08] | 11 | covered |
+| [SRS-EP-08] | 8 | covered |
 | [SRS-EP-09] | 2 | covered |
 | [SRS-EP-10] | 23 | covered |
 | [SRS-EP-11] | 12 | covered |
@@ -65,8 +65,8 @@ _None._
 | [SRS-IN-04] | 10 | covered |
 | [SRS-IN-05] | 0 | missing |
 | [SRS-IN-06] | 0 | missing |
-| [SRS-IN-07] | 16 | covered |
-| [SRS-IN-08] | 2 | covered |
+| [SRS-IN-07] | 21 | covered |
+| [SRS-IN-08] | 4 | covered |
 | [SRS-IN-09] | 3 | covered |
 | [SRS-IN-10] | 4 | covered |
 | [SRS-IN-11] | 5 | covered |

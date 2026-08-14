@@ -18,11 +18,13 @@ StrokeSync::StrokeSync(QObject *parent)
     connect(&m_socket, &QTcpSocket::readyRead, this, &StrokeSync::onReadyRead);
     connect(&m_socket, &QTcpSocket::connected, this, [this]() {
         qInfo() << "[sync] connected to" << m_socket.peerAddress().toString() << m_socket.peerPort();
+        emit socketConnected();
         flushQueue();
     });
     connect(&m_socket, &QTcpSocket::disconnected, this, [this]() {
         qInfo() << "[sync] disconnected — will retry";
         m_inbound.clear();
+        emit socketDisconnected();
     });
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     connect(&m_socket, &QTcpSocket::errorOccurred, this, [this](QAbstractSocket::SocketError) {
@@ -35,6 +37,7 @@ StrokeSync::StrokeSync(QObject *parent)
         qWarning() << "[sync] socket error" << m_socket.errorString();
         m_socket.abort();
         m_inbound.clear();
+        emit socketDisconnected();
     });
 
     auto *retry = new QTimer(this);
@@ -63,6 +66,11 @@ void StrokeSync::connectToMac()
     // Mac USB IP (e.g. 10.11.99.12) — never the tablet's own 10.11.99.1.
     qInfo() << "[sync] connecting to" << QString::fromUtf8(host) << "9877";
     m_socket.connectToHost(QString::fromUtf8(host), 9877);
+}
+
+bool StrokeSync::isConnected() const
+{
+    return m_socket.state() == QAbstractSocket::ConnectedState;
 }
 
 void StrokeSync::sendLine(const QByteArray &jsonLine)

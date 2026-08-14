@@ -103,6 +103,7 @@ void runDocProbeSynth(TabletCanvasItem *canvas)
 TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     : QQuickPaintedItem(parent)
     , m_sync(new StrokeSync(this))
+    , m_oneWay(m_document)
 {
     m_paintsInk = qgetenv("RM_INK_MODE").trimmed().toLower() != "pool";
     m_beacons = envFlag("RM_INK_BEACON", false);
@@ -115,6 +116,22 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     m_flushClock.start();
     m_refreshClock.start();
     connect(m_sync, &StrokeSync::hostMessage, this, &TabletCanvasItem::onHostMessage);
+    connect(m_sync, &StrokeSync::socketConnected, this, [this]() {
+        m_oneWay.onLinkUp();
+        flushOneWayWire();
+    });
+    connect(m_sync, &StrokeSync::socketDisconnected, this, [this]() {
+        m_oneWay.onLinkDown();
+    });
+    auto *helloRetry = new QTimer(this);
+    helloRetry->setInterval(2000);
+    connect(helloRetry, &QTimer::timeout, this, [this]() {
+        if (!m_sync->isConnected() || m_oneWay.epochLive())
+            return;
+        m_oneWay.retransmitHelloIfWaiting();
+        flushOneWayWire();
+    });
+    helloRetry->start();
     m_sync->connectToMac();
     updateToolChipRect();
 }
@@ -488,6 +505,7 @@ void TabletCanvasItem::endStroke()
     // Safety net: commitOp already ended a successful gesture; this aborts an empty one.
     m_document.abortGesture();
     notifyHistory();
+    flushOneWayWire();
 
     m_current.clear();
     m_hasEmitted = false;
@@ -599,61 +617,53 @@ void TabletCanvasItem::ingestCurrentStroke()
 
 void TabletCanvasItem::syncBegin()
 {
-    QJsonObject obj{
-        {"type", "stroke_begin"},
-        {"id", m_activeStrokeId},
-        // World units — Infini stores as-is (ADR-0012).
-        {"brush", QJsonObject{{"width", m_activeWorldStrokeWidth}}},
-        {"cw", width()},
-        {"ch", height()},
-    };
-    // SRS-EP-04 / SRS-IN-13 — intent only; tool mode stays device-local.
-    if (m_toolMode == QLatin1String("ink_box"))
-        obj.insert(QStringLiteral("intent"), QStringLiteral("enclose"));
-    else
-        obj.insert(QStringLiteral("intent"), QStringLiteral("ink"));
-    m_sync->sendLine(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+    // @implements [SRS-EP-08] stroke_begin without intent
+    m_oneWay.beginPreviewStroke(m_activeStrokeId.toStdString());
+    flushOneWayWire();
 }
 
 void TabletCanvasItem::syncPoint(const Point &pt)
 {
-    // Wire uses panel-framebuffer coords (after digitizer map). Infini UV is then
-    // orientation-aware against the sync frame — do not send pre-map raw (double-rotate).
-    QJsonObject obj{
-        {"type", "stroke_point"},
-        {"id", m_activeStrokeId},
-        {"x", pt.pos.x()},
-        {"y", pt.pos.y()},
-        {"p", pt.pressure},
-    };
-    m_sync->sendLine(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+    m_oneWay.previewStrokePoint(m_activeStrokeId.toStdString(), pt.pos.x(), pt.pos.y(),
+                                pt.pressure);
+    flushOneWayWire();
 }
 
 void TabletCanvasItem::syncEnd()
 {
-    QJsonObject obj{
-        {"type", "stroke_end"},
-        {"id", m_activeStrokeId},
-    };
-    m_sync->sendLine(QJsonDocument(obj).toJson(QJsonDocument::Compact));
+    m_oneWay.endPreviewStroke(m_activeStrokeId.toStdString());
+    flushOneWayWire();
+}
+
+void TabletCanvasItem::flushOneWayWire()
+{
+    m_oneWay.onLocalCommit();
+    if (!m_sync->isConnected())
+        return;
+    for (const std::string &line : m_oneWay.takeOutbound())
+        m_sync->sendLine(QByteArray::fromStdString(line));
 }
 
 void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
 {
-    const QString type = obj.value(QStringLiteral("type")).toString();
-    if (type == QLatin1String("viewport")) {
+    const QString inboundType = obj.value(QStringLiteral("type")).toString();
+    if (inboundType != QLatin1String("viewport"))
+        qInfo() << "[sync] inbound" << inboundType << "live" << m_oneWay.epochLive()
+                << "handshake" << m_oneWay.handshakeInFlight();
+    const QByteArray raw = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+    m_oneWay.handleInboundLine(std::string(raw.constData(), static_cast<size_t>(raw.size())));
+    if (m_oneWay.viewportApplied() > 0 && obj.value(QStringLiteral("type")).toString()
+            == QLatin1String("viewport")) {
         applyViewport(obj);
-        return;
     }
-    if (type == QLatin1String("doc_snapshot")) {
-        applyDocSnapshot(obj);
-        return;
+    if (m_document.selectionId() == std::nullopt) {
+        m_selectedIds.clear();
+        m_selectedPickableId.clear();
     }
-    // Legacy PNG path ignored — paint stays on the local tree (SRS-EP-07 / ADR-0014 §2).
-    if (type == QLatin1String("region_refresh")) {
-        qInfo() << "[sync] ignoring region_refresh bitmap; paint stays on local tree";
-        return;
-    }
+    flushOneWayWire();
+    if (obj.value(QStringLiteral("type")).toString() == QLatin1String("doc_load")
+        && m_oneWay.epochLive())
+        scheduleVectorRasterize(true);
 }
 
 void TabletCanvasItem::applyViewport(const QJsonObject &obj)
@@ -782,6 +792,7 @@ void TabletCanvasItem::applyHistoryRestore(bool isUndo)
     notifyHistory();
     scheduleVectorRasterize(true);
     refreshSelectionChrome();
+    flushOneWayWire();
 }
 
 void TabletCanvasItem::pruneSelectionAfterHistory()
@@ -945,6 +956,7 @@ void TabletCanvasItem::encloseSelection()
     refreshSelectionChrome();
     scheduleVectorRasterize(true);
     notifyHistory();
+    flushOneWayWire();
 }
 
 void TabletCanvasItem::beginMarqueeOrLasso(const QPointF &canvasPos)
@@ -1142,6 +1154,7 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
         scheduleVectorRasterize(true);
         refreshSelectionChrome();
         notifyHistory();
+        flushOneWayWire();
         return;
     }
     if (kind == GestureKind::Resize || kind == GestureKind::SelectMove) {
@@ -1288,6 +1301,7 @@ void TabletCanvasItem::commitLiveManip()
     m_liveDirtyPrev = QRectF();
     refreshSelectionChrome();
     notifyHistory();
+    flushOneWayWire();
 }
 
 void TabletCanvasItem::endSelectionGesture()

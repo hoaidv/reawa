@@ -18,6 +18,7 @@
 
 #include "document/device_document.hpp"
 #include "document/manipulate.hpp"
+#include "document/one_way_sync.hpp"
 
 class StrokeSync;
 class ToolCanvasItem;
@@ -27,6 +28,7 @@ class ToolCanvasItem;
  * @implements [SRS-EP-01]
  * @implements [SRS-EP-02] vector ∩ drawingRegion paint (no bitmap push)
  * @implements [SRS-EP-07] local tree paint + stroke ingest
+ * @implements [SRS-EP-08] one-way sync handshake and publish
  * @implements [SRS-EP-11] live SmartGroup manipulation
  */
 class TabletCanvasItem : public QQuickPaintedItem
@@ -166,6 +168,7 @@ private:
     void syncPoint(const Point &pt);
     void syncEnd();
     void syncToolIntent(const QJsonObject &obj);
+    void flushOneWayWire();
     void onHostMessage(const QJsonObject &obj);
     void applyViewport(const QJsonObject &obj);
     void applyDocSnapshot(const QJsonObject &obj);
@@ -235,6 +238,7 @@ private:
     int m_viewportSeq = 0;
     WorldAabb m_drawingRegion;
     epaper::document::DeviceDocument m_document;
+    epaper::document::OneWaySyncSession m_oneWay;
     std::vector<std::int64_t> m_ingestNs;
     int m_ingestApplied = 0;
     int m_ingestRejected = 0;

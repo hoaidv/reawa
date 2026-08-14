@@ -22,10 +22,13 @@ public:
     void connectToMac();
     void sendLine(const QByteArray &jsonLine);
     bool enabled() const { return m_enabled; }
+    bool isConnected() const;
 
 signals:
     /** Host → device message (viewport / region_refresh). */
     void hostMessage(const QJsonObject &obj);
+    void socketConnected();
+    void socketDisconnected();
 
 private:
     void flushQueue();

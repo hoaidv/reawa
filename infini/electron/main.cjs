@@ -58,7 +58,8 @@ function sendToRmClients(obj) {
 
 /**
  * Bidirectional JSON-lines with Epaper StrokeSync.
- * RM → Mac: stroke_*; Mac → RM: viewport, region_refresh
+ * RM → Mac: hello, doc_change, queue_empty, load_ack, stroke_*
+ * Mac → RM: drain_ack, doc_load, viewport
  */
 function startStrokeIngestServer() {
   if (strokeServer) return;
@@ -78,6 +79,10 @@ function startStrokeIngestServer() {
         if (!line) continue;
         try {
           const obj = JSON.parse(line);
+          const t = obj && obj.type;
+          if (t && t !== "stroke_point") {
+            console.log("[stroke-ingest]", t, t === "doc_change" ? (obj.op && obj.op.type) : "");
+          }
           broadcastStroke(obj);
         } catch (e) {
           console.warn("[stroke-ingest] bad line", line.slice(0, 120));
