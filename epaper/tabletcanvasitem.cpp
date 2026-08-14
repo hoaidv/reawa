@@ -37,6 +37,15 @@ bool envFlag(const char *name, bool fallback)
     return !(v == "0" || v == "false" || v == "off" || v == "no");
 }
 
+/** Context toolbar under the box — south of the bottom handle (28 du visual). */
+QRectF modeChipRect(const QRectF &box)
+{
+    constexpr qreal w = 120.0;
+    constexpr qreal h = 36.0;
+    constexpr qreal gap = 32.0; // handle half (14) + pad
+    return QRectF(box.center().x() - w * 0.5, box.bottom() + gap, w, h);
+}
+
 /** Fixed screen slots for the render-path beacons (EXP-0001 Round 22). */
 constexpr int kStaticBeaconX = 40;
 constexpr int kStaticBeaconY = 60;
@@ -804,11 +813,13 @@ void TabletCanvasItem::refreshSelectionChrome()
     m_encloseVisible = isSelectionTool() && m_selectedIds.size() >= 2
         && m_selGesture != SelGesture::Marquee && m_selGesture != SelGesture::Lasso;
     if (m_encloseVisible && !bounds.isEmpty()) {
-        // Below the box — clear of the keep-size / scale-ink chip (bottom-center, 28 du tall).
         m_encloseCtaRect = QRectF(bounds.center().x() - 32.0, bounds.bottom() + 36.0, 64.0, 64.0);
     } else
         m_encloseCtaRect = QRectF();
-    m_selectionChromeDirty = bounds.united(m_encloseCtaRect).adjusted(-12, -12, 12, 12);
+    m_selectionChromeDirty = bounds.united(m_encloseCtaRect);
+    if (ids.size() == 1 && !bounds.isEmpty())
+        m_selectionChromeDirty = m_selectionChromeDirty.united(modeChipRect(bounds));
+    m_selectionChromeDirty.adjust(-12, -12, 12, 12);
     emit selectionChromeChanged();
     update();
 }
@@ -980,7 +991,7 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
                 const QPointF tl = worldToPanel(wb.x, wb.y);
                 const QPointF br = worldToPanel(wb.x + wb.width, wb.y + wb.height);
                 const QRectF r = QRectF(tl, br).normalized();
-                const QRectF tog(r.center().x() - 32.0, r.bottom() - 8.0, 64.0, 28.0);
+                const QRectF tog = modeChipRect(r);
                 toggleHit = tog.contains(canvasPos);
             }
             if (!lodAllows(wb.width, wb.height, panelScale()) && (handleHit || toggleHit
@@ -1275,9 +1286,10 @@ void TabletCanvasItem::paintSelectionChrome(QPainter *painter) const
     for (int i = 0; i < nH; ++i)
         painter->drawRect(QRectF(pts[i].x() - h * 0.5, pts[i].y() - h * 0.5, h, h));
     if (manipChrome && one) {
-        painter->fillRect(QRectF(r.center().x() - 32, r.bottom() - 8, 64, 28), Qt::white);
-        painter->drawRect(QRectF(r.center().x() - 32, r.bottom() - 8, 64, 28));
-        painter->drawText(QRectF(r.center().x() - 32, r.bottom() - 8, 64, 28), Qt::AlignCenter,
+        const QRectF chip = modeChipRect(r);
+        painter->fillRect(chip, Qt::white);
+        painter->drawRect(chip);
+        painter->drawText(chip, Qt::AlignCenter,
                           QString::fromStdString(one->inkScaleMode == "fixedInk" ? "Keep size" : "Scale ink"));
     }
     painter->restore();
