@@ -73,7 +73,8 @@ pan/zoom (viewport-driven) and through a drag. ToolChip is not pinned to the box
 No fifth **exclusive** ToolChip. Enclose stays off-chip. Undo/Redo are history **actions** after a
 gap ([ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md)). `cta.enclose` is **selection-contextual** on
 SelectionOverlay ([ADR-0016](../../../../adr/ADR-0016-selection-create-enclose-cta.md)).
-Primary inventory is four tools ([ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md)).
+Primary inventory is three exclusive tools + two recognizer toggles + Undo/Redo
+([ADR-0021](../../../../adr/ADR-0021-connector-toolchip.md); [ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md) superseded).
 `cta.create_smart_group` is the logic alias of `cta.enclose`. Enclose-with-Ink-box (Creation A)
 remains a separate path.
 
@@ -87,8 +88,9 @@ remains a separate path.
 | Enclose guard failed | Ordinary ink, unchanged | **No** banner, no error state, no chrome at all |
 
 The asymmetry is intentional: a *refused explicit command* deserves a reason, a *guard that did not
-fire* does not. The creator who drew a small rectangle in `Ink-box` mode drew a rectangle; telling
-them it "failed" would be telling them their ink was a mistake.
+fire* does not. The creator who drew a small rectangle with `Pen` and `recog.ink_box` armed drew a
+rectangle; telling them it "failed" would be telling them their ink was a mistake. There is no
+exclusive `ink_box` tool.
 
 ### Interaction map
 
@@ -98,7 +100,7 @@ them it "failed" would be telling them their ink was a mistake.
 | Box bounds | Pen press + drag | Move | **The ink moves.** Bounds track the ink at ≥5 Hz |
 | Canvas (`tool.sel_rect`) | Pen-down + move | Rect marquee | `ovl.marquee` AABB follows tip; pen-up → nodes with ≥80% inside the rect; then `ovl.nodes_bounds` + 6 anchors + `cta.enclose` |
 | Canvas (`tool.sel_freeform`) | Pen-down + move | Lasso | `ovl.lasso` polyline follows tip; pen-up closes path, hit-test ≥80% **inside polyline**; chrome → `ovl.nodes_bounds` (tight AABB) + 6 anchors + `cta.enclose` — **not** a dotted polyline |
-| `tool.sel_rect` / `tool.sel_freeform` | Finger tap on ToolChip | Arm that selection tool | Exclusive invert on primary bar ([ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md)) |
+| `tool.sel_rect` / `tool.sel_freeform` | Finger tap on ToolChip | Arm that selection tool | Exclusive invert on primary bar ([ADR-0021](../../../../adr/ADR-0021-connector-toolchip.md)); recognizer toggles dim |
 | `ovl.resize_handles` | Pen drag on a handle | Resize | Real ink resizes per mode; bounds follow the handle |
 | `tgl.ink_scale_mode` | Pen tap | Swap mode | `ind.mode_current` updates; effect visible on the next resize |
 | `cta.enclose` | Pen or finger tap | Selection-create | Box created, or `sel.create_refused` |
@@ -130,7 +132,7 @@ No hover, no focus, no cursor on this platform — do not design them.
 
 | State id | InkSurface | SelectionOverlay | Refresh |
 |---|---|---|---|
-| `sel.none` | Document | overlay hidden; ToolChip shows four tools (`sel_rect` or `sel_freeform` armed) | — |
+| `sel.none` | Document | overlay hidden; ToolChip shows 3 tools + 2 dimmed recognizer toggles (`sel_rect` or `sel_freeform` armed) | — |
 | `sel.marquee` | Document | `ovl.marquee` AABB follows tip; `tool.sel_rect` armed | Partial |
 | `sel.lasso` | Document | `ovl.lasso` polyline follows tip; `tool.sel_freeform` armed | Partial |
 | `sel.nodes_selected` | Document | `ovl.nodes_bounds` + 6 anchors + `cta.enclose` (polyline gone) | Partial |

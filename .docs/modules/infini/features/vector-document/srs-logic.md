@@ -97,8 +97,10 @@ Anchor = {
 2. `Frame` nodes appear only in `Document.rootChildren` (not under Group/Frame).
 3. `Group` may nest `Ink|Text|Primitive|Group|Connector|SmartGroup` (no `Frame`).
    `SmartGroup` v0 children are **Ink only**. Connectors may be root or Group children.
-4. Connector `from.nodeId` / `to.nodeId` must resolve at apply time or connector is marked
-   `invalid` (still in tree until product removes it).
+4. Connector `from.nodeId` / `to.nodeId` **should** resolve; if a target was deleted, the
+   connector **stays in the tree** and that end uses last live world pose
+   ([ADR-0020](../../../../adr/ADR-0020-connector-ink-geometry.md) §7). It is not marked `invalid`
+   and is not removed. Undo of the delete restores the same id and live resolve.
 5. Tree order = default z-order (later siblings paint above).
 6. Connector anchors attach to the **boundary** of the target node’s geometry (rect edges,
    ellipse circumference, line segment, group/frame/**SmartGroup** AABB). Preferred ports are

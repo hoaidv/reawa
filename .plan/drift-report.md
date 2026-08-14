@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-14T04:38:41+00:00
+generated_at: 2026-08-14T13:25:25+00:00
 ---
 
 # Drift Report
@@ -11,4 +11,6 @@ generated_at: 2026-08-14T04:38:41+00:00
 _None._
 
 ## Unresolved references
-_None._
+| Story | Reference | Problem |
+|---|---|---|
+| STORY-IN-030 | [REQ-09] | REQ not found in module |

@@ -1,23 +1,36 @@
 ---
 iter: iter-004
-goal: "Awaiting human PRD (post device-document campaign)"
+goal: "On-device connectors (REQ-09) + ToolChip 3 tools / 2 recognizer toggles / Undo+Redo (REQ-03)"
 start: 2026-08-14
 end: ""
-capacity: 0
-committed_points: 0
-status: planned
+capacity: 32
+committed_points: 32
+status: active
 ---
 
-# Iter 004 — Awaiting PRD
+# Iter 004 — On-device connectors
 
-Scaffold only. Previous campaign (Epaper owns the document, REQ-04…07) **closed** in
+Recognize hand-drawn connectors between SmartGroups and keep them attached when a node moves.
+ToolChip becomes **Rect | Freeform | Pen ⟨space⟩ Ink-box recognizer | Connector recognizer ⟨space⟩ Undo | Redo**.
+Default routing is computed from the rest spine → **Ink** (`morph`) or **Curve** (`cubic`).
+
+Lock: **horizontal · design-validated**. Implement stories are sliced and stay `draft`.
+
+Track: [TRACK-004](../tracks/TRACK-004-on-device-connectors.md) ·
+Board: [execution-board](./execution-board.md)
+
+Prior campaign (Epaper owns the document, REQ-04…07) **closed** in
 [iter-003](../iter-003/iter.md) · [retro](../iter-003/retro.md).
-
-**Do not** auto-commit `[REQ-08]`, CHL-0011, or CHL-0012. Human will supply the next PRD → `/pm`.
 
 ## Committed
 
-_none_
+- [STORY-EP-026](./stories/STORY-EP-026.md) — design — designer — 3 pts — ToolChip 3+2+Undo/Redo
+- [STORY-EP-027](./stories/STORY-EP-027.md) — design — designer — 3 pts — connector blink + Ink/Curve chrome
+- [STORY-EP-028](./stories/STORY-EP-028.md) — implement — dev — 3 pts — depends_on EP-026 · **frozen**
+- [STORY-EP-029](./stories/STORY-EP-029.md) — implement — dev — 5 pts — depends_on EP-028 · **frozen**
+- [STORY-EP-030](./stories/STORY-EP-030.md) — implement — dev — 5 pts — depends_on EP-027, EP-029 · **frozen**
+- [STORY-EP-031](./stories/STORY-EP-031.md) — implement — dev — 8 pts — depends_on EP-030 · **frozen**
+- [STORY-IN-030](./stories/STORY-IN-030.md) — implement — dev — 5 pts — depends_on EP-030 · **frozen**
 
 ## Carry-over candidates (not committed)
 
@@ -28,13 +41,17 @@ _none_
 
 ## Risks
 
-- Slicing leftover thickening as if it were the next Must
+- Default-on recognizers (D22) before the EXP-0002 guard corpus (ship gate, not lock gate)
+- Dispatch fall-through (D21) regressing EP-016 enclose / EP-017 membership
+- ToolChip rebase regressing EP-023 / EP-025 chrome
 
 ## Links to product docs
 
-- Closed campaign: epaper [REQ-04…07](../../.docs/modules/epaper/prd.md)
-- Parked: [node-manipulation](../../.docs/modules/epaper/features/node-manipulation/)
+- [REQ-09](../../.docs/modules/epaper/prd.md#device-connectors) · [REQ-03](../../.docs/modules/epaper/prd.md#tool-modes)
+- [connector-ink](../../.docs/modules/epaper/features/connector-ink/) · [tool-modes](../../.docs/modules/epaper/features/tool-modes/)
+- [ADR-0020](../../.docs/adr/ADR-0020-connector-ink-geometry.md) · [ADR-0021](../../.docs/adr/ADR-0021-connector-toolchip.md) · [ADR-0022](../../.docs/adr/ADR-0022-recognizer-dispatch.md)
+- [BS-0001](./brainstorms/BS-0001-auto-connector-ink.md) · [EXP-0002](./explorations/EXP-0002-connector-ink-warp.md)
 
 ## Execution board
 
-- None until the new lock. Frozen prior: [iter-003 board](../iter-003/execution-board.md)
+- [execution-board](./execution-board.md)

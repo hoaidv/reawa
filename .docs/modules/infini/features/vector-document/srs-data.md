@@ -179,7 +179,7 @@ Exact attribute grammar may tighten in an appendix without changing ADR-0010.
 | `reparent` | `{ id, newParentId, index }` |
 | `remove_node` | `{ id }` |
 | `set_text` | `{ id, runs }` |
-| `create_connector` | `{ id, from, to }` |
+| `create_connector` | `{ id, from, to, warpStyle, body?, restShape? }` — `from`/`to` carry `kind` (`edge`\|`centre`), `nodeId`, `edge`, `t`, `drawnEdgeLocal`; missing node uses last live pose ([ADR-0020](../../../../adr/ADR-0020-connector-ink-geometry.md)). Geometry is **derived** on apply; never streamed as samples. |
 | `create_smart_group` | `{ id, bounds, transform?, inkScaleMode?, children: InkNode[] }` (code) — older fixtures may use `childIds` |
 | `set_smart_transform` | `{ id, transform }` |
 | `set_ink_scale_mode` | `{ id, inkScaleMode }` |

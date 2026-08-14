@@ -35,7 +35,7 @@ the final say. This feature removes both.
 | Enclose recognition on the device (rect-only, guarded) | OCR / handwriting-to-Text; "is this text?" gating |
 | Selection-create from a surround stroke | AABB-only grouping with no boundary ink |
 | Draw-into membership for existing boxes | In-box alignment, reflow, auto-padding; sizing `FREE_FORM`/`WRAP_CONTENT`; `align-content` ([CHL-0012](../../../../../.plan/iter-003/challenges/CHL-0012-inkbox-sizing-align.md)) |
-| Select, move, resize, `inkScaleMode` toggle, deselect | **Rotation**, connector attachment — [REQ-08](../../prd.md#node-manipulation) |
+| Select, move, resize, `inkScaleMode` toggle, deselect | **Rotation** — [REQ-08](../../prd.md#node-manipulation). Connector attachment — [REQ-09](../../prd.md#device-connectors) |
 | Live direct manipulation of real ink | Advisory ghosts / outline stand-ins corrected later |
 | One undoable entry per gesture; linear redo | Branching history, per-sample undo |
 | Nested boxes resolved by paint order | Multi-select, marquee, enter/exit group — [REQ-08](../../prd.md#node-manipulation) |
@@ -48,7 +48,7 @@ the final say. This feature removes both.
 | Rule id | Statement (product language) | Inherits |
 |---|---|---|
 | BR-B01 | **The device recognizes and creates.** Enclose evaluation, guards, capture, and the resulting Smart Group all happen on the device at pen-up. No peer message is required for the box to exist or to be visible. | replaces BR-09g placement |
-| BR-B02 | **Never created unprompted.** Creation requires the `Ink-box` tool armed when the enclosing stroke is drawn, or an explicit Smart Group command on a selection. A rectangle drawn in `Pen` mode is ordinary ink, forever. | BR-09a |
+| BR-B02 | **Never created unprompted.** Creation requires **Ink-box recognition** armed when the enclosing stroke is drawn, or an explicit Smart Group command on a selection. Recognizers ship armed; a rectangle drawn with the toggle **off** is ordinary ink, forever. | BR-09a; BS-0001 D13/D22 |
 | BR-B03 | **Enclose guards.** An armed enclose creates a box only when the fitted rect is ≥ a fixed minimum size **and** contains ≥1 ink with ≥80% of its samples inside. Otherwise the stroke stays ordinary ink, with no error state. Enclosure is rectangle-only. | BR-09b |
 | BR-B04 | **Captures any ink.** No content test — handwriting, sketch, or shape all qualify. | BR-09c |
 | BR-B05 | **A box always reads as a box.** A successful create always has `role: boundary` ink — the creator's own stroke, never a synthetic rectangle. | BR-09d |

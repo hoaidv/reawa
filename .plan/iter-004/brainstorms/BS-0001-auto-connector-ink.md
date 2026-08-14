@@ -5,10 +5,10 @@ topic_source: chat 2026-08-14 (human, via /pm) — "Connector tool on device" pr
 date: 2026-08-14
 facilitator: pm
 participants: [pm, architect, designer, sm, dev, qa]
-status: concluded
-mode: keep-going          # human: "Keep brainstorming" — batched R2…R5, then decision rounds R6/R7
-rounds_planned: open      # ran 7
-relates-to: [REQ-05, REQ-06, REQ-08, SRS-EP-07, SRS-EP-08, SRS-EP-10, SRS-EP-11, SRS-IN-04, SRS-IN-09, ADR-0010, ADR-0011, ADR-0015, ADR-0017, CHL-0011, CHL-0012]
+status: concluded             # human 2026-08-14: complete; open questions → follow-ups / REQ-09
+mode: checkpoint
+rounds_planned: open      # ran 10
+relates-to: [REQ-05, REQ-06, REQ-08, REQ-09, SRS-EP-07, SRS-EP-08, SRS-EP-10, SRS-EP-11, SRS-IN-04, SRS-IN-09, ADR-0010, ADR-0011, ADR-0015, ADR-0017, ADR-0020, ADR-0021, ADR-0022, CHL-0011, CHL-0012, EXP-0002]
 ---
 
 # BS-0001 — Auto-recognized hand-drawn connectors (connector-ink)
@@ -66,10 +66,11 @@ edge or to the node centre.
 | **rest shape** | The body as drawn, stored once in spine-relative coordinates; never re-derived from a deformed state |
 | **(s, d)** | Per-sample storage: `s` = normalized arc-length position along the rest spine, `d` = signed perpendicular offset in world units |
 | **warp** | Pure function `(rest shape, endpoint anchors) → world samples`. No time, no iteration state |
-| **facing** | The outward direction an endpoint leaves its node (edge normal, or centre ray) — from `ml-mindmap` `NodeAnchor.facing` |
+| **facing** | The outward direction an endpoint leaves its node — drawn departure carried in the edge frame, or drawn departure clamped to a 60° cone about the centre ray |
+| **Ink / Curve** | Creator-facing names for `warpStyle: morph` / `warpStyle: cubic` |
 | **chain** | Several strokes recognized together as one connector body (UX2) |
-| **dangling end** | A connector end bound to a free canvas point instead of a node (`PointAnchor`) |
-| **terminal** | Arrowhead or decoration at an end, recognized from short strokes near that end |
+| **dangling end** | A connector end whose bound node is gone; still a `NodeAnchor` on that id, resolved from last live world pose until undo restores the node |
+| **terminal** | Arrowhead or decoration at an end, recognized from short strokes near that end (parked v1.1) |
 | **recognizer chain** | The ordered set of pen-up recognizers (enclose · draw-into · connector) with a single verdict |
 
 ## Session history
@@ -171,6 +172,24 @@ Human answers (2026-08-14): **Q6** failed enclose **falls through** to draw-into
 - **R7-I5** (designer): The chip must now carry **two visual languages at once** — exclusive tool selection *and* independent armed/dimmed toggle state — and both must stay legible during a trailing partial refresh. That is the real design risk in ASR-7, more than the extra tile.
 - **R7-I6** (dev): Dimmed-but-armed is state that survives tool switches, so the toggle tuple is part of device-local tool state (`SRS-EP-04`) and must latch at pen-down per D15 regardless of which tool is active.
 
+### Round 8 — converge · technique: human decision (facing)
+
+Human: edge facing is the **drawn departure**, carried in the edge frame. Perpendicular leave abandoned (D26). Identity at rest is an invariant (D27, later amended to rest-shape reconstruction).
+
+### Round 9 — build & challenge · EXP-0002 R5 (preserve vs smooth)
+
+Human named the conflict: local end-blend cannot look globally smooth. Directed a three-way tournament (Local / Always-cubic / Morph). Measurement: no mix function is both; Cubic is ~10 u from the rest spine *at rest*.
+
+### Round 10 — converge · technique: human decision (W1)
+
+Human: **"I love 2 algorithms: Always-cubic and Morph, keep both as 2 routing options."** Spike stays on `exp/connector-ink-warp`. `/architect` records [ADR-0020](../../.docs/adr/ADR-0020-connector-ink-geometry.md). Local G1 is not a stored style. Morph is the ADR default. Continue brainstorming remaining connector details (this round's open questions).
+
+- **R10-I1** (pm): D32. `warpStyle` is a persisted field, not a ToolChip tool. Default Morph until the human says otherwise.
+- **R10-I2** (architect): ADR-0020 accepted; amends ADR-0010 §6. Production re-implements; spike is numeric reference.
+- **R10-I3** (pm): D10 still excludes squared/rounded/obstacle. The two spines are deformation, not that picker — but the human called them "routing options", so creator-facing vocabulary is still open.
+- **R10-I4** (designer): two styles plus centre-vs-edge on a modifier-less tablet is a selection-chrome problem, same family as ink-box handles. Do not add a fifth exclusive tool.
+- **R10-I5** (pm): Names **Ink** / **Curve**. Recognition chrome is a one-shot blink of connector + both nodes — not a style label. Delete **keeps** connectors via last-live pose cache (D39), which retires the shipped `invalid` connector rule when REQ-09 lands.
+
 ## Research & sources
 
 - [R2-I1] MyScript Interactive Ink — *Shapes and connectors* (developer.myscript.com, Diagram features): "Once two items are linked, moving/resizing one means moving/resizing the other accordingly"; "Draw a shape connector between two shapes to link them"; "Draw two shape connectors close to each other to link them"; connector links to the shape, not the text inside it. (**analog** — commercial pen product, validates both UX1 and UX2 chaining as shippable)
@@ -187,20 +206,20 @@ Human answers (2026-08-14): **Q6** failed enclose **falls through** to draw-into
 |---|---|---|---|---|
 | D1 | Connector-ink is the existing `Connector` kind extended with an ink **body** (raw strokes as children, draw order) plus a derived **spine** — not a new node kind, not a bespoke op family | decided | — | R2-I8, R3-I2 |
 | D2 | Recognition is **automatic** at `pen` pen-up, guarded by the R2-I3 ladder, reversible by **one** undo, and announced by chrome — **no fifth ToolChip tool**. Conditional on PM resolving the BR-B02 conflict (ASR-4) | **superseded** by D13/D14 | R1-I5 (manual connector tool) | R2-I2, R2-I3, human directive |
-| D3 | UX3 deformation = **rest shape in spine coordinates `(s, d)` + endpoint-driven similarity warp + Hermite tangent blend at the ends**. Live physics rope rejected for v1 | decided | EH1 (fit-only), EH2 (rope) | R3-I2…R3-I6, R3-I10 |
+| D3 | UX3 deformation = **rest shape in spine coordinates `(s, d)` + endpoint-driven similarity warp + Hermite tangent blend at the ends**. Live physics rope rejected for v1 | **superseded** by D32 | EH1 (fit-only), EH2 (rope) | R3-I2…R3-I6, R3-I10; human R9 |
 | D4 | Connector geometry is **derived**, never re-published on move: a node move emits only its own `set_smart_transform`; 0 extra ops, 0 extra undo entries | decided | — | R3-I7 |
 | D5 | Rest shape is **never re-baked** from a warped result | decided | — | R3-I8 |
 | D6 | UX2 uses **retro-chaining at completion** (no pending half-connector node); free-end feedback is chrome only | decided | R2-I6(a) | R2-I6, R2-I7 |
 | D7 | Recognizer precedence at `pen` pen-up: **draw-into membership → connector → ordinary ink**; `ink_box` still goes to enclose. Never flip a shipped outcome | decided | — | R2-I4 |
 | D8 | `d` is stored **absolute** (world units); `s` normalized; no mirroring of `d` | decided | — | R3-I9 |
-| D9 | Anchor model gains `facing` and a `centre` kind; edge binds leave **perpendicular** to the edge, centre binds leave along the centre ray | decided | — | R1-I2, R3-I2, ADR-0010 §6 |
-| D10 | Routing styles (squared / rounded / bezier presentation) and obstacle-aware matrix routing are **out** of v1 — the warp needs no router | decided | R1-I3 | R4-I5 |
+| D9 | Anchor model gains `facing` and a `centre` kind; centre binds leave along the centre ray | decided; **perpendicular clause superseded by D26** | — | R1-I2, R3-I2, ADR-0010 §6 |
+| D10 | Orthogonal routing styles (squared / rounded / bezier-as-route-vertices) and obstacle-aware matrix routing are **out** of v1 | decided; **picker-for-deformation-spines superseded by D32** | R1-I3 | R4-I5; human R10 |
 | D11 | Terminals / arrowheads deferred to v1.1, but a `terminal` slot per end is reserved in the model now | deferred | — | R2-I9 |
 | D12 | Interior **pins** (piecewise warp preserving a deliberate detour) and a deterministic fixed-iteration `rope` class are the named v2 upgrade paths | deferred | — | R3-I10 |
 | D13 | **BR-B02 upheld** — nothing is created unprompted; recognition requires an armed recognizer | decided | D2 (auto in Pen mode) | human R6, R6-I2 |
 | D14 | ToolChip becomes **3 exclusive tools** (`sel_rect` · `sel_freeform` · `pen`) **+ 2 independent recognizer toggles** (`recog.ink_box`, `recog.connector`). `ink_box` stops being an exclusive tool | decided | `ADR-0017` four-tile exclusive inventory | human R6, R6-I1 |
 | D15 | Tool **and** both toggle states latch at pen-down for the whole stroke | decided | — | R6-I5 |
-| D16 | Endpoint binding: **edge-first with perpendicular leave**; centre binding available as the alternative | decided | — | human R6 |
+| D16 | Endpoint binding: **edge-first**; centre binding available as the alternative | decided; **"perpendicular leave" superseded by D26** | — | human R6 |
 | D17 | A centre-bound end **clips the ink at the box boundary** (`Avoid`), so the drawn line never crosses content inside the box | decided | — | human R6 |
 | D18 | v1 connector targets: **SmartGroup only** | decided | — | human R6 |
 | D19 | The warp **EXP runs before the campaign lock**; PRD/SRS do not commit the deformation clause until the EXP verdict | decided | — | human R6 |
@@ -210,6 +229,21 @@ Human answers (2026-08-14): **Q6** failed enclose **falls through** to draw-into
 | D23 | Toggles are **dimmed** (armed state retained) while a Selection tool is active | decided | — | human R7 |
 | D24 | Creator-facing vocabulary: **"Ink-box recognition"** and **"Connector recognition"** (`recog.ink_box`, `recog.connector`) | decided | — | human R7 |
 | D25 | Because recognizers ship armed (D22), the **false-positive rate is a ship gate**, not a metric — a number agreed before ship, measured on a corpus that includes a fresh page's first 20 strokes | decided | — | R7-I2 |
+| D26 | An edge anchor's `facing` is the **drawn departure direction**, stored in the edge's local frame and carried rigidly with the edge (so it follows a move, resize and rotation). **Perpendicular leave is abandoned as a goal** — EXP-0002 R3 measured it costing 7.8 u of the creator's own ink at rest, because a hand-drawn line leaves a face 36–46° off its normal | decided | **supersedes** D9 perpendicular clause + D16 "perpendicular leave"; conflicts with the human's own EH2 rope property "attach perpendicular to face/edge" | human R8, EXP-0002 R3 §7.1 |
+| D27 | **Identity at rest** is an invariant, not an aspiration: with nothing moved, warp output is byte-identical to the **rest-shape reconstruction** — achieved by having **no base blend length at all**, so zero turn means zero blend arc. Measured bitwise (0.000000000 u) and *continuous* — 0.04 u at 2° of rotation, versus a 4.1 u pop for the deadband alternative | decided; **amended** from "byte-identical to the drawn ink" | the `(s, d)` store itself loses **0.07 u** on a wiggly line before any blend runs — this is *representation fidelity*, an order of magnitude below ink width, and closing it (storing a tangential component per sample) is a **v2 representation path, not taken** | human R8, EXP-0002 R4 |
+| D29 | A **centre** anchor's facing is the **drawn departure clamped to a 60° cone** about the peer ray — not the raw ray, which sits 8–23° off the ink and would move it 2.5 u at rest. The cone angle is load-bearing: 90° overshoots 12–14 times, 60° keeps 0 cusps, 0 overshoot, and still rescues every U-turn | decided | — | EXP-0002 R4 |
+| D30 | The departure-facing test is **analytic** (assert the constructed derivative equals the facing — exactly zero by construction). A flat ±5° *sampled* bar is **retired**: it is mathematically incompatible with the 12 u radius bar, since a secant over baseline `b` on radius `R` is unavoidably `28.6·b/R` degrees off tangent. Any sampled check must be radius-implied | decided | flat ±5° facing bar (W4 as originally written) | EXP-0002 R4 |
+| D31 | `turnRoomFactor` is a **window (4.5–6.5, ship 5.0), not a floor** — too much blend arc is its own failure mode. The ADR records the **re-tune method** (sweep the constant, count new cusps over the population), not just the value, because an envelope-of-minima estimator silently picks a failing value | decided | round-3 value 7.0, which now **fails** | EXP-0002 R4 |
+| D32 | A connector stores **`warpStyle: morph \| cubic`**. These are deformation spines, not the ml-mindmap routing picker (D10 still excludes squared/rounded/obstacle). Local G1 end-blend is **not** a stored style. Recorded as [ADR-0020](../../.docs/adr/ADR-0020-connector-ink-geometry.md) | decided | D3 | human R10, EXP-0002 R5 W1 |
+| D33 | **Auto-pick `warpStyle` at recognition from the rest spine:** at most one inflection on `S` → `cubic`; two or more → `morph`. The test is on `S`, never rest-fit to `C` (~10 u even for a smooth arc). Creator can override. Silent style choice, announced by the same "recognized" chrome; one undo reverts the whole recognition | decided | ADR-0020's interim "Morph is the default" | human R10 |
+| D34 | After recognition, **selection chrome** on a selected connector: two-state style control (**Ink / Curve**) and per-end kind (Edge/Centre). Not a ToolChip tool, not a draw-time toggle. Same family as ink-box handles | decided | draw-time toggle; parking until REQ-08 | human R10 |
+| D35 | v1 connector **presentation is the warped ink as drawn**. Width comes from the stroke. No dashed toggle, no double-line, no arrowheads this campaign (D11 stays parked) | decided | width/dash Could; pulling D11 forward | human R10 |
+| D36 | Connector **re-warps live during the drag** of a bound node, not only at commit. Partial-refresh only (old∪new AABB); 0 full-panel invalidations. Missed frame → last pose, commit warp on pen-up. **Supersedes ASR-6 "commit only"** — that was an e-ink guess; CPU is ~7 µs, the panel constraint remains | decided | ASR-6 commit-only | human R10 |
+| D37 | Creator-facing names: **Ink** = `morph`, **Curve** = `cubic`. Code and ADR keep `warpStyle: morph \| cubic`; chrome and selection control say Ink / Curve | decided | — | human R10 |
+| D38 | Recognition chrome **only announces that a connector was created** — it does not name the auto-picked style. One-shot emphasis: **blink the new connector together with its two bound nodes**, once. Partial refresh; no persistent badge. Designer owns waveform and duration | decided | style-named toast; blink-connector-only | human R10 |
+| D39 | **Deleting a bound box keeps every connector.** Ends stay `NodeAnchor`s on the deleted id; warp resolves a missing node from that end's **last live world pose** (derived cache, not an op). Undo of the delete restores the box with the same id and the ends glue back. 0 connector ops on delete. **Supersedes** `SRS-IN-04` invariant 4 / BR-08 "connector becomes `invalid`" and REQ-08 `journey.delete_referenced` for this campaign | decided | mark invalid; delete the connector; convert to PointAnchor (extra ops) | human R10 |
+| D40 | **UX2 auto-pick uses the merged rest spine**, not each stroke. After retro-chain completes, inflection count of `S` chooses Ink/Curve once for the whole connector. Follow-up may retune the cutoff on a real corpus; the intent does not reopen | decided | per-stroke style | PM close of BS-0001 |
+| D28 | The adaptive blend is an **absolute arc length**, not a fraction of the connector: `blendArc_per_end = min(max(blendLength·L', turnRoomFactor · minInkRadius · turn_rad), blendCap·L')`. Turning through an angle at a radius costs that much arc regardless of line length, so no dimensionless factor exists | decided | PM's proposed `T·L'·(1 + α·turn)` form | EXP-0002 R3 |
 
 ## Assumptions & riskiest bets
 
@@ -226,10 +260,10 @@ Human answers (2026-08-14): **Q6** failed enclose **falls through** to draw-into
 
 **v1 core set (MoSCoW)**
 
-- **Must** — UX1 single-stroke recognition with the guard ladder; connector-ink node + one `create_connector` op carrying body + anchors; edge anchors with `facing`; the warp on move/resize/rotate of either node; one undo entry per gesture; mirror parity (0 divergent figures); "recognized" chrome + one-undo revert; invalid-on-delete behaviour.
-- **Should** — UX2 retro-chaining; centre anchors; refuse/no-op feedback consistent with enclose (no error banner); `[connector]` device-log token.
+- **Must** — UX1 single-stroke recognition with the guard ladder; connector-ink node + one `create_connector` op carrying body + anchors + `warpStyle`; edge anchors with drawn `facing`; Morph and Cubic warps, auto-picked at recognition (D33), shown as **Ink / Curve** (D37); live re-warp during drag of a bound node (D36); selection chrome to change style and end kind (D34); one-shot blink of connector + both nodes on create (D38); keep connectors when a bound box is deleted (D39); one undo entry per gesture; mirror parity (0 divergent figures); one-undo revert of recognition.
+- **Should** — UX2 retro-chaining; centre anchors; creator can change `warpStyle` and end kind after recognition; refuse/no-op feedback consistent with enclose (no error banner); `[connector]` device-log token.
 - **Could** — terminals/arrowheads (v1.1); dashed style + 2–3 width presets; interior pins.
-- **Won't (this campaign)** — physics rope; obstacle-aware routing; routing-style picker; desktop-side connector authoring; connectors to non-SmartGroup kinds; connector labels.
+- **Won't (this campaign)** — physics rope; obstacle-aware routing; squared/rounded/orthogonal-route picker; desktop-side connector authoring; connectors to non-SmartGroup kinds; connector labels; dash/double-line/arrowheads as presentation.
 
 **North Star** — share of drawn connectors the creator never has to repair or redraw after a node move (target ≥90% on a scripted diagram session).
 
@@ -256,7 +290,7 @@ Human answers (2026-08-14): **Q6** failed enclose **falls through** to draw-into
 | ASR-3 — Anchor model gains `facing` + `centre` kind | Perpendicular attachment and centre binding are product requirements from the human; the current schema has `port` / `boundary` only | Anchors re-resolve on transform with 0 detachment | **yes** — `ADR-0010` §6 amendment |
 | ASR-4 — **BR-B02 conflict:** "Never created unprompted" is a shipped product rule. ~~Automatic connector recognition would be the first unprompted creation~~ | **Resolved R7** — human upheld the rule via recognizer toggles (D13/D14), but chose **default-armed** (D22), which retires BR-B02's "ordinary ink, forever" clause and converts the false-positive rate into a ship gate (D25) | Wording change in `BR-B02` + the ship gate in `## Goal prioritisation` | superseded by ASR-7 |
 | ASR-5 — Recognizer chain becomes a first-class ordered component with one verdict per pen-up | Today the pen-up dispatch is a two-branch table; a third recognizer with precedence and logging is a structural change to the hot path | Ordered, logged, fixture-tested; 0 change to `REQ-01` ink latency | with the geometry ADR |
-| ASR-6 — Deformation runs at **commit**, not per frame | e-ink partial-refresh budget (`BR-N06`) | 0 full-panel invalidations during a drag; re-warp p95 ≤300 ms | no |
+| ASR-6 — Deformation runs **live during drag**, partial-refresh only | e-ink panel budget (`BR-N06`); CPU is not the constraint (~7 µs) | 0 full-panel invalidations during a drag; live pose on old∪new AABB; commit warp on pen-up | no — refresh path, not a new ADR; amends ADR-0020 §5 |
 | ASR-7 — **Tools vs recognizers split** (D14): 3 exclusive tools + 2 independent recognizer toggles supersedes `ADR-0017`. Ripples into `REQ-03` ("exactly four tools", "no sub-mode strip"), `SRS-EP-04`/`SRS-EP-05` (arming, status affordance), `SRS-EP-10` trigger-dispatch table, `BR-B02` wording, and the `UI-EP-02` design package | Changes shipped, human-PASSed chrome (EP-023 rebase, EP-025 ToolCanvasLayer) and the arming contract every recognizer reads | 0 regressions in EP-016 enclose / EP-017 membership / EP-018 selection-create / EP-019 manipulation / EP-025 chrome outcomes; active-state legible under partial refresh | **yes** — supersede `ADR-0017`; needs a `/designer` story |
 | ASR-8 — Both recognizers may be armed on one stroke (impossible today) | Requires a deterministic closure classifier and an explicit answer on whether a **failed enclose falls through to draw-into** (Q6) — the current spec says membership never runs on an enclose stroke | One verdict per pen-up, logged; fixtures for closed/open/ambiguous strokes | with the geometry ADR |
 
@@ -278,10 +312,7 @@ one-way sync contract. Three findings carry it:
    independent recognizer toggles. It keeps `BR-B02`'s "never unprompted" promise structurally while
    giving the creator both pure paper and one-fewer mode switch.
 
-**Why conclude now.** All seven definition-of-enough items are addressed, the mandatory pre-mortem
-ran in Round 4, and every remaining unknown is either an **empirical bet with an EXP route** (warp
-naturalness, guard false-positive rate) or an **explicitly parked v1.1/v2 item** — not a gap in the
-framing. Further rounds would restate rather than resolve.
+**Re-close 2026-08-14 (human).** Warp W1 chose **Ink + Curve** as stored styles ([ADR-0020](../../.docs/adr/ADR-0020-connector-ink-geometry.md)); ToolChip is 3+2+undo/redo ([ADR-0021](../../.docs/adr/ADR-0021-connector-toolchip.md)); remaining open questions (blink waveform, inflection cutoff on a real corpus, live-drag panel rate) go to follow-up stories / EXP-0002 Initiative 2, not more brainstorm rounds. Finding 2 above is **superseded** by D32: local end-blend is not a stored style; deformation is Morph (Ink) or Cubic (Curve), auto-picked from the merged rest spine (D33, D40).
 
 **Definition-of-enough checklist**
 
@@ -316,9 +347,10 @@ question: the EXP below blocks the campaign lock (D19) and the false-positive ba
 
 Sequenced actions (human chose **EXP before campaign lock**, so the lock stays open):
 
-- [ ] `/explore` **[EXP-0002](../explorations/EXP-0002-connector-ink-warp.md)** — (a) warp naturalness on the host harness over a scripted 20-case move set; (b) guard false-positive rate on a real ink corpus incl. a fresh page's first 20 strokes. Blocks the campaign lock (D19) and the ship gate (D25) → owner **architect + qa** · **drafted 2026-08-14, `status: proposed`**
-- [ ] `/pm` mint **[REQ-09] On-device connectors** + amend **[REQ-03]** for the tools-vs-recognizers split (D14/D24); retire the five clauses listed in the Conclusion with `superseded-by`, propagating lifecycle per element; rank REQ-09 **above** REQ-08 / CHL-0011 / CHL-0012 → owner **pm**
-- [ ] `/architect` supersede **ADR-0017** (ASR-7); new ADR for connector-ink geometry (ASR-1); amend **ADR-0010** §6 for `facing` + `centre` (ASR-2, ASR-3); closure classifier + one-verdict dispatch (ASR-5, ASR-8) → owner **architect**
-- [ ] `/designer` ToolChip design story — 3 tools + 2 toggles, active/armed states legible under partial refresh, do-not-regress list for EP-023 / EP-025 → owner **designer**
-- [ ] `/pm` flip the MASTER `execution:` lock to this campaign **after** the EXP verdict (currently `features: []`, `stop_line: srs-ready`, `autonomy: ask`) → owner **pm**
-- [ ] `/sm` slice only after PRD → SRS (stop line is `srs-ready`) → owner **sm**
+- [x] `/explore` **[EXP-0002](../explorations/EXP-0002-connector-ink-warp.md)** — (a) warp naturalness: W1 closed as both styles (ADR-0020); W2–W6 passed on the host harness. (b) **guard corpus still open** — blocks **ship** (D25), not lock → owner **qa**
+- [x] `/pm` mint **[REQ-09] On-device connectors** + amend **[REQ-03]** for the tools-vs-recognizers split (D14/D24); retire the five clauses listed in the Conclusion with `superseded-by`, propagating lifecycle per element; rank REQ-09 **above** REQ-08 / CHL-0011 / CHL-0012
+- [x] `/architect` connector-ink geometry ADR (ASR-1) + ADR-0010 §6 amendment (ASR-2, ASR-3) → **[ADR-0020](../../.docs/adr/ADR-0020-connector-ink-geometry.md)**
+- [x] `/architect` supersede **ADR-0017** (ASR-7) → **[ADR-0021](../../.docs/adr/ADR-0021-connector-toolchip.md)**; closure classifier + one-verdict dispatch (ASR-5, ASR-8) → **[ADR-0022](../../.docs/adr/ADR-0022-recognizer-dispatch.md)**
+- [ ] `/designer` ToolChip design story — 3 tools + 2 toggles, active/armed states legible under partial refresh, do-not-regress list for EP-023 / EP-025 → **[STORY-EP-026](../stories/STORY-EP-026.md)** ∥ connector chrome **[STORY-EP-027](../stories/STORY-EP-027.md)**
+- [x] `/pm` + `/sm` flip the MASTER `execution:` lock to this campaign (horizontal · `design-validated` · TRACK-004)
+- [x] `/sm` slice iter-004 stories (EP-026…031, IN-030); implement UI stays `draft` until design is `done`

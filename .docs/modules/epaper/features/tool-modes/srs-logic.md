@@ -32,8 +32,10 @@ Touch-on-chip uses MouseArea; pen-on-chip press is ignored for ink (fallback pat
 
 | Rule | Value |
 |---|---|
-| Tools | `sel_rect` \| `sel_freeform` \| `pen` \| `ink_box` |
-| Default on launch | `pen` — the device must still be a notebook if nothing else works |
+| Tools | `sel_rect` \| `sel_freeform` \| `pen` |
+| Recognizer toggles | `recog.ink_box` \| `recog.connector` — independent; both default **on**; dimmed (state kept) while a Selection tool is active ([ADR-0021](../../../../adr/ADR-0021-connector-toolchip.md)) |
+| Latch | Exclusive tool **and** both toggles latch at pen-down for the whole stroke |
+| Default on launch | `pen`, both recognizers armed — the device must still be a notebook if nothing else works |
 | Ownership | **Device-local UI state.** Never sent to Infini, never set by Infini (ADR-0013 §1) |
 | Persistence | Not persisted across restarts in v0 |
 | Input | Finger touch on the ToolChip (pen-on-chip fallback). Pen events on the chip are not ink |
@@ -42,22 +44,21 @@ Touch-on-chip uses MouseArea; pen-on-chip press is ignored for ink (fallback pat
 
 | Tool | Pen down on canvas | Finger / pen on ToolChip | Finger on canvas |
 |---|---|---|---|
-| `pen` | Local ink → ingest as an `Ink` node at pen-up ([SRS-EP-07](../device-document/srs-logic.md)); draw-into membership evaluated ([SRS-EP-10](../ink-box/srs-logic.md)) | Switch tool | Ignored (no on-device pan — PRD Non-Goal) |
-| `ink_box` | Local ink → evaluate enclose at pen-up ([SRS-EP-10](../ink-box/srs-logic.md)) | Switch tool | Ignored |
+| `pen` | Local ink → **dispatch** at pen-up ([ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)): enclose / membership / connector / ordinary ink | Switch tool or flip a toggle | Ignored (no on-device pan — PRD Non-Goal) |
 | `sel_rect` | Rect marquee / pick / move / resize against the local document ([SRS-EP-10](../ink-box/srs-logic.md), [SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Ignored |
 | `sel_freeform` | Freeform lasso / pick / move / resize ([SRS-EP-10](../ink-box/srs-logic.md), [SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Ignored |
 
-`ink_box` and `pen` share one ink path — same Round 19 map, same paint, byte-identical while the pen
-is down. They differ only in **what the device does at pen-up**, so ink latency cannot regress by
-tool ([SRS-EP-01](../local-pen-ink/srs-logic.md)).
+`pen` is the only inking exclusive tool — same Round 19 map, same paint. Recognizers differ only
+in **what the device does at pen-up**, so ink latency cannot regress by toggle
+([SRS-EP-01](../local-pen-ink/srs-logic.md)).
 
 ### Arming
 
 | Rule | Value |
 |---|---|
-| `ink_box` stays armed | Repeated boxes without re-tapping, until the creator switches tool |
-| Arming is the confirmation | No propose/accept step; creation is immediate and undoable (ADR-0013, ADR-0011 §4A as amended) |
-| Refused enclose | The stroke stays ordinary ink; the tool stays armed; no banner |
+| Recognizers stay armed across strokes | Until the creator toggles them off |
+| Dimmed under Selection | Armed state retained; they do not run |
+| Refused enclose or connector | The stroke stays ordinary ink (or falls through per ADR-0022); no banner |
 
 ### Tool independence
 
@@ -69,7 +70,7 @@ Tool mode is device-local and now trivially so: the peer has no tools this campa
 | Case | Behavior |
 |---|---|
 | Touch layer unavailable at runtime | Fall back to `pen` permanently; surface it in the status line; never trap the creator in a non-drawing tool |
-| Session down | **All four tools stay fully available** — editing is local ([REQ-04](../../prd.md#device-document)). Only publishing waits; the status affordance shows changes are queued |
+| Session down | **All three exclusive tools and both toggles stay fully available** — editing is local ([REQ-04](../../prd.md#device-document)). Only publishing waits; the status affordance shows changes are queued |
 | Pen-down starts on the ToolChip bounds | Not ink; may arm a tool when pen-on-chip fallback is active |
 | Tool switched mid-gesture | The in-flight gesture completes under the tool it started with; the new tool applies from the next pen-down |
 

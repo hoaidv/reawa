@@ -72,11 +72,12 @@ right trade on a device whose scarce resource is *latency*, not storage.
 |---|---|---|
 | Vector document (Ink, Text, Primitive, Group, Frame, Connector, SmartGroup) | [domain/vector-document](../../domain/vector-document.md) | Link only — the device implements these semantics, it does not redefine them |
 
-Device-authored kinds this iter: `Ink`, `SmartGroup`. Other kinds arrive via `doc_load` and must
+Device-authored kinds this iter: `Ink`, `SmartGroup`, `Connector` ([REQ-09](./prd.md#device-connectors),
+[ADR-0020](../../adr/ADR-0020-connector-ink-geometry.md)). Other kinds arrive via `doc_load` and must
 round-trip and paint; unknown kinds are carried opaquely so a device session cannot make the
 desktop's file lossy.
 
-Device-local, never shared: tool mode, selection, undo ring, publish queue, session epoch
+Device-local, never shared: exclusive tool, recognizer toggles, selection, undo ring, publish queue, session epoch
 ([SRS-EP-09](./features/device-document/srs-data.md)).
 
 ## Context view

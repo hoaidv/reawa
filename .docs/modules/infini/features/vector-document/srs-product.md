@@ -51,7 +51,7 @@ saveable, and syncable — not a pile of disconnected strokes.
 | BR-09i | **`fixedInk` per-ink offset.** Each `role: content` ink tracks **its own** relative offset / UV in the box. On bounds/scale change under `fixedInk`, adjust each ink independently so its UV is preserved and sample size stays fixed — a newly drawn stroke never moves older content. `withBounds` scales content with the box. Boundary ink always transforms. | Preferred impl model for architect/dev |
 | BR-09j | **Selection create needs a surround stroke.** Among the selected inks, one stroke must contain ≥80% of each other selected stroke’s samples (open stroke OK — test via artificial closed path). That stroke → `boundary`; others → `content`. If none qualify → **cannot create**. | Solution 3 guard |
 | BR-07 | Unsaved edits mark the document **dirty**; failed open/parse must not wipe the on-screen tree. | doc.* states |
-| BR-08 | Deleting a node that a connector references must not crash; connector becomes invalid and is shown as error or removed per edge policy below. | |
+| BR-08 | Deleting a node that a connector references must not crash; the connector **stays** and that end uses last live pose until undo restores the node ([ADR-0020](../../../../adr/ADR-0020-connector-ink-geometry.md)). | REQ-09 D39 |
 
 ### Edge cases
 

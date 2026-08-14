@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.5.1
+version: 0.6.0
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -55,7 +55,9 @@ viewed at scale, and saved.
 | Manipulation commit fidelity | Committed geometry = last previewed geometry; 0 px jump on pen-up; 0 snap-backs in a 20-gesture set | Manual QA |
 | Editing works with the link down | 100% of create / move / resize / undo succeed offline | Manual QA |
 | Device change → desktop mirror | p95 ≤ 300 ms after the op; 0 divergent figures after settle | Manual / trace |
-| Inbound document messages after initial load | **0** during a session | Trace |
+| Connector recognized → visible on panel | p95 ≤500 ms after pen-up (same bar as enclose) | Manual / trace |
+| Connector re-warp during bound-node drag | ≥5 Hz partial refresh; 0 full-panel invalidations; committed geometry = last previewed | Manual QA |
+| Default-on recognizer false positives | ≤2% of `pen` strokes on a real corpus incl. a fresh page's first 20 strokes | EXP-0002 G1/G2 — **ship gate** |
 
 ## [REQ-01] Local pen-matched ink {#local-pen-ink}
 - **Priority:** Must · **Traces:** [BRD-06]
@@ -93,40 +95,52 @@ viewed at scale, and saved.
   matches thinned existing vectors (world width × current panel scale).
 
 ## [REQ-03] On-device tool modes {#tool-modes}
-<!-- revised: 2026-08-13 — CHL-0008. Tools now act on the local document instead of emitting
-     advisory intent to Infini. Same id, content revised; no supersession. -->
+<!-- revised: 2026-08-14 — BS-0001 / ADR-0021. Three exclusive tools + two recognizer
+     toggles + Undo/Redo actions. Same id, content revised; [ADR-0017](../../adr/ADR-0017-four-tool-chip.md)
+     superseded. -->
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
 - The creator decides **on the device** what the pen does, without reaching for the desktop.
-  A minimal, always-visible toolbar offers exactly **four** tools —
-  **Selection rect · Selection freeform · Pen · Ink-box** —
-  switched by **finger touch**, so the pen stays free for content. `Pen` is the default and
-  leaves [REQ-01](#local-pen-ink) local ink behaviour unchanged. There is no separate sub-mode
-  strip; the two Selection arms **replace** a single mouse-like Selection button
-  ([ADR-0017](../../adr/ADR-0017-four-tool-chip.md)).
-- All four tools act on the **device's own document** ([REQ-04](#device-document)): `Pen` adds ink,
-  `Ink-box` arms enclose recognition ([REQ-05](#device-ink-box)), `Selection rect` / `Selection
-  freeform` pick and manipulate ([REQ-06](#device-manipulation)). No tool depends on a reply from
-  the desktop.
+  A minimal, always-visible toolbar:
+  **Selection rect | Selection freeform | Pen ⟨space⟩ Ink-box recognition | Connector recognition ⟨space⟩ Undo | Redo**
+  ([ADR-0021](../../adr/ADR-0021-connector-toolchip.md),
+  [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)).
+  Switched by **finger touch**, so the pen stays free for content. `Pen` is the default and
+  leaves [REQ-01](#local-pen-ink) local ink behaviour unchanged.
+- **Exclusive tools** (exactly three): `sel_rect` · `sel_freeform` · `pen`. There is no
+  `ink_box` tool. The two Selection arms still replace a single mouse-like Selection button.
+- **Recognizer toggles** (independent, not tools): `recog.ink_box` ("Ink-box recognition")
+  and `recog.connector` ("Connector recognition"). Both **ship armed**. While a Selection
+  tool is active they are **dimmed** (armed state kept). Tool and both toggles **latch at
+  pen-down** for the whole stroke.
+- Tools act on the **device's own document** ([REQ-04](#device-document)): `Pen` adds ink and,
+  when a recognizer is armed, may enclose ([REQ-05](#device-ink-box)) or create a connector
+  ([REQ-09](#device-connectors)); `Selection rect` / `Selection freeform` pick and manipulate
+  ([REQ-06](#device-manipulation)). No tool depends on a reply from the desktop.
 - Tool state is **local to the device** — Infini neither drives nor mirrors it.
 - The toolbar also carries the **session/publish status** affordance for
   [REQ-07](#one-way-sync): linked, link down with changes queued, and document reloading.
 
 **Acceptance**
-- Given Epaper is running, When the creator taps a tool with a finger, Then the toolbar shows the
+- Given Epaper is running, When the creator taps an exclusive tool with a finger, Then the toolbar shows the
   new active tool with p95 ≤300 ms and the pen's next action uses that tool.
 - Given the `Pen` tool, When the creator draws, Then local ink latency stays within
   [REQ-01](#local-pen-ink) (p95 ≤30 ms pen-down → pixel) — the toolbar costs no ink latency.
 - Given any tool and no session, When the creator uses it, Then it behaves identically to the
-  linked case (0 tools disabled by link state) and the status affordance shows changes are queued.
+  linked case (editing is local; only publishing waits).
+- Given both recognizer toggles, When the creator taps one, Then it flips armed/disarmed with p95 ≤300 ms
+  and does not change the exclusive tool.
+- Given `sel_rect` or `sel_freeform` active, When the chip is shown, Then both recognizer toggles are
+  dimmed and retain their armed state; switching back to `Pen` restores them as they were.
+- Given Undo / Redo, When tapped, Then they remain **actions** (not `toolMode`) per
+  [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md).
+- **UI states / journeys to design:** three exclusive tools; two toggles armed / disarmed / dimmed;
+  Undo/Redo enabled / empty no-op; publish status on the same chip; ToolChip during a trailing panel
+  refresh; orientation-top placement; link down with queued changes; document reloading after reconnect.
 - Given any tool, When the pen passes over the floating ToolChip, Then no ink is drawn there
   (0 stray strokes inside the chip exclusion rect; InkSurface stays full-bleed).
 - Given a full-panel refresh is in flight, When the creator switches tools, Then the active-tool
   indicator is still legible (partial refresh of the chip, no dependence on the settled frame).
-- **UI states / journeys to design:** default `Pen`; switching tools; `Selection rect` /
-  `Selection freeform` idle; Smart Group selected (handles); `Ink-box` armed; enclose rejected
-  (too small / no ink inside); ToolChip during a trailing panel refresh; orientation-top placement;
-  link down with queued changes; document reloading after reconnect.
 
 ## [REQ-04] On-device working document {#device-document}
 - **Priority:** Must · **Traces:** [BRD-07]
@@ -164,7 +178,7 @@ viewed at scale, and saved.
 - Needs design: yes
 - **Outcome:** a creator who has handwritten a thought can make that cluster behave as **one
   object** — and it happens **where they drew it**, immediately, with no round trip and no OCR.
-- **Creation A — ink-box tool (enclose).** In `Ink-box` mode the creator draws a shape around ink.
+- **Creation A — enclose.** With `Pen` and **Ink-box recognition** armed, the creator draws a shape around ink.
   The **device** recognizes a roughly rectangular stroke (recognize, do **not** convert to a
   Primitive), captures every ink whose samples are ≥80% inside, and creates a Smart Group: the
   enclose stroke is kept as `role: boundary` ink, contained ink is reparented as `role: content`,
@@ -198,12 +212,11 @@ viewed at scale, and saved.
 - Recognition is **best-effort plus undo**: a wrong box costs one undo, never a stuck document.
 
 **Acceptance**
-- Given the `Ink-box` tool and ink on the panel, When the creator draws a closed roughly rectangular
+- Given **Ink-box recognition** armed and ink on the panel, When the creator draws a closed roughly rectangular
   stroke whose fitted rect is ≥ the minimum size and contains ≥80% of that ink's samples, Then a
   Smart Group exists in the local document and is visible on the panel with p95 ≤500 ms after
   pen-up, with **0 messages required from the desktop**.
-- Given the same gesture over empty canvas, or a fitted rect below the minimum size, or the `Pen`
-  tool, When the stroke ends, Then no Smart Group is created and the stroke remains ordinary ink
+- Given the same gesture over empty canvas, or a fitted rect below the minimum size, or **Ink-box recognition disarmed**, When the stroke ends, Then no Smart Group is created and the stroke remains ordinary ink
   (0 creations on the negative fixture set).
 - Given the `Selection` tool, When the creator pens down and moves, Then a thin dotted rubber-band
   follows the pen tip; on pen-up a thin dotted selection rect **tightly** equals the union AABB of
@@ -240,10 +253,11 @@ viewed at scale, and saved.
 - **Outcome:** manipulating a box on the tablet feels like moving paper, not like filing a request.
   What the creator sees under the pen **is** the document — no advisory ghost, no peer correction,
   no snap-back.
-- **Pilot scope.** Select by pressing a Smart Group; move by dragging inside the bounds (no prior
+- **Pilot scope.**   Select by pressing a Smart Group; move by dragging inside the bounds (no prior
   selection needed); resize via handles after explicit selection; toggle `inkScaleMode`
-  (`withBounds` | `fixedInk`); deselect by pressing empty canvas. **Rotation and connector
-  attachment are out of scope this iter** — they arrive with [REQ-08](#node-manipulation).
+  (`withBounds` | `fixedInk`); deselect by pressing empty canvas. **Rotation is out of scope this
+  iter** — it arrives with [REQ-08](#node-manipulation). **Connector attachment** is
+  [REQ-09](#device-connectors), this campaign.
 - **`inkScaleMode` feel.** `withBounds`: content scales with the box. `fixedInk`: each content ink
   keeps its sample size fixed and tracks the box via **its own** relative offset / UV inside the box,
   so a newly drawn stroke never moves older content. Boundary ink always transforms with the frame.
@@ -344,6 +358,47 @@ viewed at scale, and saved.
 - Given a completed reconnect load, When both ends settle, Then the tablet document equals the
   desktop document (0 divergent nodes) and the tablet resumes publishing.
 
+## [REQ-09] On-device connectors {#device-connectors}
+- **Priority:** Must · **Traces:** [BRD-07] · **Campaign:** this iteration — ranked **above**
+  [REQ-08](#node-manipulation), CHL-0011, CHL-0012
+- Needs design: yes
+- **Outcome:** the creator draws a line between two ink-boxes and it *stays* a connection —
+  their ink, attached, alive when either box moves — as natural as enclosing a thought.
+- **Create.** With `Pen` and **Connector recognition** armed, a stroke whose ends bind two
+  different SmartGroups becomes a connector ([ADR-0022](../../adr/ADR-0022-recognizer-dispatch.md)
+  fall-through). Multi-stroke chains merge at completion (no pending half-connector). One undo
+  reverts the recognition. v1 targets SmartGroup only.
+- **Style.** Auto-picked from the (merged) rest spine: **Ink** (`morph`) if wiggly, **Curve**
+  (`cubic`) if smooth. Creator may change it later. Geometry:
+  [ADR-0020](../../adr/ADR-0020-connector-ink-geometry.md).
+- **Live.** Moving or resizing a bound box re-warps attached connectors during the drag
+  (partial refresh). Deleting a box **keeps** the connectors; they glue back if the delete is undone.
+- **Not this REQ.** Re-anchor as a generic node-manipulation verb, squared/rounded routing,
+  arrowheads, dash/double-line, non-SmartGroup targets — [REQ-08](#node-manipulation) / later.
+  Full product depth:
+  [features/connector-ink/srs-product.md](./features/connector-ink/srs-product.md).
+
+**Acceptance**
+- Given two SmartGroups and Connector recognition armed, When the creator draws an open stroke
+  from near A into C, Then a connector exists in the local document and is visible on the panel
+  with p95 ≤500 ms after pen-up, **0 desktop messages required**, and one undo restores the
+  original ink.
+- Given the same stroke with Connector recognition **disarmed**, When the stroke ends, Then it
+  remains ordinary ink (0 connectors).
+- Given a connector, When the creator moves or resizes a bound box, Then the connector stays
+  attached, re-warps live at ≥5 Hz with 0 full-panel invalidations, and on pen-up committed
+  geometry equals the last previewed pose (0 px jump).
+- Given a connector, When the bound box is deleted, Then the connector remains drawn; When that
+  delete is undone, Then the connector glues back to the restored box (same id).
+- Given a scripted 20-gesture set on shared fixtures, When both ends settle, Then device and
+  desktop connector geometry match (0 divergent nodes) — [REQ-07](#one-way-sync).
+- Given both recognizers armed as shipped, When a real writing corpus (incl. a fresh page's
+  first 20 strokes) is replayed, Then unintended connector or enclose creations are ≤2% of
+  `pen` strokes — **ship gate**.
+- **UI states / journeys to design:** recognition blink (connector + both nodes, once);
+  selected connector (Ink/Curve; per-end Edge/Centre); dimmed toggles under Selection;
+  refuse/no-op (stroke stays ink, no banner).
+
 ## [REQ-08] Direct manipulation of any document node {#node-manipulation}
 - **Priority:** Should · **Traces:** [BRD-07] · **Campaign:** distinct iteration — thickened now,
   designed and built after the [REQ-04](#device-document)…[REQ-07](#one-way-sync) wave is verified
@@ -398,14 +453,15 @@ viewed at scale, and saved.
   to a later campaign; this iter is one-way per direction.
 - **Desktop-authored document changes reaching the tablet mid-session** — the only inbound document
   message is the initial full load.
-- **Rotation and connector attachment on a Smart Group this iter** — they arrive with
-  [REQ-08](#node-manipulation).
+- **Rotation on a Smart Group this iter** — arrives with [REQ-08](#node-manipulation).
+  Connector attachment is [REQ-09](#device-connectors).
+- **Automatic (unprompted) creation** — every Smart Group or connector still requires an
+  **armed recognizer** (or an explicit selection command). Recognizers **ship armed**;
+  "ordinary ink forever in Pen mode" is retired.
 - **In-box content alignment / reflow** (left/center/right, baseline snap, auto-padding when
   appending ink) — freehand placement and `fixedInk` UV tracking only.
 - **OCR / handwriting-to-Text** — the ink-box captures **any** ink inside the enclosure; there is no
   "is this text?" gate.
-- **Automatic (unprompted) ink-box creation** — every Smart Group comes from an explicit tool mode or
-  an explicit selection command.
 - Non-rectangular enclosure shapes (ellipse, lasso) — `bounds` is axis-aligned.
 - **Nested enclose (Smart Groups capturing other Smart Groups)** — this campaign's enclose captures
   **free top-level ink only**. Capturing whole ink-boxes as content (nested ink-boxes) is adopted
@@ -420,8 +476,9 @@ viewed at scale, and saved.
     draw-into.
   - This campaign keeps `inkScaleMode` (`withBounds` | `fixedInk`) only; membership does **not**
     expand bounds; no content align/reflow.
-- A general on-device tool palette — the toolbar is exactly the four tools in
-  [REQ-03](#tool-modes); no brushes, colors, layers, or document browser.
+- A general on-device tool palette — the toolbar is exactly the three exclusive tools,
+  two recognizer toggles, and Undo/Redo in [REQ-03](#tool-modes); no brushes, colors,
+  layers, or document browser.
 - Production use of `regionsync/` `append_ink` NetSink until wired into the Qt binary
   (library remains the future ADR-0009 shape).
 
@@ -445,7 +502,7 @@ viewed at scale, and saved.
 
 - Undo depth and affordance on the device — **closed 2026-08-14** ([CHL-0016](../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
   / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)): depth 20; on-panel Undo and Redo after
-  a gap on the primary strip. Exclusive tools stay four.
+  a gap on the primary strip. Exclusive tools are three as of [ADR-0021](../../adr/ADR-0021-connector-toolchip.md).
 - Document-change granularity on the wire (op log vs coalesced change set) — **owner:** architect —
   **needed by:** ADR-0015. Affects the ≤300 ms mirror target and the reconnect queue.
 - Manual "reload document to tablet" control — **owner:** pm — **needed by:** first

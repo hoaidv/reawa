@@ -1,10 +1,11 @@
 ---
 id: ADR-0017
 title: ToolChip: Selection rect, Selection freeform, Pen, Ink-box
-status: accepted
+status: superseded
 date: 2026-08-14
 deciders: [architect, pm]
 supersedes: null
+superseded-by: [ADR-0021]
 amends: [ADR-0013, ADR-0016]
 source: CHL-0015
 ---

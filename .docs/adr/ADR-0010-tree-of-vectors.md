@@ -5,6 +5,7 @@ status: accepted
 date: 2026-08-11
 deciders: [architect, pm]
 supersedes: null
+amended-by: [ADR-0020]
 ---
 
 # ADR-0010 — Tree-of-vectors document model

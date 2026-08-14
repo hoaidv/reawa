@@ -38,30 +38,30 @@ consequence, never as a precondition.
 ### Trigger dispatch at pen-up
 
 **Changed:** there is no `intent` flag on the wire and no `pickables` cache. The device reads its own
-armed tool ([SRS-EP-04](../tool-modes/srs-logic.md)) at **pen-down**, latches it for the stroke, and
-dispatches at pen-up.
+exclusive tool **and** recognizer toggles ([SRS-EP-04](../tool-modes/srs-logic.md)) at **pen-down**,
+latches them for the stroke, and dispatches at pen-up per
+[ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md).
 
 | Armed at pen-down | Pen-up path |
 |---|---|
-| `ink_box` | Enclose evaluation (below). Guards fail → the stroke stays ordinary ink |
-| `pen` | Draw-into membership evaluation (below) |
-| `selection` | No ink was produced; not an ingestion path at all |
+| `pen` + closure-first dispatch | 1 closed-ish **and** `recog.ink_box` → enclose (below); **guards fail → fall through** · 2 draw-into membership · 3 open **and** `recog.connector` → [SRS-EP-17](../connector-ink/srs-logic.md) · 4 ordinary ink |
+| `sel_rect` / `sel_freeform` | No ink was produced; not an ingestion path at all |
 
-Latching at pen-down matters: switching tools mid-stroke must not retroactively change what the
-stroke means.
+Latching at pen-down matters: switching tools or toggles mid-stroke must not retroactively change
+what the stroke means.
 
 ### Enclose recognition — inherited from [SRS-IN-10]
 
 | Step | Rule |
 |---|---|
-| Trigger | Pen-up of a stroke drawn with `ink_box` armed (**changed** — was `intent: enclose` on the wire) |
+| Trigger | Pen-up of a closed-ish stroke with `recog.ink_box` armed (**changed** — was exclusive `ink_box` tool) |
 | Candidate shape | Closed or near-closed polyline fitting an axis-aligned rect; **rectangle only** |
 | Fitted bounds | AABB of the enclose stroke samples → `(x, y, width, height)` |
 | Guard — size | Shorter side ≥ `MIN_ENCLOSE_WORLD` = **48 world units** ([ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md) §6, kept by ADR-0014 §7) |
 | Guard — content | ≥1 **free top-level Ink** with **≥80%** of its samples inside the fitted rect. **Capture inventory this campaign: Ink only.** Smart Group nodes are **not** capturable content ([CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md) — nested enclose is future) |
 | Guard — already grouped | Ink whose parent is already a `SmartGroup` is **skipped**; remaining free ink still captures |
 | Commit | `create_smart_group` immediately — no proposal, no accept step. The enclose stroke becomes `role: boundary` ink; captured ink becomes `role: content` in group-local coordinates; `bounds` = fitted rect; **each content ink seeded with its own `layoutOffset` UV** |
-| Guard fails | **No-op** — the stroke stays ordinary ink. No error state, no banner ([SRS-EP-12](./srs-ui.md)) |
+| Guard fails | **Fall through** to draw-into membership ([ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) step 2), then connector, then ordinary ink. No error state, no banner ([SRS-EP-12](./srs-ui.md)) |
 | Undo | One entry; one undo restores the pre-op tree exactly ([SRS-EP-07](../device-document/srs-logic.md)) |
 | Visibility | The box is on the panel **p95 ≤500 ms after pen-up**, with 0 peer messages required ([SRS-EP-14](./srs-quality.md)) |
 
@@ -76,7 +76,7 @@ activates `cta.enclose` on SelectionOverlay — never from pen-up alone.
 
 | Step | Rule |
 |---|---|
-| Select (arm) | Exclusive ToolChip: `sel_rect` or `sel_freeform` ([ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md)). Switching mid-gesture is ignored until pen-up. |
+| Select (arm) | Exclusive ToolChip: `sel_rect` or `sel_freeform` ([ADR-0021](../../../../adr/ADR-0021-connector-toolchip.md)). Switching mid-gesture is ignored until pen-up. |
 | Select (rect) | `sel_rect` armed. Pen-down + move draws a thin dotted **axis-aligned rectangle** (rubber-band from down to tip). On pen-up: Ink if **≥80% of samples** lie inside the rectangle; other pickables if **≥80% of their world AABB area** lies inside. A grazing AABB intersect is **not** enough. |
 | Select (freeform) | `sel_freeform` armed. Pen-down + move appends samples to a thin dotted **polyline**. On pen-up the polyline **closes** (edge last→first for the test; stored samples stay as drawn). Membership: Ink — ≥80% of samples inside the closed polyline (even-odd); other nodes — ≥80% of a 5×5 grid on the world AABB inside. **Not** AABB-intersect of the gesture. Settled chrome is **not** the polyline — see next row. |
 | Select (feedback, settled) | After **either** gesture: thin dotted **selection rect** = **tight** union AABB of selected nodes (**0** extra padding); **6 square anchors** (visual only this campaign). The freeform polyline is **gone** once settled. |
@@ -92,7 +92,8 @@ Self-intersecting surrounds are accepted as-is under even-odd — no geometry cl
 
 ### Draw-into membership — inherited from [SRS-IN-15]
 
-Runs at pen-up for ordinary ink (`pen` armed). **Never** runs on an enclose stroke.
+Runs at pen-up as **step 2** of [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)
+(including after a **failed** enclose). Not skipped merely because the stroke was closed-ish.
 
 | Step | Rule |
 |---|---|

@@ -38,7 +38,7 @@ somewhere else, or ink that settles somewhere other than where the hand released
 |---|---|
 | Persona / role | Creator drawing on the reMarkable 2, pen in hand, device in the lap or on a desk |
 | Situation / when | Mid-thought on a page that already has handwriting; wants to structure or rearrange it |
-| Trigger | Finger tap on `Ink-box` or `Selection` in the floating ToolChip |
+| Trigger | Finger tap on `Pen` / a Selection tool / a recognizer toggle in the floating ToolChip |
 | Preconditions | Epaper running fullscreen ([REQ-01](../../prd.md#local-pen-ink)); a local document exists ([REQ-04](../../prd.md#device-document)); session may be up **or down** |
 
 ---
@@ -54,11 +54,11 @@ somewhere else, or ink that settles somewhere other than where the hand released
 | Step | Beat (human language) | In-scene state | Notes |
 |---|---|---|---|
 | 1 | Creator has written a few lines and wants them to hold together | `tool.pen` default | Ink already in the local document |
-| 2 | Taps `Ink-box` with a finger; the chip shows the tool is armed | `tool.ink_box.armed` | Pen never leaves the page; ≤300 ms |
-| 3 | Draws a loose rectangle around the writing — it inks normally under the pen | `tool.ink_box.drawing` | Identical ink path to `Pen`; no latency cost |
-| 4 | Lifts the pen; the device evaluates the enclosure and creates the box | `tool.ink_box.accepted` | ≤500 ms pen-up → visible; **0 desktop messages** |
-| 5 | The frame is the stroke they drew; the writing inside is now content | `tool.ink_box.accepted` | Never a synthetic rectangle |
-| 6 | The tool stays armed, so they box the next paragraph too | `tool.ink_box.armed` | Repeat without re-tapping |
+| 2 | Confirms **Ink-box recognition** is armed (ships on; one tap if they had turned it off) | `recog.ink_box.on` | Pen never leaves the page; ≤300 ms |
+| 3 | Draws a loose rectangle around the writing — it inks normally under the pen | `tool.pen` | Identical ink path; no latency cost |
+| 4 | Lifts the pen; the device evaluates the enclosure and creates the box | `recog.rejected` if guards fail, else box visible | ≤500 ms pen-up → visible; **0 desktop messages** |
+| 5 | The frame is the stroke they drew; the writing inside is now content | `tool.pen` | Never a synthetic rectangle |
+| 6 | The toggle stays armed, so they box the next paragraph too | `recog.ink_box.on` | Repeat without re-tapping |
 
 ### Journey: `journey.device_move` — Slide a box out of the way
 
@@ -102,7 +102,7 @@ somewhere else, or ink that settles somewhere other than where the hand released
 
 | Step | Beat | In-scene state | Notes |
 |---|---|---|---|
-| 1 | Taps **Selection rect** or **Selection freeform** on the primary chip (four tools) | `sel.none` | [ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md) |
+| 1 | Taps **Selection rect** or **Selection freeform** on the primary chip (3 tools + 2 toggles) | `sel.none` | [ADR-0021](../../../../adr/ADR-0021-connector-toolchip.md) |
 | 2a | Rect armed: one straight drag — thin dotted **rectangle** follows tip | `sel.marquee` | AABB membership |
 | 2b | Freeform armed: draw around — thin dotted **polyline**; pen-up closes it | `sel.lasso` | Inside-polyline membership |
 | 3 | Pen-up — dotted rect **tightly** around selected nodes’ AABBs + 6 anchors; icon-only Enclose | `sel.nodes_selected` | 0 extra padding; lasso chrome gone |
@@ -117,9 +117,9 @@ somewhere else, or ink that settles somewhere other than where the hand released
 
 | Step | Beat | In-scene state | Notes |
 |---|---|---|---|
-| 1 | Creator draws a small box around nothing, or a box too small to count | `tool.ink_box.drawing` | |
-| 2 | On pen-up nothing is grouped; the stroke stays as ordinary ink | `tool.ink_box.rejected` | No error banner, no modal — the ink simply is what they drew |
-| 3 | They can immediately try again, or undo the stroke | `tool.ink_box.armed` | Best-effort + undo |
+| 1 | Creator draws a small box around nothing, or a box too small to count | `tool.pen` | `recog.ink_box` armed |
+| 2 | On pen-up nothing is grouped; the stroke stays as ordinary ink | `recog.rejected` | No error banner, no modal — the ink simply is what they drew |
+| 3 | They can immediately try again, or undo the stroke | `recog.ink_box.on` | Best-effort + undo |
 
 ### Journey: `journey.device_select_create.alt_no_surround` — Nothing surrounds anything
 
@@ -127,7 +127,7 @@ somewhere else, or ink that settles somewhere other than where the hand released
 |---|---|---|---|
 | 1 | Creator rubber-band selects scattered ink with no stroke around it and taps **Enclose** | `sel.nodes_selected` | |
 | 2 | Creation is refused and the reason is visible | `sel.create_refused` | Selection unchanged; **no** AABB-only box |
-| 3 | They draw a frame around it with `Ink-box` instead | `tool.ink_box.armed` | The refusal teaches the working path |
+| 3 | They draw a frame around it with `Pen` and Ink-box recognition armed instead | `recog.ink_box.on` | The refusal teaches the working path |
 
 ### Journey: `journey.device_edit.alt_offline` — Working with the link down
 
@@ -160,9 +160,9 @@ somewhere else, or ink that settles somewhere other than where the hand released
 
 | Journey step | In-scene state | srs-ui state / control | Product rule / AC | Logic pointer |
 |---|---|---|---|---|
-| `journey.device_enclose` 2 | `tool.ink_box.armed` | ToolChip active-tool indicator | BR-B02 | TBD — architect |
-| `journey.device_enclose` 4 | `tool.ink_box.accepted` | box visible on panel | BR-B01, BR-B03 | TBD — architect |
-| `journey.device_enclose.alt_refused` 2 | `tool.ink_box.rejected` | no chrome; ink unchanged | BR-B03 | TBD — architect |
+| `journey.device_enclose` 2 | `recog.ink_box.on` | `tgl.recog.ink_box` armed | BR-B02 | [SRS-EP-04](../tool-modes/srs-logic.md) |
+| `journey.device_enclose` 4 | box visible on panel | enclose commit | BR-B01, BR-B03 | [SRS-EP-10](./srs-logic.md) |
+| `journey.device_enclose.alt_refused` 2 | `recog.rejected` | no chrome; ink unchanged | BR-B03 | [SRS-EP-10](./srs-logic.md) |
 | `journey.device_move` 3 | `tool.selection.moving` | live ink under pen (no ghost) | BR-B10, BR-B15 | TBD — architect |
 | `journey.device_move` 5 | `tool.selection.idle` | selection cleared, no residue | BR-B16 | TBD — architect |
 | `journey.device_resize` 1 | `tool.selection.selected` | `ovl.selection_bounds`, `ovl.resize_handles` | BR-B11 | TBD — architect |

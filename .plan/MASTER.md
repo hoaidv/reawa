@@ -3,17 +3,20 @@ updated: 2026-08-14
 current_iter: iter-004
 owner: sm
 
-# Campaign: closed 2026-08-14 (device-document / ink-box). Next PRD from human.
+# Campaign: on-device connectors (REQ-09 + REQ-03 ToolChip). Design first.
 execution:
-  direction: vertical
+  direction: horizontal
   scope:
     modules: [epaper, infini]
-    features: []
-  stop_line: srs-ready
-  autonomy: ask
+    features:
+      - epaper/connector-ink
+      - epaper/tool-modes
+      - epaper/ink-box
+      - infini/vector-document
+  stop_line: design-validated
+  autonomy: bounded
   out_of_scope: backlog
-  wip: 1
-  validated_by: "human 2026-08-14"
+  validated_by: ""
 ---
 
 # Master Plan
@@ -25,14 +28,12 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 | Field | Value | Why |
 |---|---|---|
-| Direction | **vertical** | Hold until the next PRD; do not start REQ-08 by inertia |
-| Scope | `epaper`, `infini` · **no features** | Awaiting human PRD |
-| Stop line | **srs-ready** | No implement until PRD → SRS |
-| Autonomy | **ask** | Confirm before slicing |
+| Direction | **horizontal** | ToolChip + connector chrome design together before any implement |
+| Scope | `epaper/{connector-ink, tool-modes, ink-box}`, `infini/vector-document` | REQ-09 + the ToolChip split that arms it |
+| Stop line | **design-validated** | Paint EP-026/027; implement stays `draft` |
+| Autonomy | **bounded** | Run inside the lock; stop at the boundary |
 
-**Campaign closed 2026-08-14 (human).** Exit criteria for Epaper-owns-document **met**: REQ-04…07 + design for REQ-05/06; W12 human confirm. `[REQ-08]`, CHL-0011, CHL-0012 **not** in the next lock until the new PRD says so.
-
-**Re-lock (2026-08-13, historical — CHL-0008).** Device owned the in-session document; Infini viewer + persistence; one-way sync. See [iter-003 retro](./iter-003/retro.md).
+**Campaign opened 2026-08-14 (human).** Exit criteria for this stop line: both design packages pass `ui-spec-gate`; human accepts ToolChip 3+2+Undo/Redo and connector blink/selection chrome. Then PM records `validated_by` and flips `stop_line` toward `bdd-ready` / `verified`.
 
 **Out-of-scope log**
 
@@ -41,13 +42,15 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | 2026-08-10 | Epaper on-device pan/zoom | backlog |
 | 2026-08-10 | `reawa/*` | backlog |
 | 2026-08-11 | STORY-IN-006 DocChrome | cancelled |
-| 2026-08-11 | Rotation + connectors on a Smart Group | backlog → now folded into epaper `[REQ-08]` (next campaign) |
+| 2026-08-11 | Rotation + connectors on a Smart Group | backlog → REQ-08 rotation; **connectors are now REQ-09** (this campaign) |
 | 2026-08-11 | Mouse ink drawing on Infini (`Pen` on desktop) | backlog |
 | 2026-08-11 | In-box content alignment / reflow | backlog |
 | 2026-08-13 | Desktop-side ink-box authoring (Infini Selection / Ink-box tools) | backlog — infini `[REQ-04]` deprecated until multi-directional sync |
 | 2026-08-13 | Multi-directional sync / modern doc-sync algorithm / CRDT | backlog — explicitly deferred by human |
 | 2026-08-13 | On-device persistence, offline work, sync-any-moment | backlog — explicitly deferred by human |
-| 2026-08-13 | Generic manipulation of any document node | epaper `[REQ-08]` — thickened now, **distinct iteration** |
+| 2026-08-13 | Generic manipulation of any document node | epaper `[REQ-08]` — **not this lock** |
+| 2026-08-14 | Nested enclose (CHL-0011), FREE_FORM / align-content (CHL-0012) | backlog — not this lock |
+| 2026-08-14 | Guard-corpus false-positive bar (EXP-0002 Initiative 2) | **ship gate**, not lock gate — `/qa` may run in parallel with design |
 
 ## History spine
 
@@ -56,15 +59,15 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | iter-000 | Traceability backfill | closed; retro-gate passed | BDD optional | [iter](./iter-000/iter.md) |
 | iter-001 | EXP-0001 + epaper promote | closed; S1 proven | → Infini REQs | [EXP-0001](./iter-001/explorations/EXP-0001-remarkable-canvas-sync.md) |
 | iter-002 | Infini + sync | **closed** — Must W4+W5 gated READY-WITH-CONCERNS | IN-010 → iter-003 | [iter](./iter-002/iter.md) · [retro](./iter-002/retro.md) |
-| iter-003 | Epaper owns the document (REQ-04…07) | **closed** — W12 human confirm; campaign exited | REQ-08 / CHL-0011 / CHL-0012 await PRD | [iter](./iter-003/iter.md) · [retro](./iter-003/retro.md) |
+| iter-003 | Epaper owns the document (REQ-04…07) | **closed** — W12 human confirm; campaign exited | REQ-08 / CHL-0011 / CHL-0012 stay parked | [iter](./iter-003/iter.md) · [retro](./iter-003/retro.md) |
 
 ## Now — iter-004
 
 ### Goal & capacity
 
-- Goal: **Awaiting human PRD.** No stories committed. Do not auto-slice REQ-08 / CHL-0011 / CHL-0012.
-- Capacity: unset until PRD.
-- Risks: starting the next Must from leftover thickening instead of the new brief.
+- Goal: **On-device connectors** (REQ-09) + ToolChip 3 exclusive tools / 2 recognizer toggles / Undo+Redo (REQ-03). Default routing is auto-picked from ink → **Ink / Curve** (no picker at draw time).
+- Capacity: design 6 pts in flight (EP-026 + EP-027); implement 26 pts sliced and **frozen**.
+- Risks: shipping default-on recognizers before the EXP-0002 guard corpus; regressing EP-016 enclose / EP-017 membership / EP-018–025 chrome.
 
 ### Tracks
 
@@ -73,21 +76,24 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
 | TRACK-003 | planned | **done** | campaign exited 2026-08-14 | [track](./tracks/TRACK-003-smart-group-pilot.md) |
+| TRACK-004 | planned | **active** | EP-026 ∥ EP-027 · `/designer` | [track](./tracks/TRACK-004-on-device-connectors.md) |
 
 ### Open challenges / blocked
 
-- CHL-0011 / CHL-0012 **future** — not in lock until PRD includes them.
+- CHL-0011 / CHL-0012 **future** — not in this lock.
+- epaper `[REQ-08]` **future** — not in this lock.
 - ADR-0019 / CHL-0018 amend **deferred**.
 - Residue EP-007…011 / IN-020…026 remain **blocked** on iter-003.
 
 ### Design packages in flight
 
-_none — iter-003 packages are the current index winners (UI-EP-01/02/03)._
+- [toolchip-recognizers](./iter-004/design/toolchip-recognizers/) — STORY-EP-026
+- [connector-chrome](./iter-004/design/connector-chrome/) — STORY-EP-027
 
 ### Execution board(s)
 
-- [iter-003 execution-board](./iter-003/execution-board.md) — **frozen** (W12 done, campaign closed)
-- [iter-002 board (final)](./iter-002/execution-board.md) — frozen
+- [iter-004 execution-board](./iter-004/execution-board.md) — **NOW** W1 design
+- [iter-003 execution-board](./iter-003/execution-board.md) — **frozen** (campaign closed)
 
 ### Freeze notes
 
@@ -95,6 +101,6 @@ _none — iter-003 packages are the current index winners (UI-EP-01/02/03)._
 
 ## Forward
 
-- **Now:** `/pm` with the new PRD (human will supply). Then `/architect` → `/sm` slice.
+- **Now:** `/designer` EP-026 ∥ EP-027. After both `done`, `/pm` `validated_by` then flip stop line → `/qa` then `/dev`.
 - Parked (not committed): epaper `[REQ-08]`, nested enclose (CHL-0011), FREE_FORM / align-content (CHL-0012).
 - Backlog: [backlog.md](./backlog.md)

@@ -61,8 +61,10 @@ Both described behaviour this rework deletes.
 | State id | Designer scene / Spec | QA AC / BDD |
 |---|---|---|
 | `tool.pen` | tool-modes package | REQ-03 default + ink latency |
-| `tool.ink_box` | tool-modes package | armed; ink path identical while pen is down |
-| `tool.ink_box.rejected` | tool-modes package | stroke stays ink; no banner |
+| `recog.ink_box.on` / `.off` | tool-modes package | toggle armed; ink path identical while pen is down |
+| `recog.connector.on` / `.off` | tool-modes package | toggle independent of ink-box |
+| `recog.rejected` | tool-modes package | stroke stays ink; no banner |
+| `recog.dimmed` | tool-modes package | both toggles dimmed under Selection; armed state kept |
 | `tool.selection.idle` | tool-modes package | pen inert on canvas |
 | `tool.selection.selected` | ink-box package | real bounds + handles from the local document |
 | `tool.selection.moving` | ink-box package | real ink follows pen; commit = release |
