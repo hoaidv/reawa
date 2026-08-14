@@ -2,7 +2,7 @@
 id: ADR-0016
 title: Selection-create Enclose CTA on SelectionOverlay
 status: accepted
-amended_by: [ADR-0017]
+amended_by: [ADR-0017, ADR-0019]
 date: 2026-08-13
 deciders: [architect, pm]
 supersedes: null

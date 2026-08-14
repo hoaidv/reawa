@@ -101,7 +101,8 @@ flowchart TB
     doc["DeviceDocument + undo ring — SRS-EP-07"]
     recog["Recognition + membership — SRS-EP-10"]
     manip["Hit-test + transforms — SRS-EP-11"]
-    paint["Rasterize from document — SRS-EP-02"]
+    paint["CanvasLayer document raster — SRS-EP-02"]
+    overlay["ToolCanvasLayer + ToolLayer chrome — SRS-EP-12 / ADR-0019"]
     sync["Session: queue, publisher, load handshake — SRS-EP-08"]
     dlog["Debug ship worker — SRS-EP-15"]
     input --> ink
@@ -112,6 +113,8 @@ flowchart TB
     recog --> doc
     manip --> doc
     doc --> paint
+    manip --> overlay
+    tools --> overlay
     doc --> sync
   end
   sync <-->|"TCP JSON-lines :9877"| infini["Infini"]
@@ -141,6 +144,7 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 
 ## Decisions
 
+- [ADR-0019](../../adr/ADR-0019-selection-chrome-layers.md) — CanvasLayer / ToolCanvasLayer / ToolLayer (Pen / Mono / UI)
 - [ADR-0014](../../adr/ADR-0014-document-ownership-inversion.md) — the device owns the working document
 - [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md) — one-way sync contract v1
 - [ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) — §1 device-local tool state and §6 world-unit enclose guard survive; §2–§5 superseded
@@ -158,6 +162,7 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 | C++/TS geometry divergence | Document fidelity | M×H | Shared fixtures (`ops/`, `enclose/`, `fixed-ink/`, `round-trip/`) + the domain doc |
 | Undo ring memory (20 whole-tree snapshots) | Ink latency | M×M | Measured in [SRS-EP-13](./features/device-document/srs-quality.md); shrink the ring before slowing ink |
 | Live manipulation exceeds the partial-refresh budget | Gesture feel | M×M | ≥5 Hz / 0 full-panel bar; CHL-0006 established that slow is acceptable |
+| Selection chrome painted on CanvasLayer (full `update()`) | Lasso lag / refresh discipline | **H×M** | **Closed [CHL-0017](../../../.plan/iter-003/challenges/CHL-0017-selection-chrome-layers.md) / [ADR-0019](../../adr/ADR-0019-selection-chrome-layers.md)** — ToolCanvasLayer Mono + ToolLayer QML |
 | Device constants inherited from desktop values (LOD 0.35, 8 px tolerance) | Manipulation usability | **H×M** | **Closed.** Device locks: handle 28/56 du, LOD min on-panel axis 96 du ([SRS-EP-12](./features/ink-box/srs-ui.md)). Miss-rate on hardware files a `CHL-*` in du, never 8 CSS px / 0.35 |
 | No undo affordance on a three-tool chip | Recoverability | H×M | **Deferred this campaign ([CHL-0010](../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)).** Undo logic ships regardless ([SRS-EP-07](./features/device-document/srs-logic.md) / EP-015) |
 | Unpublished work lost on app restart | Data loss | L×M (accepted) | Publish per committed op + visible pending state |

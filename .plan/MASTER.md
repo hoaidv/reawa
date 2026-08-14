@@ -92,7 +92,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 |---|---|---|---|---|
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
-| TRACK-003 | planned | **active** | W11b EP-019 ready → `/dev` | [track](./tracks/TRACK-003-smart-group-pilot.md) |
+| TRACK-003 | planned | **active** | W11c EP-025 ready → `/dev` | [track](./tracks/TRACK-003-smart-group-pilot.md) |
 
 ### Open challenges / blocked
 
@@ -127,7 +127,7 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 
 ### Execution board(s)
 
-- [iter-003 execution-board](./iter-003/execution-board.md) — **W11b** EP-019 manipulation; EP-023 done
+- [iter-003 execution-board](./iter-003/execution-board.md) — **W11c** EP-025 → `/dev`
 - [iter-002 board (final)](./iter-002/execution-board.md) — frozen
 
 ### Freeze notes
@@ -140,8 +140,8 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 ## Forward
 
 - **Done 2026-08-13:** `/architect` design + `/sm` re-slice (EP-012…020, IN-027…028)
-- **Now:** **W11b** — [STORY-EP-023](./iter-003/stories/STORY-EP-023.md) **done** (four-tool rebase).
-  [STORY-EP-019](./iter-003/stories/STORY-EP-019.md) **in-review** → `/qa`.
+- **Now:** **W11c** — [STORY-EP-025](./iter-003/stories/STORY-EP-025.md) **ready** → `/dev`.
+  W11b (EP-019) **done** (human PASS 2026-08-14).
 - **Next campaign:** epaper `[REQ-08]` direct manipulation of any document node — thickened in
   [node-manipulation](../.docs/modules/epaper/features/node-manipulation/), designed and built in a
   distinct iteration. Also: nested enclose (CHL-0011); ink-box sizing / align-content (CHL-0012);

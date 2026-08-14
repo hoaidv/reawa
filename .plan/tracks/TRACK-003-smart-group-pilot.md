@@ -36,6 +36,7 @@ Pilot ADRs [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md) (semantics) and
 | [STORY-EP-018](../iter-003/stories/STORY-EP-018.md) | implement | **done** | W11a — human PASS 2026-08-14 |
 | [STORY-EP-019](../iter-003/stories/STORY-EP-019.md) | implement | **in-review** | W11b — live manip + descriptor |
 | [STORY-EP-023](../iter-003/stories/STORY-EP-023.md) | design | **done** | W11b — UI-EP-02 four-tool rebase |
+| [STORY-EP-025](../iter-003/stories/STORY-EP-025.md) | implement | **ready** | W11c — chrome layers ADR-0019; after EP-019 |
 | [STORY-EP-020](../iter-003/stories/STORY-EP-020.md) | implement | **draft** | W12 — device sync |
 | [STORY-IN-028](../iter-003/stories/STORY-IN-028.md) | implement | **draft** | W12 — desktop `doc_load` |
 
@@ -95,3 +96,4 @@ Pilot stories (IN-010…019, EP-003…006) remain **done** as history. Residue E
 | 2026-08-14 | EP-018 **done** (human PASS). W11a closed. W11b: EP-019 **ready**. Cursor → `/qa`. |
 | 2026-08-14 | W11b QA walk + EP-023 four-tool rebase **done**. EP-019 **ready** → `/dev`. |
 | 2026-08-14 | EP-019 **in-review** — descriptor router + live transform; host `manipulate_test` PASS. Cursor → `/qa`. |
+| 2026-08-14 | EP-019 **done** — human RM2 confirm. W11b closed. Cursor → W11c `/dev` EP-025. |

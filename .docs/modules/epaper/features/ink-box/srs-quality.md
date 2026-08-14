@@ -45,6 +45,8 @@ Logic: [SRS-EP-10 / SRS-EP-11](./srs-logic.md). Document budgets:
 | Undo granularity | Undo entries per completed gesture | Exactly **1**; one undo reverts exactly that gesture |
 | Feedback rate during a drag | Update rate / worst stall | ≥5 Hz / ≤200 ms |
 | Refresh discipline during a drag | Full-panel invalidations | **0** |
+| Lasso / marquee live stroke (`sel.lasso` / `sel.marquee`) | Full-panel invalidations; CanvasLayer `update()` with no rect | **0** ([CHL-0017](../../../../../.plan/iter-003/challenges/CHL-0017-selection-chrome-layers.md) / [ADR-0019](../../../../adr/ADR-0019-selection-chrome-layers.md)) |
+| Lasso / marquee live stroke | Damage | ToolCanvasLayer only — last segment or old∪new AABB; waveform **Mono** |
 | Deselect | Residual selection pixels on the next settled frame | **0** (**CHL-0007 regression**) |
 | Below the LOD cutoff | Accidental transforms | **0**; unavailability stated |
 

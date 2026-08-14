@@ -4,7 +4,7 @@ title: "On-device live manipulation and REQ-08 conformance"
 kind: implement
 parent_srs: [SRS-EP-11, SRS-EP-14]
 parent_req: [REQ-06]
-status: in-review
+status: done
 priority: P0
 iter: iter-003
 estimate: 5
@@ -59,8 +59,7 @@ four-tool chip (ADR-0017) before this story is `ready`. **EP-023 done 2026-08-14
 | Owner | `dev` |
 | Depends on | EP-012 (design), EP-016, EP-023 (four-tool rebase) |
 
-## Done when
+## QA (2026-08-14)
 
-- `@SRS-EP-11` scenarios green including the descriptor scenario
-- `ui_spec` / `scenes` / `hifi` copied from EP-012
-- CHL-0004…0007 named bars in SRS-EP-14 are 0
+**PASS** — human RM2 confirm (“confirm all works”) + host `manipulate_test` / document suite green. CHL-0004…0007 live bars accepted on panel. Link-drop mid-gesture not exercised (no session drop).
+

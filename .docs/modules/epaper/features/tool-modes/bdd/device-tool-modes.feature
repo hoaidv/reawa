@@ -61,3 +61,22 @@ Feature: Epaper device tool modes
     When the mode changes
     Then only the chip region needs refresh
     And ink surface content is preserved
+
+  # STORY-EP-024 — SRS-EP-05 / ADR-0018 (human confirm 2026-08-14)
+
+  @SRS-EP-05
+  Scenario: Primary strip is four tools then Undo and Redo
+    Given the floating ToolChip is visible
+    When the panel is observed
+    Then exclusive tools are sel_rect, sel_freeform, pen, ink_box in that order
+    And a 32 du gap separates that cluster from Undo and Redo
+    And tapping Undo or Redo does not change the armed tool
+
+  @SRS-EP-05
+  Scenario: Undo and Redo on the chip restore document history
+    Given at least one structural commit on the device
+    When the creator taps Undo
+    Then the pre-op tree is restored
+    And tapping Redo restores that op when no newer commit has landed
+    And a new structural commit after undo makes Redo a no-op
+    And tapping Undo or Redo on an empty stack leaves the tree unchanged

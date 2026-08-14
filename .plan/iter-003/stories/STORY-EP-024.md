@@ -4,7 +4,7 @@ title: Undo and Redo buttons on primary toolbar
 kind: implement
 parent_srs: [SRS-EP-05]
 parent_req: [REQ-04]
-status: in-review
+status: done
 priority: P0
 iter: iter-003
 estimate: 3
@@ -40,8 +40,6 @@ Human layout: **Selection Rect | Selection Freeform | Pen | Ink-box | ⟨space�
 | Owner | `dev` |
 | Depends on | EP-015 (ring) |
 
-## Done when
+## QA (2026-08-14)
 
-- Layout and hit-test match ADR-0018
-- Redo stack host tests green
-- No Enclose-as-tool; four exclusive tools unchanged
+**PASS** — human confirm on device + host `run_device_document_test.sh` green (redo restore, commit-clears-redo, empty no-op, load clears both). Layout matches ADR-0018. Enclose not on exclusive row.

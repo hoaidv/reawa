@@ -37,14 +37,19 @@ already moving; it never stands in for ink that will move later
 
 ### Composition layers (extends [SRS-EP-05](../tool-modes/srs-ui.md))
 
-| Layer id | Role | Notes |
-|---|---|---|
-| InkSurface | Full-bleed document paint | Unchanged; the ink itself is the feedback |
-| SelectionOverlay | Bounds outline, handles, mode toggle | Panel-space, above InkSurface, below ToolChip |
-| ToolChip | Tool arming + publish status | [SRS-EP-05](../tool-modes/srs-ui.md) — do not duplicate here |
+Product regions stay InkSurface / SelectionOverlay / ToolChip. **Implementation** splits
+SelectionOverlay by refresh class ([ADR-0019](../../../../adr/ADR-0019-selection-chrome-layers.md) /
+[CHL-0017](../../../../../.plan/iter-003/challenges/CHL-0017-selection-chrome-layers.md)):
 
-SelectionOverlay is **content-space**: it tracks the box through pan/zoom (viewport-driven) and
-through a drag. It is not pinned chrome.
+| Layer id | Product region | Role | Notes |
+|---|---|---|---|
+| CanvasLayer | InkSurface | Full-bleed document paint | Persistent `m_image` + live ink; waveform **Pen**; never used for chrome |
+| ToolCanvasLayer | SelectionOverlay (stroke) | Marquee, lasso, settled dotted AABB | Transparent painted sibling; waveform **Mono**; tight dirty rects; **not** a document blit |
+| ToolLayer (content) | SelectionOverlay (widgets) | Handles, Enclose, ink-scale chip, indicators | QML; content-space |
+| ToolLayer (screen) | ToolChip | Tool arming + publish status | QML; **screen-space** — [SRS-EP-05](../tool-modes/srs-ui.md) |
+
+SelectionOverlay widgets and ToolCanvasLayer are **content-space**: they track the box through
+pan/zoom (viewport-driven) and through a drag. ToolChip is not pinned to the box.
 
 ### Closed control inventory
 
