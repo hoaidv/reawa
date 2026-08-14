@@ -32,7 +32,7 @@ that distance.
 | Device holds the document tree in memory for the session | On-device persistence / file browser / documents surviving app restart |
 | Device ingests its own finished strokes as document nodes | Bézier fitting of handwriting (samples stay polylines) |
 | Panel paints from the device document | Painting from a peer-supplied picture |
-| Undo history for structural ops, on the device | Redo, branching history, per-sample undo |
+| Undo/redo history for structural ops, on the device (linear, depth 20) | Branching history, per-sample undo |
 | Publish document changes to the desktop; queue them when the link is down | Applying desktop-authored changes mid-session |
 | Accept an initial full-document load at start / reconnect / explicit resync | Multi-directional sync, CRDT, conflict resolution |
 | Multiple boxes and nodes in one document | Multiple documents / switching documents on the device |

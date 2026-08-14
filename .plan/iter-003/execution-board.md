@@ -31,7 +31,7 @@ wip: 2
 modules: epaper, infini
 features: epaper/device-document; epaper/ink-box; epaper/tool-modes; infini/tablet-sync
 personas: /dev EP-019
-forbidden: nested enclose; undo chrome invent; regress EP-018 chip
+forbidden: nested enclose; regress EP-018 chip
 NOW: W11b — STORY-EP-019 ready
 cursor: /qa EP-019
 ```

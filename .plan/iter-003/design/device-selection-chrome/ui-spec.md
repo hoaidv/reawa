@@ -194,7 +194,7 @@ No-op still acknowledges press (`:active` / `.is-pressed`).
 |---|---|---|
 | Handle size + hit in **device units** | Visual **28 du** (≈3.1 mm @ 226 dpi). Hit **56 du** (≈6.3 mm), 14 du pad beyond visual. 1 preview CSS px = 1 device unit. **Not** 8 CSS px. | **Accepted 2026-08-13 (architect).** Implement lock for EP-019. |
 | LOD cutoff on a **fixed panel** | Unavailable when the selected box's **smaller on-panel axis < 96 device px** (≈10.8 mm; ~6.8% of the 1404 px short edge). Below that, 28 du handles collide. **Not** `TILE_LOD_SCALE = 0.35`. | **Accepted 2026-08-13 (architect).** Implement lock for EP-019. |
-| Undo on the four-tool chip | Does **not** fit. Chip inventory is closed (`sel_rect` · `sel_freeform` · Pen · Ink-box). No fifth tool; no properties panel. | **CHL-0010 deferred** (PM 2026-08-13) — no on-panel chrome; EP-015 ships the ring |
+| Undo on the four-tool chip | **Adopted CHL-0016 / ADR-0018:** not a fifth exclusive tool. After a 32 du gap: Undo \| Redo. | Human 2026-08-14 |
 | Selection-create invocation | `cta.create_smart_group` stays **out of v1 chrome**. Refuse scene ships; invocation control does not. Enclose-with-Ink-box is the create path. | **CHL-0010 deferred** (PM 2026-08-13) |
 | Chrome vs dense 1-bit handwriting | **Designer closed:** double-rail bounds (3px black / 2px paper / 1px black) vs single-path ink; **filled** handles with paper well vs open strokes; **45° hatch** on mode toggle and indicators (ink never uses hatch fill). No tint, no shadow, no dashed ghost. | Closed in this Spec |
 

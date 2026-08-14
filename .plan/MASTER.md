@@ -101,8 +101,9 @@ thickened PRDs); design stories done for `[REQ-05]` + `[REQ-06]`. `[REQ-08]` nod
 - **CHL-0009 resolved (adopted 2026-08-13)** — `device-document/srs-logic.md` landed
   (`[SRS-EP-07]` / `[SRS-EP-08]`). IN-027 **done**. EP-014 **done**. EP-015 **done**.
   EP-020 stays `draft`. Verdict: READY-WITH-CONCERNS (op-type aliases — use SRS-IN-09 transmit names).
-- **CHL-0010 deferred (2026-08-13)** — **undo chrome** still deferred. Selection-create invocation
-  **superseded by CHL-0013 Adopt** (ADR-0016 / EP-022).
+- **CHL-0010 superseded-in-part (2026-08-14)** — undo **chrome** adopted as actions after a gap
+  ([CHL-0016](./iter-003/challenges/CHL-0016-undo-redo-toolbar.md) / [ADR-0018](../.docs/adr/ADR-0018-undo-redo-chip-actions.md)).
+  Selection-create invocation remains Enclose CTA (CHL-0013), not a tool.
 - **CHL-0011 adopted → future (2026-08-13)** — nested enclose (capture Smart Groups as content).
   Not W10–W12. Current enclose stays free-ink only; Enclose CTA refuses if SmartGroup selected.
 - **CHL-0012 adopted → future (2026-08-13)** — ink-box sizing `FREE_FORM` / `WRAP_CONTENT` and

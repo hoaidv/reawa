@@ -37,7 +37,7 @@ the final say. This feature removes both.
 | Draw-into membership for existing boxes | In-box alignment, reflow, auto-padding; sizing `FREE_FORM`/`WRAP_CONTENT`; `align-content` ([CHL-0012](../../../../../.plan/iter-003/challenges/CHL-0012-inkbox-sizing-align.md)) |
 | Select, move, resize, `inkScaleMode` toggle, deselect | **Rotation**, connector attachment — [REQ-08](../../prd.md#node-manipulation) |
 | Live direct manipulation of real ink | Advisory ghosts / outline stand-ins corrected later |
-| One undoable entry per gesture | Redo, per-sample undo |
+| One undoable entry per gesture; linear redo | Branching history, per-sample undo |
 | Nested boxes resolved by paint order | Multi-select, marquee, enter/exit group — [REQ-08](../../prd.md#node-manipulation) |
 | Non-rectangular enclosure | Ellipse / lasso enclosure |
 

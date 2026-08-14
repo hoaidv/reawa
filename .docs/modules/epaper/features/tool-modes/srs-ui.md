@@ -62,7 +62,7 @@ latency or reserving a full edge band of drawing area.
 | Layer id | Role | Fill |
 |---|---|---|
 | InkSurface | **Full-bleed** drawing area (existing) | White |
-| ToolChip | Compact **four**-tool cluster (aka ToolStrip) | White; 1 px outline; squared (`border-radius: 0`) |
+| ToolChip | Floating strip: **four** exclusive tools + gap + Undo/Redo actions ([ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md)) | White clusters; 1 px outline; squared (`border-radius: 0`) |
 | SelectionOverlay | Handles + ghost while `selection` is active | Outline only |
 | StatusLine | Existing debug/status text | Unchanged |
 
@@ -78,7 +78,7 @@ hits on the chip are excluded from ink via hit-test ([SRS-EP-04](./srs-logic.md)
 | # | Region id | Parent | Contents |
 |---|---|---|---|
 | 0 | DeviceScreen | panel | Full panel |
-| 1 | ToolChip | DeviceScreen | 4 tool buttons, floating orientation-top chip |
+| 1 | ToolChip | DeviceScreen | 4 exclusive tools, 32 du gap, Undo + Redo; floating orientation-top |
 | 2 | InkSurface | DeviceScreen | Full-bleed drawing region |
 | 3 | SelectionOverlay | InkSurface | Bounds + handles for the selected node |
 | 4 | StatusLine | DeviceScreen | Existing status text |
@@ -94,17 +94,20 @@ hits on the chip are excluded from ink via hit-test ([SRS-EP-04](./srs-logic.md)
 | `ind.tool_active` | Which tool is armed | ToolChip |
 | `ind.tool_unavailable` | Tool cannot act (below LOD cutoff; touch layer dead) | ToolChip |
 | `ind.publish_status` | Linked · changes queued · reloading document | ToolChip |
+| `cta.undo` | Undo last structural gesture | ToolChip history cluster ([ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md)) |
+| `cta.redo` | Redo last undone gesture | ToolChip history cluster |
 | `ovl.selection_bounds` | Selected node bounds | SelectionOverlay ([SRS-EP-12](../ink-box/srs-ui.md)) |
 | `ovl.resize_handles` | Resize handles on bounds | SelectionOverlay ([SRS-EP-12](../ink-box/srs-ui.md)) |
 
-`ovl.drag_ghost` is **removed** — the ink itself moves. No other controls. No brushes, colors,
-layers, undo button, or document browser ([epaper Non-Goals](../../prd.md)).
+`ovl.drag_ghost` is **removed** — the ink itself moves. No brushes, colors, layers, or document
+browser ([epaper Non-Goals](../../prd.md)). Undo/Redo are **actions**, not exclusive tools.
 
 ### Interaction map
 
 | Control | Action | Result | Feedback |
 |---|---|---|---|
 | `tool.*` | Finger tap (or pen-on-chip fallback) | Arm that tool | Active indicator moves within **300 ms** (partial refresh of chip) |
+| `cta.undo` / `cta.redo` | Finger tap (or pen-on-chip) | Restore previous / undone tree ([SRS-EP-07](../device-document/srs-logic.md)) | Brief invert; **does not** change `toolMode`. Empty stack = no-op |
 | `ovl.selection_bounds` | Pen press inside | Select + begin move | Bounds outline appears; the **ink** follows the pen |
 | `ovl.resize_handles` | Pen drag on handle | Resize | Real ink resizes live; committed geometry = released geometry |
 | InkSurface empty | Pen press in `selection` | Clear selection | Overlay disappears, leaving 0 residual pixels |
@@ -120,6 +123,7 @@ Note there is **no hover and no focus** on this platform — do not design them.
 | `tool.sel_freeform` | outline | filled / inverted | brief invert | hatched + inert **only** below the LOD cutoff |
 | `tool.pen` | outline | filled / inverted | brief invert | never — always available |
 | `tool.ink_box` | outline | filled / inverted | brief invert | never — works with the link down |
+| `cta.undo` / `cta.redo` | outline | never armed | brief invert | empty stack still tappable (no-op) |
 
 **No tool is gated by the session.** The link state is reported by `ind.publish_status`, not by
 disabling the creator's tools.
@@ -179,10 +183,8 @@ not design them.
 
 ### Open (needs design)
 
-- **Undo affordance.** **Deferred this campaign**
-  ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)):
-  no on-panel control; the chip stays **four** tools ([Closed control inventory](#closed-control-inventory));
-  no keyboard. [SRS-EP-07](../device-document/srs-logic.md) ring still ships. Reopen only with a
-  verified hardware gesture or a new SRS for a **fifth** chip.
+- **Undo affordance.** **Closed** [CHL-0016](../../../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
+  / [ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md): `cta.undo` and `cta.redo` after a
+  32 du gap on the primary strip. Exclusive tools stay four.
 - **`inkScaleMode` toggle placement** — it belongs to a selected box, not to the chip; specified in
   [SRS-EP-12](../ink-box/srs-ui.md).

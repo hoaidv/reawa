@@ -543,6 +543,44 @@ static void test_undo_accepted_doc_load_clears_ring()
     CHECK(doc.snapshotString() != preLoad);
 }
 
+/** @SRS-EP-07 Redo restores the undone tree; new commit clears redo */
+static void test_redo_restores_undone_tree()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitOp(makeAppendInkOp("ink_r")).applied);
+    const std::string after = doc.snapshotString();
+    CHECK(doc.undo().restored);
+    CHECK(doc.redoDepth() == 1);
+    CHECK(!doc.find("ink_r"));
+    const UndoResult r = doc.redo();
+    CHECK(r.restored);
+    CHECK(doc.find("ink_r"));
+    CHECK(doc.snapshotString() == after);
+    CHECK(doc.redoDepth() == 0);
+    CHECK(doc.undoDepth() == 1);
+
+    CHECK(doc.undo().restored);
+    CHECK(doc.commitOp(makeAppendInkOp("ink_newer", 8, 8)).applied);
+    CHECK(doc.redoDepth() == 0);
+    CHECK(doc.redo().noop);
+    CHECK(doc.find("ink_newer"));
+    CHECK(!doc.find("ink_r"));
+}
+
+/** @SRS-EP-07 Empty redo is a no-op; load clears redo */
+static void test_redo_empty_and_load_clears()
+{
+    DeviceDocument empty;
+    CHECK(empty.redo().noop);
+    DeviceDocument doc;
+    CHECK(doc.commitOp(makeAppendInkOp("gone")).applied);
+    CHECK(doc.undo().restored);
+    CHECK(doc.redoDepth() == 1);
+    doc.onAcceptedDocLoad();
+    CHECK(doc.redoDepth() == 0);
+    CHECK(doc.redo().noop);
+}
+
 int main()
 {
     test_append_ink_fixture_needs_parent();
@@ -562,6 +600,8 @@ int main()
     test_undo_mid_gesture_is_deferred();
     test_undo_publishes_restore_snapshot();
     test_undo_accepted_doc_load_clears_ring();
+    test_redo_restores_undone_tree();
+    test_redo_empty_and_load_clears();
 
     if (g_fails) {
         std::cerr << g_fails << " check(s) failed\n";

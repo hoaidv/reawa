@@ -61,3 +61,16 @@ Feature: Snapshot undo ring on the device document
     When a doc_load is accepted
     Then the undo ring is empty
     And undo cannot reach the pre-load tree
+
+  @SRS-EP-07
+  Scenario: Redo restores the undone tree
+    Given a structural op that was undone
+    When redo runs
+    Then the tree equals the pre-undo tree
+    And a later structural commit clears the redo stack
+
+  @SRS-EP-07
+  Scenario: Empty redo is a no-op
+    Given an empty redo stack
+    When redo runs
+    Then the tree is unchanged

@@ -433,11 +433,9 @@ viewed at scale, and saved.
 
 ## Open Questions
 
-- Undo depth and affordance on the device — **owner:** pm with designer — **needed by:** first
-  [REQ-06](#device-manipulation) design story. [REQ-04](#device-document) sets a floor of 20
-  structural ops. **Affordance deferred this campaign**
-  ([CHL-0010](../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)): no
-  on-panel control, no fourth tool; the ring still ships. Depth-20 is unchanged.
+- Undo depth and affordance on the device — **closed 2026-08-14** ([CHL-0016](../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
+  / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)): depth 20; on-panel Undo and Redo after
+  a gap on the primary strip. Exclusive tools stay four.
 - Document-change granularity on the wire (op log vs coalesced change set) — **owner:** architect —
   **needed by:** ADR-0015. Affects the ≤300 ms mirror target and the reconnect queue.
 - Manual "reload document to tablet" control — **owner:** pm — **needed by:** first

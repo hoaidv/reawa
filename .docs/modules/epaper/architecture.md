@@ -61,9 +61,10 @@ Three layers, ordered by how much the ink budget protects them.
    [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md)).
 
 The strategy is deliberately boring where it can be: the undo ring is whole-document snapshots
-(depth 20) rather than inverse-op algebra, and the change stream is one op per gesture rather than a
-diff format. Both choices buy correctness with memory and bytes, which is the right trade on a
-device whose scarce resource is *latency*, not storage.
+(depth 20) rather than inverse-op algebra, with a matching linear redo stack
+([ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)), and the change stream is one op per
+gesture rather than a diff format. Both choices buy correctness with memory and bytes, which is the
+right trade on a device whose scarce resource is *latency*, not storage.
 
 ## Domain entities (consumed)
 

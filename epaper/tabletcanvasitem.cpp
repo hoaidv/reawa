@@ -490,6 +490,7 @@ void TabletCanvasItem::endStroke()
         ingestCurrentStroke();
     // Safety net: commitOp already ended a successful gesture; this aborts an empty one.
     m_document.abortGesture();
+    notifyHistory();
 
     m_current.clear();
     m_hasEmitted = false;
@@ -725,33 +726,94 @@ QString TabletCanvasItem::toolModeAtChipPos(const QPointF &canvasPos) const
 {
     if (!pointInToolChip(canvasPos))
         return {};
-    const qreal tileW = m_toolChipRect.height();
-    if (tileW <= 0.0)
-        return {};
+    const qreal tileW = 64.0;
+    const qreal gap = 32.0;
     const qreal relX = canvasPos.x() - m_toolChipRect.x();
-    const int tile = qBound(0, int(relX / tileW), 3);
-    static const char *const kModes[] = {"sel_rect", "sel_freeform", "pen", "ink_box"};
-    return QString::fromLatin1(kModes[tile]);
+    if (relX < 0)
+        return {};
+    if (relX < tileW * 4.0) {
+        const int tile = qBound(0, int(relX / tileW), 3);
+        static const char *const kModes[] = {"sel_rect", "sel_freeform", "pen", "ink_box"};
+        return QString::fromLatin1(kModes[tile]);
+    }
+    if (relX < tileW * 4.0 + gap)
+        return QStringLiteral("gap");
+    const qreal histX = relX - tileW * 4.0 - gap;
+    if (histX < tileW)
+        return QStringLiteral("undo");
+    if (histX < tileW * 2.0)
+        return QStringLiteral("redo");
+    return {};
 }
 
 bool TabletCanvasItem::tryArmToolAtCanvasPos(const QPointF &canvasPos)
 {
-    const QString mode = toolModeAtChipPos(canvasPos);
-    if (mode.isEmpty())
+    const QString hit = toolModeAtChipPos(canvasPos);
+    if (hit.isEmpty())
         return false;
-    armTool(mode);
+    if (hit == QLatin1String("undo")) {
+        requestUndo();
+        return true;
+    }
+    if (hit == QLatin1String("redo")) {
+        requestRedo();
+        return true;
+    }
+    if (hit == QLatin1String("gap"))
+        return true;
+    armTool(hit);
     return true;
+}
+
+void TabletCanvasItem::requestUndo()
+{
+    applyHistoryRestore(true);
+}
+
+void TabletCanvasItem::requestRedo()
+{
+    applyHistoryRestore(false);
+}
+
+void TabletCanvasItem::applyHistoryRestore(bool isUndo)
+{
+    using namespace epaper::document;
+    const UndoResult r = isUndo ? m_document.undo() : m_document.redo();
+    (void)r;
+    pruneSelectionAfterHistory();
+    notifyHistory();
+    scheduleVectorRasterize(true);
+    refreshSelectionChrome();
+}
+
+void TabletCanvasItem::pruneSelectionAfterHistory()
+{
+    QStringList keep;
+    for (const QString &id : m_selectedIds) {
+        if (m_document.find(id.toStdString()))
+            keep.append(id);
+    }
+    m_selectedIds = keep;
+    if (!m_selectedPickableId.isEmpty()
+        && !m_document.find(m_selectedPickableId.toStdString())) {
+        m_selectedPickableId.clear();
+        m_gesturePickableId.clear();
+    }
+}
+
+void TabletCanvasItem::notifyHistory()
+{
+    emit historyChanged();
 }
 
 void TabletCanvasItem::updateToolChipRect()
 {
-    // UI-EP-01 amended (human verify 2026-08-11): ≥64px tiles (was 32).
+    // UI-EP-01 + ADR-0018: 4 tools + 32du gap + undo/redo.
     // @implements [SRS-EP-05] floating ToolChip hit bounds
     const qreal chipH = 64.0;
-    const qreal chipW = 64.0 * 4.0;
+    const qreal chipW = 64.0 * 4.0 + 32.0 + 64.0 * 2.0;
     const qreal inset = 8.0;
     qreal top = inset;
-    // gutOnTop → oriented top is opposite short edge (bottom of panel coords).
     if (m_orientation == QLatin1String("gutOnTop"))
         top = height() - inset - chipH;
     const qreal left = (width() - chipW) * 0.5;
@@ -862,8 +924,8 @@ void TabletCanvasItem::encloseSelection()
     m_selGesture = SelGesture::None;
     m_selectionGesture = false;
     refreshSelectionChrome();
-    m_needEncloseRasterize = true;
     scheduleVectorRasterize(true);
+    notifyHistory();
 }
 
 void TabletCanvasItem::beginMarqueeOrLasso(const QPointF &canvasPos)
@@ -1047,6 +1109,7 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
                                                   subject->id, next));
         scheduleVectorRasterize(true);
         refreshSelectionChrome();
+        notifyHistory();
         return;
     }
     if (kind == GestureKind::Resize || kind == GestureKind::SelectMove) {
@@ -1150,6 +1213,7 @@ void TabletCanvasItem::commitLiveManip()
         m_document.abortGesture();
         m_selectedPickableId = m_gesturePickableId;
         refreshSelectionChrome();
+        notifyHistory();
         return;
     }
     ++m_toolIntentSeq;
@@ -1163,6 +1227,7 @@ void TabletCanvasItem::commitLiveManip()
     scheduleVectorRasterize(true);
     m_liveDirtyPrev = QRectF();
     refreshSelectionChrome();
+    notifyHistory();
 }
 
 void TabletCanvasItem::endSelectionGesture()

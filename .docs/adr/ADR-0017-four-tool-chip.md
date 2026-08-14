@@ -35,8 +35,8 @@ contextual.
 2. There is **no** `tool.selection` control and **no** `tgl.sel_*` off-chip.
 3. `cta.enclose` stays on SelectionOverlay when **either** selection tool is armed and the
    selection is non-empty ([ADR-0016](./ADR-0016-selection-create-enclose-cta.md)).
-4. Undo chrome remains deferred ([CHL-0010](../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md))
-   — that would be a **fifth** chip, still rejected.
+4. Undo chrome later adopted as **actions** after a gap, not a fifth exclusive tool
+   ([ADR-0018](./ADR-0018-undo-redo-chip-actions.md)). Enclose still must not join this row.
 
 ## Consequences
 

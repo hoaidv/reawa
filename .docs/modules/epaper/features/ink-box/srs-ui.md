@@ -62,7 +62,8 @@ through a drag. It is not pinned chrome.
 | `ind.manipulation_unavailable` | Below the LOD cutoff | SelectionOverlay or ToolChip |
 | `ind.create_refused_no_surround` | Why a selection-create was refused | Transient, near the selection |
 
-No fifth ToolChip (Enclose / undo stay off-chip). `cta.enclose` is **selection-contextual** on
+No fifth **exclusive** ToolChip. Enclose stays off-chip. Undo/Redo are history **actions** after a
+gap ([ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md)). `cta.enclose` is **selection-contextual** on
 SelectionOverlay ([ADR-0016](../../../../adr/ADR-0016-selection-create-enclose-cta.md)).
 Primary inventory is four tools ([ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md)).
 `cta.create_smart_group` is the logic alias of `cta.enclose`. Enclose-with-Ink-box (Creation A)
@@ -173,7 +174,7 @@ a creator unable to tell which mode they were resizing in until after they relea
 - Connector attachment chrome on a box.
 - Any confirm/accept step beyond tapping `cta.enclose`.
 - Drag events on the 6 selection anchors (visual only this campaign).
-- A fifth ToolChip slot (Enclose or undo).
+- A fifth **exclusive** ToolChip slot (Enclose as a tool). Undo/Redo are actions ([ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md)).
 
 ### Open (needs design) {#open-needs-design}
 
@@ -181,7 +182,7 @@ a creator unable to tell which mode they were resizing in until after they relea
 |---|---|---|
 | **Handle size and hit tolerance in device units** | **Closed 2026-08-13 (architect).** Visual **28 du**; hit **56 du** (14 du pad beyond visual). 1 du = 1 panel pixel @ 226 dpi. **Not** 8 CSS px. Binding for [STORY-EP-019](../../../../../.plan/iter-003/stories/STORY-EP-019.md). | architect — accepted |
 | **LOD cutoff value on device** | **Closed 2026-08-13 (architect).** Manipulation unavailable when the selected box's **smaller on-panel axis < 96 du**. **Not** `TILE_LOD_SCALE = 0.35`. Binding for EP-019. | architect — accepted |
-| **Undo affordance** | **Deferred this campaign ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)).** No on-panel control; no fifth ToolChip; no properties panel. | pm + designer — deferred |
+| **Undo affordance** | **Closed** [CHL-0016](../../../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md) / [ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md): gap then Undo \| Redo. | pm — adopted |
 | **Selection-create invocation** | **Closed** CHL-0013 / ADR-0016 / CHL-0014 hit-tests / **CHL-0015 + ADR-0017** four-tool chip. Design: [STORY-EP-022](../../../../../.plan/iter-003/stories/STORY-EP-022.md). | architect — accepted; designer |
 | **Chrome legibility against dense ink** | 1-bit chrome over handwriting, with no tint or shadow available | designer |
 

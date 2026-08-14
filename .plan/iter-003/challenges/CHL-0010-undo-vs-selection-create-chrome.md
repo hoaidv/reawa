@@ -4,8 +4,8 @@ title: Undo and selection-create cannot share the three-tool chip
 author: designer
 target: [SRS-EP-12]
 severity: medium
-status: deferred
-resolution: deferred
+status: resolved
+resolution: superseded-in-part
 resolved_by: pm
 resolved: 2026-08-13
 opened: 2026-08-13
@@ -66,9 +66,9 @@ Until adopted: [STORY-EP-018](../stories/STORY-EP-018.md) must not invent a seco
    `ind.create_refused_no_surround`) still ships; it does not introduce an invocation control.
    No pen gesture is invented that is not already in the SRS.
 
-Not reject: both capabilities remain in logic ([SRS-EP-07] ring, [SRS-EP-10] selection-create).
-Not adopt: no new chrome, no fourth chip, no new SRS. Reopen in a later campaign if a hardware
-gesture is verified or a new SRS authorizes a fourth chip / CTA.
+**2026-08-14:** Undo chrome **superseded** by [CHL-0016](./CHL-0016-undo-redo-toolbar.md) /
+[ADR-0018](../../../.docs/adr/ADR-0018-undo-redo-chip-actions.md) (actions after a gap). Selection-create
+invocation remains as closed by CHL-0013 (Enclose CTA, not a tool).
 
 **Stories:** [STORY-EP-018](../stories/STORY-EP-018.md) stays **frozen at `draft`** (no invocation
 to implement). EP-015 is **not** frozen. Do not flip EP-018 / EP-019 to `ready` from this triage

@@ -38,6 +38,8 @@ class TabletCanvasItem : public QQuickPaintedItem
     /** Device-local tool: sel_rect | sel_freeform | pen | ink_box — never synced (SRS-EP-04 / ADR-0017). */
     Q_PROPERTY(QString toolMode READ toolMode WRITE setToolMode NOTIFY toolModeChanged)
     Q_PROPERTY(QRectF toolChipRect READ toolChipRect NOTIFY toolChipRectChanged)
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
+    Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
     Q_PROPERTY(QRectF encloseCtaRect READ encloseCtaRect NOTIFY selectionChromeChanged)
     Q_PROPERTY(bool encloseVisible READ encloseVisible NOTIFY selectionChromeChanged)
     Q_PROPERTY(QString encloseRefuseReason READ encloseRefuseReason NOTIFY selectionChromeChanged)
@@ -53,6 +55,10 @@ public:
     QString toolMode() const { return m_toolMode; }
     void setToolMode(const QString &mode);
     QRectF toolChipRect() const { return m_toolChipRect; }
+    bool canUndo() const { return m_document.undoDepth() > 0; }
+    bool canRedo() const { return m_document.redoDepth() > 0; }
+    Q_INVOKABLE void requestUndo();
+    Q_INVOKABLE void requestRedo();
     QRectF encloseCtaRect() const { return m_encloseCtaRect; }
     bool encloseVisible() const { return m_encloseVisible; }
     QString encloseRefuseReason() const { return m_encloseRefuseReason; }
@@ -90,6 +96,7 @@ signals:
     void debugChanged();
     void toolModeChanged();
     void toolChipRectChanged();
+    void historyChanged();
     void pickablesChanged();
     void selectionChromeChanged();
     void segmentDrawn(qreal x1, qreal y1, qreal x2, qreal y2, qreal lineWidth);
@@ -162,6 +169,9 @@ private:
     /** @implements [SRS-EP-04] local selection bounds + move ghost (not baked into ink) */
     void paintSelectionChrome(QPainter *painter) const;
     QRectF pickablePanelRect(const QString &id, double dxWorld = 0, double dyWorld = 0) const;
+    void applyHistoryRestore(bool isUndo);
+    void pruneSelectionAfterHistory();
+    void notifyHistory();
     void scheduleVectorRasterize(bool sharp);
     void rasterizeVectors(bool sharp);
     QPointF worldToPanel(double wx, double wy) const;

@@ -335,14 +335,13 @@ public:
                 m_undoRing.pop_back();
             return r;
         }
-        if (structural)
+        if (structural) {
             enqueueChange(op);
+            m_redoRing.clear();
+        }
         m_intermediateFrames = 0;
         m_gestureInFlight = false;
-        if (m_undoLatched) {
-            m_undoLatched = false;
-            undoNow();
-        }
+        runLatchedHistory();
         return r;
     }
 
@@ -352,10 +351,22 @@ public:
     UndoResult undo()
     {
         if (m_gestureInFlight) {
-            m_undoLatched = true;
+            m_historyLatch = HistoryLatch::Undo;
             return {false, true, false};
         }
         return undoNow();
+    }
+
+    /**
+     * @implements [SRS-EP-07] redo restores the undone tree
+     */
+    UndoResult redo()
+    {
+        if (m_gestureInFlight) {
+            m_historyLatch = HistoryLatch::Redo;
+            return {false, true, false};
+        }
+        return redoNow();
     }
 
     /** @implements [SRS-EP-07] mid-gesture latch — gesture in flight */
@@ -373,10 +384,7 @@ public:
     {
         m_gestureInFlight = false;
         m_intermediateFrames = 0;
-        if (m_undoLatched) {
-            m_undoLatched = false;
-            undoNow();
-        }
+        runLatchedHistory();
     }
 
     /**
@@ -398,8 +406,10 @@ public:
 
     int intermediateFrameCount() const { return m_intermediateFrames; }
     bool gestureInFlight() const { return m_gestureInFlight; }
-    bool undoLatched() const { return m_undoLatched; }
+    bool undoLatched() const { return m_historyLatch == HistoryLatch::Undo; }
+    bool redoLatched() const { return m_historyLatch == HistoryLatch::Redo; }
     std::size_t undoDepth() const { return m_undoRing.size(); }
+    std::size_t redoDepth() const { return m_redoRing.size(); }
 
     const UndoRingEntry *oldestEntry() const
     {
@@ -451,7 +461,8 @@ public:
     void onAcceptedDocLoad()
     {
         m_undoRing.clear();
-        m_undoLatched = false;
+        m_redoRing.clear();
+        m_historyLatch = HistoryLatch::None;
         m_gestureInFlight = false;
         m_intermediateFrames = 0;
     }
@@ -520,11 +531,13 @@ public:
 
 private:
     std::set<std::string> m_applied;
+    enum class HistoryLatch { None, Undo, Redo };
     std::deque<UndoRingEntry> m_undoRing;
+    std::deque<UndoRingEntry> m_redoRing;
     std::vector<DocChange> m_publishQueue;
     int m_lastSeq = 0;
     bool m_gestureInFlight = false;
-    bool m_undoLatched = false;
+    HistoryLatch m_historyLatch = HistoryLatch::None;
     int m_intermediateFrames = 0;
     double m_panX = 0;
     double m_panY = 0;
@@ -547,24 +560,71 @@ private:
     /**
      * @implements [SRS-EP-07] pop newest, replace tree, enqueue restore_snapshot
      */
-    UndoResult undoNow()
+    UndoRingEntry captureNow(const std::string &opId, const std::string &kind) const
     {
-        if (m_undoRing.empty())
-            return {false, false, true};
-        UndoRingEntry e = std::move(m_undoRing.back());
-        m_undoRing.pop_back();
+        UndoRingEntry cur;
+        cur.snapshot = rootChildren;
+        cur.status = status;
+        cur.appliedOpIds = m_applied;
+        cur.opId = opId;
+        cur.kind = kind;
+        return cur;
+    }
+
+    static void pushCapped(std::deque<UndoRingEntry> &ring, UndoRingEntry &&e)
+    {
+        if (static_cast<int>(ring.size()) == kUndoRingDepth)
+            ring.pop_front();
+        ring.push_back(std::move(e));
+    }
+
+    void restoreEntry(UndoRingEntry &&e, const std::string &prefix)
+    {
         rootChildren = std::move(e.snapshot);
         status = e.status;
         m_applied = std::move(e.appliedOpIds);
-
         DocOp rst;
-        rst.opId = std::string("restore_snapshot:") + e.opId;
+        rst.opId = prefix + e.opId;
         rst.type = "restore_snapshot";
         rst.source = "epaper";
         JsonValue::Object payload;
         payload.emplace_back("document", toJSON());
         rst.payload = JsonValue::object(std::move(payload));
         enqueueChange(rst);
+    }
+
+    void runLatchedHistory()
+    {
+        const HistoryLatch latched = m_historyLatch;
+        m_historyLatch = HistoryLatch::None;
+        if (latched == HistoryLatch::Undo)
+            undoNow();
+        else if (latched == HistoryLatch::Redo)
+            redoNow();
+    }
+
+    /**
+     * @implements [SRS-EP-07] pop newest, replace tree, enqueue restore_snapshot
+     */
+    UndoResult undoNow()
+    {
+        if (m_undoRing.empty())
+            return {false, false, true};
+        pushCapped(m_redoRing, captureNow("redo-of:" + m_undoRing.back().opId, "undo"));
+        UndoRingEntry e = std::move(m_undoRing.back());
+        m_undoRing.pop_back();
+        restoreEntry(std::move(e), "restore_snapshot:");
+        return {true, false, false};
+    }
+
+    UndoResult redoNow()
+    {
+        if (m_redoRing.empty())
+            return {false, false, true};
+        pushCapped(m_undoRing, captureNow("undo-of:" + m_redoRing.back().opId, "redo"));
+        UndoRingEntry e = std::move(m_redoRing.back());
+        m_redoRing.pop_back();
+        restoreEntry(std::move(e), "restore_snapshot:redo:");
         return {true, false, false};
     }
 

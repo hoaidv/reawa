@@ -126,7 +126,7 @@ if a structural op will apply:
 | Snapshot | Whole-document snapshot ([SRS-EP-09](./srs-data.md) `{ snapshot, opId, kind }`). Inverse-op algebra is not used ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §5) |
 | Depth | **20**. Overflow drops the oldest. Undo past an empty ring is a **no-op**, not an error |
 | Not covered | Viewport pan/zoom, tool switches, selection changes — these are not document state and **must not** push |
-| Redo | Out of scope |
+| Redo | Snapshot stack, depth **20**. Undo pushes the current tree onto redo before restore. A successful structural commit **clears** redo. Empty redo is a no-op. Branching / non-linear history remains out ([ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md)) |
 
 ### Undo
 
@@ -136,7 +136,21 @@ if a gesture is in flight:
   after that gesture commits (one ring entry, one queued change), run undo
 if ring is empty: no-op
 else:
-  pop the newest entry
+  push the current tree onto the redo stack (drop oldest if depth == 20)
+  pop the newest undo entry
+  replace the tree with that entry's snapshot
+  enqueue doc_change { op: restore_snapshot { document: restored tree } }
+```
+
+### Redo
+
+```text
+if a gesture is in flight:
+  latch; last history request wins; run after commit
+if redo stack is empty: no-op
+else:
+  push the current tree onto the undo ring (drop oldest if depth == 20)
+  pop the newest redo entry
   replace the tree with that entry's snapshot
   enqueue doc_change { op: restore_snapshot { document: restored tree } }
 ```
@@ -146,7 +160,7 @@ else:
 | Exactness | After undo, the tree equals the popped pre-op snapshot (0 divergent nodes). Geometry tolerance is [SRS-EP-13](./srs-quality.md), not redefined here |
 | Mid-gesture | Deferred as above. **0** corrupted in-flight gestures |
 | Already published | Undo is itself a change and publishes like any other — the mirror follows |
-| Accepted `doc_load` | Ring is emptied. Undo cannot reach the pre-load tree |
+| Accepted `doc_load` | Undo and redo stacks are emptied. History cannot reach the pre-load tree |
 
 ### No peer round trip inside a gesture
 

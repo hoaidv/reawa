@@ -152,7 +152,7 @@ somewhere else, or ink that settles somewhere other than where the hand released
 |---|---|---|---|
 | 1 | A box was created around the wrong strokes, or a drag went too far | any | |
 | 2 | Creator undoes once | `undo.applied` | Exactly one gesture reverts |
-| 3 | The document is back to the previous state, ±1 px | previous state | **No on-panel undo chrome this campaign** ([CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md) deferred); ring still ships (EP-015) |
+| 3 | The document is back to the previous state, ±1 px | previous state | Tap `cta.undo` on the primary strip ([ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md)); `cta.redo` restores if no newer commit |
 
 ---
 
@@ -182,7 +182,7 @@ somewhere else, or ink that settles somewhere other than where the hand released
 | Enter/exit a box to edit its children as a sub-scene | Defer | [REQ-08](../../prd.md#node-manipulation) |
 | Ellipse or lasso enclosure | Reject (this campaign) | epaper PRD Non-Goals |
 | Aligning writing inside the box | Reject (this campaign) | epaper PRD Non-Goals |
-| A fifth tool for undo | Defer (this campaign) | [CHL-0010](../../../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md) — EP-015 ships the ring with no chrome |
+| A fifth *exclusive tool* for undo | Reject | [ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md) — Undo/Redo are actions after a gap |
 | Confirmation dialog before creating a box | Reject | BR-B09 — best-effort + undo, no modals on e-ink |
 
 ---
