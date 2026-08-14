@@ -109,6 +109,7 @@ enum SSHKeyInstaller {
         touch "$AUTH_KEYS"
         chmod 600 "$AUTH_KEYS"
         grep -qxF '\(escapedKey)' "$AUTH_KEYS" 2>/dev/null || echo '\(escapedKey)' >> "$AUTH_KEYS"
+        # append-only: other Macs' keys in authorized_keys must stay ([SRS-RW-10])
         """
 
         let askpassURL = try writeAskpassScript(password: password)

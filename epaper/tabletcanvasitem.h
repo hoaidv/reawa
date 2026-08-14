@@ -44,6 +44,7 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(bool encloseVisible READ encloseVisible NOTIFY selectionChromeChanged)
     Q_PROPERTY(QString encloseRefuseReason READ encloseRefuseReason NOTIFY selectionChromeChanged)
     Q_PROPERTY(QString manipulationUnavailable READ manipulationUnavailable NOTIFY selectionChromeChanged)
+    Q_PROPERTY(QRectF manipulationUnavailableRect READ manipulationUnavailableRect NOTIFY selectionChromeChanged)
 
 public:
     explicit TabletCanvasItem(QQuickItem *parent = nullptr);
@@ -63,6 +64,7 @@ public:
     bool encloseVisible() const { return m_encloseVisible; }
     QString encloseRefuseReason() const { return m_encloseRefuseReason; }
     QString manipulationUnavailable() const { return m_manipUnavailable; }
+    QRectF manipulationUnavailableRect() const { return m_manipUnavailableRect; }
     Q_INVOKABLE void encloseSelection();
 
     /** Digitizer channels reported on this sample (SRS-EP-09). Unset = not reported. */
@@ -181,6 +183,10 @@ private:
     void drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
                   const epaper::document::DocNode *smartParent);
     double panelScale() const;
+    QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const;
+    bool lodOkPanel(const epaper::document::SmartBounds &wb) const;
+    bool viewportZoomedOut() const;
+    void showManipUnavailable(const epaper::document::SmartBounds &wb);
     qreal worldStrokeWidth(qreal pressure) const;
     void panelToFrameUv(double localX, double localY, double *u, double *v) const;
     void frameUvToPanel(double u, double v, double *x, double *y) const;
@@ -231,6 +237,7 @@ private:
     bool m_encloseVisible = false;
     QString m_encloseRefuseReason;
     QString m_manipUnavailable;
+    QRectF m_manipUnavailableRect;
     epaper::document::SmartTransform m_originT;
     epaper::document::SmartTransform m_liveT;
     epaper::document::SmartBounds m_originB;

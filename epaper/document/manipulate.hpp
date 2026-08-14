@@ -61,6 +61,12 @@ inline bool lodAllows(double worldW, double worldH, double panelScale)
     return ax >= kLodMinAxisDu;
 }
 
+/** SRS-EP-11: smaller *on-panel* axis (after world→panel), not world×uniform X scale. */
+inline bool lodAllowsPanel(double panelW, double panelH)
+{
+    return std::min(std::abs(panelW), std::abs(panelH)) >= kLodMinAxisDu;
+}
+
 /** Kind-agnostic bounds provider. */
 inline bool boundsOf(const DocNode &n, SmartBounds &out) { return nodeWorldAabb(n, out); }
 

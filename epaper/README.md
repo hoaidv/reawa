@@ -34,6 +34,10 @@ See [TOOLCHAIN.md](TOOLCHAIN.md) for SDK installer setup.
 ./scripts/deploy-rm2.sh --restore   # kill epaper, start xochitl
 ```
 
+Deploy picks a working key under `~/Library/Application Support/Reawa/keys/*/id_rsa`
+(or `RM_SSH_KEY`). It **appends** this Mac's `.pub` to the tablet `authorized_keys`
+and never replaces that file, so other machines keep access ([SRS-RW-10]).
+
 Optional env, forwarded to the device by `deploy-rm2.sh` when set locally:
 
 | Env | Effect |

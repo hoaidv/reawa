@@ -157,7 +157,7 @@ real ink; `set_smart_transform` publishes at pen-up as a consequence
 | Resolution order | Topmost first — later siblings paint above, so they pick first |
 | Hit region | Inside `bounds`, plus a handle tolerance band when selected: visual **28 du**, hit **56 du** (14 du pad beyond visual). 1 du = 1 panel pixel @ 226 dpi. **Not** 8 CSS px |
 | Source | The **local document** — never a peer-supplied list |
-| LOD cutoff | Picking disabled when the selected box's **smaller on-panel axis < 96 du**. **Not** `TILE_LOD_SCALE = 0.35` (desktop tile constant — the device has a fixed panel and no tiles) |
+| LOD cutoff | Applies **only when the viewport is zoomed out** (min panel/world scale **< 1.0**). Then picking is disabled if the box's **smaller on-panel axis < 96 du** (world→panel AABB). At scale **≥ 1.0** (identity map / 100% zoom), every SmartGroup is manipulable — enclose min-axis is 48 world, which is a legal box. **Not** `TILE_LOD_SCALE = 0.35` |
 | Below cutoff | The press does nothing to the document, and the UI states that manipulation is unavailable ([SRS-EP-12](./srs-ui.md)) |
 
 **Device constants (closed 2026-08-13).** Handle 28/56 du and LOD 96 du min-axis are accepted from

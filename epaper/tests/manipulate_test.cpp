@@ -170,6 +170,10 @@ static void test_lod()
 {
     CHECK(lodAllows(200, 200, 1.0));
     CHECK(!lodAllows(50, 200, 1.0));
+    CHECK(lodAllowsPanel(200, 100));
+    CHECK(!lodAllowsPanel(80, 200));
+    CHECK(lodAllowsPanel(96, 400));
+    CHECK(lodAllows(48, 48, 1.0) == false); // 48du enclose at 1:1 would fail naive LOD
 }
 
 int main()

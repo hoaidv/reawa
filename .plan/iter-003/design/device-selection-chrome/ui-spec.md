@@ -250,7 +250,7 @@ Release is the commit. No confirm step. Overlay annotates ink that is **already 
 | `ovl.resize_handles` 8 handles, **no rotation** | `.c-handle` nw…w; 0 rotate | match |
 | `tgl.ink_scale_mode` | `.c-mode-toggle` on the box | match |
 | `ind.mode_current` | `.c-mode-current` label | match |
-| `ind.manipulation_unavailable` | hatch indicator | match |
+| `ind.manipulation_unavailable` | hatch indicator next to the box (SelectionOverlay). Copy: **Too far out to move**. Never the top-left debug HUD. Hidden at viewport scale ≥ 1.0 |
 | `ind.create_refused_no_surround` | hatch indicator | match |
 | `cta.create_smart_group` | omitted | omit — SRS out of v1; CHL-0010 |
 | No properties panel / context menu / handle labels / z-order / guides | absent | match |

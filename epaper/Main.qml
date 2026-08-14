@@ -185,14 +185,27 @@ TabletWindow {
         text: drawCanvas.encloseRefuseReason
     }
 
-    Text {
+    // ind.manipulation_unavailable — on the selection overlay, never the debug HUD [SRS-EP-12]
+    Rectangle {
+        id: manipUnavailable
         z: 21
         visible: drawCanvas.manipulationUnavailable.length > 0
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: 72
-        font.pixelSize: 16
-        color: "black"
-        text: drawCanvas.manipulationUnavailable
+        x: drawCanvas.manipulationUnavailableRect.x
+        y: drawCanvas.manipulationUnavailableRect.y
+        width: Math.max(220, drawCanvas.manipulationUnavailableRect.width)
+        height: Math.max(36, drawCanvas.manipulationUnavailableRect.height)
+        color: "white"
+        border.color: "black"
+        border.width: 2
+        Text {
+            anchors.fill: parent
+            anchors.margins: 6
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.pixelSize: 14
+            color: "black"
+            text: drawCanvas.manipulationUnavailable
+        }
     }
 
     Repeater {
@@ -221,7 +234,6 @@ TabletWindow {
               + (EpaperBridge.penModeAttached ? " | pen" : "")
               + (drawCanvas.paintsInk ? " | painted" : " | pool " + root.inkNext)
               + " | " + drawCanvas.toolMode
-              + " | pick " + drawCanvas.pickableCount
               + " | strokes " + drawCanvas.strokeCount
               + "  " + drawCanvas.debugInfo
     }

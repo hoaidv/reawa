@@ -1026,6 +1026,7 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
     using namespace epaper::document;
     m_encloseRefuseReason.clear();
     m_manipUnavailable.clear();
+    m_manipUnavailableRect = QRectF();
     const QPointF world = panelToWorld(canvasPos);
 
     auto worldToPanelCb = [this](double wx, double wy, double *px, double *py) {
@@ -1056,12 +1057,10 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
                 const QRectF tog = modeChipRect(r);
                 toggleHit = tog.contains(canvasPos);
             }
-            if (!lodAllows(wb.width, wb.height, panelScale()) && (handleHit || toggleHit
+            if (!lodOkPanel(wb) && (handleHit || toggleHit
                     || (world.x() >= wb.x && world.x() <= wb.x + wb.width
                         && world.y() >= wb.y && world.y() <= wb.y + wb.height))) {
-                m_manipUnavailable = QStringLiteral("Too small to manipulate");
-                emit selectionChromeChanged();
-                update();
+                showManipUnavailable(wb);
                 return;
             }
         }
@@ -1072,7 +1071,8 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
     const DocNode *hit = nullptr;
     for (int i = int(pick.size()) - 1; i >= 0; --i) {
         const DocNode *n = pick[size_t(i)];
-        if (!n || !descriptorFor(n->kind).has(Verb::Select))
+        // Single-press pickables are SmartGroups (Move), not free ink [SRS-EP-11].
+        if (!n || !descriptorFor(n->kind).has(Verb::Move))
             continue;
         SmartBounds b;
         if (!boundsOf(*n, b))
@@ -1092,14 +1092,19 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
         cap = descriptorFor(subject->kind);
         SmartBounds wb;
         if (boundsOf(*subject, wb))
-            lodOk = lodAllows(wb.width, wb.height, panelScale());
+            lodOk = lodOkPanel(wb);
     }
 
     const GestureKind kind = resolvePress(cap, lodOk, handleHit, toggleHit, nodeHit);
     if (kind == GestureKind::Unavailable) {
-        m_manipUnavailable = QStringLiteral("Too small to manipulate");
-        emit selectionChromeChanged();
-        update();
+        SmartBounds wb;
+        if (subject && boundsOf(*subject, wb))
+            showManipUnavailable(wb);
+        else {
+            m_manipUnavailable = QStringLiteral("Too far out to move");
+            emit selectionChromeChanged();
+            update();
+        }
         return;
     }
     if (kind == GestureKind::ToggleMode && subject) {
@@ -1126,7 +1131,7 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
         m_resizeHandle = handle;
         m_selGesture = kind == GestureKind::Resize ? SelGesture::Resize : SelGesture::Move;
         m_document.beginGesture();
-        m_selectionGhostClock.restart();
+        m_selectionGhostClock.invalidate();
         m_liveDirtyPrev = QRectF();
         m_selectionChromeDirty = QRectF();
         refreshSelectionChrome();
@@ -1152,10 +1157,6 @@ void TabletCanvasItem::updateSelectionGesture(const QPointF &canvasPos)
         return;
     }
     m_gestureLastWorld = panelToWorld(canvasPos);
-    if (m_selectionGhostClock.isValid()
-        && m_selectionGhostClock.elapsed() < kSelectionGhostMinIntervalMs)
-        return;
-    m_selectionGhostClock.restart();
 
     const double dx = m_gestureLastWorld.x() - m_gestureStartWorld.x();
     const double dy = m_gestureLastWorld.y() - m_gestureStartWorld.y();
@@ -1177,6 +1178,12 @@ void TabletCanvasItem::updateSelectionGesture(const QPointF &canvasPos)
     }
     m_document.applyLiveSmartGeometry(m_gesturePickableId.toStdString(), m_liveT, m_liveB);
     m_document.previewManipulationFrame();
+    // Keep live transform current so a short drag still commits [SRS-EP-11].
+    // Throttle only the panel redraw (≥5 Hz / stall ≤200 ms).
+    if (m_selectionGhostClock.isValid()
+        && m_selectionGhostClock.elapsed() < kSelectionGhostMinIntervalMs)
+        return;
+    m_selectionGhostClock.restart();
     redrawLiveManipRegion();
 }
 
@@ -1437,6 +1444,52 @@ double TabletCanvasItem::panelScale() const
     if (rw <= 0.0)
         return 1.0;
     return width() / rw;
+}
+
+QRectF TabletCanvasItem::worldBoundsToPanel(const epaper::document::SmartBounds &wb) const
+{
+    const QPointF tl = worldToPanel(wb.x, wb.y);
+    const QPointF br = worldToPanel(wb.x + wb.width, wb.y + wb.height);
+    return QRectF(tl, br).normalized();
+}
+
+bool TabletCanvasItem::lodOkPanel(const epaper::document::SmartBounds &wb) const
+{
+    // @implements [SRS-EP-11] LOD only when zoomed out; scale ≥ 1.0 always manipulable
+    if (!viewportZoomedOut())
+        return true;
+    const QRectF r = worldBoundsToPanel(wb);
+    return epaper::document::lodAllowsPanel(r.width(), r.height());
+}
+
+bool TabletCanvasItem::viewportZoomedOut() const
+{
+    if (!m_drawingRegion.valid)
+        return false;
+    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
+    const double rh = m_drawingRegion.maxY - m_drawingRegion.minY;
+    if (rw <= 0.0 || rh <= 0.0)
+        return false;
+    const double sx = width() / rw;
+    const double sy = height() / rh;
+    return std::min(sx, sy) < 1.0 - 1e-6;
+}
+
+void TabletCanvasItem::showManipUnavailable(const epaper::document::SmartBounds &wb)
+{
+    // Design copy: ind.manipulation_unavailable — not the debug HUD.
+    m_manipUnavailable = QStringLiteral("Too far out to move");
+    const QRectF box = worldBoundsToPanel(wb);
+    constexpr qreal kW = 220.0;
+    constexpr qreal kH = 36.0;
+    qreal x = box.center().x() - kW * 0.5;
+    qreal y = box.bottom() + 8.0;
+    if (y + kH > height())
+        y = std::max(8.0, box.top() - kH - 8.0);
+    x = qBound(8.0, x, qMax(8.0, width() - kW - 8.0));
+    m_manipUnavailableRect = QRectF(x, y, kW, kH);
+    emit selectionChromeChanged();
+    update();
 }
 
 qreal TabletCanvasItem::worldStrokeWidth(qreal pressure) const

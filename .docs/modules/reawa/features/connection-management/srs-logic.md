@@ -46,8 +46,10 @@ JSON uses snake_case keys: `region_x`, `snapped_window_ref`, etc. RM2 aspect: `2
 
 - Connect with RSA key; on auth failure, `setupKey(...)` with Keychain password.
 - `ensureKeyPair(...)`: 3072-bit RSA via `/usr/bin/ssh-keygen`.
-- `setupKey(...)`: temporary `SSH_ASKPASS` helper installs public key to device `authorized_keys`.
+- `setupKey(...)`: temporary `SSH_ASKPASS` helper **appends** this machine's public key to device `authorized_keys` if the exact line is absent. It must not truncate, rewrite, or replace the file — several Macs may share one RM2.
 - After first successful setup, subsequent connects use key only.
+- USB Ethernet always uses `10.11.99.1`; host-key checks against a shared `known_hosts` are not reliable across machines or tablet reinstalls. Clients use `StrictHostKeyChecking=no` and `UserKnownHostsFile=/dev/null` (key auth still required).
+- Epaper deploy (`epaper/scripts/deploy-rm2.sh`) resolves `RM_SSH_KEY` or any `~/Library/Application Support/Reawa/keys/*/id_rsa`, then appends that key's `.pub` the same way.
 
 ## [SRS-RW-11] Single active connection
 
