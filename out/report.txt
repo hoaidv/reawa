@@ -1,341 +1,230 @@
 
-=== EXP-0002 round 4 — connector-ink warp probe (SPIKE, host-only) ===
-final model: variant A (unblended control) and A+C (candidate). An edge anchor's facing is the DRAWN DEPARTURE, stored in the edge's local frame and carried rigidly (D27). No base blend length: the blend arc is only what the turn demands, so it is zero when no turn was introduced.
-departure stub ratio 1.50 | turn room 5.00 | blend cap 0.35 per end | minimum ink radius 12.0 u
-rule: blend arc per end = min(5.0 * 12u * turn_rad, 0.35*L')
-turn = angle between the required facing and the unblended spine's own departure at the anchor. For a rigid facing this is exactly how much the box rotated relative to how much the chord rotated.
+=== EXP-0002 round 5 — Local vs Always-cubic vs Morph (SPIKE, host-only) ===
+Local is the round-4 shipped model, not retuned: stub 1.50, turn room 5.0, blend cap 0.35, min radius 12.0 u. No base blend. d absolute, never re-bake, pre-blend parameterization, no clamp, variant B gone.
+Always-cubic (EH1): warped spine is a cubic Hermite through the new endpoints with the two facings. (s,d) re-placed on that cubic. Not an identity at rest unless the rest spine was already that cubic.
+Morph: V = mix(U, C, m) with ONE mix factor for the whole connector. m = f(max(turn0, turn1)), turn_i = angle(facing_i, unblended spine tangent at that end). Measured at the end itself (no base blend length). m(0)=0 is a true skip, bitwise U (D27). Quadratic is mathematically insufficient (one interior control cannot hold two independent facings) and is not built.
+Handle default: RestSpeed (Hermite speed = L' of the unblended spine). Mix default: world-space lerp. m(turn) form: versine saturating at 90 deg — a proposal, not a win; section 4 says whether any form can keep both goals. The case set and contact sheet use these.
+Centre facing is D29 (drawn departure, 60 deg cone about the peer ray).
 
---- 1a. the stored facing: drawn departure vs edge normal ---
-the angle below is what D27 now stores, per end, in the edge's local frame. It is the reason the round-3 model altered the ink at rest: it was using 0.0 for every one of these.
-shape    A off-normal  B off-normal  the departure the creator actually drew
-arc      -38.6 deg     27.7 deg      carried rigidly with the edge from here on
-wiggle   -15.8 deg     23.3 deg      carried rigidly with the edge from here on
+--- 1. I6 identity at rest (bitwise vs rest-shape reconstruction) ---
+Local and Morph must pass. Always-cubic is expected to fail; the residual is the price of EH1.
+shape   rep residual u  Local vs U        Morph vs U        Cubic vs U max/mean   Cubic frac>1u
+arc     0.0000          bitwise           bitwise           19.208/10.354         85%
+wiggle  0.0717          bitwise           bitwise           25.587/11.268         89%
 
---- 1b. identity at rest: four candidate mechanisms, nothing moved ---
-'dev from ink' is the largest distance between an output sample and the sample the creator drew. 'A+C vs A' is whether the blended output is bitwise the unblended warp -- the only form of identity that can be exact.
-'first-move jump' is the same deviation after a 2 deg rotation of box A, i.e. the pop the creator would see on the smallest move that a mechanism with a threshold cannot avoid.
-mechanism         shape   turn at rest  blend len  dev from ink u  A+C vs A  first-move jump u  what it is
-M0 round 3        arc     36.25 deg     0.150      7.687           differs   8.37               edge-normal facing, base blend 0.15, stub 1.5
-M0 round 3        wiggle  46.34 deg     0.171      7.819           differs   7.73               
-M1 facing only    arc     2.37 deg      0.150      4.046           differs   4.07               drawn facing, base blend kept at 0.15
-M1 facing only    wiggle  30.51 deg     0.150      4.770           differs   4.72               
-M2 stub 1.0       arc     2.37 deg      0.150      0.011           differs   0.35               M1 with the stub ratio collapsed to 1.0
-M2 stub 1.0       wiggle  30.51 deg     0.150      2.910           differs   2.85               
-M3 deadband 1deg  arc     0.00 deg      0.000      0.000           identical 4.07               drawn facing, base blend, short circuit
-M3 deadband 1deg  wiggle  0.00 deg      0.000      0.072           identical 4.72               
-M4 no floor       arc     0.00 deg      0.000      0.000           identical 0.04               drawn facing, blend arc = turn demand only
-M4 no floor       wiggle  0.00 deg      0.000      0.072           identical 0.06               
-the residual that survives M4 is not the blend: it is the (s,d) store itself. Variant A, which does no blending at all, sits the same distance from the raw ink, because the nearest-point projection drops the tangential component of a sample whose foot falls outside its segment.
-  arc     representation residual (A vs ink) 0.0000 u, blend residual (A+C vs A) 0.000000000 u
-  wiggle  representation residual (A vs ink) 0.0717 u, blend residual (A+C vs A) 0.000000000 u
+--- 1b. identity continuity: 0-8 deg rotation of box A (arc) ---
+A threshold/deadband pops; a continuous mix must not. Cubic has no identity to be continuous with.
+rot    turn    m       Local mean/max  Morph mean/max  Cubic mean/max  Local/Morph bitwise?
+0.0    0.00    0.000   0.000/0.000     0.000/0.000     10.354/19.208   L=U M=U
+0.5    0.64    0.000   0.000/0.000     0.001/0.002     10.600/19.555   L=U M~
+1.0    1.27    0.000   0.000/0.000     0.005/0.010     10.852/19.916   L=U M~
+2.0    2.54    0.002   0.000/0.043     0.022/0.041     11.370/20.674   L~ M~
+4.0    5.08    0.008   0.003/0.314     0.098/0.175     12.460/22.319   L~ M~
+8.0    10.15   0.031   0.013/0.846     0.460/0.808     14.799/26.018   L~ M~
+15.0   18.96   0.106   0.054/1.860     2.028/3.515     19.215/33.291   L~ M~
 
---- 1c. is the identity continuous, or is it a cliff at a threshold? ---
-box A rotated by a hair. A mechanism with a threshold is exact at 0 and jumps the moment the threshold is crossed; a mechanism whose blend arc is the turn demand ramps from nothing.
-rot A   turn     M3 blend u  M3 moved u  M4 blend u  M4 moved u  
-0.00    0.00     0.0         0.000       0.0         0.000       
-0.25    0.32     0.0         0.000       0.3         0.000       
-0.50    0.64     0.0         0.000       0.7         0.000       
-1.00    1.27     54.7        4.049       1.3         0.000       
-1.50    1.91     54.7        4.057       2.0         0.000       
-2.00    2.54     54.7        4.068       2.7         0.043       
-4.00    5.08     54.8        4.141       5.3         0.314       
-8.00    10.15    55.0        4.423       10.6        0.846       
-16.00   20.21    55.6        5.408       21.2        2.036       
-32.00   39.77    57.8        8.283       41.6        5.966       
-the smallest turn the blend can act on at all is one sample spacing of arc: 1.91 deg. Below that the demanded arc is shorter than the gap between samples, so nothing moves and the departure is left as drawn -- which is inside the 5 deg facing bar by a factor of 2.6.
+--- 2. cubic handle length: Chord vs ChordThird vs RestSpeed ---
+Chord = Hermite speed |c'| (Bezier controls at chord/3). ChordThird = speed |c'|/3. RestSpeed = L' of the unblended spine. Fit at rest is the EH1 identity price; the rotated rows ask whether the handle loops, cusps, or S-curves.
+handle        shape   rot   h u      fit max/mean  minR    cusps  back/x  inflect  face analytic
+Chord |c'|    arc     0     331.7    23.7/13.4     225.7   0      0/0     0        0.00
+Chord |c'|    arc     15    336.4    36.0/21.4     160.8   0      0/0     1        0.00
+Chord |c'|    arc     45    365.7    67.8/40.4     98.6    0      0/0     1        0.00
+Chord |c'|    arc     75    410.3    101.0/59.5    73.6    0      0/0     1        0.00
+Chord |c'|    arc     120   475.3    144.6/85.1    30.3    0      4/0     1        0.00
+Chord |c'|    wiggle  0     331.7    28.5/12.4     200.4   0      0/0     1        0.00
+Chord |c'|    wiggle  15    336.4    43.9/16.3     135.3   0      0/0     1        0.00
+Chord |c'|    wiggle  45    365.7    76.5/31.7     82.6    0      0/0     1        0.00
+Chord |c'|    wiggle  75    410.3    109.2/47.9    44.7    0      0/0     1        0.00
+Chord |c'|    wiggle  120   475.3    149.9/70.4    13.6    0      16/0    1        0.00
+Chord/3       arc     0     110.6    53.9/37.0     16.2    0      0/0     0        0.00
+Chord/3       arc     15    112.1    58.2/39.6     14.0    0      0/0     0        0.00
+Chord/3       arc     45    121.9    71.9/48.7     12.0    1      0/0     1        0.00
+Chord/3       arc     75    136.8    88.7/59.7     10.5    3      0/0     1        0.00
+Chord/3       arc     120   158.4    110.3/73.7    7.8     9      1/0     1        0.00
+Chord/3       wiggle  0     110.6    49.6/24.6     17.3    0      0/0     0        0.00
+Chord/3       wiggle  15    112.1    52.4/26.9     14.4    0      0/0     1        0.00
+Chord/3       wiggle  45    121.9    65.5/34.0     10.9    1      0/0     1        0.00
+Chord/3       wiggle  75    136.8    82.5/42.3     8.3     7      0/0     1        0.00
+Chord/3       wiggle  120   158.4    103.4/52.8    4.8     14     5/0     1        0.00
+RestSpeed L'  arc     0     364.7    19.2/10.4     295.7   0      0/0     0        0.00
+RestSpeed L'  arc     15    369.8    33.3/19.2     188.2   0      0/0     1        0.00
+RestSpeed L'  arc     45    402.0    67.9/39.5     107.6   0      0/0     1        0.00
+RestSpeed L'  arc     75    451.1    103.3/59.8    79.4    0      0/0     1        0.00
+RestSpeed L'  arc     120   522.5    150.0/87.5    30.9    0      4/0     1        0.00
+RestSpeed L'  wiggle  0     396.7    25.6/11.3     240.4   0      0/0     1        0.00
+RestSpeed L'  wiggle  15    402.3    43.7/15.3     158.4   0      0/0     1        0.00
+RestSpeed L'  wiggle  45    437.4    80.6/32.1     95.0    0      0/0     1        0.00
+RestSpeed L'  wiggle  75    490.7    117.2/50.9    47.3    0      0/0     1        0.00
+RestSpeed L'  wiggle  120   568.4    163.6/78.5    13.1    0      19/0    1        0.00
+pick (on this table): RestSpeed. It has the lowest rest-fit error on both shapes (the EH1 identity price we came to measure): arc 19.2/10.4 vs Chord 23.7/13.4 vs ChordThird 53.9/37.0. High-turn failure modes are the same as Chord (S-curve, then backtrack past ~120 deg of rotation); ChordThird under-steers and cusps from 45 deg. Chord's theoretical virtue — it is the unique speed that makes a cubic a straight line when both facings already align with the chord — does not apply here: the stored facings are 16-39 deg off the chord, so that identity is never in play. The case set uses RestSpeed.
 
---- 2. turn room, re-derived on the drawn-departure baseline ---
-arc* = smallest blend arc, in world units, that holds the 12.0 u radius bar at the rotated end (cap off). If the demand is an absolute arc then arc*/(R*turn) is constant across connector lengths; that ratio IS the turn room.
-rows marked 'rest-limited' are excluded from the envelope: the creator's own ink is already tighter than the bar inside that window, so the bar is unreachable for a reason the blend cannot fix.
-shape   rotA   L' u     turn    arc* u   arc*/(R*turn)  note
-arc     15     33.2     34.5    -        -              bar unreachable inside half the connector
-arc     15     76.7     23.5    14.0     2.85           
-arc     15     152.8    19.3    11.5     2.84           
-arc     15     283.4    17.3    10.2     2.82           
-arc     15     479.2    16.4    10.1     2.94           
-arc     30     40.1     63.3    -        -              bar unreachable inside half the connector
-arc     30     81.8     45.8    28.5     2.97           
-arc     30     157.2    38.2    24.1     3.01           
-arc     30     287.3    34.5    21.6     2.99           
-arc     30     483.0    32.6    20.3     2.97           
-arc     45     50.0     84.8    -        -              bar unreachable inside half the connector
-arc     45     90.3     65.9    -        -              bar unreachable inside half the connector
-arc     45     164.7    56.2    38.0     3.23           
-arc     45     294.2    51.2    34.4     3.21           
-arc     45     489.6    48.7    32.3     3.17           
-arc     60     61.0     101.5   -        -              bar unreachable inside half the connector
-arc     60     100.8    83.5    -        -              bar unreachable inside half the connector
-arc     60     174.4    73.2    57.0     3.72           
-arc     60     303.4    67.5    51.0     3.60           
-arc     60     498.5    64.6    47.9     3.54           
-arc     75     72.0     115.3   -        -              bar unreachable inside half the connector
-arc     75     112.0    99.2    -        -              bar unreachable inside half the connector
-arc     75     185.4    89.2    84.0     4.50           
-arc     75     314.1    83.3    74.5     4.27           
-arc     75     509.0    80.1    68.7     4.10           
-arc     90     82.5     127.5   -        -              bar unreachable inside half the connector
-arc     90     123.2    113.3   -        -              bar unreachable inside half the connector
-arc     90     196.7    104.2   -        -              bar unreachable inside half the connector
-arc     90     325.5    98.4    108.4    5.26           
-arc     90     520.3    95.2    101.5    5.09           
-wiggle  15     32.3     34.5    -        -              bar unreachable inside half the connector
-wiggle  15     75.0     23.5    -        -              bar unreachable inside half the connector
-wiggle  15     153.8    19.3    10.6     2.63           
-wiggle  15     288.9    17.3    9.5      2.63           
-wiggle  15     490.7    16.4    10.3     3.01           
-wiggle  30     38.9     63.3    -        -              bar unreachable inside half the connector
-wiggle  30     80.1     45.8    -        -              bar unreachable inside half the connector
-wiggle  30     158.2    38.2    22.8     2.85           
-wiggle  30     293.0    34.5    19.3     2.68           
-wiggle  30     494.5    32.6    19.3     2.82           
-wiggle  45     48.5     84.8    -        -              bar unreachable inside half the connector
-wiggle  45     88.4     65.9    -        -              bar unreachable inside half the connector
-wiggle  45     165.7    56.2    74.1     6.29           
-wiggle  45     300.0    51.2    30.6     2.85           
-wiggle  45     501.3    48.7    30.1     2.95           
-wiggle  60     59.2     101.5   -        -              bar unreachable inside half the connector
-wiggle  60     98.6     83.5    -        -              bar unreachable inside half the connector
-wiggle  60     175.5    73.2    -        -              bar unreachable inside half the connector
-wiggle  60     309.4    67.5    43.6     3.08           
-wiggle  60     510.4    64.6    42.9     3.17           
-wiggle  75     69.9     115.3   -        -              bar unreachable inside half the connector
-wiggle  75     109.6    99.2    -        -              bar unreachable inside half the connector
-wiggle  75     186.5    89.2    -        -              bar unreachable inside half the connector
-wiggle  75     320.3    83.3    123.9    7.11           
-wiggle  75     521.1    80.1    57.8     3.45           
-wiggle  90     80.1     127.5   -        -              bar unreachable inside half the connector
-wiggle  90     120.6    113.3   -        -              bar unreachable inside half the connector
-wiggle  90     198.0    104.2   -        -              bar unreachable inside half the connector
-wiggle  90     331.8    98.4    -        -              bar unreachable inside half the connector
-wiggle  90     532.7    95.2    81.5     4.09           
-measured turn room over 33 clean points: 2.63 to 7.11 (0 rest-limited, 27 unreachable).
-read down each rotation block: the ratio is near-constant across a 6x range of connector length (2.82-2.94 at 15 deg, 2.97-3.01 at 30 deg), which is round 3's absolute-arc finding reproduced on the new baseline. Read across blocks and it rises with the turn, because a Hermite absorbing a bigger turn concentrates its curvature more. So the constant must be the envelope over the turn range the model actually serves.
+--- 3. U/C correspondence artefacts at m=0.5 (arc, box A rotated) ---
+World lerp is V=(1-m)U+mC. Turning-angle mixes unwrapped headings then similarity-fits onto the endpoints. Opposite-side: sign(mean offset of U from the chord) != sign of C. Shortening: len(V) vs (1-m)len(U)+m len(C).
+rot   mix         sideU    sideC    opp?  lenU    lenC    lenV    shorten  minR    back/x  inflect
+0     world       -42.4    -33.0    no    364.7   351.3   364.7   1.019    153.5   0/0     0
+0     turning     -42.4    -33.0    no    364.7   351.3   364.7   1.019    153.5   0/0     0
+15    world       -43.0    -26.0    no    369.8   349.9   358.0   0.995    211.4   0/0     1
+15    turning     -43.0    -26.0    no    369.8   349.9   357.7   0.994    219.4   0/0     1
+45    world       -46.7    -10.3    no    402.0   380.2   382.7   0.979    213.2   0/0     1
+45    turning     -46.7    -10.3    no    402.0   380.2   382.2   0.977    205.6   0/0     1
+75    world       -52.4    3.7      YES   451.1   440.0   426.6   0.958    99.1    0/0     1
+75    turning     -52.4    3.7      YES   451.1   440.0   425.7   0.956    180.3   0/0     1
+120   world       -60.7    13.9     YES   522.5   534.7   492.6   0.932    29.3    0/0     1
+120   turning     -60.7    13.9     YES   522.5   534.7   494.0   0.935    109.1   0/0     1
+pick: world lerp. Opposite-side (U and C on different sides of the chord) starts around 75 deg of rotation, where versine m is already ~1 so Morph has become Cubic and the mix method is idle. At the intermediate m that the mix actually runs (15-45 deg) the two spines are on the same side, shortening is <3%, and neither mix self-intersects. Turning-angle keeps more radius once they go opposite, but it does not equal C at m=1 (similarity-fit of a reconstructed polyline) and it is not bitwise U at m=0 without the skip we already have. World lerp equals C at m=1 exactly. The case set uses it.
 
---- 2b. choosing the constant: sweep it and count what fails ---
-in scope = L' >= 24 u, turn <= 90 deg (past that a backtrack is forced and no arc helps), and the connector long enough to be granted the demand at this constant. The last condition is what moves lines into the cap-bound column as the constant grows; those are section 5's limitation, not a verdict on the constant.
-turn room  in scope  cap-bound  new cusps  cases failing  worst radius u  mean blend % of arc  
-2.0        59        7          167        47             5.4             9.6%                 
-2.5        56        10         131        43             6.3             9.8%                 
-3.0        54        12         61         21             6.2             10.5%                
-3.5        52        14         25         11             8.7             11.1%                
-4.0        51        15         11         4              8.5             12.1%                
-4.5        50        16         0          0              12.1            13.0%                
-5.0        48        18         0          0              13.1            13.3%                
-5.5        46        20         0          0              12.9            13.1%                
-6.0        46        20         0          0              12.3            14.3%                
-6.5        44        22         0          0              13.1            14.4%                
-7.0        42        24         1          1              12.0            14.2%                
-7.5        42        24         3          1              10.5            15.2%                
-8.0        40        26         4          1              10.4            15.0%                
-there is a WINDOW, not a floor: below 4.5 the blend has too little arc for the turn, and at 7.0 and above it has too much and the Hermite starts to overshoot again. Round 3's 7.0 was derived as an envelope of per-point minima on the old baseline and sits just outside the window on the high side.
-the two edges fail differently, which is why an envelope of minima is the wrong estimator here -- more arc is not monotonically safer:
-  k 4.0  arc/rot-75                 L' 451.1u    turn 86.9 deg    blend 72.8u     min radius 11.0 u (rest shape's own min there 720.1 u)
-  k 4.0  arc/short-260u-75deg       L' 314.1u    turn 83.3 deg    blend 69.8u     min radius 11.3 u (rest shape's own min there 413.1 u)
-  k 4.0  arc/short-440u-75deg       L' 509.0u    turn 80.1 deg    blend 67.1u     min radius 11.7 u (rest shape's own min there 1221.5 u)
-  k 4.0  wiggle/short-140u-60deg    L' 175.5u    turn 73.2 deg    blend 61.4u     min radius 8.5 u (rest shape's own min there 21.8 u)
-  k 8.0  wiggle/rot-75              L' 490.7u    turn 86.9 deg    blend 145.7u    min radius 10.4 u (rest shape's own min there 23.3 u)
-the two failure modes are physically different. At the low edge the rest shape inside the window is nearly straight (720 u, 413 u, 1221 u) and the tight radius is the blend's own bend: it has too little arc for the turn. At the high edge the window has grown long enough to swallow the creator's own curvature (23 u) and the blend adds its bend on top of it. So arc is not a free resource: too much of it is its own failure, and the constant is bounded above as well as below.
-the model ships 5.0: inside the window with margin on both sides, rather than on its lower edge.
-metric audit: vertices waived as the creator's own curves across this whole population at the shipped constant: 0. The per-vertex waiver therefore changes no verdict here; it is in the metric so that a blend large enough to cover a drawn kink is not charged for it.
+--- 4. m(turn) characterization: Morph at forced m, arc rest shape ---
+turn = max(turn0, turn1), measured at the unblended spine ends (no base blend). Each cell is minR / new-cusps / backtrack / mean-dev-from-U / frac>1u.
+rot   turn    m=0.00                      m=0.10                      m=0.25                      m=0.35                      m=0.50                      m=0.75                      m=1.00                      
+0     0.0     153.5/0/0/0.0/0%            160.5/0/0/1.0/54%           172.7/0/0/2.6/71%           182.2/0/0/3.6/75%           199.0/0/0/5.2/79%           237.5/0/0/7.8/82%           295.7/0/0/10.4/85%          
+2     2.5     153.6/0/0/0.0/0%            160.7/0/0/1.1/57%           173.1/0/0/2.8/73%           182.8/0/0/4.0/77%           200.1/0/0/5.7/81%           240.0/0/0/8.5/84%           278.8/0/0/11.4/86%          
+8     10.2    154.2/0/0/0.0/0%            161.8/0/0/1.5/64%           175.2/0/0/3.7/78%           185.7/0/0/5.2/81%           204.9/0/0/7.4/84%           243.7/0/0/11.1/86%          230.5/0/0/14.8/88%          
+15    19.0    155.6/0/0/0.0/0%            164.0/0/0/1.9/70%           179.0/0/0/4.8/80%           191.1/0/0/6.7/83%           211.4/0/0/9.6/85%           228.5/0/0/14.4/88%          188.2/0/0/19.2/89%          
+30    37.4    161.1/0/0/0.0/0%            172.2/0/0/2.9/75%           192.9/0/0/7.3/84%           207.1/0/0/10.2/86%          221.4/0/0/14.6/89%          177.4/0/0/21.9/94%          133.6/0/0/29.2/96%          
+45    54.9    169.2/0/0/0.0/0%            184.2/0/0/3.9/78%           212.1/0/0/9.9/85%           229.0/0/0/13.8/89%          213.2/0/0/19.7/93%          147.3/0/0/29.6/96%          107.6/0/0/39.5/97%          
+60    71.4    179.1/0/0/0.0/0%            198.7/0/0/5.0/80%           234.5/0/0/12.4/86%          232.4/0/0/17.4/90%          145.1/0/0/24.8/95%          107.0/0/0/37.3/97%          96.1/0/0/49.7/98%           
+75    86.9    189.9/0/0/0.0/0%            214.7/0/0/6.0/81%           260.6/0/0/14.9/87%          168.6/0/0/20.9/90%          99.1/0/0/29.9/95%           79.3/0/0/44.8/97%           79.4/0/0/59.8/98%           
+90    101.6   200.7/0/0/0.0/0%            230.7/0/0/7.0/82%           248.0/0/0/17.4/87%          127.3/0/0/24.3/88%          68.5/0/0/34.8/95%           58.5/0/0/52.2/97%           59.4/0/0/69.6/98%           
+120   128.9   219.9/0/0/0.0/0%            259.2/0/0/8.7/85%           213.2/0/0/21.9/88%          78.0/0/0/30.6/89%           29.3/0/0/43.7/90%           28.4/0/0/65.6/91%           30.9/0/4/87.5/95%           
+150   154.5   232.7/0/0/0.0/0%            277.5/0/0/10.1/86%          319.7/0/0/25.2/90%          64.6/0/0/35.3/91%           7.6/5/0/50.5/92%            9.6/9/8/75.7/93%            12.5/0/17/101.0/94%         
+same grid, wiggle rest shape, selected rotations:
+rot   turn    m=0.00                      m=0.10                      m=0.25                      m=0.35                      m=0.50                      m=0.75                      m=1.00                      
+0     0.0     16.6/0/0/0.0/0%             17.5/0/0/1.1/54%            19.4/0/0/2.8/76%            21.2/0/0/3.9/81%            25.3/0/0/5.6/84%            41.9/0/0/8.4/88%            240.4/0/0/11.3/89%          
+15    19.0    16.8/0/0/0.0/0%             17.8/0/0/1.5/54%            19.8/0/0/3.8/85%            21.7/0/0/5.4/89%            25.9/0/0/7.7/91%            42.6/0/0/11.5/93%           158.4/0/0/15.3/95%          
+45    54.9    18.3/0/0/0.0/0%             19.9/0/0/3.2/83%            23.0/0/0/8.0/92%            25.9/0/0/11.2/93%           32.3/0/0/16.0/95%           57.9/0/0/24.1/97%           95.0/0/0/32.1/98%           
+75    86.9    20.5/0/0/0.0/0%             23.1/0/0/5.1/83%            28.2/0/0/12.7/93%           32.9/0/0/17.8/95%           36.2/0/0/25.4/96%           38.8/0/0/38.1/98%           47.3/0/0/50.9/98%           
+120   128.9   23.7/0/0/0.0/0%             27.9/0/0/7.8/87%            32.3/0/0/19.6/92%           29.0/0/0/27.5/93%           20.0/0/0/39.3/95%           12.1/0/6/58.9/97%           13.1/0/19/78.5/98%          
 
---- 3. departure stub ratio on the new distribution ---
-each cell is 'min blend radius u / overshoot count' with the adaptive arc active, so this asks only what the ratio does.
-shape   rotA   turn    arc u    ratio 0.5     ratio 1.0     ratio 1.5     ratio 2.0     ratio 2.5     
-arc     15     19.0    19.9     10.9 / 0      17.4 / 0      20.6 / 0      14.1 / 0      8.6 / 0       
-arc     30     37.4    39.1     6.6 / 0       15.9 / 0      20.2 / 0      16.5 / 0      9.9 / 0       
-arc     45     54.9    57.5     5.4 / 0       14.9 / 0      18.6 / 0      14.3 / 0      8.5 / 0       
-arc     60     71.4    74.8     5.0 / 0       13.2 / 0      16.3 / 0      14.6 / 0      9.2 / 0       
-arc     75     86.9    91.0     4.8 / 0       11.1 / 0      13.5 / 0      13.9 / 0      8.9 / 0       
-arc     90     101.6   106.4    4.1 / 1       8.7 / 2       10.8 / 2      11.2 / 2      9.0 / 1       
-wiggle  15     19.0    19.9     13.1 / 0      20.7 / 0      21.3 / 0      14.7 / 0      8.1 / 0       
-wiggle  30     37.4    39.1     9.0 / 0       21.1 / 0      20.6 / 0      16.1 / 0      8.6 / 0       
-wiggle  45     54.9    57.5     6.9 / 0       19.0 / 0      19.8 / 0      12.5 / 0      8.0 / 0       
-wiggle  60     71.4    74.8     5.5 / 0       15.1 / 0      18.0 / 0      13.0 / 0      8.6 / 0       
-wiggle  75     86.9    91.0     5.0 / 0       11.5 / 0      13.7 / 0      13.0 / 0      9.1 / 0       
-wiggle  90     101.6   106.4    4.1 / 2       8.4 / 3       10.0 / 3      10.1 / 4      8.3 / 3       
+--- 4b. candidate m(turn) forms on arc, compared at 15/45/75 deg ---
+linear: m=turn/90. versine: 0.5*(1-cos(pi*turn/90)), m'(0)=0. exp: 1-exp(-3*turn/90), m(90)~0.95.
+form      rot   turn    m       minR    cusps  back/x  mean u   frac>1u  analytic face
+linear    0     0.0     0.000   153.5   0      0       0.00     0%       0.0
+linear    2     2.5     0.028   155.5   0      0       0.32     0%       2.5
+linear    15    19.0    0.211   174.8   0      0       4.05     79%      15.0
+linear    45    54.9    0.610   180.0   0      0       24.07    95%      20.9
+linear    75    86.9    0.966   79.4    0      0       57.72    98%      2.0
+linear    90    101.6   1.000   59.4    0      0       69.56    98%      0.0
+versine   0     0.0     0.000   153.5   0      0       0.00     0%       0.0
+versine   2     2.5     0.002   153.7   0      0       0.02     0%       2.5
+versine   15    19.0    0.106   164.5   0      0       2.03     71%      17.0
+versine   45    54.9    0.669   165.0   0      0       26.41    95%      17.5
+versine   75    86.9    0.997   79.4    0      0       59.59    98%      0.2
+versine   90    101.6   1.000   59.4    0      0       69.56    98%      0.0
+exp       0     0.0     0.000   153.5   0      0       0.00     0%       0.0
+exp       2     2.5     0.081   159.3   0      0       0.92     51%      2.3
+exp       15    19.0    0.468   207.5   0      0       9.00     85%      10.1
+exp       45    54.9    0.840   130.9   0      0       33.13    97%      8.0
+exp       75    86.9    0.945   79.4    0      0       56.46    98%      3.3
+exp       90    101.6   0.966   59.3    0      0       67.21    98%      2.0
+shipped form for the sheet: versine, sat 90 deg. It is continuous at 0 (section 1b: 0.002 u at 0.5 deg, no pop). It does NOT satisfy both product goals: see section 7. No other form in this table does either. Linear at 15 deg already spends most of the line; exp spends it faster; versine is the slowest start and still moves 71% of samples >1 u at 15 deg of rotation because C is ~19 u away from U at that pose. A form slow enough to keep ink at 15 deg (m ~ 0.002) is still ~0.04 at 75 deg and is not a cubic. That is the conflict this round exists to measure, not a constant to retune.
 
---- 4. cost of the adaptation as a function of obliquity ---
-read the 0 deg row first: with nothing rotated the blend is empty and the cost is zero. Everything below it is the price of motion the creator introduced, not of recognition.
-shape   rotA   obliq A   turn A   f0 vs chord  blend len A  blend % arc  mean dev u  middle dev u  min radius u  cusps  backtrack
-arc     0      32.8      0.0      0.0          0.000        0.0%         0.00        0.00          no blend      0      0
-arc     15     13.8      19.0     18.9         0.054        6.5%         0.79        0.00          20.6          0      0
-arc     30     4.6       37.4     37.1         0.102        12.2%        2.34        0.01          20.2          0      0
-arc     45     22.1      54.9     54.2         0.143        16.9%        4.60        0.01          18.6          0      0
-arc     60     38.6      71.4     70.4         0.176        20.4%        7.45        0.00          16.3          0      0
-arc     75     54.2      86.9     85.5         0.202        23.0%        10.84       0.01          13.5          0      0
-arc     90     68.8      101.6    99.9         0.223        24.9%        14.44       0.01          10.8          3      2
-arc     105    82.8      115.5    113.5        0.241        26.3%        18.25       0.00          8.1           5      4
-arc     120    96.1      128.9    126.5        0.258        27.6%        22.28       0.02          5.6           6      6
-arc     135    109.1     141.9    139.1        0.275        28.8%        26.37       0.05          3.4           7      7
-arc     150    121.7     154.5    151.4        0.293        30.1%        30.06       0.02          1.7           7      9
-arc     165    134.2     167.0    163.4        0.312        31.5%        33.75       0.00          0.6           6      10
-arc     180    146.6     179.3    175.2        0.334        33.5%        37.00       0.01          0.1           2      10
-wiggle  0      10.0      0.0      0.0          0.000        0.0%         0.00        0.00          no blend      0      0
-wiggle  15     9.0       19.0     14.0         0.049        6.0%         0.89        0.01          21.3          0      0
-wiggle  30     27.4      37.4     32.1         0.094        11.3%        2.62        0.02          20.6          0      0
-wiggle  45     44.9      54.9     55.1         0.131        15.5%        4.92        0.03          19.8          0      0
-wiggle  60     61.4      71.4     77.0         0.162        18.7%        7.21        0.00          18.0          0      0
-wiggle  75     77.0      86.9     96.4         0.186        21.1%        10.33       0.00          13.7          0      0
-wiggle  90     91.6      101.6    113.7        0.205        22.8%        14.17       0.03          10.0          4      3
-wiggle  105    105.6     115.5    129.4        0.222        24.2%        18.30       0.00          6.5           5      6
-wiggle  120    118.9     128.9    144.1        0.237        25.4%        23.25       0.02          3.7           6      7
-wiggle  135    131.9     141.9    157.8        0.253        26.5%        28.19       0.04          1.4           7      9
-wiggle  150    144.5     154.5    170.6        0.269        27.7%        32.91       0.06          0.3           4      9
-wiggle  165    157.0     167.0    177.8        0.287        29.0%        36.90       0.00          0.4           5      10
-wiggle  180    169.4     179.3    167.7        0.307        30.8%        39.01       0.00          2.4           7      10
-* = the blend cap of 0.35 per end is binding
-'f0 vs chord' is the angle from the required facing to the straight line across the blend region. Past 90 deg the ink must set off away from where it has to arrive, so a backtrack is forced by the anchor and no parameter retires it.
+--- 5. the 22-case set, Local / Cubic / Morph side by side ---
+case                      class     turn    m      L cusp/r    C cusp/r    M cusp/r    L/C/M back  L mean  C mean  M mean  L/C/M face-an
+arc/identity              aligned   0.0     0.00   0/9999.0    0/295.7     0/153.5     0/0/0       0.00    10.35   0.00    0.0/0.0/0.0
+arc/translate-near        aligned   4.7     0.01   0/23.8      0/208.2     0/136.5     0/0/0       0.01    9.58    0.06    0.0/0.0/4.7
+arc/translate-far         aligned   25.6    0.19   0/20.8      0/173.9     0/332.5     0/0/0       0.14    43.18   8.08    0.0/0.0/20.9
+arc/chord-flip            REVERSED  176.4   1.00   10/0.1      3/11.7      3/11.7      20/32/32    21.27   141.08  141.08  0.0/0.0/0.0
+arc/rotate-a              aligned   62.7    0.79   0/17.5      0/101.0     0/126.7     0/0/0       1.01    44.23   34.95   0.0/0.0/11.9
+arc/resize-a              aligned   1.6     0.00   0/9999.0    0/228.7     0/129.8     0/0/0       0.00    8.82    0.01    0.0/0.0/1.6
+arc/both-move             aligned   26.8    0.20   0/21.1      0/190.3     0/385.1     0/0/0       0.14    51.04   10.36   0.0/0.0/21.4
+arc/degenerate            aligned   5.8     0.01   24/1.6      24/2.0      2/1.4       0/0/0       0.03    0.10    0.00    0.0/0.0/5.8
+arc/detour-third-box      aligned   31.8    0.28   0/19.9      0/71.5      0/105.5     0/0/0       0.43    47.73   13.22   0.0/0.0/23.1
+arc/chain-3-stroke        aligned   25.4    0.18   0/20.5      0/359.6     0/7.9       0/0/0       0.11    74.07   13.65   0.0/0.0/20.8
+arc/centre-clip           aligned   20.5    0.12   0/20.9      0/213.6     0/425.8     0/0/0       0.10    24.24   2.96    0.0/0.0/18.0
+wiggle/identity           aligned   0.0     0.00   0/9999.0    0/240.4     0/16.6      0/0/0       0.00    11.27   0.00    0.0/0.0/0.0
+wiggle/translate-near     aligned   4.7     0.01   0/21.0      0/277.0     0/14.7      0/0/0       0.01    9.31    0.06    0.0/0.0/4.7
+wiggle/translate-far      aligned   25.6    0.19   0/19.2      0/153.6     0/36.2      0/0/0       0.15    40.75   7.63    0.0/0.0/20.9
+wiggle/chord-flip         REVERSED  176.4   1.00   14/1.1      18/2.0      18/2.0      20/39/39    23.24   102.97  102.97  0.0/0.0/0.0
+wiggle/rotate-a           aligned   62.7    0.79   0/19.3      0/80.3      0/60.1      0/0/0       1.06    36.41   28.77   0.0/0.0/11.9
+wiggle/resize-a           aligned   1.6     0.00   0/9999.0    0/186.3     0/14.0      0/0/0       0.00    9.82    0.01    0.0/0.0/1.6
+wiggle/both-move          aligned   26.8    0.20   0/19.8      0/168.7     0/42.0      0/0/0       0.15    47.73   9.69    0.0/0.0/21.4
+wiggle/degenerate         aligned   5.8     0.01   4/0.2       6/3.0       0/0.2       0/0/0       0.10    0.16    0.00    0.0/0.0/5.8
+wiggle/detour-third-box   aligned   31.8    0.28   0/21.2      0/55.6      0/36.4      0/0/0       0.43    55.76   15.44   0.0/0.0/23.1
+wiggle/chain-3-stroke     aligned   25.4    0.18   0/16.0      0/401.0     0/11.4      0/0/0       0.12    73.01   13.45   0.0/0.0/20.8
+wiggle/centre-clip        aligned   20.5    0.12   0/19.4      0/256.4     0/53.2      0/0/0       0.10    20.93   2.56    0.0/0.0/18.0
 
---- 5. short connectors: where is the practical floor now? ---
-the radius bar is a flat 12.0 u (round 4 drops round 3's span-relative relaxation, which let a capped blend hide its own shortfall). Connectors under 24 u are reported, not graded.
-case                      L' u     turn A   wanted u   used u    capped  min radius u  cusps  overshoot  middle left
-arc/short-20u-0deg        21.1     0.0      0.0        0.0       no      no blend      0?     0          100%
-arc/short-20u-15deg       22.6     43.7     45.7       7.9       yes     4.0           6?     0          30%
-arc/short-20u-45deg       40.7     96.1     100.6      14.3      yes     3.0           3      0          30%
-arc/short-20u-90deg       72.2     134.9    141.3      25.3      yes     3.2           3      1          30%
-arc/short-30u-0deg        32.1     0.0      0.0        0.0       no      no blend      0      0          100%
-arc/short-30u-15deg       33.2     34.5     36.2       11.6      yes     7.6           4      0          30%
-arc/short-30u-45deg       50.0     84.8     88.8       17.5      yes     3.4           5      0          30%
-arc/short-30u-90deg       82.5     127.5    133.5      28.9      yes     2.5           1      1          30%
-arc/short-45u-0deg        48.5     0.0      0.0        0.0       no      no blend      0      0          100%
-arc/short-45u-15deg       49.5     28.2     29.5       17.3      yes     12.7          0      0          37%
-arc/short-45u-45deg       64.7     74.8     78.3       22.6      yes     5.2           4      0          30%
-arc/short-45u-90deg       97.7     120.4    126.1      34.2      yes     3.5           3      1          32%
-arc/short-70u-0deg        75.9     0.0      0.0        0.0       no      no blend      0      0          100%
-arc/short-70u-15deg       76.7     23.5     24.6       24.6      no      17.8          0      0          56%
-arc/short-70u-45deg       90.3     65.9     69.0       31.6      yes     8.2           4      0          41%
-arc/short-70u-90deg       123.2    113.3    118.7      43.1      yes     3.7           5      1          45%
-arc/short-110u-0deg       119.5    0.0      0.0        0.0       no      no blend      0      0          100%
-arc/short-110u-15deg      120.2    20.4     21.4       21.4      no      20.9          0      0          77%
-arc/short-110u-45deg      132.6    59.0     61.8       46.4      yes     14.0          0      0          54%
-arc/short-110u-90deg      165.0    107.0    112.1      57.7      yes     5.2           5      1          54%
-arc/short-140u-0deg       152.2    0.0      0.0        0.0       no      no blend      0      0          100%
-arc/short-140u-15deg      152.8    19.3     20.2       20.2      no      20.6          0      0          84%
-arc/short-140u-45deg      164.7    56.2     58.9       57.6      yes     18.5          0      0          58%
-arc/short-140u-90deg      196.7    104.2    109.1      68.9      yes     6.6           5      1          57%
-arc/short-200u-0deg       217.5    0.0      0.0        0.0       no      no blend      0      0          100%
-arc/short-200u-15deg      218.1    18.0     18.8       18.8      no      20.6          0      0          90%
-arc/short-200u-45deg      229.3    53.0     55.5       55.5      no      18.9          0      0          72%
-arc/short-200u-90deg      260.9    100.6    105.3      91.3      yes     9.5           5      1          61%
-arc/short-260u-0deg       282.8    0.0      0.0        0.0       no      no blend      0      0          100%
-arc/short-260u-15deg      283.4    17.3     18.1       18.1      no      20.6          0      0          93%
-arc/short-260u-45deg      294.2    51.2     53.7       53.7      no      18.9          0      0          80%
-arc/short-260u-90deg      325.5    98.4     103.1      103.1     no      11.3          3      1          66%
-arc/short-360u-0deg       391.6    0.0      0.0        0.0       no      no blend      0      0          100%
-arc/short-360u-15deg      392.2    16.7     17.5       17.5      no      20.7          0      0          95%
-arc/short-360u-45deg      402.7    49.5     51.9       51.9      no      19.1          0      0          86%
-arc/short-360u-90deg      433.6    96.3     100.8      100.8     no      11.7          2      1          75%
-arc/short-440u-0deg       478.7    0.0      0.0        0.0       no      no blend      0      0          100%
-arc/short-440u-15deg      479.2    16.4     17.1       17.1      no      20.8          0      0          96%
-arc/short-440u-45deg      489.6    48.7     51.0       51.0      no      19.2          0      0          89%
-arc/short-440u-90deg      520.3    95.2     99.7       99.7      no      11.9          2      1          80%
-? = below the scoreability floor, reported not graded
+--- 6. restated bars, all three variants ---
+Local
+  I6  identity at rest, bitwise vs U: 0 failing of 2 -> PASS
+  W5  zero new cusps, aligned, L'>=24u: 0 failing of 18 -> PASS  (turn to 62.7 deg, 2 unscoreable)
+  W5b zero backtrack where facing faces the chord: 0 failing of 18 -> PASS  forced-BT-region still unhealthy: 0
+Always-cubic
+  I6  identity at rest: EXPECTED FAIL, residual vs U max 25.587 u (the EH1 price). rep residual vs raw ink 0.0717 u
+  W5  zero new cusps, aligned, L'>=24u: 0 failing of 18 -> PASS  (turn to 62.7 deg, 2 unscoreable)
+  W5b zero backtrack where facing faces the chord: 0 failing of 18 -> PASS  forced-BT-region still unhealthy: 0
+Morph
+  I6  identity at rest, bitwise vs U: 0 failing of 2 -> PASS
+  W5  zero new cusps, aligned, L'>=24u: 0 failing of 18 -> PASS  (turn to 62.7 deg, 2 unscoreable)
+  W5b zero backtrack where facing faces the chord: 0 failing of 18 -> PASS  forced-BT-region still unhealthy: 0
+D30 analytic facing: Cubic is 0 by construction. Morph analytic is the angle between (1-m)U' + m C' and the facing — it inherits Local's mismatch at low m and buys facing by spending ink. Local is 0 when a blend fires, else the unblended mismatch (which is 0 at rest).
 
---- 6. blend cap: how often does each candidate actually bind? ---
-population = every end of the case set, the rotation sweep and the short-connector sweep, aligned ends only (a reversed end is a U-turn by the creator's own choice and is not the cap's business).
-cap    binds         share   binds on healthy  worst shortfall  middle guaranteed  
-0.50   19 of 157     12%     11 of 140         20% of demand    0%                 
-0.45   22 of 157     14%     14 of 140         18% of demand    10%                
-0.40   23 of 157     15%     14 of 140         16% of demand    20%                
-0.35   24 of 157     15%     15 of 140         14% of demand    30%                
-0.30   27 of 157     17%     17 of 140         12% of demand    40%                
-0.25   28 of 157     18%     18 of 140         10% of demand    50%                
-ends where the cap binds at 0.35 (h = otherwise healthy):
-  arc/degenerate A          L' 3.3u     turn 5.8 deg    wanted 186%   got 35%   -
-  arc/degenerate B          L' 3.3u     turn 5.8 deg    wanted 186%   got 35%   -
-  wiggle/degenerate A       L' 3.6u     turn 5.8 deg    wanted 171%   got 35%   -
-  wiggle/degenerate B       L' 3.6u     turn 5.8 deg    wanted 171%   got 35%   -
-  arc/short-20u-15deg A     L' 22.6u    turn 43.7 deg   wanted 203%   got 35%   -
-  arc/short-20u-15deg B     L' 22.6u    turn 28.7 deg   wanted 133%   got 35%   -
-  arc/short-20u-45deg A     L' 40.7u    turn 96.1 deg   wanted 247%   got 35%   h
-  arc/short-20u-45deg B     L' 40.7u    turn 51.1 deg   wanted 131%   got 35%   h
-  arc/short-20u-90deg B     L' 72.2u    turn 44.9 deg   wanted 65%    got 35%   h
-  arc/short-30u-15deg A     L' 33.2u    turn 34.5 deg   wanted 109%   got 35%   h
-  arc/short-30u-15deg B     L' 33.2u    turn 19.5 deg   wanted 62%    got 35%   h
-  arc/short-30u-45deg A     L' 50.0u    turn 84.8 deg   wanted 178%   got 35%   h
-  arc/short-30u-45deg B     L' 50.0u    turn 39.8 deg   wanted 83%    got 35%   h
-  arc/short-30u-90deg B     L' 82.5u    turn 37.5 deg   wanted 48%    got 35%   h
-  arc/short-45u-15deg A     L' 49.5u    turn 28.2 deg   wanted 60%    got 35%   h
-  arc/short-45u-45deg A     L' 64.7u    turn 74.8 deg   wanted 121%   got 35%   h
-  arc/short-45u-45deg B     L' 64.7u    turn 29.8 deg   wanted 48%    got 35%   h
-  arc/short-70u-45deg A     L' 90.3u    turn 65.9 deg   wanted 76%    got 35%   h
-  arc/short-70u-90deg A     L' 123.2u   turn 113.3 deg  wanted 96%    got 35%   h
-  arc/short-110u-45deg A    L' 132.6u   turn 59.0 deg   wanted 47%    got 35%   h
-  arc/short-110u-90deg A    L' 165.0u   turn 107.0 deg  wanted 68%    got 35%   -
-  arc/short-140u-45deg A    L' 164.7u   turn 56.2 deg   wanted 36%    got 35%   h
-  arc/short-140u-90deg A    L' 196.7u   turn 104.2 deg  wanted 55%    got 35%   -
-  arc/short-200u-90deg A    L' 260.9u   turn 100.6 deg  wanted 40%    got 35%   -
+--- 7. adaptation / straighten cost at 15 / 45 / 75 deg box rotation ---
+unit is whole-line mean deviation from U, and fraction of samples moved >1 u. Blend share is the wrong unit for a global morph.
+shape   rot   turn    m      L mean/%      C mean/%      M mean/%      L minR  C minR  M minR  L/C/M cusp
+arc     0     0.0     0.00   0.00/0%       10.35/85%     0.00/0%       9999.0  295.7   153.5   0/0/0
+arc     15    19.0    0.11   0.05/3%       19.21/89%     2.03/71%      20.6    188.2   164.5   0/0/0
+arc     45    54.9    0.67   0.72/10%      39.46/97%     26.41/95%     18.6    107.6   165.0   0/0/0
+arc     75    86.9    1.00   2.21/15%      59.76/98%     59.59/98%     13.5    79.4    79.4    0/0/0
+wiggle  0     0.0     0.00   0.00/0%       11.27/89%     0.00/0%       9999.0  240.4   16.6    0/0/0
+wiggle  15    19.0    0.11   0.06/3%       15.31/95%     1.61/56%      21.3    158.4   17.9    0/0/0
+wiggle  45    54.9    0.67   0.83/12%      32.10/98%     21.49/96%     19.8    95.0    45.9    0/0/0
+wiggle  75    86.9    1.00   2.16/16%      50.86/98%     50.72/98%     13.7    47.3    47.2    0/0/0
 
---- 7. the 22-case set at the final defaults ---
-case                      class     obliq   f0-chord  blend len   A face   A+C face  W5 cusps  minR u    over  blend %  mean dev u  middle dev u  blend moved u
-arc/identity              aligned   33.5    0.0       0.00/0.00   0.0      0.0       0+0       no blend  0     0%       0.00        0.00          0 (bitwise)
-arc/translate-near        aligned   37.5    4.7       0.02/0.02   4.7      2.3       0+0       23.8      0     3%       0.16        0.01          0.37
-arc/translate-far         aligned   59.1    25.7      0.04/0.04   25.6     4.9       0+0       20.8      0     8%       1.62        0.01          2.89
-arc/chord-flip            REVERSED  150.8   179.8     0.32/0.32   176.4    0.1       10+0      0.1       20    64%      38.17       0.00          68.26
-arc/rotate-a              aligned   44.2    61.9      0.16/0.03   62.7     3.0       0+0       17.5      0     19%      5.88        0.00          13.29
-arc/resize-a              aligned   35.1    1.6       0.01/0.01   1.6      1.6       0+0       no blend  0     1%       0.00        0.00          0 (bitwise)
-arc/both-move             aligned   60.3    26.9      0.03/0.03   26.8     5.6       0+0       21.1      0     7%       1.66        0.04          3.13
-arc/degenerate            aligned   38.6    10.5      0.35/0.35   5.8      0.1       24+0      1.6       0     70%      0.05        0.00          0.09
-arc/detour-third-box      aligned   80.7    32.7      0.06/0.06   31.8     3.6       0+0       19.9      0     12%      2.39        0.01          4.14
-arc/chain-3-stroke        aligned   29.8    26.1      0.03/0.03   25.4     4.7       0+0       20.5      0     6%       1.58        0.01          2.83
-arc/centre-clip           aligned   44.5    23.3      0.04/0.04   20.5     3.5       0+0       20.9      0     8%       1.25        0.02          2.51
-wiggle/identity           aligned   29.1    0.0       0.00/0.00   0.0      0.0       0+0       no blend  0     0%       0.00        0.00          0 (bitwise)
-wiggle/translate-near     aligned   24.4    5.4       0.01/0.01   4.7      2.4       0+0       21.0      0     3%       0.17        0.00          0.37
-wiggle/translate-far      aligned   54.8    28.7      0.04/0.04   25.6     5.1       0+0       19.2      0     7%       1.53        0.00          2.94
-wiggle/chord-flip         REVERSED  173.6   170.5     0.29/0.29   176.4    0.8       14+0      1.1       20    59%      42.02       0.00          75.28
-wiggle/rotate-a           aligned   52.8    65.6      0.15/0.03   62.7     3.1       0+0       19.3      0     17%      5.77        0.00          12.95
-wiggle/resize-a           aligned   30.7    1.6       0.00/0.00   1.6      1.6       0+0       no blend  0     1%       0.00        0.00          0 (bitwise)
-wiggle/both-move          aligned   55.9    29.4      0.03/0.03   26.8     5.7       0+0       19.8      0     6%       1.72        0.04          3.14
-wiggle/degenerate         aligned   23.3    1.7       0.35/0.35   5.8      0.5       4+0       0.2       0     70%      0.16        0.00          0.40
-wiggle/detour-third-box   aligned   87.4    30.9      0.06/0.06   31.8     3.4       0+0       21.2      0     11%      2.42        0.00          4.34
-wiggle/chain-3-stroke     aligned   19.9    36.5      0.03/0.03   25.4     5.4       0+0       16.0      0     6%       1.49        0.00          2.90
-wiggle/centre-clip        aligned   32.3    22.9      0.01/0.03   20.5     3.7       0+0       19.4      0     5%       0.94        0.00          2.03
+--- 8. forced backtrack >~90 deg: can a cubic hold opposing facings? ---
+Local cannot (round 4: geometry, not tuning). A cubic can loop or S-curve. chord-flip is the case; also the high-rotation rows.
+case                      obliq   L back/x/r    C back/x/r/inf    M back/x/r/inf    C mean vs U
+arc/chord-flip            150.8   20/0/0.1      32/0/11.7/0       32/0/11.7/0       141.1
+arc/rotate-a              44.2    0/0/17.5      0/0/101.0/1       0/0/126.7/1       44.2
+wiggle/chord-flip         173.6   20/0/1.1      39/0/2.0/0        39/0/2.0/0        103.0
+wiggle/rotate-a           52.8    0/0/19.3      0/0/80.3/1        0/0/60.1/5        36.4
+arc/rot-90                68.8    2/0/10.8      0/0/59.4/1        0/0/59.4/1        69.6
+arc/rot-105               82.8    4/0/8.1       0/0/43.6/1        0/0/43.6/1        78.9
+arc/rot-120               96.1    6/0/5.6       4/0/30.9/1        4/0/30.9/1        87.5
+arc/rot-150               121.7   9/0/1.7       17/0/12.5/1       17/0/12.5/1       101.0
+arc/rot-180               146.6   10/0/0.1      24/0/2.5/1        24/0/2.5/1        107.1
 
-restated bars (round 3), plus the identity bar (round 4)
-I6  identity at rest: blended output bitwise == unblended warp : 0 failing of 2 -> PASS
-    residual against the creator's raw ink at rest: 0.0717 u -- entirely the (s,d) store, not the blend; see section 1b
-W4  departure within 5 deg, edge-bound ends only     : max 5.68 deg, 4 over a flat 5 deg (arc/both-move (5.63 deg, bound 7.98 over a 5.9 u baseline), wiggle/translate-far (5.08 deg, bound 7.76 over a 5.2 u baseline), wiggle/both-move (5.68 deg, bound 8.51 over a 5.9 u baseline), wiggle/chain-3-stroke (5.43 deg, bound 8.99 over a 5.0 u baseline))
-    against max(5 deg, the deviation the radius bar itself implies over the same baseline): 0 failing -> PASS
-W5  zero new cusps, aligned ends, L' >= 24u          : 0 failing of 18 scoreable aligned cases -> PASS
-    20 of 22 cases are aligned; obliquity covered up to 87.4 deg, turn absorbed up to 62.7 deg
-    not scoreable (shorter than two minimum radii, so no radius bar exists): 2 -- arc/degenerate (L' 3.3u, 24 cusps), wiggle/degenerate (L' 3.6u, 4 cusps)
-W5b zero backtrack where the facing still faces the chord: 0 failing of 20 -> PASS
-    backtrack forced by the anchor (facing >= 90 deg off the blend chord, no parameter retires it): 0
-bar sensitivity (scoreable aligned): radius 8u -> 18/18 clean, 12u -> 18/18 (chosen), 16u -> 17/18 clean
+--- 9. short connectors: does a global cubic remove the ~50 u floor? ---
+case                      L' u    turn    L minR/cusp   C minR/cusp   M minR/cusp   scoreable?
+arc/short-20u-0deg        21.1    0.0     9999.0/0      25.7/0        15.9/0        no
+arc/short-20u-15deg       22.6    43.7    4.0/6         5.2/4         11.0/2        no
+arc/short-20u-45deg       40.7    96.1    3.0/3         4.7/4         4.7/4         yes
+arc/short-30u-0deg        32.1    0.0     9999.0/0      31.6/0        19.6/0        yes
+arc/short-30u-15deg       33.2    34.5    7.6/4         9.6/3         21.9/0        yes
+arc/short-30u-45deg       50.0    84.8    3.4/5         6.8/5         6.9/5         yes
+arc/short-45u-0deg        48.5    0.0     9999.0/0      42.7/0        25.8/0        yes
+arc/short-45u-15deg       49.5    28.2    12.7/0        17.2/0        29.3/0        yes
+arc/short-45u-45deg       64.7    74.8    5.2/4         10.1/3        11.0/2        yes
+arc/short-70u-0deg        75.9    0.0     9999.0/0      63.4/0        36.6/0        yes
+arc/short-70u-15deg       76.7    23.5    17.8/0        31.5/0        40.0/0        yes
+arc/short-70u-45deg       90.3    65.9    8.2/4         17.5/0        21.7/0        yes
+arc/short-110u-0deg       119.5   0.0     9999.0/0      96.9/0        54.8/0        yes
+arc/short-110u-15deg      120.2   20.4    20.9/0        55.9/0        58.7/0        yes
+arc/short-110u-45deg      132.6   59.0    14.0/0        31.0/0        43.1/0        yes
+arc/short-200u-0deg       217.5   0.0     9999.0/0      173.0/0       95.1/0        yes
+arc/short-200u-15deg      218.1   18.0    20.6/0        113.0/0       100.5/0       yes
+arc/short-200u-45deg      229.3   53.0    18.9/0        64.6/0        99.6/0        yes
 
---- 8. W7 centre-bind escape hatch for every REVERSED case ---
-centre binds carry no facing bar; their requirement is no U-turn and no new cusp, measured at the boundary crossing
-case                      converted   crossing deg  cusps   cusps unclipped  overshoot  ink kept  verdict
-arc/chord-flip            both ends   26.4          0+0     0                0          54%       PASS
-wiggle/chord-flip         both ends   32.4          0+0     0                0          51%       PASS
-W7 verdict: PASS
+--- 10. W7 centre-bind escape hatch (D29 60 deg cone in force) ---
+case                      var     cusps   overshoot  ink kept  verdict
+arc/chord-flip            Local   0       0          54%       PASS
+arc/chord-flip            Cubic   0       0          56%       PASS
+arc/chord-flip            Morph   0       0          56%       PASS
+wiggle/chord-flip         Local   0       0          51%       PASS
+wiggle/chord-flip         Cubic   0       0          53%       PASS
+wiggle/chord-flip         Morph   0       0          53%       PASS
+W7 Local (the remedy the policy needs): PASS
 
---- 8b. a centre anchor cannot hold the identity under the round-3 rule ---
-a centre anchor's facing is derived from the ray to the peer, so at rest it is not the drawn departure and the blend fires. The cone rule below is a round-4 proposal, not a decision: keep the drawn departure, but limited to a cone about that ray, so it still cannot oppose the chord.
-centre rule          shape   turn at rest  dev from ink u  cusps  crossing deg  note
-ray only (round 3)   arc     23.4 deg      2.538           0      18.5          blend fires at rest
-drawn, cone 90 deg   arc     0.0 deg       0.000           0      4.9           identity holds
-drawn, cone 60 deg   arc     0.0 deg       0.000           0      4.9           identity holds
-ray only (round 3)   wiggle  8.0 deg       0.602           0      35.3          blend fires at rest
-drawn, cone 90 deg   wiggle  0.0 deg       0.007           0      27.3          identity holds
-drawn, cone 60 deg   wiggle  0.0 deg       0.007           0      27.3          identity holds
-'crossing deg' is the angle between the required facing and the tangent where the ink leaves the box: it is how much of the turn is hidden inside the box, not a kink in visible ink. The visible risk is the ink looping back INTO the box after it has left, which 're-enters' counts.
-and the load-bearing question: does the cone still rescue a U-turn? Same W7 conversion, under each centre rule.
-case                 centre rule          crossing deg  cusps  overshoot  re-enters  ink kept  verdict
-arc/chord-flip       ray only (round 3)   26.4          0      0          0          54%       PASS
-arc/chord-flip       drawn, cone 90 deg   131.5         0      14         0          50%       FAIL
-arc/chord-flip       drawn, cone 60 deg   103.9         0      0          0          54%       PASS
-wiggle/chord-flip    ray only (round 3)   32.4          0      0          0          51%       PASS
-wiggle/chord-flip    drawn, cone 90 deg   127.1         0      12         0          50%       FAIL
-wiggle/chord-flip    drawn, cone 60 deg   97.8          0      0          0          51%       PASS
-
---- 9. W2 round-trip drift ---
+--- 11. W2 round-trip drift ---
 rest shape  variant  never-re-bake (D5)    re-bake, 20 moves   re-bake, 200 moves
 arc         A        0.000000000 u         0.0043 u            0.0419 u
-arc         A+C      0.000000000 u         10.4347 u           20.9470 u
+arc         Local    0.000000000 u         10.4347 u           20.9470 u
+arc         Cubic    0.000000000 u         76.9579 u           200.5703 u
+arc         Morph    0.000000000 u         40.7317 u           211.0215 u
 wiggle      A        0.000000000 u         0.1314 u            0.3887 u
-wiggle      A+C      0.000000000 u         9.3455 u            19.1501 u
-W2: never-re-bake max 0.000000000 u -> PASS;  re-bake max 10.4347 u / 20.9470 u -> fails as intended
+wiggle      Local    0.000000000 u         9.3455 u            19.1501 u
+wiggle      Cubic    0.000000000 u         71.3501 u           189.1473 u
+wiggle      Morph    0.000000000 u         34.9502 u           171.0185 u
+W2 never-re-bake max 0.000000000 u -> PASS
 
 --- W3 determinism ---
 same inputs run twice   : PASS (byte-identical)
@@ -343,8 +232,10 @@ case set run in reverse : PASS (byte-identical)
 
 --- W6 cost: 1000 re-warps of a 500-sample connector ---
 variant  p50 (us)    p95 (us)
-A        4.88        5.00
-A+C      5.54        7.04
+A        5.08        5.25
+Local    5.50        7.67
+Cubic    5.67        6.96
+Morph    5.71        6.25
 bar: p95 <= 2000 us
 
-wrote 22 case SVGs + 2 W7 SVGs + index.html to /Users/howard/.cursor/worktrees/exp0002-warp-a3f19c2d/reawa-6bcab1d3a018/out
+wrote 22 case SVGs + 4 sweep SVGs + 2 W7 SVGs + index.html to /Users/howard/.cursor/worktrees/exp0002-warp-a3f19c2d/reawa-6bcab1d3a018/out

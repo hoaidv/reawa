@@ -97,14 +97,9 @@ and on the table: **7.8 u of the creator's ink, moved on a connector nobody had 
   samples that fall inside the box's axis-aligned bounding box, and move the first surviving
   sample onto the boundary intersection. **Keep the whole rest shape.** The hidden ink is what
   allows correct re-clipping when the box is later moved or resized.
-- **Open decision.** A centre anchor's facing is derived, not drawn, so it does not satisfy I6:
-  at rest the derived ray sits 8–23° off the ink and the blend fires, moving the ink by up to
-  2.5 u with nothing moved. A **60° cone rule** — keep the drawn departure, clamped to a 60° cone
-  about the ray — was built and measured: it restores I6 exactly on both probe shapes and still
-  rescues every U-turn case (0 new cusps, 0 overshoot, the ink re-enters the box 0 times, the
-  same 51–54% of ink kept). A 90° cone does **not**: it overshoots 12–14 times. This is the one
-  thing in the model the probe recommends but the human has not ruled on. Until they do, a centre
-  bind is exempt from I6 and the exemption must be stated wherever I6 is.
+- **D29 (in force).** Facing is the drawn departure, clamped to a **60° cone** about the peer
+  ray. Restores I6 exactly and still rescues every U-turn (round 4 measurement; round 5 ships
+  it as the default). A 90° cone overshoots and is not used.
 
 Switching a U-turning end to a centre anchor is the creator's remedy for a U-turn. The system
 never applies it silently.
@@ -320,8 +315,8 @@ No clamps. The similarity scale is used as computed, including at `scale ≈ 0.0
     so this residual is the price of the store, not of the warp, and no blend change can reach
     it. If the product wants 0.000 u against the raw ink, that is a rest-shape representation
     question — keep a tangential offset as well as `d` — and it should be raised as such.
-    **(b)** I6 covers edge anchors. A centre bind is exempt until the cone decision in section 2
-    is made.
+    **(b)** I6 covers edge anchors and, with D29, centre anchors too: the 60° cone keeps the
+    drawn departure at rest, so a centre bind is no longer exempt.
 
 Cost: **≈5.5 µs median, 6.3 µs p95** for a full re-warp of a 500-sample connector, single
 threaded, host build. The blend adds ≈0.7 µs over the similarity warp alone — and at rest it adds
@@ -391,8 +386,46 @@ confirmed the second is geometry rather than tuning.
 
 ## 8. What the human still has to decide
 
-1. **W1, naturalness.** The contact sheet (`index.html`) is the artifact. Read the two `identity`
-   panels first: one line, no blend band, nothing touched.
-2. **The centre-bind cone rule** in section 2. The probe recommends the 60° cone: it is the only
-   option measured that gives a centre bind the same at-rest identity an edge bind now has,
-   without losing the U-turn rescue.
+1. **W1, naturalness — now a three-way sheet.** Round 5 did not replace this model. Read
+   `identity` first, then the 0/15/45/75° rotation sweep. Red = this algorithm (Local). Green =
+   always-cubic. Orange = rest→cubic morph. The numbers say this is a product call, not a
+   geometry one: see section 9.
+
+D29 (centre facing = drawn departure clamped to a 60° cone about the peer ray) is **in force**.
+The open item in section 2 of this file is closed.
+
+---
+
+## 9. Round 5 tournament — Local remains the shipped model
+
+Round 5 built Always-cubic (EH1) and a rest→cubic morph `V = mix(U, C, m)` with one mix factor
+for the whole connector, `m = versine(max(turn0, turn1) / 90°)`, `m(0) = 0` a true skip.
+Quadratic was not built: one interior control cannot represent two independent facings.
+
+**Morph did not win, and Always-cubic is forbidden by D27.** Local stays the algorithm above.
+Do not lift a cubic into the ADR for the sake of having built one.
+
+The finding, not a tuning miss: C is already **10.4 u mean / 19.2 u max** (arc) and **11.3 / 25.6**
+(wiggle) from U **at rest**, and **19.2 u mean** at 15° of box rotation. Any `m` large enough that
+a hard turn looks like a cubic has already spent the drawn line; any `m` small enough that a
+15° nudge still looks like ink is indistinguishable from Local. No single `m(turn)` has both.
+That is a W1 call — both overlays are on the contact sheet; this file does not pick.
+
+Handle for the cubic, picked on evidence: **rest-spine end-speed** (`L'`), not chord/3. Chord/3
+as a Hermite *speed* under-steers and cusps; chord/3 as a Bezier *offset* (Hermite speed `|c'|`)
+is close to RestSpeed but loses 4 u of rest-fit. Unused if Local ships.
+
+The two Local limitations, re-checked:
+
+- **Short-connector floor.** A global cubic lowers it (70 u at 45° of rotation: Local 8.2 u
+  radius / 4 cusps, Cubic 16.4 u / 0) but does not remove it (20 u and 30 u connectors still
+  fail the 12 u bar under a 45° rotation, because the cubic itself is that small).
+- **Forced backtrack >~90°.** A cubic *can* S-curve through ~90–105° of box rotation with 0
+  backtrack and min radius 42–56 u (Local backtracks and drops below 12 u). Past ~120° it
+  loops. `chord-flip` still loops. The centre bind remains the remedy for a genuine U-turn;
+  it is no longer the only remedy for a hard-but-aligned turn, *if* the product accepts
+  redrawing the line as a cubic.
+
+`turnRoomFactor` / `blendCap` / `departureStubRatio` stay: the cubic does not subsume them
+because the cubic is not shipping.
+

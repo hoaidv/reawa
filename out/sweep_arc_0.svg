@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1100" viewBox="0 0 1100 1100">
 <rect x="0" y="0" width="1100" height="1100" fill="#ffffff"/>
-<text x="18" y="26" font-family="-apple-system,Helvetica,Arial" font-size="18" font-weight="600" fill="#111">arc/identity</text>
-<text x="18" y="46" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="#444">nothing moved -- I6 requires the output to be the drawn ink, bit for bit</text>
+<text x="18" y="26" font-family="-apple-system,Helvetica,Arial" font-size="18" font-weight="600" fill="#111">arc/rot-0</text>
+<text x="18" y="46" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="#444">A rotates 52 deg; the anchor and its edge normal rotate with it</text>
 <text x="18" y="63" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="#444">ends: A edge:aligned obliq 32.8deg   B edge:aligned obliq 33.5deg</text>
 <text x="18" y="80" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="#444">rest 280 samples, len 364.7u, chord 331.7u   |   warped L' 364.7u, scale 1.000</text>
 <text x="18" y="97" font-family="ui-monospace,Menlo,monospace" font-size="12" fill="#444">turn 0.0/0.0deg   Local blend 0.000/0.000 of arc   Morph m=0.000   Cubic handle 364.7u</text>
