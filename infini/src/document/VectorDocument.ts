@@ -357,14 +357,15 @@ export class VectorDocument {
     if (!detached) throw new Error(`join_missing:${inkId}`);
     const content: InkNode = cloneJson(detached);
     content.role = "content";
-    // World → group-local (match enclose / device join); do not expand bounds (SRS-IN-15 / EP-10)
+    // World → group-local. fixedInk paint is local+translate (no /scale) — match device.
     const t = sg.transform;
+    const fixedInk = sg.inkScaleMode === "fixedInk";
     const sx = t.scaleX !== 0 ? t.scaleX : 1;
     const sy = t.scaleY !== 0 ? t.scaleY : 1;
     content.samples = content.samples.map((s) => ({
       ...s,
-      x: (s.x - t.x) / sx,
-      y: (s.y - t.y) / sy,
+      x: fixedInk ? s.x - t.x : (s.x - t.x) / sx,
+      y: fixedInk ? s.y - t.y : (s.y - t.y) / sy,
     }));
     content.layoutOffset = seedLayoutOffset(content.samples, sg.bounds);
     sg.children.push(content);

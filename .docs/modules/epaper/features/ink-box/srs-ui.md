@@ -43,10 +43,13 @@ SelectionOverlay by refresh class ([ADR-0019](../../../../adr/ADR-0019-selection
 
 | Layer id | Product region | Role | Notes |
 |---|---|---|---|
-| CanvasLayer | InkSurface | Full-bleed document paint | Persistent `m_image` + live ink; waveform **Pen**; never used for chrome |
-| ToolCanvasLayer | SelectionOverlay (stroke) | Marquee, lasso, settled dotted AABB | Transparent painted sibling; waveform **Mono**; tight dirty rects; **not** a document blit |
-| ToolLayer (content) | SelectionOverlay (widgets) | Handles, Enclose, ink-scale chip, indicators | QML; content-space |
+| CanvasLayer | InkSurface | Full-bleed document paint | Persistent document raster + live **pen** ink; waveform **Pen**; **not** the live SmartGroup during move/resize ([CHL-0018](../../../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md)) |
+| ToolCanvasLayer | SelectionOverlay (stroke + live node) | Marquee, lasso, settled dotted AABB; **during move/resize:** the live node (ink + AABB + handles) | Transparent painted sibling; waveform **Mono**; tight dirty rects; origin box punched off CanvasLayer for the gesture |
+| ToolLayer (content) | SelectionOverlay (widgets) | Settled handles, Enclose, ink-scale chip, indicators | QML; content-space. Handles ride ToolCanvasLayer **while** a move/resize is in flight |
 | ToolLayer (screen) | ToolChip | Tool arming + publish status | QML; **screen-space** — [SRS-EP-05](../tool-modes/srs-ui.md) |
+
+**Option 2 (live node on CanvasLayer)** is not in this campaign. Reopen only for a later rendering
+phase if overlay composition regresses Pen ink.
 
 SelectionOverlay widgets and ToolCanvasLayer are **content-space**: they track the box through
 pan/zoom (viewport-driven) and through a drag. ToolChip is not pinned to the box.

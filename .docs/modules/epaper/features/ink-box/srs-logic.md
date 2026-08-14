@@ -191,8 +191,9 @@ EP-018. Anchor resolution for connectors lands in [REQ-08](../../prd.md#node-man
 
 | Rule | Value |
 |---|---|
-| What moves | The **document's** ink, transformed live. There is no ghost, no outline stand-in, no advisory layer |
-| Commit | On release, the committed transform **equals** the last previewed transform. 0 px jump, 0 snap-back |
+| What moves | The **document's** ink, transformed live. There is no advisory outline that a peer later corrects |
+| Paint during the gesture | **ToolCanvasLayer** draws the live node; CanvasLayer hides the origin box only ([CHL-0018](../../../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md)). Not a second document, not a ghost |
+| Commit | On release, the committed transform **equals** the last previewed transform. 0 px jump, 0 snap-back. Settled raster returns to CanvasLayer |
 | Op granularity | **One** `set_smart_transform` per completed gesture, not per frame — intermediate frames are local paint only |
 | Refresh | Partial refresh only during the gesture; **0** full-panel invalidations ([SRS-EP-02](../region-sync/srs-logic.md)) |
 | Feedback rate | ≥5 Hz; no stall >200 ms. Slow is acceptable, wrong is not (CHL-0006) |

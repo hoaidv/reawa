@@ -931,12 +931,20 @@ private:
         if (!detachInk(inkId, &detached))
             throw std::runtime_error(std::string("join_missing:") + inkId);
 
+        // Inverse of smartLocalToWorld: fixedInk is translate-only (no /scale).
+        // @fix [STORY-EP-017] draw-into local vs resized parent
         const SmartTransform &t = sg->transform;
+        const bool fixedInk = sg->inkScaleMode == "fixedInk";
         const double sx = t.scaleX != 0 ? t.scaleX : 1.0;
         const double sy = t.scaleY != 0 ? t.scaleY : 1.0;
         for (auto &s : detached.samples) {
-            s.x = (s.x - t.x) / sx;
-            s.y = (s.y - t.y) / sy;
+            if (fixedInk) {
+                s.x = s.x - t.x;
+                s.y = s.y - t.y;
+            } else {
+                s.x = (s.x - t.x) / sx;
+                s.y = (s.y - t.y) / sy;
+            }
         }
         detached.role = "content";
         // UV vs current local bounds — do not expand bounds (SRS-EP-10)

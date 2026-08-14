@@ -132,8 +132,10 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
   never coalesced, because the undo unit and the change unit are the same gesture.
 - **Degradation:** the link going down removes *publishing*, not *function*. Nothing in the tool
   chip may be gated on the session ([SRS-EP-05](./features/tool-modes/srs-ui.md)).
-- **Refresh:** map is never coalesced, paint is. Ghosting is a timing allowance, never a content
-  allowance — a settled frame that disagrees with the document is a defect.
+- **Refresh:** map is never coalesced, paint is. Ghosting **during** a move/resize is a timing
+  allowance ([CHL-0018](../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md));
+  a **settled** frame that disagrees with the document is a defect. Live node pixels in flight
+  belong on ToolCanvasLayer, not a growing CanvasLayer punch.
 - **Error posture:** retired message types are rejected, logged, and surfaced rather than ignored.
   The pilot's extra snapshots were tolerated silently for weeks, and silence is what made them
   expensive.
@@ -163,6 +165,7 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 | Undo ring memory (20 whole-tree snapshots) | Ink latency | M×M | Measured in [SRS-EP-13](./features/device-document/srs-quality.md); shrink the ring before slowing ink |
 | Live manipulation exceeds the partial-refresh budget | Gesture feel | M×M | ≥5 Hz / 0 full-panel bar; CHL-0006 established that slow is acceptable |
 | Selection chrome painted on CanvasLayer (full `update()`) | Lasso lag / refresh discipline | **H×M** | **Closed [CHL-0017](../../../.plan/iter-003/challenges/CHL-0017-selection-chrome-layers.md) / [ADR-0019](../../adr/ADR-0019-selection-chrome-layers.md)** — ToolCanvasLayer Mono + ToolLayer QML |
+| Live SmartGroup painted on CanvasLayer during drag | Duplicate origin + trail wipe | **H×M** | **Closed [CHL-0018](../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md)** — live node on ToolCanvasLayer; option 2 deferred |
 | Device constants inherited from desktop values (LOD 0.35, 8 px tolerance) | Manipulation usability | **H×M** | **Closed.** Device locks: handle 28/56 du, LOD min on-panel axis 96 du ([SRS-EP-12](./features/ink-box/srs-ui.md)). Miss-rate on hardware files a `CHL-*` in du, never 8 CSS px / 0.35 |
 | No undo affordance on a three-tool chip | Recoverability | H×M | **Deferred this campaign ([CHL-0010](../../../.plan/iter-003/challenges/CHL-0010-undo-vs-selection-create-chrome.md)).** Undo logic ships regardless ([SRS-EP-07](./features/device-document/srs-logic.md) / EP-015) |
 | Unpublished work lost on app restart | Data loss | L×M (accepted) | Publish per committed op + visible pending state |

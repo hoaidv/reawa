@@ -42,3 +42,6 @@ BDD: [draw-into-membership.feature](../../../.docs/modules/epaper/features/ink-b
 **SM 2026-08-13:** W10 auto — host membership fixtures PASS (`membership_test`). Flat join only;
 bounds not expanded; enclose latch never calls membership. Infini `join_smart_group` converts
 world→local for mirror parity. CHL-0011/0012 stay future.
+
+**Dev 2026-08-14:** Draw-into local (x,y) hotfix — `fixedInk` join is `world − translate` (same as
+paint). Dividing by parent `scale` after resize made new content re-render inward / toward center.

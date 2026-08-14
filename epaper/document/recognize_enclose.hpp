@@ -167,6 +167,34 @@ inline Vec2 smartLocalToWorld(double localX, double localY, const DocNode &sg, c
     return {x + t.x, y + t.y};
 }
 
+/**
+ * Inverse of smartLocalToWorld for draw-into join.
+ * @implements [SRS-EP-10] world samples → group-local
+ * @fix [STORY-EP-017] fixedInk join must not divide by scale
+ */
+inline Vec2 smartWorldToLocal(double worldX, double worldY, const DocNode &sg,
+                              const std::string &role)
+{
+    const SmartTransform &t = sg.transform;
+    if (role == "content" && sg.inkScaleMode == "fixedInk") {
+        // Inverse of local + translate (no scale) — matches paint.
+        return {worldX - t.x, worldY - t.y};
+    }
+    double x = worldX - t.x;
+    double y = worldY - t.y;
+    if (t.rotation != 0) {
+        const double csn = std::cos(-t.rotation);
+        const double sn = std::sin(-t.rotation);
+        const double rx = x * csn - y * sn;
+        const double ry = x * sn + y * csn;
+        x = rx;
+        y = ry;
+    }
+    const double sx = t.scaleX != 0 ? t.scaleX : 1.0;
+    const double sy = t.scaleY != 0 ? t.scaleY : 1.0;
+    return {x / sx, y / sy};
+}
+
 /** @implements [SRS-EP-10] already-grouped ink is skipped */
 inline void walkInkCandidates(const std::vector<DocNode> &nodes, bool parentIsSmartGroup,
                               std::vector<const DocNode *> &out)

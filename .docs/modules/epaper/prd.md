@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.5.0
+version: 0.5.1
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -247,8 +247,15 @@ viewed at scale, and saved.
 - **`inkScaleMode` feel.** `withBounds`: content scales with the box. `fixedInk`: each content ink
   keeps its sample size fixed and tracks the box via **its own** relative offset / UV inside the box,
   so a newly drawn stroke never moves older content. Boundary ink always transforms with the frame.
-- **Live and direct.** Feedback during a drag mutates the real ink within the e-paper partial-refresh
-  budget. A slow refresh is acceptable; a picture that later jumps is not.
+- **Live and direct.** Feedback during a drag mutates the real document (not an advisory outline).
+  **Paint (2026-08-14, [CHL-0018](../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md)):**
+  while move/resize is in flight, the origin box is hidden on the document surface and the live node
+  (ink + AABB + handles) is drawn on the selection overlay's canvas layer (ToolCanvasLayer). On
+  pen-up the committed node is rasterized back onto the document surface — one settled picture.
+  Mid-gesture e-ink ghosting and dirty traces are allowed; a settled frame that disagrees with the
+  document is not. Painting the live node on the document surface instead (option 2) is **out of
+  this campaign** — reopen only if a later rendering phase cannot keep Pen ink isolated from overlay
+  refresh.
 - **Below the LOD cutoff** manipulation is unavailable and the UI says so; the gesture does not
   silently do something else.
 - **Forward compatibility (binding).** This REQ ships as a **conforming subset** of
@@ -275,6 +282,9 @@ viewed at scale, and saved.
   (geometry ±1 px @ 100% zoom against the expected transform).
 - Given a drag in progress, When the device renders feedback, Then it updates at ≥5 Hz using partial
   refresh only (0 full-panel invalidations during the gesture) and the UI never freezes for >200 ms.
+  The live node is painted on ToolCanvasLayer; CanvasLayer does not keep a second copy of that box.
+  Mid-gesture ghosting/dirty traces do not fail this AC; on pen-up the next settled frame shows
+  **one** box at the committed geometry (0 leftover origin pixels, 0 overlay duplicate).
 - Given any completed manipulation gesture, When the creator undoes once, Then exactly that gesture
   is reverted (1 undo entry per gesture; 0 partial reverts).
 - Given a selected Smart Group, When the creator presses empty canvas, Then selection clears and the
@@ -449,6 +459,9 @@ viewed at scale, and saved.
   selected box's smaller **on-panel** axis is **< 96 du** (not `TILE_LOD_SCALE = 0.35`). Handle
   visual **28 du** / hit **56 du**. Binding: [SRS-EP-11](./features/ink-box/srs-logic.md) /
   [SRS-EP-12](./features/ink-box/srs-ui.md).
+- Live node paint during move/resize (CanvasLayer vs ToolCanvasLayer) — **closed 2026-08-14
+  (pm)** ([CHL-0018](../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md)):
+  option 1 (ToolCanvasLayer) adopted; option 2 deferred to a later rendering phase.
 
 ## Linked Modules
 

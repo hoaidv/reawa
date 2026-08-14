@@ -307,6 +307,39 @@ static void test_translated_group_local_samples()
     CHECK(near(sg->smartBounds.width, 120));
 }
 
+/** @fix [STORY-EP-017] fixedInk join vs resized (scale≠1) parent — not /scale */
+static void test_fixed_ink_join_ignores_parent_scale()
+{
+    DeviceDocument doc;
+    createSg(doc, "sg_1", 40, 40, 100, 100, {}, {0.5, 0.5});
+    JsonValue::Object t;
+    t.emplace_back("x", JsonValue::number(40));
+    t.emplace_back("y", JsonValue::number(40));
+    t.emplace_back("rotation", JsonValue::number(0));
+    t.emplace_back("scaleX", JsonValue::number(2));
+    t.emplace_back("scaleY", JsonValue::number(2));
+    JsonValue::Object payload;
+    payload.emplace_back("id", JsonValue::string("sg_1"));
+    payload.emplace_back("transform", JsonValue::object(std::move(t)));
+    DocOp rz;
+    rz.opId = "set_smart_transform:sg_1";
+    rz.type = "set_smart_transform";
+    rz.payload = JsonValue::object(std::move(payload));
+    CHECK(doc.commitOp(rz).applied);
+    // World point 40px in from the box origin; paint is local+translate (no scale).
+    appendInk(doc, "ink", pts({{80, 90}, {90, 95}}));
+    CHECK(tryDrawIntoMembership(doc, "ink").kind == MembershipKind::Joined);
+    const DocNode *sg = doc.find("sg_1");
+    CHECK(sg && sg->children.size() == 1);
+    const DocNode &ink = sg->children[0];
+    CHECK(near(ink.samples[0].x, 40)); // 80 - 40, not (80-40)/2
+    CHECK(near(ink.samples[0].y, 50));
+    const Vec2 world = smartLocalToWorld(ink.samples[0].x, ink.samples[0].y, *sg, "content",
+                                         ink.layoutOffset, nullptr);
+    CHECK(near(world.x, 80));
+    CHECK(near(world.y, 90));
+}
+
 int main()
 {
     test_join_with_uv_bounds_unchanged();
@@ -316,6 +349,7 @@ int main()
     test_membership_undo();
     test_enclose_stroke_skips_membership();
     test_translated_group_local_samples();
+    test_fixed_ink_join_ignores_parent_scale();
 
     if (g_fails) {
         std::cerr << g_fails << " failure(s)\n";

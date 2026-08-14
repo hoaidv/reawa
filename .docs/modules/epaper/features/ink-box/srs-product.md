@@ -70,6 +70,7 @@ the final say. This feature removes both.
 | BR-B16 | **Deselect leaves nothing behind.** No residual selection chrome on the next settled frame. | CHL-0007 |
 | BR-B17 | **Rotation is out of scope but not designed out.** The transform op carries a rotation field that stays unset; nothing in this feature may assume rotation cannot exist. | REQ-06 ↔ REQ-08 |
 | BR-B18 | **SmartGroup declares its capabilities.** `{select, move, resize, set-ink-scale-mode}` through the shared capability descriptor of [node-manipulation](../node-manipulation/srs-product.md) — not as a bespoke, hard-coded tool. | REQ-06 conformance |
+| BR-B19 | **Live node paint is overlay, settle is document.** During move/resize the origin box is hidden on the document surface and the live ink + chrome are painted on ToolCanvasLayer. On pen-up, one raster of the committed node on CanvasLayer. Mid-gesture ghosting/dirty traces are allowed; a settled duplicate or snap-back is not. Painting the live node on CanvasLayer (option 2) is deferred. | CHL-0018 / ADR-0019 |
 
 ## Edge cases
 
@@ -92,6 +93,7 @@ the final say. This feature removes both.
 | Drag attempted below the LOD cutoff | No manipulation starts; UI shows it is unavailable |
 | Box left with zero children after an edit | Disallowed; removing the last child removes the Smart Group and restores the ink to the parent |
 | Panel refresh in flight when a gesture starts | Gesture takes priority; feedback uses partial refresh; no full-panel invalidation mid-drag |
+| Move/resize in flight (live node on ToolCanvasLayer) | Origin box hidden on CanvasLayer; live ink+chrome on ToolCanvasLayer; e-ink trail/ghost during the drag allowed; pen-up one settled raster (CHL-0018) |
 | Undo pressed mid-gesture | Ignored until the gesture commits; undo then reverts exactly that gesture |
 
 ## Acceptance (drives BDD / stories)
@@ -118,7 +120,9 @@ the final say. This feature removes both.
 - Given `withBounds` and a handle drag, When the creator releases, Then content scales with the
   bounds within ±1 px @ 100% zoom of the expected transform.
 - Given a drag in progress, When feedback renders, Then it updates at ≥5 Hz with partial refresh
-  only (0 full-panel invalidations) and no stall exceeds 200 ms.
+  only (0 full-panel invalidations) and no stall exceeds 200 ms. The live box is on ToolCanvasLayer
+  (0 second copy on CanvasLayer). Mid-gesture ghosting does not fail; pen-up settled frame shows
+  exactly one box at the committed geometry.
 - Given any completed gesture, When the creator undoes once, Then exactly that gesture reverts
   (1 entry per gesture; 0 partial reverts).
 - Given a selected box, When the creator presses empty canvas, Then the next settled frame shows

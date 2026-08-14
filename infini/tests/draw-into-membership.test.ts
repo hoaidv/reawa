@@ -65,6 +65,34 @@ describe("STORY-IN-016 / SRS-IN-15 draw-into membership", () => {
     expect(tree.rootChildren.some((n) => n.id === "new_ink")).toBe(false);
   });
 
+  it("fixedInk join stores local = world − translate (ignores parent scale)", () => {
+    const tree = new VectorDocument();
+    const undo = new UndoRing();
+    tree.applyOp({
+      opId: "sg",
+      type: "create_smart_group",
+      payload: {
+        id: "sg_1",
+        bounds: { x: 0, y: 0, width: 100, height: 100 },
+        transform: { x: 40, y: 40, rotation: 0, scaleX: 2, scaleY: 2 },
+        inkScaleMode: "fixedInk",
+        children: [],
+      },
+    });
+    commitLiveStrokeToTree(tree, {
+      id: "ink",
+      points: [
+        { x: 80, y: 90 },
+        { x: 90, y: 95 },
+      ],
+    });
+    expect(tryDrawIntoMembership(tree, undo, "ink").kind).toBe("joined");
+    const sg = tree.indexById().get("sg_1") as SmartGroupNode;
+    const neu = sg.children.find((c) => c.id === "ink")!;
+    expect(neu.samples[0].x).toBeCloseTo(40);
+    expect(neu.samples[0].y).toBeCloseTo(50);
+  });
+
   it("later sibling wins among overlapping groups", () => {
     const tree = new VectorDocument();
     const undo = new UndoRing();
