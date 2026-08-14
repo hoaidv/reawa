@@ -2,8 +2,8 @@
 
 | Component | Kind | Source | File | Pattern | States |
 |---|---|---|---|---|---|
-| ToolChip | screen | **compose** UI-EP-01 | `components/tool-chip.html` | `.c-tool-chip` | default, tool active |
-| ToolButton | screen | **compose** UI-EP-01 | (in tool-chip.html) | `.c-tool-btn` | default, active, pressed, unavailable |
+| ToolChip | screen | **compose** UI-EP-03 | `components/tool-chip.html` | `.c-tool-chip` | default, sel_rect active, sel_freeform active |
+| ToolButton | screen | **compose** UI-EP-03 | (in tool-chip.html) | `.c-tool-btn` | default, active, pressed, unavailable |
 | SelectionOverlay | screen | **build** | `components/selection-overlay.html` | `.c-bounds` `.c-handle` | hidden, selected, moving, resizing, handle pressed |
 | InkScaleModeToggle | screen | **build** | `components/ink-scale-mode-toggle.html` | `.c-mode-toggle` | withBounds, fixedInk, pressed, hidden |
 | CreateRefusedIndicator | screen | **build** | `components/create-refused-indicator.html` | `.c-indicator` | hidden, visible |
@@ -31,6 +31,6 @@
 
 ### ToolChip (composed)
 
-- Three 64×64 tiles: Selection · Pen · Ink-box
+- Four 64×64 tiles: `sel_rect` · `sel_freeform` · Pen · Ink-box ([ADR-0017](../../../../.docs/adr/ADR-0017-four-tool-chip.md))
 - Orientation-top float; radius 0
-- **Do not add undo or Smart Group** (CHL-0010)
+- **Do not add undo or Enclose** (CHL-0010 / ADR-0016)

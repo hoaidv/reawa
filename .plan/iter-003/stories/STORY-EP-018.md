@@ -4,15 +4,15 @@ title: "On-device selection-create surround"
 kind: implement
 parent_srs: [SRS-EP-10, SRS-EP-11, SRS-EP-12, SRS-EP-14]
 parent_req: [REQ-05]
-status: in-review
+status: done
 priority: P1
 iter: iter-003
 estimate: 5
 owner: dev
 depends_on: [STORY-EP-012, STORY-EP-016, STORY-EP-022]
 acceptance_criteria:
-  - "Given tool.sel_rect and pen-down+move, When the gesture runs, Then ovl.marquee (thin dotted AABB) follows the pen tip; on pen-up, nodes whose AABB intersects the rect are selected."
-  - "Given tool.sel_freeform, When the creator draws a polyline and pens up, Then ovl.lasso is a thin dotted polyline while drawing; pen-up closes it; membership is even-odd inside the polyline (not the gesture AABB); ovl.lasso is gone; ovl.nodes_bounds is the tight union AABB (0 pad) + 6 anchors + icon-only cta.enclose 64 du."
+  - "Given tool.sel_rect and pen-down+move, When the gesture runs, Then ovl.marquee (thin dotted AABB) follows the pen tip; on pen-up, only inks with ≥80% of samples inside the rect are selected (grazing AABB does not select)."
+  - "Given tool.sel_freeform, When the creator draws a polyline and pens up, Then ovl.lasso is a thin dotted polyline while drawing; pen-up closes it; membership is ≥80% of ink samples even-odd inside the polyline (not the gesture AABB); ovl.lasso is gone; ovl.nodes_bounds is the tight union AABB (0 pad) + 6 anchors + icon-only cta.enclose 64 du."
   - "Given pen-up after either mode, When the selection is non-empty, Then ovl.nodes_bounds tightly equals the union AABB of those document nodes (0 extra padding) with 6 square anchors, and cta.enclose is an icon-only 64 du control on SelectionOverlay with no context-toolbar chrome."
   - "Given ≥2 selected free inks where one stroke surrounds ≥80% of every other, When the user taps cta.enclose, Then the winner is role boundary, others are role content with layoutOffset UV, and bounds equal the winner AABB."
   - "Given an open surround stroke, When containment is tested, Then the artificial closed path (even-odd) may qualify and stored samples are unchanged."

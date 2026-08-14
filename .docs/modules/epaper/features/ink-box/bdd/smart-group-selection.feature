@@ -8,14 +8,35 @@ Feature: Smart Group selection hit-test move resize and fixedInk UV on the devic
   # Changed: the ghost is gone, hit-testing reads the local document, and below the
   # LOD cutoff the press falls through to nothing (there is no on-device pan).
 
-  @SRS-EP-11
-  Scenario: Hit selects topmost SmartGroup above the LOD cutoff
+  @SRS-EP-11 @SRS-EP-12
+  Scenario: Hit selects topmost SmartGroup above the LOD cutoff with sel_rect
     Given scale is at or above the device LOD cutoff
+    And tool.sel_rect is armed
     And the device document has SmartGroup siblings "sg_a" then "sg_b" with overlapping world bounds
-    When the pen presses inside the overlap with Selection armed
+    When the pen presses inside the overlap
     Then "sg_b" is selected (topmost / later sibling)
     And the selection overlay shows bounds for the selected node
     And the selection affordance appears within 100 ms
+    And ovl.marquee is not drawn
+
+  @SRS-EP-11 @SRS-EP-12
+  Scenario: Hit selects topmost SmartGroup above the LOD cutoff with sel_freeform
+    Given scale is at or above the device LOD cutoff
+    And tool.sel_freeform is armed
+    And the device document has SmartGroup siblings "sg_a" then "sg_b" with overlapping world bounds
+    When the pen presses inside the overlap
+    Then "sg_b" is selected (topmost / later sibling)
+    And the selection overlay shows bounds for the selected node
+    And the selection affordance appears within 100 ms
+    And ovl.lasso is not drawn
+
+  @SRS-EP-11 @SRS-EP-12 @SRS-EP-05
+  Scenario: Manipulation chrome uses the four-tool chip
+    Given a SmartGroup is selected under tool.sel_rect or tool.sel_freeform
+    Then the ToolChip has exactly the tools sel_rect, sel_freeform, pen, ink_box
+    And the armed selection tile is invert
+    And cta.enclose is not a ToolChip tile
+    And ovl.selection_bounds, ovl.resize_handles, and tgl.ink_scale_mode are visible
 
   @SRS-EP-11
   Scenario: Drag moves the real ink and emits one op on release

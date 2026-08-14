@@ -34,18 +34,24 @@
     Press = invert. Hover / focus-visible = N/A (SRS-EP-12).
   </p>
 
-  <h2>ToolButton (composed UI-EP-01)</h2>
+  <h2>ToolButton (composed UI-EP-03 / ADR-0017)</h2>
   <div class="grid">
     <div class="cell">
-      <span>default</span>
+      <span>default (sel_rect idle)</span>
       <div class="c-tool-chip" role="toolbar">
-        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection"><img src="../system/assets/icon-epaper-selection.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
       </div>
     </div>
     <div class="cell">
-      <span>active (armed)</span>
+      <span>active (sel_rect armed)</span>
       <div class="c-tool-chip" role="toolbar">
-        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection"><img src="../system/assets/icon-epaper-selection.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>active (sel_freeform armed)</span>
+      <div class="c-tool-chip" role="toolbar">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
       </div>
     </div>
     <div class="cell">

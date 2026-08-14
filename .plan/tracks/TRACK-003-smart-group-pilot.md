@@ -4,7 +4,7 @@ slug: smart-group-pilot
 kind: planned
 status: active
 iter: iter-003
-cursor: "W11a — EP-022 done; EP-018 ready → /dev"
+cursor: "W11b — EP-019 ready → /dev"
 goal: "Ink-box rework: epaper REQ-04…REQ-07 (device owns the document) + infini REQ-03 one-way sync"
 owner: sm
 ---
@@ -33,8 +33,9 @@ Pilot ADRs [ADR-0011](../../.docs/adr/ADR-0011-smart-group.md) (semantics) and
 | [STORY-EP-021](../iter-003/stories/STORY-EP-021.md) | implement | **done** | W10b — log shipper; human accepted |
 | [STORY-EP-017](../iter-003/stories/STORY-EP-017.md) | implement | **done** | W10 — draw-into membership (host PASS) |
 | [STORY-EP-022](../iter-003/stories/STORY-EP-022.md) | design | **done** | W11a — UI-EP-03 marquee + Enclose |
-| [STORY-EP-018](../iter-003/stories/STORY-EP-018.md) | implement | **ready** | W11a — waits /dev after QA BDD |
-| [STORY-EP-019](../iter-003/stories/STORY-EP-019.md) | implement | **draft** | W11b — 28/56/96 du locked |
+| [STORY-EP-018](../iter-003/stories/STORY-EP-018.md) | implement | **done** | W11a — human PASS 2026-08-14 |
+| [STORY-EP-019](../iter-003/stories/STORY-EP-019.md) | implement | **ready** | W11b — 28/56/96 du; both sel tools |
+| [STORY-EP-023](../iter-003/stories/STORY-EP-023.md) | design | **done** | W11b — UI-EP-02 four-tool rebase |
 | [STORY-EP-020](../iter-003/stories/STORY-EP-020.md) | implement | **draft** | W12 — device sync |
 | [STORY-IN-028](../iter-003/stories/STORY-IN-028.md) | implement | **draft** | W12 — desktop `doc_load` |
 
@@ -90,3 +91,6 @@ Pilot stories (IN-010…019, EP-003…006) remain **done** as history. Residue E
 | 2026-08-13 | PM **CHL-0012 Adopt → future** — FREE_FORM / WRAP_CONTENT sizing + align-content. EP-017 unchanged. |
 | 2026-08-13 | W10 auto — Device Log **done** (human accept). EP-017 membership **done** (host PASS). Opened CHL-0013 for EP-018 UX → `/pm`. |
 | 2026-08-13 | CHL-0013 **Adopted**; ADR-0016; SRS thickened; EP-022 design **ready**. Cursor → `/designer`. |
+| 2026-08-14 | EP-022 **done**. EP-018 **in-review** (four-chip, marquee/lasso, Enclose, ≥80% membership). Cursor → `/qa` on-panel. W11b gated. |
+| 2026-08-14 | EP-018 **done** (human PASS). W11a closed. W11b: EP-019 **ready**. Cursor → `/qa`. |
+| 2026-08-14 | W11b QA walk + EP-023 four-tool rebase **done**. EP-019 **ready** → `/dev`. |

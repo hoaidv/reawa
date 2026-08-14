@@ -4,14 +4,14 @@ title: "On-device live manipulation and REQ-08 conformance"
 kind: implement
 parent_srs: [SRS-EP-11, SRS-EP-14]
 parent_req: [REQ-06]
-status: draft
+status: ready
 priority: P0
 iter: iter-003
 estimate: 5
 owner: dev
-depends_on: [STORY-EP-012, STORY-EP-016]
+depends_on: [STORY-EP-012, STORY-EP-016, STORY-EP-023]
 acceptance_criteria:
-  - "Given the selected box's smaller on-panel axis is ≥ 96 du (not TILE_LOD_SCALE 0.35), When the pen presses a SmartGroup, Then the topmost sibling is selected and chrome appears p95 ≤100 ms."
+  - "Given the selected box's smaller on-panel axis is ≥ 96 du (not TILE_LOD_SCALE 0.35) and tool.sel_rect or tool.sel_freeform is armed, When the pen presses a SmartGroup, Then the topmost sibling is selected and chrome appears p95 ≤100 ms (same verbs in both selection tools)."
   - "Given a press+drag inside bounds, When the gesture runs, Then the real ink follows the pen (≥5 Hz, stall ≤200 ms, 0 full-panel invalidations, 0 ghost) and release commits exactly one set_smart_transform whose geometry equals the last previewed geometry (0 px jump, 0 snap-back) — CHL-0006 / CHL-0007."
   - "Given fixedInk resize, When bounds change, Then each content ink keeps sample size (±1 px) and its own layoutOffset UV; boundary follows the frame; 0 unrelated content moves — CHL-0004 / CHL-0005."
   - "Given withBounds resize, When bounds change, Then content scales with the box and boundary always transforms with the frame."
@@ -48,7 +48,8 @@ its premise.
 
 **Device units locked (architect 2026-08-13):** handle visual **28 du**, hit **56 du**, LOD =
 smaller on-panel axis **< 96 du**. 1 du = 1 panel pixel @ 226 dpi. Do not fall back to 8 CSS px
-or `TILE_LOD_SCALE 0.35`. Story stays `draft` until W11 (after EP-016). Chrome package is `done`.
+or `TILE_LOD_SCALE 0.35`. Chrome package EP-012 is `done`; **EP-023** rebases it onto the
+four-tool chip (ADR-0017) before this story is `ready`. **EP-023 done 2026-08-14.** W11b **ready**.
 
 ## Kind
 
@@ -56,7 +57,7 @@ or `TILE_LOD_SCALE 0.35`. Story stays `draft` until W11 (after EP-016). Chrome p
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Depends on | EP-012 (design), EP-016 |
+| Depends on | EP-012 (design), EP-016, EP-023 (four-tool rebase) |
 
 ## Done when
 

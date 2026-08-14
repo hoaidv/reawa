@@ -3,7 +3,7 @@ id: UI-EP-02
 title: Device selection overlay and manipulation chrome
 parent_srs: [SRS-EP-12]
 parent_req: [REQ-05, REQ-06]
-stories: [STORY-EP-012]
+stories: [STORY-EP-012, STORY-EP-023]
 status: draft
 iter: iter-003
 scenes:
@@ -34,7 +34,7 @@ platform: epaper
 Iter-local UI design for [SRS-EP-12](../../../../.docs/modules/epaper/features/ink-box/srs-ui.md).
 **Not a port** of [ink-box-ui](../ink-box-ui/) (mouse + ghost) or of
 [epaper-tool-strip](../epaper-tool-strip/) `selection-dragging` ghost scenes.
-ToolChip is **composed** from [UI-EP-01](../epaper-tool-strip/ui-spec.md).
+ToolChip is **composed** from [UI-EP-03](../selection-enclose-chrome/ui-spec.md) (four tools, [ADR-0017](../../../../.docs/adr/ADR-0017-four-tool-chip.md)). Overlay geometry stays UI-EP-02.
 
 ## Source
 
@@ -43,7 +43,7 @@ ToolChip is **composed** from [UI-EP-01](../epaper-tool-strip/ui-spec.md).
 - Experience: [srs-experience](../../../../.docs/modules/epaper/features/ink-box/srs-experience.md) — READY (in-scene state sequences; scene graph N/A)
 - Logic (behavior, not chrome): [SRS-EP-10 / SRS-EP-11](../../../../.docs/modules/epaper/features/ink-box/srs-logic.md)
 - Story AC: [STORY-EP-012](../../stories/STORY-EP-012.md)
-- Compose: [UI-EP-01 ToolChip](../epaper-tool-strip/)
+- Compose: [UI-EP-03 ToolChip](../selection-enclose-chrome/) — four tools; do not revert to UI-EP-01 three-chip
 - Reference image: none
 
 ## Platform profile
@@ -95,7 +95,7 @@ Nav kind: **in-scene state** (not push / present-modal). Relative hops in scene 
 | DeviceScreen | Landscape panel frame | — | default |
 | InkSurface | Full-bleed document paint; handwriting + boundary ink | InkFigure | document / live-moving / live-scaling / tiny / replaced |
 | SelectionOverlay | Bounds, 8 resize handles (no rotation), mode toggle, mode indicator | SelectionOverlay | hidden / selected / moving / resizing / unavailable |
-| ToolStrip | Floating three-tool chip | ToolChip (composed UI-EP-01) | Selection armed |
+| ToolStrip | Floating four-tool chip | ToolChip (composed UI-EP-03) | `sel_rect` or `sel_freeform` armed |
 | StatusLine | Tool + state caption (design preview only) | — | default |
 
 **Chrome relationships:** SelectionOverlay **above** InkSurface, **below** ToolChip. Overlay is
@@ -109,7 +109,7 @@ SelectionOverlay is a child of InkSurface in z-order (painted over ink).
 
 | Component | Source | Pattern id / CSS class | Variant / props | Used in regions |
 |---|---|---|---|---|
-| ToolChip | **reuse** UI-EP-01 | `.c-tool-chip` | 3 tools, 64×64, radius 0 | ToolStrip |
+| ToolChip | **reuse** UI-EP-03 | `.c-tool-chip` | 4 tools, 64×64, radius 0 | ToolStrip |
 | ToolButton | **reuse** UI-EP-01 | `.c-tool-btn` | default, active, pressed, unavailable | ToolStrip |
 | SelectionOverlay | **build** | `.c-bounds` + handles | selected, moving, resizing, hidden | SelectionOverlay |
 | InkScaleModeToggle | **build** | `.c-mode-toggle` | withBounds, fixedInk, pressed, hidden | SelectionOverlay |
@@ -134,7 +134,7 @@ in `.docs/DESIGN.md`. Chip tokens composed from UI-EP-01 v0.4 (`--chip-btn: 64px
 | Project tokens valid | Infini tokens unchanged; this package is a 1-bit subset |
 | tokens.css generated | `./tokens.css` |
 | Component catalog complete | `components.md` + self-contained `.html` |
-| Pattern-only reuse | ToolChip copy-pasted from UI-EP-01; overlay is new |
+| Pattern-only reuse | ToolChip copy-pasted from UI-EP-03; overlay is UI-EP-02 |
 
 ## States (required)
 
@@ -194,7 +194,7 @@ No-op still acknowledges press (`:active` / `.is-pressed`).
 |---|---|---|
 | Handle size + hit in **device units** | Visual **28 du** (≈3.1 mm @ 226 dpi). Hit **56 du** (≈6.3 mm), 14 du pad beyond visual. 1 preview CSS px = 1 device unit. **Not** 8 CSS px. | **Accepted 2026-08-13 (architect).** Implement lock for EP-019. |
 | LOD cutoff on a **fixed panel** | Unavailable when the selected box's **smaller on-panel axis < 96 device px** (≈10.8 mm; ~6.8% of the 1404 px short edge). Below that, 28 du handles collide. **Not** `TILE_LOD_SCALE = 0.35`. | **Accepted 2026-08-13 (architect).** Implement lock for EP-019. |
-| Undo on the three-tool chip | Does **not** fit. Chip inventory is closed (Selection · Pen · Ink-box). No fourth tool; no properties panel. | **CHL-0010 deferred** (PM 2026-08-13) — no on-panel chrome; EP-015 ships the ring |
+| Undo on the four-tool chip | Does **not** fit. Chip inventory is closed (`sel_rect` · `sel_freeform` · Pen · Ink-box). No fifth tool; no properties panel. | **CHL-0010 deferred** (PM 2026-08-13) — no on-panel chrome; EP-015 ships the ring |
 | Selection-create invocation | `cta.create_smart_group` stays **out of v1 chrome**. Refuse scene ships; invocation control does not. Enclose-with-Ink-box is the create path. | **CHL-0010 deferred** (PM 2026-08-13) |
 | Chrome vs dense 1-bit handwriting | **Designer closed:** double-rail bounds (3px black / 2px paper / 1px black) vs single-path ink; **filled** handles with paper well vs open strokes; **45° hatch** on mode toggle and indicators (ink never uses hatch fill). No tint, no shadow, no dashed ghost. | Closed in this Spec |
 
@@ -236,7 +236,7 @@ Release is the commit. No confirm step. Overlay annotates ink that is **already 
 | sel.unavailable | [SRS-EP-12] | LOD in panel terms | 96 du locked |
 | sel.reloaded | [SRS-EP-12] | selection cleared | |
 | sel.none | [SRS-EP-12] | overlay hidden | boundary ink only |
-| ToolChip | [SRS-EP-05] | composed, not redesigned | UI-EP-01 |
+| ToolChip | [SRS-EP-05] | composed, not redesigned | UI-EP-03 four-tool |
 | Handle / LOD constants | [SRS-EP-12] | 28/56 du · 96 du min-axis | architect-locked 2026-08-13 |
 | Undo / create CTA | [SRS-EP-12] Open | scarce chrome | CHL-0010 |
 
@@ -259,7 +259,7 @@ Release is the commit. No confirm step. Overlay annotates ink that is **already 
 | Box unselected = creator's boundary ink, no synthetic rect | `sel.none` / `sel.deselected` | match |
 | Enclose guard fail = no banner | not a scene (no chrome) | match (N/A scene) |
 | Platform 1872×1404 `data-platform=epaper` | all scenes | match |
-| ToolChip not duplicated / redesigned | composed UI-EP-01 markup | match |
+| ToolChip not duplicated / redesigned | composed UI-EP-03 four-tool markup | match |
 | Preview tablet not phone | `data-preview-scale="tablet"` | match |
 | Rotation handle | absent | match |
 
@@ -285,7 +285,8 @@ Release is the commit. No confirm step. Overlay annotates ink that is **already 
 
 | Icon | Kind | File | Used in |
 |---|---|---|---|
-| Selection | system (UI-EP-01) | `../system/assets/icon-epaper-selection.svg` | ToolChip |
+| Selection rect | system (UI-EP-03) | `../system/assets/icon-epaper-sel-rect.svg` | ToolChip `tool.sel_rect` |
+| Selection freeform | system (UI-EP-03) | `../system/assets/icon-epaper-sel-freeform.svg` | ToolChip `tool.sel_freeform` |
 | Pen | system (UI-EP-01) | `../system/assets/icon-epaper-pen.svg` | ToolChip |
 | Ink-box | system (UI-EP-01) | `../system/assets/icon-epaper-ink-box.svg` | ToolChip |
 | Mode withBounds | system | `../system/assets/icon-epaper-mode-with-bounds.svg` | toggle |
@@ -299,7 +300,7 @@ Handles are geometric chrome (filled squares), not icons.
 
 | Name | Kind | File path | Variants demoed |
 |---|---|---|---|
-| ToolChip | screen (composed) | `./components/tool-chip.html` | default, Selection active |
+| ToolChip | screen (composed) | `./components/tool-chip.html` | default, sel_rect active, sel_freeform active |
 | SelectionOverlay | screen | `./components/selection-overlay.html` | selected, pressed handle, hidden |
 | InkScaleModeToggle | screen | `./components/ink-scale-mode-toggle.html` | withBounds, fixedInk, pressed |
 | CreateRefusedIndicator | screen | `./components/create-refused-indicator.html` | visible |
@@ -309,7 +310,7 @@ Handles are geometric chrome (filled squares), not icons.
 
 | Check | Evidence / result |
 |---|---|
-| Existing system discovered | UI-EP-01 ToolChip + 1-bit tokens; ink-box-ui withdrawn |
+| Existing system discovered | UI-EP-03 four-tool chip + UI-EP-02 overlay; ink-box-ui withdrawn |
 | Required platform frames covered | 1872×1404 landscape tablet |
 | Component/state coverage | overlay + toggle + indicators + composed chip |
 | Structural audit | `data-region` = DeviceScreen, InkSurface, SelectionOverlay, ToolStrip, StatusLine |
