@@ -91,7 +91,8 @@ Lanes **∥**. Shared `.docs/` only if stitching; do not parallel-edit the same 
 
 | Area | TBD |
 |---|---|
-| Blink waveform / duration | Designer picked in EP-027 (~250 ms Mono) |
+| Blink waveform / duration | Enclose: ~250 ms Mono. Membership: last-join highlight (UI-EP-06); no blink |
+| Device chrome state machine | STORY-EP-032 draft — `/architect` later; not NOW |
 | Inflection cutoff on a real corpus | EXP-0002 Initiative 2 / QA — ship gate |
 | Live-drag panel rate on RM2 | Measure in EP-031, not lock |
 

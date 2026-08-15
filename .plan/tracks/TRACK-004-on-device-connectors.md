@@ -6,7 +6,7 @@ status: active
 iter: iter-004
 goal: "On-device connectors: recognize hand-drawn ink between SmartGroups and keep it attached when a node moves"
 scope: [epaper/connector-ink, epaper/tool-modes, epaper/ink-box, infini/vector-document]
-stories: [STORY-EP-026, STORY-EP-027, STORY-EP-028, STORY-EP-029, STORY-EP-030, STORY-EP-031, STORY-IN-030, STORY-IN-031]
+stories: [STORY-EP-026, STORY-EP-027, STORY-EP-028, STORY-EP-029, STORY-EP-030, STORY-EP-031, STORY-IN-030, STORY-IN-031, STORY-EP-032]
 cursor: "STORY-EP-030 · /dev"
 paused_reason: ""
 interrupts: []
@@ -45,10 +45,13 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 | [STORY-EP-031](../iter-004/stories/STORY-EP-031.md) | implement | ready | Ink/Curve warp + live drag — depends EP-030 |
 | [STORY-IN-030](../iter-004/stories/STORY-IN-030.md) | implement | ready | Infini envelope + derived warp — depends EP-030 |
 | [STORY-IN-031](../iter-004/stories/STORY-IN-031.md) | implement | **done** | Remove Infini ToolStrip |
+| [STORY-EP-032](../iter-004/stories/STORY-EP-032.md) | implement | **draft** | `/architect` later — chrome state machine |
 
 ## Cursor
 
 **Next:** `/dev` [STORY-EP-030](../iter-004/stories/STORY-EP-030.md)
+
+EP-032 waits on `/architect` (not this cursor).
 
 BDD for both is READY-FOR-DEV. Write sets do not overlap (`epaper/` vs `infini/`).
 
@@ -72,3 +75,4 @@ BDD for both is READY-FOR-DEV. Write sets do not overlap (`epaper/` vs `infini/`
 | 2026-08-15 | PM: remove Infini ToolStrip this track. STORY-IN-031 sliced; **∥ EP-028**. CHL-0019 adopted (64 px). |
 | 2026-08-15 | IN-031 **in-review** (ToolStrip unmounted). EP-028 still `/dev`. |
 | 2026-08-15 | EP-028 **in-review**. Cursor → `/qa` both W2 stories. |
+| 2026-08-15 | Membership blink caused Pen lag. UI-EP-06 → last-join highlight. EP-032 parked for `/architect`. Cursor stays EP-030. |

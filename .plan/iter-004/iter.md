@@ -33,6 +33,10 @@ Prior campaign (Epaper owns the document, REQ-04…07) **closed** in
 - [STORY-IN-030](./stories/STORY-IN-030.md) — implement — dev — 5 pts — depends_on EP-030
 - [STORY-IN-031](./stories/STORY-IN-031.md) — implement — dev — 2 pts — remove Infini ToolStrip · **∥ EP-028**
 
+## Parked (track, not this cursor)
+
+- [STORY-EP-032](./stories/STORY-EP-032.md) — draft — `/architect` later — device UI chrome state machine (membership highlight is a stopgap on TabletCanvasItem)
+
 ## Carry-over candidates (not committed)
 
 - epaper `[REQ-08]` any-node manipulation (thickened, not built)
