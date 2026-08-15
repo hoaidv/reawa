@@ -5,8 +5,7 @@ Feature: On-device connector recognition
   So that the line stays my ink and is attached without a fifth tool
 
   # STORY-EP-030 — SRS-EP-17 / SRS-EP-19. Chrome matches UI-EP-05.
-  # Constants named in SRS: MIN_CONNECTOR_WORLD 48 u; body ≤20% in A, ≤20% in B, ≥60% outside.
-  # R_SNAP and R_JOIN stay named; do not invent numeric values here.
+  # Constants named in SRS: MIN_CONNECTOR_WORLD 48 u; R_JOIN 6 u; chain max 5; body ≤20% in A/B.
 
   @SRS-EP-17
   Scenario: UX1 open stroke A to C commits create_connector
@@ -26,8 +25,8 @@ Feature: On-device connector recognition
   Scenario: UX2 chained strokes merge into one connector and one undo
     Given two distinct Smart Groups A and C
     And tgl.recog.connector is armed
-    When three successive free top-level inks join by R_JOIN and tangent continuity
-    And the last stroke lands on C while the far end binds A
+    When up to five free top-level inks join by R_JOIN 6 in any order
+    And the assembled path binds A at one end and C at the other
     Then exactly one create_connector exists
     And body children are those strokes in draw order
     And warpStyle is picked from the merged rest spine S: at most one inflection yields cubic else morph

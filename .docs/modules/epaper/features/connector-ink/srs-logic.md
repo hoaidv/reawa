@@ -30,10 +30,9 @@ v1 targets **SmartGroup only**.
 
 ### Chain (UX2)
 
-On a stroke that binds a second node, walk back through the last **N≈8** free top-level inks
-for endpoint-adjacent (`R_JOIN`) and tangent-continuous (turn ≤ ~60°) links, either draw
-direction. If the far end binds a different SmartGroup, merge the chain into **one**
-`create_connector` (body = strokes in draw order) with **one** undo entry. No pending node.
+On a stroke, take only the **latest consecutive free inks at root** (max **5**). Stop at a
+SmartGroup or Connector — do not skip over an ink-box. Join if they **intersect** or come
+within `R_JOIN` **6 u** (near-miss counts). No tangent test.
 
 ### Style pick
 

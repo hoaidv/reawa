@@ -113,5 +113,13 @@ inline std::string formatRecogLog(const std::string &outcome, const std::string 
     return line;
 }
 
+inline std::string formatConnLog(const std::string &diag, const std::string &reason)
+{
+    std::string line = "[conn] " + diag;
+    if (!reason.empty())
+        line += " fail=" + reason;
+    return line;
+}
+
 } // namespace debuglog
 } // namespace epaper

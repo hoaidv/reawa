@@ -600,6 +600,10 @@ void TabletCanvasItem::ingestCurrentStroke()
         ++m_ingestRejected;
     qInfo().noquote() << QString::fromStdString(
         epaper::debuglog::formatRecogLog(d.outcomeName(), d.guard, d.encloseWhy));
+    if (!d.connector.diag.empty()) {
+        qInfo().noquote() << QString::fromStdString(
+            epaper::debuglog::formatConnLog(d.connector.diag, d.connector.reason));
+    }
     if (d.outcome == RecogOutcome::Enclose && d.enclose.kind == EncloseKind::Created) {
         const std::string line = epaper::debuglog::formatEncloseLog(
             "Created", d.enclose.reason, d.enclose.smartGroupId, d.enclose.childIds);
