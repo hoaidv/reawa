@@ -15,6 +15,7 @@ acceptance_criteria:
   - "Given a closed-ish stroke that fails enclose guards inside an existing box, When pen-up runs, Then draw-into membership may run (D21) — 0 dual verdicts."
   - "Given EP-016 enclose and EP-017 membership fixtures, When replayed, Then 0 changed verdicts except the deliberate D21 fall-through (EXP-0002 G4)."
   - "Given ink latency, When dispatch runs, Then REQ-01 p95 ≤30 ms is unchanged."
+human_verified: 2026-08-15
 design_package: ""
 ui_spec: ""
 scenes: []
@@ -27,6 +28,8 @@ wireframe: ""
 Implements [ADR-0022](../../.docs/adr/ADR-0022-recognizer-dispatch.md) and the revised
 [SRS-EP-10](../../.docs/modules/epaper/features/ink-box/srs-logic.md) table.
 Needs the toggle latch from [STORY-EP-028](./STORY-EP-028.md). Dispatch is `epaper/document/recognizer_dispatch.hpp`. Connector commit remains [STORY-EP-030](./STORY-EP-030.md) (`guard=connector_pending`).
+
+**Human verified 2026-08-15** on device through EP-029 (enclose, membership highlight, empty-box gate, no full-panel redraw on failed empty enclose).
 
 ## Kind
 

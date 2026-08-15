@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-15T04:50:42+00:00
+generated_at: 2026-08-15T06:25:26+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -39,6 +39,7 @@ generated_at: 2026-08-15T04:50:42+00:00
 | [STORY-EP-030](./iter-004/stories/STORY-EP-030.md) | Recognize single-stroke and chained connectors | implement | dev | epaper | [SRS-EP-17] | ready | iter-004 | 5 |
 | [STORY-EP-031](./iter-004/stories/STORY-EP-031.md) | Ink/Curve warp and live re-warp on bound-node drag | implement | dev | epaper | [SRS-EP-18], [SRS-EP-20] | ready | iter-004 | 8 |
 | [STORY-EP-032](./iter-004/stories/STORY-EP-032.md) | Architect: device UI chrome state machine | implement | unassigned | epaper | [SRS-EP-12] | draft | iter-004 | 5 |
+| [STORY-EP-033](./iter-004/stories/STORY-EP-033.md) | Reject origin/stale first sample on pen-down | implement | dev | epaper | [SRS-EP-01] | ready | iter-004 | 2 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |
