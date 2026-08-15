@@ -223,6 +223,9 @@ private:
                      const epaper::document::DocNode *smartParent = nullptr);
     void drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
                   const epaper::document::DocNode *smartParent);
+    void drawWarpedConnector(QPainter &p, const epaper::document::DocNode &conn);
+    QRectF warpedConnectorPanelRect(const epaper::document::DocNode &conn) const;
+    QRectF boundConnectorsPanelUnion(const std::string &sgId) const;
     double panelScale() const;
     QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const;
     bool lodOkPanel(const epaper::document::SmartBounds &wb) const;
@@ -291,6 +294,7 @@ private:
     QString m_modeChipLabel;
     QRectF m_modeChipRect;
     QRectF m_originPanelRect;
+    QRectF m_originConnPunch;
     QRectF m_encloseCtaRect;
     bool m_encloseVisible = false;
     QString m_encloseRefuseReason;

@@ -5,6 +5,7 @@
  * @implements [SRS-EP-17] UX1/UX2 guards, create_connector, warpStyle from S
  */
 
+#include "connector_warp.hpp"
 #include "device_document.hpp"
 #include "membership.hpp"
 #include "recognize_enclose.hpp"
@@ -675,9 +676,10 @@ inline double hullAreaOverLen2(const std::vector<InkSample> &s)
     return convexHullArea(s) / (L * L);
 }
 
-inline void pickEdgeAnchor(const SmartBounds &b, double x, double y, const RestVec &drawn,
+inline void pickEdgeAnchor(const DocNode &sg, double x, double y, const RestVec &drawn,
                            JsonValue::Object *o)
 {
+    const SmartBounds b = smartGroupWorldBounds(sg);
     const double maxX = b.x + b.width;
     const double maxY = b.y + b.height;
     const double d[4] = {
@@ -712,13 +714,37 @@ inline void pickEdgeAnchor(const SmartBounds &b, double x, double y, const RestV
         e = {0, -1};
     }
     t = std::max(0.0, std::min(1.0, t));
+    const double dl = std::hypot(drawn.x, drawn.y);
+    const RestVec unitD = dl > 1e-9 ? RestVec{drawn.x / dl, drawn.y / dl} : RestVec{1, 0};
+    const Vec2 c0 = smartLocalToWorld(sg.smartBounds.x, sg.smartBounds.y, sg, "boundary",
+                                      std::nullopt, nullptr);
+    const Vec2 c1 = smartLocalToWorld(sg.smartBounds.x + sg.smartBounds.width, sg.smartBounds.y, sg,
+                                      "boundary", std::nullopt, nullptr);
+    const Vec2 c3 = smartLocalToWorld(sg.smartBounds.x, sg.smartBounds.y + sg.smartBounds.height, sg,
+                                      "boundary", std::nullopt, nullptr);
+    RestVec ex{c1.x - c0.x, c1.y - c0.y};
+    RestVec ey{c3.x - c0.x, c3.y - c0.y};
+    const double lex = std::hypot(ex.x, ex.y);
+    const double ley = std::hypot(ey.x, ey.y);
+    if (lex > 1e-9) {
+        ex.x /= lex;
+        ex.y /= lex;
+    }
+    if (ley > 1e-9) {
+        ey.x /= ley;
+        ey.y /= ley;
+    }
     o->emplace_back("kind", JsonValue::string("edge"));
     o->emplace_back("edge", JsonValue::number(edge));
     o->emplace_back("t", JsonValue::number(t));
     JsonValue::Object loc;
-    loc.emplace_back("n", JsonValue::number(drawn.x * n.x + drawn.y * n.y));
-    loc.emplace_back("e", JsonValue::number(drawn.x * e.x + drawn.y * e.y));
+    loc.emplace_back("n", JsonValue::number(unitD.x * n.x + unitD.y * n.y));
+    loc.emplace_back("e", JsonValue::number(unitD.x * e.x + unitD.y * e.y));
     o->emplace_back("drawnEdgeLocal", JsonValue::object(std::move(loc)));
+    JsonValue::Object box;
+    box.emplace_back("x", JsonValue::number(unitD.x * ex.x + unitD.y * ex.y));
+    box.emplace_back("y", JsonValue::number(unitD.x * ey.x + unitD.y * ey.y));
+    o->emplace_back("drawnBoxLocal", JsonValue::object(std::move(box)));
 }
 
 inline JsonValue restShapeToJson(const RestShape &r)
@@ -904,11 +930,10 @@ inline ConnectorResult tryRecognizeConnector(DeviceDocument &doc, const std::str
 
     JsonValue::Object from;
     from.emplace_back("nodeId", JsonValue::string(fromG->id));
-    pickEdgeAnchor(smartGroupWorldBounds(*fromG), concat.front().x, concat.front().y, drawnFrom,
-                   &from);
+    pickEdgeAnchor(*fromG, concat.front().x, concat.front().y, drawnFrom, &from);
     JsonValue::Object to;
     to.emplace_back("nodeId", JsonValue::string(toG->id));
-    pickEdgeAnchor(smartGroupWorldBounds(*toG), concat.back().x, concat.back().y, drawnTo, &to);
+    pickEdgeAnchor(*toG, concat.back().x, concat.back().y, drawnTo, &to);
 
     JsonValue::Array cap;
     for (const auto &id : bodyIds)
@@ -934,6 +959,7 @@ inline ConnectorResult tryRecognizeConnector(DeviceDocument &doc, const std::str
         out.reason = r.reason.empty() ? "commit_failed" : r.reason;
         return out;
     }
+    refreshAllConnectorWarps(doc);
     out.kind = ConnectorKind::Created;
     out.reason = "none";
     out.connectorId = cid;

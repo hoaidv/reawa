@@ -2,9 +2,10 @@
 /**
  * Rest spine S and (s,d) offsets at recognition. Never re-baked later.
  * @implements [SRS-EP-17] rest shape + warpStyle from inflection count of S
- * @implements [ADR-0020] resample 2u, binomial σ=6u, pin ends
+ * @implements [ADR-0020] resample kRestResampleWorld, binomial kRestSigmaWorld, pin ends
  */
 
+#include "connector_warp_params.hpp"
 #include "device_document.hpp"
 
 #include <cmath>
@@ -143,6 +144,15 @@ inline RestOffset projectOnSpine(const RestVec &p, const std::vector<RestVec> &s
     return o;
 }
 
+inline int restSmoothPasses()
+{
+    const double sp = kRestResampleWorld;
+    const double sig = kRestSigmaWorld;
+    if (sp < 1e-12)
+        return 1;
+    return std::max(1, int(std::lround(2.0 * sig * sig / (sp * sp))));
+}
+
 /** Concatenate raw polylines in draw order; no joining segments. */
 inline RestShape buildRestShape(const std::vector<std::vector<InkSample>> &strokes)
 {
@@ -154,11 +164,11 @@ inline RestShape buildRestShape(const std::vector<std::vector<InkSample>> &strok
     }
     if (raw.size() < 2)
         return r;
-    auto spaced = resampleArc(raw, 2.0);
-    binomialSmoothPinned(spaced, 18);
-    r.spine = resampleArc(spaced, 2.0);
+    auto spaced = resampleArc(raw, kRestResampleWorld);
+    binomialSmoothPinned(spaced, restSmoothPasses());
+    r.spine = resampleArc(spaced, kRestResampleWorld);
     r.inflections = countInflections(r.spine);
-    r.warpStyle = r.inflections <= 1 ? "cubic" : "morph";
+    r.warpStyle = r.inflections <= kInflectionCubicMax ? "cubic" : "morph";
     r.offsets.reserve(raw.size());
     for (const auto &p : raw)
         r.offsets.push_back(projectOnSpine(p, r.spine));

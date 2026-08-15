@@ -2,6 +2,7 @@
 #include "strokesync.h"
 #include "epaperbridge.h"
 #include "latencyprobe/stub_document.hpp"
+#include "document/connector_warp.hpp"
 #include "document/recognizer_dispatch.hpp"
 #include "document/recognize_enclose.hpp"
 #include "document/membership.hpp"
@@ -350,6 +351,8 @@ void TabletCanvasItem::paint(QPainter *painter)
         && !m_originPanelRect.isEmpty()) {
         // Punch only the original box — not origin∪live (that wipes a vertical strip).
         painter->fillRect(m_originPanelRect, Qt::white);
+        if (!m_originConnPunch.isEmpty())
+            painter->fillRect(m_originConnPunch, Qt::white);
     }
 }
 
@@ -1227,6 +1230,8 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
             else
                 m_originPanelRect = QRectF();
         }
+        refreshAllConnectorWarps(m_document);
+        m_originConnPunch = boundConnectorsPanelUnion(subject->id);
         refreshSelectionChrome();
         redrawLiveManipRegion();
         return;
@@ -1274,6 +1279,7 @@ void TabletCanvasItem::updateSelectionGesture(const QPointF &canvasPos)
         m_liveB = mapped.bounds;
     }
     m_document.applyLiveSmartGeometry(m_gesturePickableId.toStdString(), m_liveT, m_liveB);
+    refreshConnectorsBoundTo(m_document, m_gesturePickableId.toStdString());
     m_document.previewManipulationFrame();
     // Keep live transform current so a short drag still commits [SRS-EP-11].
     // Throttle only the panel redraw (≥5 Hz / stall ≤200 ms).
@@ -1295,9 +1301,16 @@ void TabletCanvasItem::redrawLiveManipRegion()
         liveBounds = worldBoundsToPanel(wb);
         next = liveBounds.adjusted(-12, -12, 12, 48);
     }
+    const QRectF connLive = boundConnectorsPanelUnion(m_gesturePickableId.toStdString());
+    if (!connLive.isEmpty())
+        next = next.isEmpty() ? connLive : next.united(connLive);
+    if (!m_originConnPunch.isEmpty())
+        next = next.isEmpty() ? m_originConnPunch : next.united(m_originConnPunch);
     // CanvasLayer: re-assert the origin hole only. ToolCanvas: origin∪live chrome.
     if (!m_originPanelRect.isEmpty())
         update(m_originPanelRect.toAlignedRect());
+    if (!m_originConnPunch.isEmpty())
+        update(m_originConnPunch.toAlignedRect());
     const QRectF toolDirty = m_liveDirtyPrev.isNull()
         ? next.united(m_originPanelRect)
         : m_liveDirtyPrev.united(next);
@@ -1316,6 +1329,7 @@ void TabletCanvasItem::commitLiveManip()
 {
     using namespace epaper::document;
     m_document.applyLiveSmartGeometry(m_gesturePickableId.toStdString(), m_originT, m_originB);
+    refreshConnectorsBoundTo(m_document, m_gesturePickableId.toStdString());
     const double dx = m_liveT.x - m_originT.x;
     const double dy = m_liveT.y - m_originT.y;
     const bool resized = m_selGesture == SelGesture::Resize;
@@ -1324,8 +1338,9 @@ void TabletCanvasItem::commitLiveManip()
         || std::abs(m_liveB.width - m_originB.width) > 0.5;
     m_selectionGesture = false;
     m_selGesture = SelGesture::None;
-    const QRectF punch = m_originPanelRect.united(m_selectionChromeDirty);
+    const QRectF punch = m_originPanelRect.united(m_selectionChromeDirty).united(m_originConnPunch);
     m_originPanelRect = QRectF();
+    m_originConnPunch = QRectF();
     if (!moved) {
         m_document.abortGesture();
         m_selectedPickableId = m_gesturePickableId;
@@ -1341,6 +1356,7 @@ void TabletCanvasItem::commitLiveManip()
     const ApplyResult r = m_document.commitOp(
         makeSetSmartTransformOp(opId, m_gesturePickableId.toStdString(), m_liveT, bptr));
     (void)r;
+    refreshAllConnectorWarps(m_document);
     m_selectedPickableId = m_gesturePickableId;
     m_gesturePickableId.clear();
     scheduleVectorRasterize(true);
@@ -1429,6 +1445,13 @@ void TabletCanvasItem::paintLiveManipOnToolCanvas(QPainter *painter)
     if (!n)
         return;
     drawTree(*painter, n->children, n);
+    for (const auto &node : m_document.rootChildren) {
+        if (node.kind != NodeKind::Connector)
+            continue;
+        if (node.fromNodeId != n->id && node.toNodeId != n->id)
+            continue;
+        drawWarpedConnector(*painter, node);
+    }
 
     SmartBounds wb;
     if (!boundsOf(*n, wb))
@@ -1799,6 +1822,41 @@ void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode 
     }
 }
 
+void TabletCanvasItem::drawWarpedConnector(QPainter &p, const epaper::document::DocNode &conn)
+{
+    if (conn.warpedSamples.size() < 2)
+        return;
+    QPainterPath path;
+    path.moveTo(worldToPanel(conn.warpedSamples[0].x, conn.warpedSamples[0].y));
+    for (size_t i = 1; i < conn.warpedSamples.size(); ++i)
+        path.lineTo(worldToPanel(conn.warpedSamples[i].x, conn.warpedSamples[i].y));
+    p.drawPath(path);
+}
+
+QRectF TabletCanvasItem::warpedConnectorPanelRect(const epaper::document::DocNode &conn) const
+{
+    if (conn.warpedSamples.empty())
+        return {};
+    QRectF r(worldToPanel(conn.warpedSamples[0].x, conn.warpedSamples[0].y), QSizeF(0, 0));
+    for (const auto &s : conn.warpedSamples)
+        r = r.united(QRectF(worldToPanel(s.x, s.y), QSizeF(0, 0)));
+    return r.adjusted(-16, -16, 16, 16);
+}
+
+QRectF TabletCanvasItem::boundConnectorsPanelUnion(const std::string &sgId) const
+{
+    QRectF u;
+    for (const auto &node : m_document.rootChildren) {
+        if (node.kind != epaper::document::NodeKind::Connector)
+            continue;
+        if (node.fromNodeId != sgId && node.toNodeId != sgId)
+            continue;
+        const QRectF r = warpedConnectorPanelRect(node);
+        u = u.isEmpty() ? r : u.united(r);
+    }
+    return u;
+}
+
 void TabletCanvasItem::drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
                                 const epaper::document::DocNode *smartParent)
 {
@@ -1806,9 +1864,10 @@ void TabletCanvasItem::drawTree(QPainter &p, const std::vector<epaper::document:
     for (const auto &node : nodes) {
         if (node.kind == NodeKind::SmartGroup)
             drawTree(p, node.children, &node);
-        else if (node.kind == NodeKind::Frame || node.kind == NodeKind::Group
-                 || node.kind == NodeKind::Connector)
+        else if (node.kind == NodeKind::Frame || node.kind == NodeKind::Group)
             drawTree(p, node.children, nullptr);
+        else if (node.kind == NodeKind::Connector)
+            drawWarpedConnector(p, node);
         else
             drawDocNode(p, node, smartParent);
     }
@@ -1816,6 +1875,8 @@ void TabletCanvasItem::drawTree(QPainter &p, const std::vector<epaper::document:
 
 void TabletCanvasItem::rasterizeVectors(bool sharp)
 {
+    using epaper::document::refreshAllConnectorWarps;
+    refreshAllConnectorWarps(m_document);
     if (!m_paintsInk)
         return;
     ensureImage();

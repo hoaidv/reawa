@@ -89,6 +89,8 @@ struct ConnectorAnchor {
     double t = 0;
     double drawnN = 1;
     double drawnE = 0;
+    double drawnBoxX = 1;
+    double drawnBoxY = 0;
 };
 
 struct ConnectorRestPt {
@@ -99,6 +101,15 @@ struct ConnectorRestPt {
 struct ConnectorRestOff {
     double s = 0;
     double d = 0;
+};
+
+/** @implements [SRS-EP-18] last live world pose cache (D39) */
+struct ConnectorEndPose {
+    double x = 0;
+    double y = 0;
+    double fx = 1;
+    double fy = 0;
+    bool valid = false;
 };
 
 struct DocNode {
@@ -125,6 +136,9 @@ struct DocNode {
     std::string warpStyle;
     std::vector<ConnectorRestPt> restSpine;
     std::vector<ConnectorRestOff> restOffsets;
+    std::vector<ConnectorRestPt> warpedSamples; // derived; not an op
+    ConnectorEndPose fromPose; // last live world pose (D39)
+    ConnectorEndPose toPose;
     bool connectorInvalid = false;
     std::vector<DocNode> children;
 };
@@ -844,6 +858,10 @@ private:
             o.drawnN = loc->getNumber("n", 1);
             o.drawnE = loc->getNumber("e", 0);
         }
+        if (const JsonValue *box = a->get("drawnBoxLocal"); box && box->isObject()) {
+            o.drawnBoxX = box->getNumber("x", 1);
+            o.drawnBoxY = box->getNumber("y", 0);
+        }
         return o;
     }
 
@@ -858,6 +876,33 @@ private:
         loc.emplace_back("n", JsonValue::number(a.drawnN));
         loc.emplace_back("e", JsonValue::number(a.drawnE));
         o.emplace_back("drawnEdgeLocal", JsonValue::object(std::move(loc)));
+        JsonValue::Object box;
+        box.emplace_back("x", JsonValue::number(a.drawnBoxX));
+        box.emplace_back("y", JsonValue::number(a.drawnBoxY));
+        o.emplace_back("drawnBoxLocal", JsonValue::object(std::move(box)));
+        return JsonValue::object(std::move(o));
+    }
+
+    static ConnectorEndPose poseFromJson(const JsonValue *p)
+    {
+        ConnectorEndPose o;
+        if (!p || !p->isObject())
+            return o;
+        o.x = p->getNumber("x", 0);
+        o.y = p->getNumber("y", 0);
+        o.fx = p->getNumber("fx", 1);
+        o.fy = p->getNumber("fy", 0);
+        o.valid = true;
+        return o;
+    }
+
+    static JsonValue poseToJson(const ConnectorEndPose &p)
+    {
+        JsonValue::Object o;
+        o.emplace_back("x", JsonValue::number(p.x));
+        o.emplace_back("y", JsonValue::number(p.y));
+        o.emplace_back("fx", JsonValue::number(p.fx));
+        o.emplace_back("fy", JsonValue::number(p.fy));
         return JsonValue::object(std::move(o));
     }
 
@@ -901,7 +946,9 @@ private:
                 n.children.push_back(std::move(ink));
             }
         }
-        n.connectorInvalid = !findMut(n.fromNodeId) || !findMut(n.toNodeId);
+        n.connectorInvalid = false;
+        n.fromPose = poseFromJson(p.get("fromPose"));
+        n.toPose = poseFromJson(p.get("toPose"));
         insertUnder(parentIdOf(p), std::move(n));
     }
 
@@ -1180,8 +1227,9 @@ private:
             n.fromNodeId = n.fromAnchor.nodeId;
             n.toNodeId = n.toAnchor.nodeId;
             n.warpStyle = j.getString("warpStyle", "");
-            if (const JsonValue *inv = j.get("invalid"); inv && inv->isBool())
-                n.connectorInvalid = inv->asBool();
+            n.connectorInvalid = false;
+            n.fromPose = DeviceDocument::poseFromJson(j.get("fromPose"));
+            n.toPose = DeviceDocument::poseFromJson(j.get("toPose"));
             if (const JsonValue *rs = j.get("restShape"); rs && rs->isObject()) {
                 if (const JsonValue *sp = rs->get("spine"); sp && sp->isArray()) {
                     for (const auto &pt : sp->asArray()) {
@@ -1337,7 +1385,10 @@ private:
                 rs.emplace_back("offsets", JsonValue::array(std::move(off)));
                 o.emplace_back("restShape", JsonValue::object(std::move(rs)));
             }
-            o.emplace_back("invalid", JsonValue::boolean(n.connectorInvalid));
+            if (n.fromPose.valid)
+                o.emplace_back("fromPose", DeviceDocument::poseToJson(n.fromPose));
+            if (n.toPose.valid)
+                o.emplace_back("toPose", DeviceDocument::poseToJson(n.toPose));
             JsonValue::Array kids;
             for (const auto &c : n.children)
                 kids.push_back(nodeToJson(c));
