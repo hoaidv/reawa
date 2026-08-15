@@ -4,7 +4,7 @@ title: Ink/Curve warp and live re-warp on bound-node drag
 kind: implement
 parent_srs: [SRS-EP-18, SRS-EP-20]
 parent_req: [REQ-09]
-status: draft
+status: ready
 priority: P0
 iter: iter-004
 estimate: 8

@@ -56,7 +56,7 @@ TabletWindow {
         visible: false
     }
 
-    // Floating tool chip — 4 exclusive tools + 32du gap + Undo/Redo (ADR-0018).
+    // Floating tool chip — 3 exclusive tools + 2 recognizer toggles + Undo/Redo (ADR-0021 / UI-EP-04).
     Item {
         id: toolChip
         z: 20
@@ -65,95 +65,183 @@ TabletWindow {
         width: drawCanvas.toolChipRect.width
         height: drawCanvas.toolChipRect.height
 
-        Rectangle {
-            id: toolCluster
-            width: 64 * 4
+        Row {
+            id: chipRow
+            spacing: 32
             height: parent.height
-            color: "white"
-            border.color: "black"
-            border.width: 1
 
-            Row {
-                anchors.fill: parent
-                spacing: 0
+            Rectangle {
+                id: toolCluster
+                width: 12 + 64 * 3
+                height: parent.height
+                color: "white"
+                border.color: "black"
+                border.width: 1
 
-                Repeater {
-                    model: [
-                        { id: "sel_rect", icon: "icon-epaper-sel-rect" },
-                        { id: "sel_freeform", icon: "icon-epaper-sel-freeform" },
-                        { id: "pen", icon: "icon-epaper-pen" },
-                        { id: "ink_box", icon: "icon-epaper-ink-box" }
-                    ]
-                    delegate: Rectangle {
-                        width: parent.height
+                Row {
+                    anchors.fill: parent
+                    spacing: 0
+
+                    Rectangle {
+                        id: publishStatus
+                        width: 12
                         height: parent.height
-                        color: drawCanvas.toolMode === modelData.id ? "black" : "white"
-                        border.color: "black"
-                        border.width: 1
+                        color: "black"
+                    }
 
-                        readonly property bool armed: drawCanvas.toolMode === modelData.id
+                    Repeater {
+                        model: [
+                            { id: "sel_rect", icon: "icon-epaper-sel-rect" },
+                            { id: "sel_freeform", icon: "icon-epaper-sel-freeform" },
+                            { id: "pen", icon: "icon-epaper-pen" }
+                        ]
+                        delegate: Rectangle {
+                            width: 64
+                            height: 64
+                            color: drawCanvas.toolMode === modelData.id ? "black" : "white"
+                            border.color: "black"
+                            border.width: 1
 
-                        Image {
-                            anchors.centerIn: parent
-                            width: parent.width * 0.62
-                            height: parent.height * 0.62
-                            fillMode: Image.PreserveAspectFit
-                            smooth: false
-                            source: armed
-                                   ? ("qrc:/icons/icons/" + modelData.icon + "-inv.png")
-                                   : ("qrc:/icons/icons/" + modelData.icon + ".png")
-                        }
+                            readonly property bool armed: drawCanvas.toolMode === modelData.id
 
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: drawCanvas.armTool(modelData.id)
+                            Image {
+                                anchors.centerIn: parent
+                                width: parent.width * 0.62
+                                height: parent.height * 0.62
+                                fillMode: Image.PreserveAspectFit
+                                smooth: false
+                                source: armed
+                                       ? ("qrc:/icons/icons/" + modelData.icon + "-inv.png")
+                                       : ("qrc:/icons/icons/" + modelData.icon + ".png")
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: drawCanvas.armTool(modelData.id)
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Rectangle {
-            id: historyCluster
-            x: toolCluster.width + 32
-            width: 64 * 2
-            height: parent.height
-            color: "white"
-            border.color: "black"
-            border.width: 1
+            Rectangle {
+                id: recogCluster
+                width: 64 * 2
+                height: parent.height
+                color: "white"
+                border.color: "black"
+                border.width: 1
 
-            Row {
-                anchors.fill: parent
-                spacing: 0
+                Row {
+                    anchors.fill: parent
+                    spacing: 0
 
-                Repeater {
-                    model: [
-                        { id: "undo", icon: "icon-epaper-undo" },
-                        { id: "redo", icon: "icon-epaper-redo" }
-                    ]
-                    delegate: Rectangle {
-                        width: parent.height
-                        height: parent.height
-                        color: "white"
-                        border.color: "black"
-                        border.width: 1
+                    Repeater {
+                        model: [
+                            { id: "ink_box", icon: "icon-epaper-recog-ink-box" },
+                            { id: "connector", icon: "icon-epaper-recog-connector" }
+                        ]
+                        delegate: Rectangle {
+                            width: 64
+                            height: 64
+                            readonly property bool armed: modelData.id === "ink_box"
+                                ? drawCanvas.recogInkBoxArmed
+                                : drawCanvas.recogConnectorArmed
+                            readonly property bool dimmed: drawCanvas.recogTogglesDimmed
+                            color: armed ? "black" : "white"
+                            border.color: "black"
+                            border.width: 1
 
-                        Image {
-                            anchors.centerIn: parent
-                            width: parent.width * 0.62
-                            height: parent.height * 0.62
-                            fillMode: Image.PreserveAspectFit
-                            smooth: false
-                            source: "qrc:/icons/icons/" + modelData.icon + ".png"
+                            Image {
+                                anchors.centerIn: parent
+                                width: parent.width * 0.62
+                                height: parent.height * 0.62
+                                fillMode: Image.PreserveAspectFit
+                                smooth: false
+                                source: armed
+                                       ? ("qrc:/icons/icons/" + modelData.icon + "-inv.png")
+                                       : ("qrc:/icons/icons/" + modelData.icon + ".png")
+                            }
+
+                            Canvas {
+                                id: hatch
+                                visible: dimmed
+                                anchors.fill: parent
+                                onPaint: {
+                                    var ctx = getContext("2d")
+                                    ctx.clearRect(0, 0, width, height)
+                                    ctx.strokeStyle = armed ? "#ffffff" : "#000000"
+                                    ctx.lineWidth = 1
+                                    for (var i = -height; i < width + height; i += 4) {
+                                        ctx.beginPath()
+                                        ctx.moveTo(i, 0)
+                                        ctx.lineTo(i + height, height)
+                                        ctx.stroke()
+                                    }
+                                }
+                                Connections {
+                                    target: drawCanvas
+                                    function onToolModeChanged() { hatch.requestPaint() }
+                                    function onRecogChanged() { hatch.requestPaint() }
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                enabled: !dimmed
+                                onClicked: {
+                                    if (modelData.id === "ink_box")
+                                        drawCanvas.toggleRecogInkBox()
+                                    else
+                                        drawCanvas.toggleRecogConnector()
+                                }
+                            }
                         }
+                    }
+                }
+            }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                if (modelData.id === "undo")
-                                    drawCanvas.requestUndo()
-                                else
-                                    drawCanvas.requestRedo()
+            Rectangle {
+                id: historyCluster
+                width: 64 * 2
+                height: parent.height
+                color: "white"
+                border.color: "black"
+                border.width: 1
+
+                Row {
+                    anchors.fill: parent
+                    spacing: 0
+
+                    Repeater {
+                        model: [
+                            { id: "undo", icon: "icon-epaper-undo" },
+                            { id: "redo", icon: "icon-epaper-redo" }
+                        ]
+                        delegate: Rectangle {
+                            width: 64
+                            height: 64
+                            color: "white"
+                            border.color: "black"
+                            border.width: 1
+
+                            Image {
+                                anchors.centerIn: parent
+                                width: parent.width * 0.62
+                                height: parent.height * 0.62
+                                fillMode: Image.PreserveAspectFit
+                                smooth: false
+                                source: "qrc:/icons/icons/" + modelData.icon + ".png"
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    if (modelData.id === "undo")
+                                        drawCanvas.requestUndo()
+                                    else
+                                        drawCanvas.requestRedo()
+                                }
                             }
                         }
                     }
@@ -314,6 +402,8 @@ TabletWindow {
               + (EpaperBridge.overlayStrokePen ? " | ovlPen" : "")
               + (drawCanvas.paintsInk ? " | painted" : " | pool " + root.inkNext)
               + " | " + drawCanvas.toolMode
+              + (drawCanvas.recogInkBoxArmed ? " ib" : "")
+              + (drawCanvas.recogConnectorArmed ? " cn" : "")
               + " | strokes " + drawCanvas.strokeCount
               + "  " + drawCanvas.debugInfo
     }

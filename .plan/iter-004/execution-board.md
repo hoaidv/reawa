@@ -3,10 +3,10 @@ title: Execution board — on-device connectors
 iter: iter-004
 track: TRACK-004
 owner: sm
-date: 2026-08-14
+date: 2026-08-15
 lock: vertical · verified · wip 2 · epaper/{connector-ink, tool-modes, ink-box} + infini/vector-document
-verdict: "READY — W1 design done; QA BDD then EP-028"
-wave: W2-bdd
+verdict: "NOW — /qa verify EP-028 + IN-031"
+wave: W2-verify
 ---
 
 # Execution board — on-device connectors
@@ -16,14 +16,13 @@ MASTER + tracks stay the **guiding spine**; this file is the **operational map**
 
 ---
 
-## Summary (as of 2026-08-14)
+## Summary (as of 2026-08-15)
 
 | Band | Count | Meaning |
 |---|---|---|
 | Design **done** | 2 | EP-026, EP-027 |
-| Wave **NOW** | BDD | `/qa` then EP-028 |
-| API-only / no UI paint | 0 | — |
-| Implement gated | 5 | `depends_on` design + BDD — stop line no longer freezes them |
+| Wave **NOW** | W2 verify | **`/qa` EP-028 + IN-031** |
+| Implement gated | 4 | EP-029 → EP-030 → EP-031 ∥ IN-030 |
 
 Design front target: **2/2** in-scope UI packages.
 
@@ -39,10 +38,10 @@ wip: 2
 out_of_scope: backlog
 modules: epaper, infini
 features: epaper/connector-ink; epaper/tool-modes; epaper/ink-box; infini/vector-document
-personas: /designer (NOW) · /qa (BDD ∥) · /dev (after BDD + design depends_on)
-forbidden: REQ-08; CHL-0011; CHL-0012; desktop connector authoring; implement UI before its design story is done
-NOW: W2 — /qa BDD then STORY-EP-028
-cursor: /qa write-bdd then /dev implement-story
+personas: /qa (NOW verify EP-028 + IN-031)
+forbidden: REQ-08; CHL-0011; CHL-0012; desktop connector authoring; IN-006 DocChrome
+NOW: W2 — /qa verify STORY-EP-028 + STORY-IN-031
+cursor: /qa verify-story both lanes
 ```
 
 ---
@@ -53,46 +52,46 @@ cursor: /qa write-bdd then /dev implement-story
 
 | Wave | Status | Parallel? | What |
 |---|---|---|---|
-| **W0** | **done** | — | PM REQ-09 + REQ-03; Architect ADR-0020/21/22 + SRS-EP-17…20 |
+| **W0** | **done** | — | PM REQ-09 + REQ-03; Architect ADR-0020/21/22 |
 | **W1** | **done** | **∥ yes** | Design ToolChip + connector chrome |
-| **W2** | **NOW** | serial | `/qa` BDD; then ToolChip implement (EP-028) |
+| **W2** | **NOW** | **∥ yes** | `/qa` verify ToolChip (EP-028) **∥** hide Infini ToolStrip (IN-031) |
 | **W3** | next | EP-030 then EP-031 ∥ IN-030 | Recognize, warp, Infini mirror |
 | **W-last** | later | serial | Human verify + `/pm` `validated_by` |
 
 ### Parallelism rules (current wave)
 
-| Lane | Story | Package / writes | Conflicts |
+| Lane | Story | Writes | Conflicts |
 |---|---|---|---|
-| **A** | [STORY-EP-026](./stories/STORY-EP-026.md) | `design/toolchip-recognizers/` | do not edit `connector-chrome/` |
-| **B** | [STORY-EP-027](./stories/STORY-EP-027.md) | `design/connector-chrome/` | do not edit `toolchip-recognizers/` |
+| **D** | [STORY-EP-028](./stories/STORY-EP-028.md) | `epaper/` (ToolChip QML) | do not edit `infini/` |
+| **E** | [STORY-IN-031](./stories/STORY-IN-031.md) | `infini/src/canvas/` ToolStrip + overlay | do not edit `epaper/` |
 
-Lanes **∥**. Shared `.docs/DESIGN.md` / tokens: stitch with designer; do not parallel-edit the same token file.
+Lanes **∥**. Shared `.docs/` only if stitching; do not parallel-edit the same file.
 
 ### Full task table
 
 | Id | Feature / chore | Pri | Docs | Design story | Status | Wave | Next owner | Parallel group |
 |---|---|---|---|---|---|---|---|---|
-| F-01 | epaper/tool-modes | Must | thick | EP-026 | **done** | W1 | `/qa` | — |
-| F-02 | epaper/connector-ink (chrome) | Must | thick | EP-027 | **done** | W1 | `/qa` | — |
-| F-03 | epaper/ink-box (dispatch) | Must | thick | — (logic) | draft | W2 | `/qa` BDD now; `/dev` after EP-028 | — |
-| F-04 | epaper/connector-ink (recognize + warp) | Must | thick | EP-027 | draft | W3 | `/qa` BDD now (logic); UI waits EP-027 | — |
-| F-05 | infini/vector-document | Must | thick | n/a | draft | W3 | `/qa` BDD now; `/dev` after EP-030 | — |
-| CHORE-1 | EXP-0002 Initiative 2 guard corpus | Ship | — | — | open | ∥ | `/qa` explore — ship gate | — |
-| CHORE-2 | PM `validated_by` | — | — | campaign verify | later | W-last | `/pm` after human confirm | serial |
+| F-01 | epaper/tool-modes | Must | thick | EP-026 | **in-review** | W2 | `/qa` EP-028 | **D** |
+| F-02 | epaper/connector-ink (chrome) | Must | thick | EP-027 | **done** | W1 | wait W3 | — |
+| F-03 | epaper/ink-box (dispatch) | Must | thick | — | ready | W2→W3 | `/dev` after EP-028 | — |
+| F-04 | epaper/connector-ink (recognize + warp) | Must | thick | EP-027 | ready | W3 | `/dev` after EP-029 | — |
+| F-05 | infini/vector-document (mirror) | Must | thick | n/a | ready | W3 | `/dev` after EP-030 | — |
+| F-06 | infini hide ToolStrip | Must | REQ-04 | n/a (remove) | **in-review** | W2 | `/qa` verify IN-031 | **E** |
+| CHORE-1 | EXP-0002 Initiative 2 guard corpus | Ship | — | — | open | ∥ | `/qa` explore | — |
+| CHORE-2 | PM `validated_by` | — | — | campaign verify | later | W-last | `/pm` | serial |
 
 ### Current-wave sub-agent roster (spawn when wave = NOW)
 
 | Lane | Agent role | Story | Package / writes | Done when |
 |---|---|---|---|---|
-| A | designer | [STORY-EP-026](./stories/STORY-EP-026.md) | `design/toolchip-recognizers/` | `ui-spec-gate` + story `done` |
-| B | designer | [STORY-EP-027](./stories/STORY-EP-027.md) | `design/connector-chrome/` | `ui-spec-gate` + story `done` |
-| C | qa | EP-029 / EP-031 / IN-030 BDD | `epaper/features/**/bdd/`, `infini/features/vector-document/` | READY-FOR-DEV; do not edit design packages |
+| D | qa | [STORY-EP-028](./stories/STORY-EP-028.md) | verify `epaper/` ToolChip BDD | pass → `done`; fail → DEF + blocked |
+| E | qa | [STORY-IN-031](./stories/STORY-IN-031.md) | verify hide-toolbar BDD | pass → `done`; fail → DEF + blocked |
 
 ### Residual TBDs (do not block current wave unless marked)
 
 | Area | TBD |
 |---|---|
-| Blink waveform / duration | Designer picks in EP-027; not a brainstorm |
+| Blink waveform / duration | Designer picked in EP-027 (~250 ms Mono) |
 | Inflection cutoff on a real corpus | EXP-0002 Initiative 2 / QA — ship gate |
 | Live-drag panel rate on RM2 | Measure in EP-031, not lock |
 
@@ -110,6 +109,7 @@ Lanes **∥**. Shared `.docs/DESIGN.md` / tokens: stitch with designer; do not p
 - Arrowheads / dash / double-line / squared routing
 - Physics rope (EH2)
 - Connectors to non-SmartGroup kinds
+- STORY-IN-006 DocChrome
 
 ---
 
@@ -117,13 +117,14 @@ Lanes **∥**. Shared `.docs/DESIGN.md` / tokens: stitch with designer; do not p
 
 | Feature | Design / pipeline | Next |
 |---|---|---|
-| tool-modes | in-progress (EP-026 ready) | `/designer` W1-A |
-| connector-ink | in-progress (EP-027 ready) | `/designer` W1-B |
-| ink-box dispatch | BDD-ready (logic) | `/qa` then W2 `/dev` |
-| infini vector-document | BDD-ready (logic) | `/qa` then W3 `/dev` |
+| tool-modes | design **done** | **`/qa` verify EP-028** |
+| Infini hide toolbar | no paint | **`/qa` verify IN-031** |
+| connector-ink | design **done** | W3 `/dev` |
+| ink-box dispatch | BDD ready | `/dev` EP-029 after EP-028 |
+| infini vector-document | BDD ready | W3 `/dev` IN-030 |
 
 ---
 
 ## Verdict
 
-**READY** — W1 design is **done** ([UI-EP-04](./design/toolchip-recognizers/), [UI-EP-05](./design/connector-chrome/)). Next: **`/qa`** then **`/dev` EP-028**. Open [CHL-0019](./challenges/CHL-0019-toolchip-tile-size.md) for `/pm` (64 px tiles vs SRS 32). Do not start REQ-08.
+**NOW** — both W2 lanes are **in-review**. Next: **`/qa`** verify EP-028 and IN-031. Do not start REQ-08.

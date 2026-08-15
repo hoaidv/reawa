@@ -1,7 +1,7 @@
 @SRS-EP-04
 Feature: Epaper device tool modes
   As an RM2 creator
-  I need Selection Pen and Ink-box on a floating chip
+  I need Selection, Pen, recognizer toggles, and Undo/Redo on a floating chip
   So that every tool acts on the device's own document without leaving the tablet
 
   # Revised 2026-08-13 — CHL-0008 / ADR-0014. The intent-emission scenarios are replaced
@@ -12,27 +12,28 @@ Feature: Epaper device tool modes
   # STORY-EP-005 — SRS-EP-04 / SRS-EP-06
 
   @SRS-EP-04
-  Scenario: Ink-box evaluates the stroke locally at pen-up
-    Given the Ink-box tool is armed
+  Scenario: Ink-box recognizer evaluates the stroke locally at pen-up
+    Given exclusive tool pen is armed
+    And tgl.recog.ink_box is armed
     When a stroke begins on the canvas
     Then local ink paints immediately
     And no intent field is placed on the wire
     When the stroke ends
-    Then enclose evaluation runs on the device
+    Then enclose evaluation runs on the device as ADR-0022 step 1
 
   @SRS-EP-04
   Scenario: Pen ingests the stroke and evaluates membership
-    Given the Pen tool is armed
+    Given exclusive tool pen is armed
     When a stroke ends
     Then the stroke becomes an Ink node in the device document
-    And draw-into membership is evaluated locally
+    And draw-into membership is evaluated locally as ADR-0022 step 2 unless a prior step already committed
 
   @SRS-EP-04
-  Scenario: Pen and Ink-box are identical while the pen is down
-    Given the same stroke drawn once with Pen armed and once with Ink-box armed
+  Scenario: Recognizer toggles do not change paint while the pen is down
+    Given the same stroke drawn once with both recognizers armed and once with both disarmed
     When the samples and the local raster are compared
     Then they are identical
-    And the tools differ only in what happens at pen-up
+    And the toggles differ only in what happens at pen-up
 
   @SRS-EP-04
   Scenario: Selection acts on the local document
@@ -45,8 +46,8 @@ Feature: Epaper device tool modes
   @SRS-EP-04
   Scenario: Tools stay available with the session down
     Given the session to the desktop is down
-    When the creator arms Selection or Ink-box
-    Then both tools are available
+    When the creator arms sel_rect or pen or flips either recognizer toggle
+    Then all three exclusive tools and both toggles stay available
     And the chip shows that changes are queued
 
   @SRS-EP-04
@@ -62,15 +63,41 @@ Feature: Epaper device tool modes
     Then only the chip region needs refresh
     And ink surface content is preserved
 
-  # STORY-EP-024 — SRS-EP-05 / ADR-0018 (human confirm 2026-08-14)
+  # STORY-EP-024 inventory superseded 2026-08-15 — STORY-EP-028 / ADR-0021 / UI-EP-04
 
   @SRS-EP-05
-  Scenario: Primary strip is four tools then Undo and Redo
-    Given the floating ToolChip is visible
-    When the panel is observed
-    Then exclusive tools are sel_rect, sel_freeform, pen, ink_box in that order
-    And a 32 du gap separates that cluster from Undo and Redo
-    And tapping Undo or Redo does not change the armed tool
+  Scenario: Primary strip is three exclusive tools, two recognizer toggles, then Undo and Redo
+    Given the floating ToolChip is visible on launch
+    When region ToolChip is observed
+    Then exclusive tools are exactly tool.sel_rect, tool.sel_freeform, tool.pen in that order
+    And tool.ink_box is absent
+    And tgl.recog.ink_box and tgl.recog.connector are independent toggles default armed
+    And cta.undo and cta.redo remain actions after a 32 px paper gap
+    And tapping Undo or Redo does not change the armed exclusive tool
+    And each tool and toggle tile is 64 by 64 px per UI-EP-04 and CHL-0019
+
+  @SRS-EP-05
+  Scenario: Selection dims both recognizer toggles and keeps armed state
+    Given tool.pen is armed and both recognizer toggles are armed
+    When the creator taps tool.sel_rect
+    Then both toggles are dimmed and not tappable
+    And both toggles remain armed
+    When the creator taps tool.pen
+    Then both toggles are tappable and still armed
+
+  @SRS-EP-04
+  Scenario: Toggle flip mid-stroke uses the pen-down latch
+    Given exclusive tool pen is armed and tgl.recog.connector is armed at pen-down
+    When the creator disarms tgl.recog.connector before pen-up
+    Then dispatch at pen-up uses the latched pen-down tuple with connector recognition still armed
+
+  @SRS-EP-04
+  Scenario: Pen inking latency and chip exclusion rect are unchanged
+    Given exclusive tool pen is armed
+    When the creator inks on InkSurface outside ToolChip bounds
+    Then pen-down to pixel p95 stays at most 30 ms
+    When pen-down starts inside ToolChip bounds
+    Then that press is not ink
 
   @SRS-EP-05
   Scenario: Undo and Redo on the chip restore document history

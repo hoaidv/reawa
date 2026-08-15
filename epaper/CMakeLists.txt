@@ -40,6 +40,10 @@ qt_add_resources(epaper_bin "epaper_tool_icons"
         icons/icon-epaper-enclose-inv.png
         icons/icon-epaper-undo.png
         icons/icon-epaper-redo.png
+        icons/icon-epaper-recog-ink-box.png
+        icons/icon-epaper-recog-ink-box-inv.png
+        icons/icon-epaper-recog-connector.png
+        icons/icon-epaper-recog-connector-inv.png
 )
 
 target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network ${CMAKE_DL_LIBS})

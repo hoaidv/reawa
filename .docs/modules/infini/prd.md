@@ -127,6 +127,9 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
   - Result reaching the peer → [epaper REQ-07](../epaper/prd.md#one-way-sync).
 - **What Infini keeps:** it renders Smart Groups published by the device, saves and reopens them
   without loss, and offers **no** desktop tool for creating or transforming them.
+- **This campaign (TRACK-004, human 2026-08-15):** leftover Infini **ToolStrip** / selection overlay
+  / transform handles from STORY-IN-013 / IN-024 **must be removed** from the shipping desktop app.
+  Pan/zoom and open/save chrome stay. Do not park this as backlog.
 - [ADR-0011](../../adr/ADR-0011-smart-group.md) node semantics survive; its "recognition runs on
   Infini" placement and [ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) §3 sole-writer rule are
   superseded by the architect's rework ADRs.
@@ -136,7 +139,7 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
 **Acceptance**
 - Given the desktop UI this campaign, When the creator looks for an ink-box or selection tool, Then
   **0** desktop authoring affordances are offered (no ToolStrip, no selection overlay, no transform
-  handles).
+  handles) — including after TRACK-004 ships; the leftover toolbar must not remain on screen.
 - Given a Smart Group created on the tablet, When Infini receives the published change, Then it
   renders boundary and content ink correctly under the current viewport (0 divergent figures for
   that region after settle).

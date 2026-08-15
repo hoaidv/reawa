@@ -10,6 +10,7 @@
 #include "document/capability.hpp"
 #include "debuglog/debug_log_format.hpp"
 #include "toolcanvasitem.h"
+#include "toolchip_layout.hpp"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -442,8 +443,14 @@ void TabletCanvasItem::beginStroke(const QPointF &canvasPos, const IngestChannel
     ++m_settleFollowUpToken;
     // @implements [SRS-EP-07] stroke is one undo gesture from pen-down
     m_document.beginGesture();
-    // @implements [SRS-EP-10] latch armed tool at pen-down
-    m_strokeArmedTool = m_toolMode;
+    // @implements [SRS-EP-04] latch exclusive tool and both toggles at pen-down
+    m_chip.latchPenDown();
+    m_strokeArmedTool = QString::fromStdString(m_chip.latchedTool);
+    const QString latch = QString::fromStdString(m_chip.dispatchTuple());
+    if (m_lastStrokeLatch != latch) {
+        m_lastStrokeLatch = latch;
+        emit lastStrokeLatchChanged();
+    }
 
     m_current.clear();
     m_activeStrokeId = QStringLiteral("s-%1").arg(++m_strokeSeq);
@@ -510,6 +517,7 @@ void TabletCanvasItem::endStroke()
     m_current.clear();
     m_hasEmitted = false;
     m_strokeActive = false;
+    m_chip.penUp();
 
     // Rasterize after enclose so group-local ink is visible (not in paint()).
     if (m_needEncloseRasterize) {
@@ -706,17 +714,9 @@ void TabletCanvasItem::applyDocSnapshot(const QJsonObject &obj)
 
 void TabletCanvasItem::setToolMode(const QString &mode)
 {
-    QString next = mode;
-    if (next == QLatin1String("selection"))
-        next = QStringLiteral("sel_rect");
-    if (next != QLatin1String("pen") && next != QLatin1String("ink_box")
-        && next != QLatin1String("sel_rect") && next != QLatin1String("sel_freeform")) {
-        next = QStringLiteral("pen");
-    }
-    if (m_toolMode == next)
+    if (!m_chip.setExclusive(mode.toStdString()))
         return;
-    m_toolMode = next;
-    // Selection inert without pickables — still allow arming; UI shows count.
+    m_toolMode = QString::fromStdString(m_chip.exclusive);
     emit toolModeChanged();
     m_debugInfo = QStringLiteral("tool=%1 pickables=%2")
                       .arg(m_toolMode)
@@ -730,33 +730,31 @@ void TabletCanvasItem::armTool(const QString &mode)
     setToolMode(mode);
 }
 
-QString TabletCanvasItem::toolModeAtChipPos(const QPointF &canvasPos) const
+void TabletCanvasItem::toggleRecogInkBox()
+{
+    if (!m_chip.flipRecogInkBox())
+        return;
+    emit recogChanged();
+}
+
+void TabletCanvasItem::toggleRecogConnector()
+{
+    if (!m_chip.flipRecogConnector())
+        return;
+    emit recogChanged();
+}
+
+QString TabletCanvasItem::toolChipHitAt(const QPointF &canvasPos) const
 {
     if (!pointInToolChip(canvasPos))
         return {};
-    const qreal tileW = 64.0;
-    const qreal gap = 32.0;
     const qreal relX = canvasPos.x() - m_toolChipRect.x();
-    if (relX < 0)
-        return {};
-    if (relX < tileW * 4.0) {
-        const int tile = qBound(0, int(relX / tileW), 3);
-        static const char *const kModes[] = {"sel_rect", "sel_freeform", "pen", "ink_box"};
-        return QString::fromLatin1(kModes[tile]);
-    }
-    if (relX < tileW * 4.0 + gap)
-        return QStringLiteral("gap");
-    const qreal histX = relX - tileW * 4.0 - gap;
-    if (histX < tileW)
-        return QStringLiteral("undo");
-    if (histX < tileW * 2.0)
-        return QStringLiteral("redo");
-    return {};
+    return QString::fromLatin1(epaper::toolchip::hitId(epaper::toolchip::hitAtRelX(relX)));
 }
 
 bool TabletCanvasItem::tryArmToolAtCanvasPos(const QPointF &canvasPos)
 {
-    const QString hit = toolModeAtChipPos(canvasPos);
+    const QString hit = toolChipHitAt(canvasPos);
     if (hit.isEmpty())
         return false;
     if (hit == QLatin1String("undo")) {
@@ -767,8 +765,16 @@ bool TabletCanvasItem::tryArmToolAtCanvasPos(const QPointF &canvasPos)
         requestRedo();
         return true;
     }
-    if (hit == QLatin1String("gap"))
+    if (hit == QLatin1String("gap") || hit == QLatin1String("publish"))
         return true;
+    if (hit == QLatin1String("tgl.recog.ink_box")) {
+        toggleRecogInkBox();
+        return true;
+    }
+    if (hit == QLatin1String("tgl.recog.connector")) {
+        toggleRecogConnector();
+        return true;
+    }
     armTool(hit);
     return true;
 }
@@ -817,10 +823,10 @@ void TabletCanvasItem::notifyHistory()
 
 void TabletCanvasItem::updateToolChipRect()
 {
-    // UI-EP-01 + ADR-0018: 4 tools + 32du gap + undo/redo.
-    // @implements [SRS-EP-05] floating ToolChip hit bounds
-    const qreal chipH = 64.0;
-    const qreal chipW = 64.0 * 4.0 + 32.0 + 64.0 * 2.0;
+    // UI-EP-04 + ADR-0021: 3 exclusive tools + 12 px publish + 2 toggles + Undo/Redo.
+    // @implements [SRS-EP-05] floating ToolChip hit bounds (64×64 tiles, CHL-0019)
+    const qreal chipH = epaper::toolchip::kHeight;
+    const qreal chipW = epaper::toolchip::chipWidth();
     const qreal inset = 8.0;
     qreal top = inset;
     if (m_orientation == QLatin1String("gutOnTop"))

@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-14
+updated: 2026-08-15
 current_iter: iter-004
 owner: sm
 
@@ -33,7 +33,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Scope | `epaper/{connector-ink, tool-modes, ink-box}`, `infini/vector-document` | REQ-09 + the ToolChip split that arms it |
 | Stop line | **verified** | `/designer`, `/qa`, `/dev` may all work; campaign ends on human confirm |
 | Autonomy | **bounded** | Run inside the lock; stop at REQ-08 / CHL-0011 / CHL-0012 |
-| WIP | **2** | EP-026 ∥ EP-027 now; later EP-030 ∥ IN-030 |
+| WIP | **2** | EP-028 ∥ IN-031 |
 
 **Re-locked 2026-08-14 (human):** flip horizontal/`design-validated` → vertical/`verified`. Exit criteria: REQ-09 + REQ-03 ToolChip human-confirmed on device; Infini mirror 0 divergent connector nodes; EP-016/017 replay under ADR-0022. EXP-0002 guard corpus (≤2% FP) remains a **ship** gate, not a wave blocker. UI implement still `depends_on` done design stories (EP-026 → EP-028; EP-027 → EP-030).
 
@@ -78,7 +78,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
 | TRACK-003 | planned | **done** | campaign exited 2026-08-14 | [track](./tracks/TRACK-003-smart-group-pilot.md) |
-| TRACK-004 | planned | **active** | EP-028 · `/qa` then `/dev` | [track](./tracks/TRACK-004-on-device-connectors.md) |
+| TRACK-004 | planned | **active** | EP-028 + IN-031 · `/qa` | [track](./tracks/TRACK-004-on-device-connectors.md) |
 
 ### Open challenges / blocked
 
@@ -94,7 +94,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [iter-004 execution-board](./iter-004/execution-board.md) — **NOW** W1 design; QA BDD unblocked
+- [iter-004 execution-board](./iter-004/execution-board.md) — **NOW** W2 implement EP-028 ∥ IN-031
 - [iter-003 execution-board](./iter-003/execution-board.md) — **frozen** (campaign closed)
 
 ### Freeze notes
@@ -103,6 +103,6 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ## Forward
 
-- **Now:** `/qa` BDD then `/dev` EP-028. Design EP-026/027 **done**. `/pm` triage [CHL-0019](./iter-004/challenges/CHL-0019-toolchip-tile-size.md).
+- **Now:** `/qa` verify **EP-028 + IN-031**. Both `in-review`. CHL-0019 **adopted**.
 - Parked (not committed): epaper `[REQ-08]`, nested enclose (CHL-0011), FREE_FORM / align-content (CHL-0012).
 - Backlog: [backlog.md](./backlog.md)

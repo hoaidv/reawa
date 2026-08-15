@@ -3,7 +3,8 @@ id: CHL-0019
 author: designer
 target: [SRS-EP-05]
 severity: medium
-status: open
+status: resolved
+resolution: adopted
 opened: 2026-08-14
 iter: iter-004
 expedite: false
@@ -28,7 +29,10 @@ Amend SRS-EP-05 physical constraints: height **64 px**, tiles **64×64**, still 
 `border-radius: 0`, floating orientation-top. Keep CHL-0003's "not a full-band ≥120 px strip".
 
 ## Resolution
-<!-- PM fills after triage: adopted | deferred | rejected -->
+
+**Adopted** 2026-08-15 (PM). 32 px failed on-device; shipped EP-023/025/026 at 64×64. SRS-EP-05
+physical constraints now match UI-EP-04 / CHL-0019. Does not block W2.
 
 ## Product doc updates
-<!-- List docs updated if adopted -->
+
+- `.docs/modules/epaper/features/tool-modes/srs-ui.md` — chip height and tiles **64 px**

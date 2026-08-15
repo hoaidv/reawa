@@ -4,7 +4,7 @@ title: Mirror create_connector envelope and derived warp
 kind: implement
 parent_srs: [SRS-IN-09]
 parent_req: [REQ-09]
-status: draft
+status: ready
 priority: P0
 iter: iter-004
 estimate: 5

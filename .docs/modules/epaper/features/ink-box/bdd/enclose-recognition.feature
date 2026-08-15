@@ -10,7 +10,7 @@ Feature: Tool-armed enclose recognition on the device
   @SRS-EP-10
   Scenario: Successful enclose commits Smart Group immediately and locally
     Given ink exists in the device document
-    And the Ink-box tool was armed at pen-down
+    And exclusive tool pen and tgl.recog.ink_box were armed at pen-down
     And the stroke AABB shorter side is at least 48 world units
     And at least one ink has at least 80 percent of samples inside that AABB
     When pen-up runs enclose recognition on the device
@@ -23,17 +23,18 @@ Feature: Tool-armed enclose recognition on the device
     And the Smart Group is visible on the panel within p95 500 ms after pen-up
 
   @SRS-EP-10
-  Scenario: Stroke drawn with Pen armed skips recognition
-    Given the Pen tool was armed at pen-down
+  Scenario: Stroke drawn with ink-box recognizer disarmed skips enclose
+    Given exclusive tool pen was armed at pen-down
+    And tgl.recog.ink_box was disarmed at pen-down
     When pen-up runs on the device
     Then enclose recognition does not run
-    And the stroke is committed as ordinary ink only
+    And dispatch continues at ADR-0022 step 2
 
   @SRS-EP-10
   Scenario: Tool switched mid-stroke does not change what the stroke means
-    Given the Ink-box tool was armed at pen-down
-    When the tool is switched to Pen before pen-up
-    Then the stroke is still evaluated as an enclose
+    Given exclusive tool pen and tgl.recog.ink_box were armed at pen-down
+    When tgl.recog.ink_box is disarmed before pen-up
+    Then the stroke is still evaluated as an enclose candidate
 
   @SRS-EP-10
   Scenario: Failed guards leave ordinary ink

@@ -131,8 +131,8 @@ structure.
 - Do not invent an accept/dismiss proposal step — arming the tool is the confirmation.
 - Do not invent rotation handles or connector glue on a Smart Group in pilot journeys.
 - Do not invent in-box alignment, snap-to-margin, or reflow when appending ink.
-- Do not invent a tool palette beyond `Selection` · `Pen` · `Ink-box` (Epaper) /
-  `Selection` · `Ink-box` (Infini).
+- Do not invent a tool palette on Infini. Epaper only: `sel_rect` · `sel_freeform` · `pen` plus
+  recognizer toggles. Infini ToolStrip is **removed** this campaign.
 
 ## Designer co-session
 

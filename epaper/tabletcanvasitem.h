@@ -19,6 +19,7 @@
 #include "document/device_document.hpp"
 #include "document/manipulate.hpp"
 #include "document/one_way_sync.hpp"
+#include "toolchip_layout.hpp"
 
 class StrokeSync;
 class ToolCanvasItem;
@@ -38,8 +39,12 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(bool paintsInk READ paintsInk CONSTANT)
     Q_PROPERTY(QPointF lastPoint READ lastPoint NOTIFY debugChanged)
     Q_PROPERTY(QString debugInfo READ debugInfo NOTIFY debugChanged)
-    /** Device-local tool: sel_rect | sel_freeform | pen | ink_box — never synced (SRS-EP-04 / ADR-0017). */
+    /** Device-local exclusive tool: sel_rect | sel_freeform | pen — never synced (SRS-EP-04). */
     Q_PROPERTY(QString toolMode READ toolMode WRITE setToolMode NOTIFY toolModeChanged)
+    Q_PROPERTY(bool recogInkBoxArmed READ recogInkBoxArmed NOTIFY recogChanged)
+    Q_PROPERTY(bool recogConnectorArmed READ recogConnectorArmed NOTIFY recogChanged)
+    Q_PROPERTY(bool recogTogglesDimmed READ recogTogglesDimmed NOTIFY toolModeChanged)
+    Q_PROPERTY(QString lastStrokeLatch READ lastStrokeLatch NOTIFY lastStrokeLatchChanged)
     Q_PROPERTY(QRectF toolChipRect READ toolChipRect NOTIFY toolChipRectChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
@@ -64,6 +69,12 @@ public:
     QString debugInfo() const { return m_debugInfo; }
     QString toolMode() const { return m_toolMode; }
     void setToolMode(const QString &mode);
+    bool recogInkBoxArmed() const { return m_chip.recogInkBox; }
+    bool recogConnectorArmed() const { return m_chip.recogConnector; }
+    bool recogTogglesDimmed() const { return m_chip.recogDimmed(); }
+    QString lastStrokeLatch() const { return m_lastStrokeLatch; }
+    Q_INVOKABLE void toggleRecogInkBox();
+    Q_INVOKABLE void toggleRecogConnector();
     QRectF toolChipRect() const { return m_toolChipRect; }
     bool canUndo() const { return m_document.undoDepth() > 0; }
     bool canRedo() const { return m_document.redoDepth() > 0; }
@@ -106,7 +117,7 @@ public:
     Q_INVOKABLE void armTool(const QString &mode);
     int documentInkCount() const;
     std::string ingestDumpText() const;
-    /** @implements [SRS-EP-04] finger/pen tap on ToolChip tile */
+    /** @implements [SRS-EP-04] finger/pen tap on ToolChip tile or toggle */
     bool tryArmToolAtCanvasPos(const QPointF &canvasPos);
 
     void paint(QPainter *painter) override;
@@ -115,6 +126,8 @@ signals:
     void strokeCountChanged();
     void debugChanged();
     void toolModeChanged();
+    void recogChanged();
+    void lastStrokeLatchChanged();
     void toolChipRectChanged();
     void historyChanged();
     void pickablesChanged();
@@ -175,7 +188,7 @@ private:
     void updateToolChipRect();
     bool pointInToolChip(const QPointF &canvasPos) const;
     bool pointInEncloseCta(const QPointF &canvasPos) const;
-    QString toolModeAtChipPos(const QPointF &canvasPos) const;
+    QString toolChipHitAt(const QPointF &canvasPos) const;
     bool isSelectionTool() const;
     void beginMarqueeOrLasso(const QPointF &canvasPos);
     void finishMarqueeOrLasso();
@@ -244,9 +257,11 @@ private:
     int m_ingestRejected = 0;
     bool m_loggedRetiredSnapshot = false;
     QJsonArray m_pickables;
+    epaper::toolchip::ChipModel m_chip;
     QString m_toolMode = QStringLiteral("pen");
-    /** Tool armed at pen-down for this stroke — latch, not live toolMode (SRS-EP-10). */
+    /** Exclusive tool latched at pen-down (SRS-EP-04 / SRS-EP-10). */
     QString m_strokeArmedTool;
+    QString m_lastStrokeLatch;
     bool m_needEncloseRasterize = false;
     QRectF m_toolChipRect;
     QString m_selectedPickableId;

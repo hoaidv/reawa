@@ -4,7 +4,7 @@ title: ToolChip inventory: 3 exclusive tools + 2 recognizer toggles
 kind: implement
 parent_srs: [SRS-EP-04, SRS-EP-05]
 parent_req: [REQ-03]
-status: draft
+status: in-review
 priority: P0
 iter: iter-004
 estimate: 3
@@ -31,7 +31,7 @@ wireframe: ""
 
 Implements [SRS-EP-04](../../.docs/modules/epaper/features/tool-modes/srs-logic.md) /
 [SRS-EP-05](../../.docs/modules/epaper/features/tool-modes/srs-ui.md).
-**Blocked on** [STORY-EP-026](./STORY-EP-026.md) (`depends_on`; do not set `ready` until that design story is `done`).
+Design dep [STORY-EP-026](./STORY-EP-026.md) is **done**. BDD READY-FOR-DEV 2026-08-15. `/dev` may set `in-progress`.
 
 ## Kind
 

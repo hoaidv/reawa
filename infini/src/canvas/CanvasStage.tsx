@@ -4,8 +4,10 @@
  * @implements [SRS-IN-03] optional rAF frame counter
  * @implements [SRS-IN-07] tablet drawing-region marker + viewport + doc_change applier
  * @implements [SRS-IN-04] WorldLayer from VectorDocument mirror
+ * @implements [SRS-IN-14] no desktop ToolStrip / SelectionOverlay (deprecated)
  *
  * Perf: coalesce paints to one rAF; no React setState on the gesture hot path.
+ * STORY-IN-031: Infini is a review/mirror window — pan/zoom only; no ink-box chrome.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -30,21 +32,7 @@ import { allowIndividualInteraction } from "./TileCache";
 import type { RmInboundMsg } from "../native";
 import { IpcRmTransport, MemoryTransport, TabletSession } from "../session";
 import { rmClientSyncHint, type RmClientEvent } from "../session/rmClientSync";
-import { ToolStrip } from "./ToolStrip";
-import {
-  createSelectionSession,
-  handleSelectionPointer,
-  pickFreeInkAt,
-  selectionOverlayScreenRect,
-  type SelectionSession,
-} from "../document/selection";
-import { screenToWorld } from "./Viewport";
-import {
-  VectorDocument,
-  createSmartGroupFromSelection,
-  UndoRing,
-} from "../document";
-import type { SmartGroupNode } from "../document/types";
+import { VectorDocument } from "../document";
 import type { DocChangeMessage, HelloMessage } from "../session";
 
 export interface CanvasStageProps {
@@ -82,9 +70,6 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const sizeRef = useRef({ w: 0, h: 0 });
   const centeredRef = useRef(false);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
-  const selectionRef = useRef<SelectionSession>(createSelectionSession());
-  const undoRef = useRef(new UndoRing());
-  const overlayRef = useRef<HTMLDivElement>(null);
   const rafPaintRef = useRef(0);
   const rafStats = useRef({ frames: 0, drops: 0, last: 0, painted: 0 });
   const gestureEndTimer = useRef(0);
@@ -97,9 +82,6 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const [emptyHint, setEmptyHint] = useState(!populated);
   const [syncHint, setSyncHint] = useState("");
   const [orientation, setOrientation] = useState<TabletOrientation>("gutToLeft");
-  const [tool, setTool] = useState<"selection" | "ink_box">("selection");
-  const [refuseReason, setRefuseReason] = useState<string | null>(null);
-  const [inkSelCount, setInkSelCount] = useState(0);
 
   if (!sessionRef.current) {
     // Prefer IPC when preload already exposed sendToRm (Electron).
@@ -146,39 +128,6 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     session.setOrientation(orientationRef.current);
     if (force) session.flushViewport(vpRef.current);
     else session.publishViewport(vpRef.current);
-  };
-
-  const syncSelectionOverlay = () => {
-    const el = overlayRef.current;
-    if (!el) return;
-    const sel = selectionRef.current;
-    const id = sel.selectedId;
-    if (!id || !allowIndividualInteraction(vpRef.current)) {
-      el.hidden = true;
-      return;
-    }
-    let node = treeRef.current.indexById().get(id);
-    if (!node || node.kind !== "smart_group") {
-      el.hidden = true;
-      return;
-    }
-    const sg = node as SmartGroupNode;
-    if (sel.preview && sel.preview.id === sg.id) {
-      node = {
-        ...sg,
-        transform: sel.preview.liveTransform,
-        bounds: sel.preview.liveBounds,
-      };
-    }
-    const rect = selectionOverlayScreenRect(node as SmartGroupNode, vpRef.current);
-    el.hidden = false;
-    el.style.left = `${rect.left}px`;
-    el.style.top = `${rect.top}px`;
-    el.style.width = `${rect.width}px`;
-    el.style.height = `${rect.height}px`;
-    el.dataset.state = sel.preview?.moved
-      ? "tool.selection.dragging"
-      : "tool.selection.selected";
   };
 
   /**
@@ -239,7 +188,6 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
     );
     rafStats.current.painted++;
     syncMarkerDom();
-    syncSelectionOverlay();
 
     const pct = Math.round(vpRef.current.scale * 100);
     if (zoomElRef.current) zoomElRef.current.textContent = `${pct}%`;
@@ -502,129 +450,24 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-    const host = hostRef.current;
-    if (!host) return;
-    const rect = host.getBoundingClientRect();
-    const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     dragRef.current = { x: e.clientX, y: e.clientY };
-    const result = handleSelectionPointer(
-      treeRef.current,
-      selectionRef.current,
-      "down",
-      screen,
-      vpRef.current,
-    );
-    selectionRef.current = result.session;
-    if (!result.consumed && result.session.tool === "selection") {
-      const world = screenToWorld(screen, vpRef.current);
-      const ink = pickFreeInkAt(treeRef.current, world);
-      if (ink) {
-        const ids = new Set(selectionRef.current.selectedInkIds);
-        if (ids.has(ink.id)) ids.delete(ink.id);
-        else ids.add(ink.id);
-        selectionRef.current = {
-          ...selectionRef.current,
-          selectedInkIds: [...ids],
-          selectedId: null,
-        };
-        setInkSelCount(ids.size);
-        setRefuseReason(null);
-      }
-    }
-    applyPreviewToTree();
     markGesturing(true);
     schedulePaint();
-  };
-
-  const applyPreviewToTree = () => {
-    const prev = selectionRef.current.preview;
-    if (!prev) return;
-    const node = treeRef.current.indexById().get(prev.id);
-    if (!node || node.kind !== "smart_group") return;
-    node.transform = { ...prev.liveTransform };
-    node.bounds = { ...prev.liveBounds };
-    paintMirror();
-  };
-
-  const restorePreviewOrigin = () => {
-    const prev = selectionRef.current.preview;
-    if (!prev) return;
-    const node = treeRef.current.indexById().get(prev.id);
-    if (!node || node.kind !== "smart_group") return;
-    node.transform = { ...prev.originTransform };
-    node.bounds = { ...prev.originBounds };
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     const drag = dragRef.current;
     if (!drag) return;
-    const host = hostRef.current;
-    if (!host) return;
-    const rect = host.getBoundingClientRect();
-    const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    const lastScreen = {
-      x: drag.x - rect.left,
-      y: drag.y - rect.top,
-    };
     const clientDx = e.clientX - drag.x;
     const clientDy = e.clientY - drag.y;
-    const result = handleSelectionPointer(
-      treeRef.current,
-      selectionRef.current,
-      "move",
-      screen,
-      vpRef.current,
-      lastScreen,
-    );
-    selectionRef.current = result.session;
     dragRef.current = { x: e.clientX, y: e.clientY };
-
-    if (result.consumed && result.session.preview) {
-      applyPreviewToTree();
-      schedulePaint();
-      return;
-    }
-
-    if (!result.consumed) {
-      vpRef.current = panByScreenDelta(vpRef.current, clientDx, clientDy);
-      publishViewportCoalesced(false);
-    }
+    vpRef.current = panByScreenDelta(vpRef.current, clientDx, clientDy);
+    publishViewportCoalesced(false);
     schedulePaint();
   };
 
-  const onPointerUp = (e: React.PointerEvent) => {
-    const host = hostRef.current;
-    const screen = host
-      ? {
-          x: e.clientX - host.getBoundingClientRect().left,
-          y: e.clientY - host.getBoundingClientRect().top,
-        }
-      : { x: 0, y: 0 };
-    if (selectionRef.current.preview) {
-      restorePreviewOrigin();
-    }
-    const result = handleSelectionPointer(
-      treeRef.current,
-      selectionRef.current,
-      "up",
-      screen,
-      vpRef.current,
-    );
-    selectionRef.current = result.session;
-    if (result.commit) {
-      undoRef.current.applyWithUndo(treeRef.current, {
-        opId: `sg_xf_${Date.now()}_${result.commit.id}`,
-        type: "set_smart_transform",
-        payload: {
-          id: result.commit.id,
-          transform: result.commit.transform,
-          ...(result.commit.bounds ? { bounds: result.commit.bounds } : {}),
-        },
-      });
-      paintMirror();
-    }
+  const onPointerUp = () => {
     dragRef.current = null;
-    // Settle flush after pan/selection drag — tablet must sharp-rasterize once more.
     publishViewportCoalesced(true);
     markGesturing(false);
     schedulePaint();
@@ -644,55 +487,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
-      <ToolStrip
-        tool={tool}
-        onToolChange={(t) => {
-          setTool(t);
-          selectionRef.current = { ...selectionRef.current, tool: t };
-          setRefuseReason(null);
-        }}
-        onCreateSmartGroup={() => {
-          const ids = selectionRef.current.selectedInkIds;
-          const result = createSmartGroupFromSelection(
-            treeRef.current,
-            undoRef.current,
-            ids,
-          );
-          if (result.kind === "refused") {
-            setRefuseReason(result.reason);
-            return;
-          }
-          setRefuseReason(null);
-          selectionRef.current = {
-            ...selectionRef.current,
-            selectedInkIds: [],
-            selectedId: result.smartGroupId,
-          };
-          setInkSelCount(0);
-          paintMirror();
-          schedulePaint();
-        }}
-        createDisabled={inkSelCount < 2}
-        refuseReason={refuseReason}
-      />
       <canvas ref={canvasRef} data-region="WorldLayer" />
-      <div
-        ref={overlayRef}
-        className="c-selection-overlay"
-        data-region="SelectionOverlay"
-        data-state="tool.selection.idle"
-        hidden
-        aria-hidden="true"
-      >
-        <span className="c-handle c-handle-nw" data-handle="nw" />
-        <span className="c-handle c-handle-n" data-handle="n" />
-        <span className="c-handle c-handle-ne" data-handle="ne" />
-        <span className="c-handle c-handle-e" data-handle="e" />
-        <span className="c-handle c-handle-se" data-handle="se" />
-        <span className="c-handle c-handle-s" data-handle="s" />
-        <span className="c-handle c-handle-sw" data-handle="sw" />
-        <span className="c-handle c-handle-w" data-handle="w" />
-      </div>
       <div
         ref={markerRef}
         className="c-tablet-region-marker"

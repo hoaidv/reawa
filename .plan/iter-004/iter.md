@@ -4,7 +4,7 @@ goal: "On-device connectors (REQ-09) + ToolChip 3 tools / 2 recognizer toggles /
 start: 2026-08-14
 end: ""
 capacity: 32
-committed_points: 32
+committed_points: 34
 status: active
 ---
 
@@ -31,6 +31,7 @@ Prior campaign (Epaper owns the document, REQ-04…07) **closed** in
 - [STORY-EP-030](./stories/STORY-EP-030.md) — implement — dev — 5 pts — depends_on EP-027, EP-029
 - [STORY-EP-031](./stories/STORY-EP-031.md) — implement — dev — 8 pts — depends_on EP-030
 - [STORY-IN-030](./stories/STORY-IN-030.md) — implement — dev — 5 pts — depends_on EP-030
+- [STORY-IN-031](./stories/STORY-IN-031.md) — implement — dev — 2 pts — remove Infini ToolStrip · **∥ EP-028**
 
 ## Carry-over candidates (not committed)
 

@@ -4,7 +4,7 @@ title: Closure-first recognizer dispatch (ADR-0022)
 kind: implement
 parent_srs: [SRS-EP-10, SRS-EP-17]
 parent_req: [REQ-05, REQ-09]
-status: draft
+status: ready
 priority: P0
 iter: iter-004
 estimate: 5

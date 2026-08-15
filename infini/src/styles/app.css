@@ -78,35 +78,6 @@ body,
   pointer-events: none;
 }
 
-/* @implements [SRS-IN-11] SelectionOverlay */
-.c-selection-overlay {
-  position: absolute;
-  z-index: 3;
-  box-sizing: border-box;
-  border: 1.5px solid var(--color-ink);
-  background: transparent;
-  pointer-events: none;
-}
-
-.c-selection-overlay .c-handle {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  margin: -4px 0 0 -4px;
-  border: 1.5px solid var(--color-ink);
-  background: var(--color-surface-elevated);
-  border-radius: 0;
-}
-
-.c-handle-nw { left: 0; top: 0; }
-.c-handle-n  { left: 50%; top: 0; }
-.c-handle-ne { left: 100%; top: 0; }
-.c-handle-e  { left: 100%; top: 50%; }
-.c-handle-se { left: 100%; top: 100%; }
-.c-handle-s  { left: 50%; top: 100%; }
-.c-handle-sw { left: 0; top: 100%; }
-.c-handle-w  { left: 0; top: 50%; }
-
 /* Tablet drawing-region marker — visible only while pan/zoom (@SRS-IN-07) */
 .c-tablet-region-marker {
   position: absolute;
@@ -139,78 +110,6 @@ body,
 
 .c-orient-toggle:hover {
   background: #fff;
-}
-
-/* @implements [SRS-IN-14] ToolStrip */
-.c-tool-strip {
-  position: absolute;
-  top: 50%;
-  left: var(--space-md);
-  transform: translateY(-50%);
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 4px;
-  background: var(--color-chrome);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-}
-
-.c-tool-btn,
-.c-create-cta {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  min-width: 3rem;
-  min-height: 3rem;
-  padding: 6px 8px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--color-ink);
-  font: 600 10px/1.2 var(--font-sans);
-  cursor: pointer;
-  border-radius: var(--radius-control);
-}
-
-.c-tool-btn img {
-  width: 20px;
-  height: 20px;
-  display: block;
-  /* Invert to white when pressed (icons are dark strokes). */
-  filter: none;
-}
-
-.c-tool-btn:hover {
-  background: rgba(15, 118, 110, 0.08);
-}
-
-.c-tool-btn[aria-pressed="true"] {
-  background: rgba(15, 118, 110, 0.14);
-  border-color: var(--color-primary, #0f766e);
-  color: var(--color-primary, #0f766e);
-}
-
-.c-create-cta {
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-elevated);
-  min-height: auto;
-  padding: 8px 10px;
-  font-size: 12px;
-}
-
-.c-create-cta:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.c-create-refused {
-  margin: 4px 0 0;
-  max-width: 6.5rem;
-  font-size: 11px;
-  color: var(--color-ink-muted);
-  line-height: 1.3;
 }
 
 .app-mark {

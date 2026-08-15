@@ -17,7 +17,7 @@ Selection and manipulation chrome: [SRS-EP-12](../ink-box/srs-ui.md).
 
 ## [SRS-EP-05] On-device tool chip {#srs-ep-05-tool-chip}
 
-<!-- adopted CHL-0003 2026-08-11: floating 32px orientation-top chip; supersedes full-band strip -->
+<!-- adopted CHL-0003 2026-08-11: floating orientation-top chip; CHL-0019 2026-08-15: 64×64 tiles -->
 <!-- revised: 2026-08-13 — CHL-0008 / ADR-0014. Selection affordances are real, not ghosts; adds
      the session/publish status affordance; tools no longer go unavailable when the link drops.
      Same id, content revised. -->
@@ -48,7 +48,7 @@ latency or reserving a full edge band of drawing area.
 | Full refresh floor | ~250 ms, ghosting allowed | Never depend on a settled frame to convey state |
 | Partial refresh | Chip bounds only | Chrome must be a small, isolatable rect (not a full edge band) |
 | Input | Pen (Wacom EMR) + capacitive touch — **touch unverified from Qt** | Fallback path must exist (`pen-on-chip`) |
-| Chip size | Height **32 px**; tools **32×32** icon tiles; hug width | Compact chip — **relaxes** the prior ≥120 px finger-target rule for this control only (CHL-0003) |
+| Chip size | Height **64 px**; tools **64×64** icon tiles; hug width | Compact chip — **relaxes** the prior ≥120 px finger-target rule (CHL-0003); **64** adopted [CHL-0019](../../../../../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md) after RM2 verify that 32 px was too small |
 | Ambient | Reflective display, read in any light | Contrast by shape and fill, never by tint |
 
 ### Composition layers (binding)
@@ -60,7 +60,7 @@ latency or reserving a full edge band of drawing area.
 | SelectionOverlay | Handles + ghost while `selection` is active | Outline only |
 | StatusLine | Existing debug/status text | Unchanged |
 
-**Containment:** `ToolChip` is a **floating** compact control cluster (height **32 px**, width hug
+**Containment:** `ToolChip` is a **floating** compact control cluster (height **64 px**, width hug
 content, icon-only) anchored to the **top edge of the current gut orientation** (moves with
 device orientation; when gut is on top, oriented “top” places the chip near the opposite short
 edge). `InkSurface` remains **full-bleed** — chrome does **not** reserve a full band. Pen/touch
@@ -170,7 +170,7 @@ disarmed.
 ### Anti-patterns
 
 - A **full-band** edge strip that shrinks `InkSurface` (retired by CHL-0003).
-- Chrome that is taller than **32 px** for this pilot chip, or that uses rounded “pill” chrome.
+- Chrome that uses rounded “pill” chrome, or a **full-band** strip. Tile size is **64×64** (CHL-0019), not 32.
 - Conveying active state by tint, greyscale, shadow, or animation.
 - A tool that can leave the creator unable to draw (pen must always be reachable).
 - Reusing desktop `tokens.css` sizing as if the chip were a desktop toolbar.

@@ -4,7 +4,7 @@ title: Recognize single-stroke and chained connectors
 kind: implement
 parent_srs: [SRS-EP-17]
 parent_req: [REQ-09]
-status: draft
+status: ready
 priority: P0
 iter: iter-004
 estimate: 5
