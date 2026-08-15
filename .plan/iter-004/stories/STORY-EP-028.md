@@ -4,7 +4,7 @@ title: ToolChip inventory: 3 exclusive tools + 2 recognizer toggles
 kind: implement
 parent_srs: [SRS-EP-04, SRS-EP-05]
 parent_req: [REQ-03]
-status: in-review
+status: done
 priority: P0
 iter: iter-004
 estimate: 3

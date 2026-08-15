@@ -78,7 +78,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
 | TRACK-003 | planned | **done** | campaign exited 2026-08-14 | [track](./tracks/TRACK-003-smart-group-pilot.md) |
-| TRACK-004 | planned | **active** | EP-028 + IN-031 · `/qa` | [track](./tracks/TRACK-004-on-device-connectors.md) |
+| TRACK-004 | planned | **active** | EP-029 · `/dev` | [track](./tracks/TRACK-004-on-device-connectors.md) |
 
 ### Open challenges / blocked
 
@@ -103,6 +103,6 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ## Forward
 
-- **Now:** `/qa` verify **EP-028 + IN-031**. Both `in-review`. CHL-0019 **adopted**.
+- **Now:** `/dev` **EP-029**. W2 (EP-028 + IN-031) **done**. CHL-0019 **adopted**.
 - Parked (not committed): epaper `[REQ-08]`, nested enclose (CHL-0011), FREE_FORM / align-content (CHL-0012).
 - Backlog: [backlog.md](./backlog.md)

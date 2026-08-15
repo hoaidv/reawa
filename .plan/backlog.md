@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-15T02:57:37+00:00
+generated_at: 2026-08-15T03:05:49+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -34,7 +34,7 @@ generated_at: 2026-08-15T02:57:37+00:00
 | [STORY-EP-025](./iter-003/stories/STORY-EP-025.md) | Selection chrome CanvasLayer / ToolCanvasLayer / ToolLayer | implement | dev | epaper | [SRS-EP-12], [SRS-EP-14] | done | iter-003 | 3 |
 | [STORY-EP-026](./iter-004/stories/STORY-EP-026.md) | Design ToolChip: 3 tools, 2 recognizer toggles, Undo/Redo | design | designer | epaper | [SRS-EP-05] | done | iter-004 | 3 |
 | [STORY-EP-027](./iter-004/stories/STORY-EP-027.md) | Design connector blink and Ink/Curve selection chrome | design | designer | epaper | [SRS-EP-19] | done | iter-004 | 3 |
-| [STORY-EP-028](./iter-004/stories/STORY-EP-028.md) | ToolChip inventory: 3 exclusive tools + 2 recognizer toggles | implement | dev | epaper | [SRS-EP-04], [SRS-EP-05] | in-review | iter-004 | 3 |
+| [STORY-EP-028](./iter-004/stories/STORY-EP-028.md) | ToolChip inventory: 3 exclusive tools + 2 recognizer toggles | implement | dev | epaper | [SRS-EP-04], [SRS-EP-05] | done | iter-004 | 3 |
 | [STORY-EP-029](./iter-004/stories/STORY-EP-029.md) | Closure-first recognizer dispatch (ADR-0022) | implement | dev | epaper | [SRS-EP-10], [SRS-EP-17] | ready | iter-004 | 5 |
 | [STORY-EP-030](./iter-004/stories/STORY-EP-030.md) | Recognize single-stroke and chained connectors | implement | dev | epaper | [SRS-EP-17] | ready | iter-004 | 5 |
 | [STORY-EP-031](./iter-004/stories/STORY-EP-031.md) | Ink/Curve warp and live re-warp on bound-node drag | implement | dev | epaper | [SRS-EP-18], [SRS-EP-20] | ready | iter-004 | 8 |
@@ -68,7 +68,7 @@ generated_at: 2026-08-15T02:57:37+00:00
 | [STORY-IN-028](./iter-003/stories/STORY-IN-028.md) | Desktop handshake-gated doc_load | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | done | iter-003 | 3 |
 | [STORY-IN-029](./iter-003/stories/STORY-IN-029.md) | Device Log panel and :9878 listener | implement | dev | infini | [SRS-IN-17], [SRS-IN-18], [SRS-IN-19] | done | iter-003 | 3 |
 | [STORY-IN-030](./iter-004/stories/STORY-IN-030.md) | Mirror create_connector envelope and derived warp | implement | dev | infini | [SRS-IN-09] | ready | iter-004 | 5 |
-| [STORY-IN-031](./iter-004/stories/STORY-IN-031.md) | Remove Infini desktop editing ToolStrip | implement | dev | infini | [SRS-IN-14] | in-review | iter-004 | 2 |
+| [STORY-IN-031](./iter-004/stories/STORY-IN-031.md) | Remove Infini desktop editing ToolStrip | implement | dev | infini | [SRS-IN-14] | done | iter-004 | 2 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |
 | [STORY-RW-003](./iter-000/stories/STORY-RW-003.md) | Accessibility permission gate | implement | dev | reawa | [SRS-RW-03] | done | iter-000 | 1 |

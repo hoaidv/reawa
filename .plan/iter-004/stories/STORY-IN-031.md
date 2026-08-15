@@ -4,7 +4,7 @@ title: Remove Infini desktop editing ToolStrip
 kind: implement
 parent_srs: [SRS-IN-14]
 parent_req: [REQ-04]
-status: in-review
+status: done
 priority: P0
 iter: iter-004
 estimate: 2
