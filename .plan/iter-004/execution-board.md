@@ -73,7 +73,7 @@ Lanes **∥**. Shared `.docs/` only if stitching; do not parallel-edit the same 
 |---|---|---|---|---|---|---|---|---|
 | F-01 | epaper/tool-modes | Must | thick | EP-026 | **done** | W2 | `/dev` EP-029 | — |
 | F-02 | epaper/connector-ink (chrome) | Must | thick | EP-027 | **done** | W1 | wait W3 | — |
-| F-03 | epaper/ink-box (dispatch) | Must | thick | — | ready | W2→W3 | `/dev` after EP-028 | — |
+| F-03 | epaper/ink-box (dispatch) | Must | thick | — | **done** | W2 | `/dev` EP-030 | — |
 | F-04 | epaper/connector-ink (recognize + warp) | Must | thick | EP-027 | ready | W3 | `/dev` after EP-029 | — |
 | F-05 | infini/vector-document (mirror) | Must | thick | n/a | ready | W3 | `/dev` after EP-030 | — |
 | F-06 | infini hide ToolStrip | Must | REQ-04 | n/a (remove) | **done** | W2 | — | **E** |
@@ -120,11 +120,11 @@ Lanes **∥**. Shared `.docs/` only if stitching; do not parallel-edit the same 
 | tool-modes | **done** (EP-028) | `/dev` EP-029 |
 | Infini hide toolbar | **done** (IN-031) | — |
 | connector-ink | design **done** | W3 `/dev` |
-| ink-box dispatch | BDD ready | `/dev` EP-029 after EP-028 |
+| ink-box dispatch | **done** (EP-029) | `/dev` EP-030 |
 | infini vector-document | BDD ready | W3 `/dev` IN-030 |
 
 ---
 
 ## Verdict
 
-**READY** — W2 verified (human + host tests). EP-028 and IN-031 **done**. Next: **`/dev` EP-029**. Do not start REQ-08.
+**READY** — EP-029 **done**. Next: **`/dev` EP-030**. Do not start REQ-08.

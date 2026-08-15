@@ -7,7 +7,7 @@ iter: iter-004
 goal: "On-device connectors: recognize hand-drawn ink between SmartGroups and keep it attached when a node moves"
 scope: [epaper/connector-ink, epaper/tool-modes, epaper/ink-box, infini/vector-document]
 stories: [STORY-EP-026, STORY-EP-027, STORY-EP-028, STORY-EP-029, STORY-EP-030, STORY-EP-031, STORY-IN-030, STORY-IN-031]
-cursor: "STORY-EP-029 · /dev"
+cursor: "STORY-EP-030 · /dev"
 paused_reason: ""
 interrupts: []
 ---
@@ -40,7 +40,7 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 | [STORY-EP-026](../iter-004/stories/STORY-EP-026.md) | design | **done** | ToolChip 3+2+Undo/Redo · `toolchip-recognizers` |
 | [STORY-EP-027](../iter-004/stories/STORY-EP-027.md) | design | **done** | Connector blink + Ink/Curve chrome · `connector-chrome` |
 | [STORY-EP-028](../iter-004/stories/STORY-EP-028.md) | implement | **done** | ToolChip inventory — **∥ IN-031** |
-| [STORY-EP-029](../iter-004/stories/STORY-EP-029.md) | implement | ready | ADR-0022 dispatch — depends EP-028 |
+| [STORY-EP-029](../iter-004/stories/STORY-EP-029.md) | implement | **done** | ADR-0022 dispatch — depends EP-028 |
 | [STORY-EP-030](../iter-004/stories/STORY-EP-030.md) | implement | ready | UX1/UX2 recognition — depends EP-027, EP-029 |
 | [STORY-EP-031](../iter-004/stories/STORY-EP-031.md) | implement | ready | Ink/Curve warp + live drag — depends EP-030 |
 | [STORY-IN-030](../iter-004/stories/STORY-IN-030.md) | implement | ready | Infini envelope + derived warp — depends EP-030 |
@@ -48,7 +48,7 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 
 ## Cursor
 
-**Next:** `/dev` [STORY-EP-029](../iter-004/stories/STORY-EP-029.md)
+**Next:** `/dev` [STORY-EP-030](../iter-004/stories/STORY-EP-030.md)
 
 BDD for both is READY-FOR-DEV. Write sets do not overlap (`epaper/` vs `infini/`).
 
