@@ -6,10 +6,10 @@ status: active
 iter: iter-004
 goal: "On-device connectors: recognize hand-drawn ink between SmartGroups and keep it attached when a node moves"
 scope: [epaper/connector-ink, epaper/tool-modes, epaper/ink-box, infini/vector-document]
-stories: [STORY-EP-026, STORY-EP-027, STORY-EP-028, STORY-EP-029, STORY-EP-030, STORY-EP-031, STORY-IN-030, STORY-IN-031, STORY-EP-032, STORY-EP-033]
+stories: [STORY-EP-026, STORY-EP-027, STORY-EP-028, STORY-EP-029, STORY-EP-030, STORY-EP-031, STORY-IN-030, STORY-IN-031, STORY-EP-032, STORY-EP-033, STORY-EP-034]
 cursor: "STORY-EP-030 · /dev"
 paused_reason: ""
-interrupts: [STORY-EP-033]
+interrupts: [STORY-EP-033, STORY-EP-034]
 ---
 
 # TRACK-004 — On-device connectors
@@ -47,12 +47,13 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 | [STORY-IN-031](../iter-004/stories/STORY-IN-031.md) | implement | **done** | Remove Infini ToolStrip |
 | [STORY-EP-032](../iter-004/stories/STORY-EP-032.md) | implement | **draft** | `/architect` later — chrome state machine |
 | [STORY-EP-033](../iter-004/stories/STORY-EP-033.md) | implement | ready | P0 origin/stale pen-down — queued, not this cursor |
+| [STORY-EP-034](../iter-004/stories/STORY-EP-034.md) | implement | ready | P1 USB gadget / SSH+TCP keepalive — queued |
 
 ## Cursor
 
 **Next:** `/dev` [STORY-EP-030](../iter-004/stories/STORY-EP-030.md)
 
-Human verified through EP-029. EP-033 (origin diagonal) stays **queued** — do not parallel with EP-030 on `tabletcanvasitem.cpp`. EP-032 waits on `/architect`.
+Human verified through EP-029. EP-033 (origin diagonal) stays **queued** — do not parallel with EP-030 on `tabletcanvasitem.cpp`. EP-034 (USB unreachability) queued — no file conflict with EP-030. EP-032 waits on `/architect`.
 
 ## Execution board
 
@@ -77,3 +78,4 @@ Human verified through EP-029. EP-033 (origin diagonal) stays **queued** — do 
 | 2026-08-15 | Membership blink caused Pen lag. UI-EP-06 → last-join highlight. EP-032 parked for `/architect`. Cursor stays EP-030. |
 | 2026-08-15 | **P0** [STORY-EP-033](../iter-004/stories/STORY-EP-033.md): random diagonal from panel origin on pen-down. Cursor → `/dev` EP-033 then EP-030. |
 | 2026-08-15 | Human verified through EP-029. Cursor **move one** → `/dev` EP-030. EP-033 queued. |
+| 2026-08-15 | **P1** [STORY-EP-034](../iter-004/stories/STORY-EP-034.md): RM2 USB unreachable until unplug/replug. Cursor stays EP-030. |

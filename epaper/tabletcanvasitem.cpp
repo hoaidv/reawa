@@ -625,6 +625,16 @@ void TabletCanvasItem::ingestCurrentStroke()
         // white-clear rasterize here is what lagged Pen every few draw-intos.
         if (highlightChanged)
             m_needEncloseRasterize = true;
+    } else if (d.outcome == RecogOutcome::Connector) {
+        // ovl.conn_blink — width pulse on connector body + both bound nodes (UI-EP-05).
+        m_needEncloseRasterize = true;
+        std::vector<std::string> ids = d.connector.bodyIds;
+        if (const DocNode *sg = m_document.find(d.connector.fromId))
+            collectSmartGroupInkIds(*sg, false, &ids);
+        if (const DocNode *sg = m_document.find(d.connector.toId))
+            collectSmartGroupInkIds(*sg, false, &ids);
+        beginRecogWidthBlink(ids);
+        clearMembershipHighlight();
     } else {
         // Failed empty enclose stays live ink. Do not white-clear the panel.
         const std::string &why = d.enclose.reason;
@@ -1792,7 +1802,8 @@ void TabletCanvasItem::drawTree(QPainter &p, const std::vector<epaper::document:
     for (const auto &node : nodes) {
         if (node.kind == NodeKind::SmartGroup)
             drawTree(p, node.children, &node);
-        else if (node.kind == NodeKind::Frame || node.kind == NodeKind::Group)
+        else if (node.kind == NodeKind::Frame || node.kind == NodeKind::Group
+                 || node.kind == NodeKind::Connector)
             drawTree(p, node.children, nullptr);
         else
             drawDocNode(p, node, smartParent);

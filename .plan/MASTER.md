@@ -33,7 +33,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Scope | `epaper/{connector-ink, tool-modes, ink-box}`, `infini/vector-document` | REQ-09 + the ToolChip split that arms it |
 | Stop line | **verified** | `/designer`, `/qa`, `/dev` may all work; campaign ends on human confirm |
 | Autonomy | **bounded** | Run inside the lock; stop at REQ-08 / CHL-0011 / CHL-0012 |
-| WIP | **2** | EP-030 NOW; EP-033 queued |
+| WIP | **2** | EP-030 NOW; EP-033 + EP-034 queued |
 
 **Re-locked 2026-08-14 (human):** flip horizontal/`design-validated` → vertical/`verified`. Exit criteria: REQ-09 + REQ-03 ToolChip human-confirmed on device; Infini mirror 0 divergent connector nodes; EP-016/017 replay under ADR-0022. EXP-0002 guard corpus (≤2% FP) remains a **ship** gate, not a wave blocker. UI implement still `depends_on` done design stories (EP-026 → EP-028; EP-027 → EP-030).
 
@@ -103,6 +103,6 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ## Forward
 
-- **Now:** `/dev` **EP-030** (connector recognition). EP-029 human-verified. EP-033 queued.
+- **Now:** `/dev` **EP-030** (connector recognition). EP-029 human-verified. EP-033 + EP-034 queued.
 - Parked (not committed): epaper `[REQ-08]`, nested enclose (CHL-0011), FREE_FORM / align-content (CHL-0012).
 - Backlog: [backlog.md](./backlog.md)

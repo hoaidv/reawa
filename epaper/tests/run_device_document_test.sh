@@ -23,3 +23,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/dispatch_test.cpp -o /tmp/dispatch_te
 /tmp/dispatch_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/enclose_shape_test.cpp -o /tmp/enclose_shape_test
 /tmp/enclose_shape_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/connector_test.cpp -o /tmp/connector_test
+/tmp/connector_test

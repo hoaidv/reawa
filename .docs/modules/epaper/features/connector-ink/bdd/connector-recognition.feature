@@ -12,7 +12,7 @@ Feature: On-device connector recognition
   Scenario: UX1 open stroke A to C commits create_connector
     Given two distinct Smart Groups A and C
     And exclusive tool pen and tgl.recog.connector are armed at pen-down
-    And an open stroke whose first sample is within R_SNAP of A bounds and last within R_SNAP of C bounds
+    And an open stroke whose first sample is within R_SNAP of A boundary ink and last within R_SNAP of C boundary ink
     And the stroke arc is at least MIN_CONNECTOR_WORLD 48 world units
     And at most 20 percent of samples lie in A, at most 20 percent in C, and at least 60 percent lie outside every box
     When pen-up runs connector recognition

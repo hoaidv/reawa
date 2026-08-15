@@ -23,8 +23,8 @@ Pen-up step 3 of ADR-0022, after failed-enclose→membership.
 | 1 | Open — first/last sample far relative to path length | ordinary ink |
 | 2 | Path-like — low self-intersection; hull area small vs length² | ordinary ink |
 | 3 | Long enough — arc ≥ `MIN_CONNECTOR_WORLD` (start 48 u, same order as enclose) | ordinary ink |
-| 4 | Two bindings — first sample within `R_SNAP` of SmartGroup A bounds, last of B, **A ≠ B** | ordinary ink |
-| 5 | Body mostly outside — ≤20% samples in A, ≤20% in B, ≥60% outside every box | ordinary ink |
+| 4 | Two bindings — first sample within `R_SNAP` of SmartGroup A **boundary ink**, last of B, **A ≠ B** | ordinary ink |
+| 5 | Body mostly outside — ≤20% samples in A, ≤20% in B, ≥60% outside every box (**boundary-ink interior**, not the fitted AABB) | ordinary ink |
 
 v1 targets **SmartGroup only**.
 

@@ -3,12 +3,12 @@
  * Closure-first recognizer dispatch at pen-up. Exactly one verdict.
  * @implements [SRS-EP-10] ADR-0022 dispatch table
  *
- * Connector commit is STORY-EP-030 — this step only reserves the slot (open +
- * recog.connector → still ink until that story).
+ * Connector commit is STORY-EP-030 — open + recog.connector → create_connector.
  */
 
 #include "ingest_stroke.hpp"
 #include "membership.hpp"
+#include "recognize_connector.hpp"
 #include "recognize_enclose.hpp"
 
 #include <chrono>
@@ -43,6 +43,7 @@ struct RecogDispatchResult {
     std::string encloseWhy;
     EncloseResult enclose;
     MembershipResult membership;
+    ConnectorResult connector;
     ApplyResult apply;
     std::int64_t ns = 0;
 
@@ -175,9 +176,14 @@ inline RecogDispatchResult dispatchPenUp(DeviceDocument &doc, EncloseStrokeInput
                 out.outcome = RecogOutcome::Membership;
                 out.guard = "none";
             } else if (!closed && latch.connector) {
-                // STORY-EP-030 owns create_connector; do not invent geometry here.
-                out.outcome = RecogOutcome::Ink;
-                out.guard = "connector_pending";
+                out.connector = tryRecognizeConnector(doc, stroke.id);
+                if (out.connector.kind == ConnectorKind::Created) {
+                    out.outcome = RecogOutcome::Connector;
+                    out.guard = "none";
+                } else {
+                    out.outcome = RecogOutcome::Ink;
+                    out.guard = out.connector.reason.empty() ? "none" : out.connector.reason;
+                }
             } else {
                 out.outcome = RecogOutcome::Ink;
                 out.guard = closed ? "recog_ink_box_off" : "none";

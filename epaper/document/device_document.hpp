@@ -82,6 +82,25 @@ struct TextRun {
     bool bold = false;
 };
 
+struct ConnectorAnchor {
+    std::string nodeId;
+    std::string kind = "edge";
+    int edge = 0;
+    double t = 0;
+    double drawnN = 1;
+    double drawnE = 0;
+};
+
+struct ConnectorRestPt {
+    double x = 0;
+    double y = 0;
+};
+
+struct ConnectorRestOff {
+    double s = 0;
+    double d = 0;
+};
+
 struct DocNode {
     std::string id;
     NodeKind kind = NodeKind::Ink;
@@ -101,6 +120,11 @@ struct DocNode {
     std::string inkScaleMode = "withBounds";
     std::string fromNodeId;
     std::string toNodeId;
+    ConnectorAnchor fromAnchor;
+    ConnectorAnchor toAnchor;
+    std::string warpStyle;
+    std::vector<ConnectorRestPt> restSpine;
+    std::vector<ConnectorRestOff> restOffsets;
     bool connectorInvalid = false;
     std::vector<DocNode> children;
 };
@@ -807,6 +831,38 @@ private:
         insertUnder(parentIdOf(p), std::move(n));
     }
 
+    static ConnectorAnchor anchorFromJson(const JsonValue *a)
+    {
+        ConnectorAnchor o;
+        if (!a || !a->isObject())
+            return o;
+        o.nodeId = a->getString("nodeId");
+        o.kind = a->getString("kind", "edge");
+        o.edge = int(a->getNumber("edge", 0));
+        o.t = a->getNumber("t", 0);
+        if (const JsonValue *loc = a->get("drawnEdgeLocal"); loc && loc->isObject()) {
+            o.drawnN = loc->getNumber("n", 1);
+            o.drawnE = loc->getNumber("e", 0);
+        }
+        return o;
+    }
+
+    static JsonValue anchorToJson(const ConnectorAnchor &a)
+    {
+        JsonValue::Object o;
+        o.emplace_back("nodeId", JsonValue::string(a.nodeId));
+        o.emplace_back("kind", JsonValue::string(a.kind));
+        o.emplace_back("edge", JsonValue::number(a.edge));
+        o.emplace_back("t", JsonValue::number(a.t));
+        JsonValue::Object loc;
+        loc.emplace_back("n", JsonValue::number(a.drawnN));
+        loc.emplace_back("e", JsonValue::number(a.drawnE));
+        o.emplace_back("drawnEdgeLocal", JsonValue::object(std::move(loc)));
+        return JsonValue::object(std::move(o));
+    }
+
+    /** @implements [SRS-EP-07] create_connector — device-authored; body + rest + anchors
+     *  @implements [SRS-EP-17] commit envelope */
     void opCreateConnector(const JsonValue &p)
     {
         const std::string id = requireId(p);
@@ -814,10 +870,37 @@ private:
         DocNode n;
         n.id = id;
         n.kind = NodeKind::Connector;
-        const JsonValue *from = p.get("from");
-        const JsonValue *to = p.get("to");
-        n.fromNodeId = from && from->isObject() ? from->getString("nodeId") : std::string();
-        n.toNodeId = to && to->isObject() ? to->getString("nodeId") : std::string();
+        n.fromAnchor = anchorFromJson(p.get("from"));
+        n.toAnchor = anchorFromJson(p.get("to"));
+        n.fromNodeId = n.fromAnchor.nodeId;
+        n.toNodeId = n.toAnchor.nodeId;
+        n.warpStyle = p.getString("warpStyle", "morph");
+        if (const JsonValue *rs = p.get("restShape"); rs && rs->isObject()) {
+            if (const JsonValue *sp = rs->get("spine"); sp && sp->isArray()) {
+                for (const auto &pt : sp->asArray()) {
+                    if (!pt.isObject())
+                        continue;
+                    n.restSpine.push_back({pt.getNumber("x"), pt.getNumber("y")});
+                }
+            }
+            if (const JsonValue *off = rs->get("offsets"); off && off->isArray()) {
+                for (const auto &pt : off->asArray()) {
+                    if (!pt.isObject())
+                        continue;
+                    n.restOffsets.push_back({pt.getNumber("s"), pt.getNumber("d")});
+                }
+            }
+        }
+        if (const JsonValue *ids = p.get("captureIds"); ids && ids->isArray()) {
+            for (const auto &idv : ids->asArray()) {
+                if (!idv.isString())
+                    throw std::runtime_error("capture_id_not_string");
+                DocNode ink;
+                if (!detachInk(idv.asString(), &ink))
+                    throw std::runtime_error(std::string("capture_missing:") + idv.asString());
+                n.children.push_back(std::move(ink));
+            }
+        }
         n.connectorInvalid = !findMut(n.fromNodeId) || !findMut(n.toNodeId);
         insertUnder(parentIdOf(p), std::move(n));
     }
@@ -1092,12 +1175,31 @@ private:
             break;
         }
         case NodeKind::Connector: {
-            if (const JsonValue *from = j.get("from"); from && from->isObject())
-                n.fromNodeId = from->getString("nodeId");
-            if (const JsonValue *to = j.get("to"); to && to->isObject())
-                n.toNodeId = to->getString("nodeId");
+            n.fromAnchor = DeviceDocument::anchorFromJson(j.get("from"));
+            n.toAnchor = DeviceDocument::anchorFromJson(j.get("to"));
+            n.fromNodeId = n.fromAnchor.nodeId;
+            n.toNodeId = n.toAnchor.nodeId;
+            n.warpStyle = j.getString("warpStyle", "");
             if (const JsonValue *inv = j.get("invalid"); inv && inv->isBool())
                 n.connectorInvalid = inv->asBool();
+            if (const JsonValue *rs = j.get("restShape"); rs && rs->isObject()) {
+                if (const JsonValue *sp = rs->get("spine"); sp && sp->isArray()) {
+                    for (const auto &pt : sp->asArray()) {
+                        if (pt.isObject())
+                            n.restSpine.push_back({pt.getNumber("x"), pt.getNumber("y")});
+                    }
+                }
+                if (const JsonValue *off = rs->get("offsets"); off && off->isArray()) {
+                    for (const auto &pt : off->asArray()) {
+                        if (pt.isObject())
+                            n.restOffsets.push_back({pt.getNumber("s"), pt.getNumber("d")});
+                    }
+                }
+            }
+            if (const JsonValue *ch = j.get("children"); ch && ch->isArray()) {
+                for (const auto &c : ch->asArray())
+                    n.children.push_back(nodeFromJson(c));
+            }
             break;
         }
         case NodeKind::SmartGroup: {
@@ -1207,13 +1309,39 @@ private:
         }
         case NodeKind::Connector: {
             o.emplace_back("kind", JsonValue::string("connector"));
-            JsonValue::Object from;
-            from.emplace_back("nodeId", JsonValue::string(n.fromNodeId));
-            JsonValue::Object to;
-            to.emplace_back("nodeId", JsonValue::string(n.toNodeId));
-            o.emplace_back("from", JsonValue::object(std::move(from)));
-            o.emplace_back("to", JsonValue::object(std::move(to)));
+            o.emplace_back("from", DeviceDocument::anchorToJson(n.fromAnchor.nodeId.empty()
+                                                                    ? ConnectorAnchor{n.fromNodeId}
+                                                                    : n.fromAnchor));
+            o.emplace_back("to", DeviceDocument::anchorToJson(n.toAnchor.nodeId.empty()
+                                                                  ? ConnectorAnchor{n.toNodeId}
+                                                                  : n.toAnchor));
+            if (!n.warpStyle.empty())
+                o.emplace_back("warpStyle", JsonValue::string(n.warpStyle));
+            if (!n.restSpine.empty() || !n.restOffsets.empty()) {
+                JsonValue::Array spine;
+                for (const auto &p : n.restSpine) {
+                    JsonValue::Object pt;
+                    pt.emplace_back("x", JsonValue::number(p.x));
+                    pt.emplace_back("y", JsonValue::number(p.y));
+                    spine.push_back(JsonValue::object(std::move(pt)));
+                }
+                JsonValue::Array off;
+                for (const auto &p : n.restOffsets) {
+                    JsonValue::Object pt;
+                    pt.emplace_back("s", JsonValue::number(p.s));
+                    pt.emplace_back("d", JsonValue::number(p.d));
+                    off.push_back(JsonValue::object(std::move(pt)));
+                }
+                JsonValue::Object rs;
+                rs.emplace_back("spine", JsonValue::array(std::move(spine)));
+                rs.emplace_back("offsets", JsonValue::array(std::move(off)));
+                o.emplace_back("restShape", JsonValue::object(std::move(rs)));
+            }
             o.emplace_back("invalid", JsonValue::boolean(n.connectorInvalid));
+            JsonValue::Array kids;
+            for (const auto &c : n.children)
+                kids.push_back(nodeToJson(c));
+            o.emplace_back("children", JsonValue::array(std::move(kids)));
             break;
         }
         case NodeKind::SmartGroup: {

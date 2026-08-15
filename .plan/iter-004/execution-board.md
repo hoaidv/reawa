@@ -5,7 +5,7 @@ track: TRACK-004
 owner: sm
 date: 2026-08-15
 lock: vertical · verified · wip 2 · epaper/{connector-ink, tool-modes, ink-box} + infini/vector-document
-verdict: "NOW — /dev EP-030 (human verified through EP-029)"
+verdict: "NOW — /dev EP-030 (human verified through EP-029); EP-034 USB P1 queued"
 wave: W3-recognize
 ---
 
@@ -56,6 +56,7 @@ cursor: /dev EP-030
 | **W1** | **done** | **∥ yes** | Design ToolChip + connector chrome |
 | **W2** | **done** | **∥ yes** | `/qa` verify ToolChip (EP-028) **∥** hide Infini ToolStrip (IN-031) |
 | **hotfix** | queued | serial vs EP-030 | P0 [STORY-EP-033](./stories/STORY-EP-033.md) origin/stale pen-down |
+| **ops** | queued | no conflict vs EP-030 | P1 [STORY-EP-034](./stories/STORY-EP-034.md) USB stay-up / keepalives |
 | **W3** | **NOW** | EP-030 then EP-031 ∥ IN-030 | Recognize, warp, Infini mirror |
 | **W-last** | later | serial | Human verify + `/pm` `validated_by` |
 
@@ -80,6 +81,7 @@ Serial vs EP-033. No Infini writes until IN-030.
 | CHORE-1 | EXP-0002 Initiative 2 guard corpus | Ship | — | — | open | ∥ | `/qa` explore | — |
 | CHORE-2 | PM `validated_by` | — | — | campaign verify | later | W-last | `/pm` | serial |
 | BUG-01 | origin/stale pen-down diagonal | P0 | SRS-EP-01 | — | ready | queued | `/dev` EP-033 after EP-030 | — |
+| BUG-02 | USB Ethernet unreachable until replug | P1 | SRS-EP-08 | — | ready | queued | `/dev` EP-034 after EP-030 | — |
 
 ### Current-wave sub-agent roster (spawn when wave = NOW)
 
@@ -94,6 +96,7 @@ Serial vs EP-033. No Infini writes until IN-030.
 | Blink waveform / duration | Enclose: ~250 ms Mono. Membership: last-join highlight (UI-EP-06); no blink |
 | Device chrome state machine | STORY-EP-032 draft — `/architect` later; not NOW |
 | Pen-down origin diagonal | STORY-EP-033 — queued after EP-030 |
+| USB gadget / SSH keepalive | STORY-EP-034 — queued; ping-dead vs ping-alive |
 | Inflection cutoff on a real corpus | EXP-0002 Initiative 2 / QA — ship gate |
 | Live-drag panel rate on RM2 | Measure in EP-031, not lock |
 
@@ -130,4 +133,4 @@ Serial vs EP-033. No Infini writes until IN-030.
 
 ## Verdict
 
-**NOW** — **`/dev` EP-030**. EP-029 human-verified. EP-033 origin-diagonal stays queued. Do not start REQ-08.
+**NOW** — **`/dev` EP-030**. EP-029 human-verified. EP-033 origin-diagonal and EP-034 USB stay-up stay queued. Do not start REQ-08.
