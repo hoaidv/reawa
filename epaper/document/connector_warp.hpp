@@ -372,6 +372,28 @@ inline RestVec facingOnBox(const WarpBox &b, const ConnectorAnchor &a, RestVec p
     return warpUnit(warpAdd(warpMul(n, a.drawnN), warpMul(along, a.drawnE)));
 }
 
+inline RestVec attachWorld(const DocNode &sg, const ConnectorAnchor &a, const WarpBox &b)
+{
+    if (a.hasLocal) {
+        const Vec2 w = smartLocalToWorld(a.localX, a.localY, sg, "boundary", std::nullopt, nullptr);
+        return {w.x, w.y};
+    }
+    return anchorPointOnBox(b, a);
+}
+
+inline RestVec facingAtAttach(const WarpBox &b, const ConnectorAnchor &a, RestVec thisP, RestVec peerP)
+{
+    if (a.kind == "centre")
+        return warpUnit(warpSub(peerP, thisP));
+    RestVec n{}, along{};
+    edgeFrameFromBox(b, a.edge, &n, &along);
+    if (kEdgeFacingPerpendicular)
+        return n;
+    const RestVec ex = warpUnit(warpSub(b.corners[1], b.corners[0]));
+    const RestVec ey = warpUnit(warpSub(b.corners[3], b.corners[0]));
+    return warpUnit(warpAdd(warpMul(ex, a.drawnBoxX), warpMul(ey, a.drawnBoxY)));
+}
+
 inline ConnectorEndPose poseFromWarpEnd(const WarpEnd &e)
 {
     ConnectorEndPose p;
@@ -405,32 +427,28 @@ inline bool resolveConnectorEnds(const DeviceDocument &doc, const DocNode &conn,
     bool ok0 = false;
     bool ok1 = false;
     if (b0.ok && b1.ok) {
-        e0.p = anchorPointOnBox(b0, conn.fromAnchor);
-        e1.p = anchorPointOnBox(b1, conn.toAnchor);
-        e0.f = facingOnBox(b0, conn.fromAnchor, b1.c);
-        e1.f = facingOnBox(b1, conn.toAnchor, b0.c);
+        e0.p = attachWorld(*sg0, conn.fromAnchor, b0);
+        e1.p = attachWorld(*sg1, conn.toAnchor, b1);
+        e0.f = facingAtAttach(b0, conn.fromAnchor, e0.p, e1.p);
+        e1.f = facingAtAttach(b1, conn.toAnchor, e1.p, e0.p);
         e0.centre = conn.fromAnchor.kind == "centre";
         e1.centre = conn.toAnchor.kind == "centre";
-        e0.clip = b0.aabb;
-        e1.clip = b1.aabb;
-        e0.hasClip = e0.centre;
-        e1.hasClip = e1.centre;
+        e0.hasClip = false;
+        e1.hasClip = false;
         ok0 = ok1 = true;
     } else if (b0.ok && conn.toPose.valid) {
-        e0.p = anchorPointOnBox(b0, conn.fromAnchor);
+        e0.p = attachWorld(*sg0, conn.fromAnchor, b0);
         e1 = endFromPose(conn.toPose);
-        e0.f = facingOnBox(b0, conn.fromAnchor, e1.p);
+        e0.f = facingAtAttach(b0, conn.fromAnchor, e0.p, e1.p);
         e0.centre = conn.fromAnchor.kind == "centre";
-        e0.clip = b0.aabb;
-        e0.hasClip = e0.centre;
+        e0.hasClip = false;
         ok0 = ok1 = true;
     } else if (b1.ok && conn.fromPose.valid) {
-        e1.p = anchorPointOnBox(b1, conn.toAnchor);
+        e1.p = attachWorld(*sg1, conn.toAnchor, b1);
         e0 = endFromPose(conn.fromPose);
-        e1.f = facingOnBox(b1, conn.toAnchor, e0.p);
+        e1.f = facingAtAttach(b1, conn.toAnchor, e1.p, e0.p);
         e1.centre = conn.toAnchor.kind == "centre";
-        e1.clip = b1.aabb;
-        e1.hasClip = e1.centre;
+        e1.hasClip = false;
         ok0 = ok1 = true;
     } else if (conn.fromPose.valid && conn.toPose.valid) {
         e0 = endFromPose(conn.fromPose);

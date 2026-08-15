@@ -140,17 +140,22 @@ static JsonValue inkChildToJsonLocal(const std::string &id, const std::string &r
     return JsonValue::object(std::move(o));
 }
 
-static void addSg(DeviceDocument &doc, const std::string &id, double x, double y, double w, double h)
+static void addSg(DeviceDocument &doc, const std::string &id, double x, double y, double w, double h,
+                  const std::vector<InkSample> *boundaryLocal = nullptr)
 {
     std::vector<InkSample> bpoly;
-    const double xs[5] = {0, w, w, 0, 0};
-    const double ys[5] = {0, 0, h, h, 0};
-    for (int i = 0; i < 5; ++i) {
-        InkSample s;
-        s.x = xs[i];
-        s.y = ys[i];
-        s.t = double(i);
-        bpoly.push_back(s);
+    if (boundaryLocal && boundaryLocal->size() >= 2) {
+        bpoly = *boundaryLocal;
+    } else {
+        const double xs[5] = {0, w, w, 0, 0};
+        const double ys[5] = {0, 0, h, h, 0};
+        for (int i = 0; i < 5; ++i) {
+            InkSample s;
+            s.x = xs[i];
+            s.y = ys[i];
+            s.t = double(i);
+            bpoly.push_back(s);
+        }
     }
     JsonValue::Object b;
     b.emplace_back("x", JsonValue::number(0));
@@ -254,6 +259,51 @@ static void test_live_move_rewarp()
     CHECK(std::abs(conn->warpedSamples.front().x - x0) > 1.0);
 }
 
+static void test_attach_stays_on_pen_not_aabb()
+{
+    DeviceDocument doc;
+    std::vector<InkSample> tri;
+    const double xs[4] = {0, 50, 100, 0};
+    const double ys[4] = {100, 0, 100, 100};
+    for (int i = 0; i < 4; ++i) {
+        InkSample s;
+        s.x = xs[i];
+        s.y = ys[i];
+        s.t = double(i);
+        tri.push_back(s);
+    }
+    addSg(doc, "A", 0, 0, 100, 100, &tri);
+    addSg(doc, "C", 300, 0, 80, 80);
+    const RecogDispatchResult d = penUp(doc, "ink_ac", lineXY(25, 50, 302, 40, 32));
+    CHECK(d.outcome == RecogOutcome::Connector);
+    const DocNode *conn = doc.find(d.connector.connectorId);
+    CHECK(conn);
+    CHECK(conn->fromAnchor.hasLocal);
+    CHECK(conn->fromAnchor.kind == "edge");
+    CHECK(conn->fromPose.valid);
+    CHECK(conn->fromPose.x > 12.0);
+    CHECK(std::abs(conn->fromPose.x - 25.0) < 8.0);
+    CHECK(std::abs(conn->fromPose.y - 50.0) < 8.0);
+    CHECK(!conn->restSpine.empty());
+    CHECK(std::hypot(conn->fromPose.x - conn->restSpine.front().x,
+                     conn->fromPose.y - conn->restSpine.front().y) < 0.5);
+}
+
+static void test_centre_keeps_pen_point()
+{
+    DeviceDocument doc;
+    addSg(doc, "A", 0, 0, 80, 80);
+    addSg(doc, "C", 300, 0, 80, 80);
+    const RecogDispatchResult d = penUp(doc, "ink_ac", lineXY(40, 40, 302, 40, 32));
+    CHECK(d.outcome == RecogOutcome::Connector);
+    const DocNode *conn = doc.find(d.connector.connectorId);
+    CHECK(conn);
+    CHECK(conn->fromAnchor.kind == "centre");
+    CHECK(conn->fromAnchor.hasLocal);
+    CHECK(std::hypot(conn->fromPose.x - conn->restSpine.front().x,
+                     conn->fromPose.y - conn->restSpine.front().y) < 0.5);
+}
+
 int main()
 {
     test_i3_morph_identity();
@@ -261,6 +311,8 @@ int main()
     test_cubic_differs_at_rest();
     test_d39_delete_keeps_connector();
     test_live_move_rewarp();
+    test_attach_stays_on_pen_not_aabb();
+    test_centre_keeps_pen_point();
     if (g_fails) {
         std::cerr << "connector_warp_test: " << g_fails << " failed\n";
         return 1;

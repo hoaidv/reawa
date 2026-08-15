@@ -140,6 +140,18 @@ constexpr double kMorphSatDeg = 90.0;
 constexpr bool kHandleModeRestSpeed = true;
 
 // ---------------------------------------------------------------------------
+// kCentreVsBoundary — centre vs boundary-ink attach
+// Default: 1.0
+// Unit: dimensionless ratio. Centre bind when d(center) < ratio · d(boundary ink).
+// Direction: higher = more ends classified centre (looser “near the middle”).
+//   Lower = stricter; more ends stay on the drawn boundary point.
+// Visual: Does not move the endpoint. Centre only drops drawn leave and faces
+//   the counterpart. Boundary keeps the pen-up point and the drawn leave in
+//   the node frame. Never snap to the fitted AABB.
+// ---------------------------------------------------------------------------
+constexpr double kCentreVsBoundary = 1.0;
+
+// ---------------------------------------------------------------------------
 // kMinInkRadiusWorld — documented bend floor (not a live clamp)
 // Default: 12.0
 // Unit: world u (minimum radius the warp is expected to express).

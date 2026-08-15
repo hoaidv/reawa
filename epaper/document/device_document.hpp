@@ -91,6 +91,9 @@ struct ConnectorAnchor {
     double drawnE = 0;
     double drawnBoxX = 1;
     double drawnBoxY = 0;
+    double localX = 0;
+    double localY = 0;
+    bool hasLocal = false;
 };
 
 struct ConnectorRestPt {
@@ -862,6 +865,11 @@ private:
             o.drawnBoxX = box->getNumber("x", 1);
             o.drawnBoxY = box->getNumber("y", 0);
         }
+        if (const JsonValue *lp = a->get("local"); lp && lp->isObject()) {
+            o.localX = lp->getNumber("x", 0);
+            o.localY = lp->getNumber("y", 0);
+            o.hasLocal = true;
+        }
         return o;
     }
 
@@ -880,6 +888,12 @@ private:
         box.emplace_back("x", JsonValue::number(a.drawnBoxX));
         box.emplace_back("y", JsonValue::number(a.drawnBoxY));
         o.emplace_back("drawnBoxLocal", JsonValue::object(std::move(box)));
+        if (a.hasLocal) {
+            JsonValue::Object lp;
+            lp.emplace_back("x", JsonValue::number(a.localX));
+            lp.emplace_back("y", JsonValue::number(a.localY));
+            o.emplace_back("local", JsonValue::object(std::move(lp)));
+        }
         return JsonValue::object(std::move(o));
     }
 

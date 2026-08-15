@@ -676,17 +676,29 @@ inline double hullAreaOverLen2(const std::vector<InkSample> &s)
     return convexHullArea(s) / (L * L);
 }
 
-inline void pickEdgeAnchor(const DocNode &sg, double x, double y, const RestVec &drawn,
-                           JsonValue::Object *o)
+inline void pickStrokeAnchor(const DocNode &sg, double x, double y, const RestVec &drawn,
+                             JsonValue::Object *o)
 {
-    const SmartBounds b = smartGroupWorldBounds(sg);
-    const double maxX = b.x + b.width;
-    const double maxY = b.y + b.height;
+    const Vec2 loc = smartWorldToLocal(x, y, sg, "boundary");
+    const auto poly = smartGroupBoundaryWorld(sg);
+    double dPoly = 1e300;
+    if (poly.size() >= 2)
+        dPoly = distPointPolyline(x, y, poly);
+    else
+        dPoly = distPointAabb(x, y, smartGroupWorldBounds(sg));
+    const SmartBounds wb = smartGroupWorldBounds(sg);
+    const double cx = wb.x + wb.width * 0.5;
+    const double cy = wb.y + wb.height * 0.5;
+    const double dCenter = std::hypot(x - cx, y - cy);
+    const bool centre = dCenter + 1e-9 < kCentreVsBoundary * dPoly;
+
+    const double maxX = wb.x + wb.width;
+    const double maxY = wb.y + wb.height;
     const double d[4] = {
-        std::abs(y - b.y),
+        std::abs(y - wb.y),
         std::abs(x - maxX),
         std::abs(y - maxY),
-        std::abs(x - b.x),
+        std::abs(x - wb.x),
     };
     int edge = 0;
     for (int i = 1; i < 4; ++i) {
@@ -697,19 +709,19 @@ inline void pickEdgeAnchor(const DocNode &sg, double x, double y, const RestVec 
     RestVec n{0, -1};
     RestVec e{1, 0};
     if (edge == 0) {
-        t = b.width > 1e-9 ? (x - b.x) / b.width : 0;
+        t = wb.width > 1e-9 ? (x - wb.x) / wb.width : 0;
         n = {0, -1};
         e = {1, 0};
     } else if (edge == 1) {
-        t = b.height > 1e-9 ? (y - b.y) / b.height : 0;
+        t = wb.height > 1e-9 ? (y - wb.y) / wb.height : 0;
         n = {1, 0};
         e = {0, 1};
     } else if (edge == 2) {
-        t = b.width > 1e-9 ? (maxX - x) / b.width : 0;
+        t = wb.width > 1e-9 ? (maxX - x) / wb.width : 0;
         n = {0, 1};
         e = {-1, 0};
     } else {
-        t = b.height > 1e-9 ? (maxY - y) / b.height : 0;
+        t = wb.height > 1e-9 ? (maxY - y) / wb.height : 0;
         n = {-1, 0};
         e = {0, -1};
     }
@@ -734,13 +746,17 @@ inline void pickEdgeAnchor(const DocNode &sg, double x, double y, const RestVec 
         ey.x /= ley;
         ey.y /= ley;
     }
-    o->emplace_back("kind", JsonValue::string("edge"));
+    o->emplace_back("kind", JsonValue::string(centre ? "centre" : "edge"));
     o->emplace_back("edge", JsonValue::number(edge));
     o->emplace_back("t", JsonValue::number(t));
-    JsonValue::Object loc;
-    loc.emplace_back("n", JsonValue::number(unitD.x * n.x + unitD.y * n.y));
-    loc.emplace_back("e", JsonValue::number(unitD.x * e.x + unitD.y * e.y));
-    o->emplace_back("drawnEdgeLocal", JsonValue::object(std::move(loc)));
+    JsonValue::Object local;
+    local.emplace_back("x", JsonValue::number(loc.x));
+    local.emplace_back("y", JsonValue::number(loc.y));
+    o->emplace_back("local", JsonValue::object(std::move(local)));
+    JsonValue::Object locN;
+    locN.emplace_back("n", JsonValue::number(unitD.x * n.x + unitD.y * n.y));
+    locN.emplace_back("e", JsonValue::number(unitD.x * e.x + unitD.y * e.y));
+    o->emplace_back("drawnEdgeLocal", JsonValue::object(std::move(locN)));
     JsonValue::Object box;
     box.emplace_back("x", JsonValue::number(unitD.x * ex.x + unitD.y * ex.y));
     box.emplace_back("y", JsonValue::number(unitD.x * ey.x + unitD.y * ey.y));
@@ -930,10 +946,14 @@ inline ConnectorResult tryRecognizeConnector(DeviceDocument &doc, const std::str
 
     JsonValue::Object from;
     from.emplace_back("nodeId", JsonValue::string(fromG->id));
-    pickEdgeAnchor(*fromG, concat.front().x, concat.front().y, drawnFrom, &from);
+    const double ax = rest.spine.size() >= 2 ? rest.spine.front().x : concat.front().x;
+    const double ay = rest.spine.size() >= 2 ? rest.spine.front().y : concat.front().y;
+    const double bx = rest.spine.size() >= 2 ? rest.spine.back().x : concat.back().x;
+    const double by = rest.spine.size() >= 2 ? rest.spine.back().y : concat.back().y;
+    pickStrokeAnchor(*fromG, ax, ay, drawnFrom, &from);
     JsonValue::Object to;
     to.emplace_back("nodeId", JsonValue::string(toG->id));
-    pickEdgeAnchor(*toG, concat.back().x, concat.back().y, drawnTo, &to);
+    pickStrokeAnchor(*toG, bx, by, drawnTo, &to);
 
     JsonValue::Array cap;
     for (const auto &id : bodyIds)
