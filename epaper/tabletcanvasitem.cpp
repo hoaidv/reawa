@@ -626,14 +626,21 @@ void TabletCanvasItem::ingestCurrentStroke()
         if (highlightChanged)
             m_needEncloseRasterize = true;
     } else {
-        // Failed empty enclose (not_primitive / too_small_empty) must settle into
-        // the framebuffer — e-ink can drop live pixels if we never rasterize the tree.
-        if (d.enclose.kind == EncloseKind::OrdinaryInk
-            && d.enclose.reason.find("pen_armed") == std::string::npos)
-            m_needEncloseRasterize = true;
-        if (!m_highlightInkIds.empty())
-            m_needEncloseRasterize = true;
-        clearMembershipHighlight();
+        // Failed empty enclose stays live ink. Do not white-clear the panel.
+        const std::string &why = d.enclose.reason;
+        const bool failedEncloseStayInk =
+            why.find("not_primitive") != std::string::npos
+            || why.find("too_small") != std::string::npos;
+        if (failedEncloseStayInk) {
+            clearMembershipHighlight();
+            m_rasterizeDeferredSharp = false;
+            m_rasterizePending = false;
+            ++m_settleFollowUpToken;
+        } else {
+            if (!m_highlightInkIds.empty())
+                m_needEncloseRasterize = true;
+            clearMembershipHighlight();
+        }
     }
 }
 
