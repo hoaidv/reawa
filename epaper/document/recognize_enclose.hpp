@@ -9,6 +9,7 @@
  */
 
 #include "device_document.hpp"
+#include "enclose_shape.hpp"
 #include "ingest_stroke.hpp"
 
 #include <cmath>
@@ -18,9 +19,6 @@
 
 namespace epaper {
 namespace document {
-
-/** ADR-0013 §6 / SRS-EP-10 — shorter side minimum in world units. */
-constexpr double kMinEncloseWorld = 28;
 
 enum class StrokeArmedTool {
     Pen,
@@ -284,7 +282,7 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
     }
 
     const double shorter = std::min(out.fittedWorldBounds.width, out.fittedWorldBounds.height);
-    if (shorter < kMinEncloseWorld) {
+    if (shorter < kMinEncloseWithContent) {
         appendOrdinaryInk(doc, stroke);
         out.kind = EncloseKind::OrdinaryInk;
         out.reason = "too_small";
@@ -304,9 +302,6 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
             capturable.push_back({ink->id, ink->samples, ink->style});
     }
     if (capturable.empty()) {
-        // Blank-canvas closed box is a legal create (boundary only). A closed
-        // stroke that already sits inside an existing group must fall through
-        // to membership (D21 / CHL-0011 — no nested enclose).
         bool insideExisting = false;
         for (const auto &n : doc.rootChildren) {
             if (n.kind != NodeKind::SmartGroup)
@@ -327,6 +322,22 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
             appendOrdinaryInk(doc, stroke);
             out.kind = EncloseKind::OrdinaryInk;
             out.reason = "no_content";
+            return out;
+        }
+        if (shorter < kMinEncloseEmpty) {
+            appendOrdinaryInk(doc, stroke);
+            out.kind = EncloseKind::OrdinaryInk;
+            out.reason = "too_small_empty";
+            return out;
+        }
+        const EmptyShapeVerdict sh = classifyEmptyBoundaryShape(
+            stroke.samples, out.fittedWorldBounds.x, out.fittedWorldBounds.y,
+            out.fittedWorldBounds.width, out.fittedWorldBounds.height);
+        out.reason = sh.diag();
+        if (!sh.ok) {
+            appendOrdinaryInk(doc, stroke);
+            out.kind = EncloseKind::OrdinaryInk;
+            out.reason = std::string("not_primitive ") + sh.diag();
             return out;
         }
     }

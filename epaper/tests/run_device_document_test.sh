@@ -21,3 +21,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/toolchip_layout_test.cpp -o /tmp/tool
 /tmp/toolchip_layout_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/dispatch_test.cpp -o /tmp/dispatch_test
 /tmp/dispatch_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/enclose_shape_test.cpp -o /tmp/enclose_shape_test
+/tmp/enclose_shape_test

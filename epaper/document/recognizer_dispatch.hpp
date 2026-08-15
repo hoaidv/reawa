@@ -104,22 +104,34 @@ inline std::string formatEncloseWhy(const std::string &strokeId, RecogLatch latc
 {
     auto rnd = [](double x) { return std::to_string(int(std::lround(x))); };
     std::string fail;
+    std::string rest;
     if (!latch.inkBox)
         fail = "recog_off";
     else if (!c.closed)
         fail = "open";
     else if (outcome == RecogOutcome::Enclose)
         fail = "none";
-    else if (!enclose.reason.empty())
-        fail = enclose.reason;
-    else
+    else if (!enclose.reason.empty()) {
+        const auto sp = enclose.reason.find(' ');
+        fail = enclose.reason.substr(0, sp);
+        if (sp != std::string::npos)
+            rest = enclose.reason.substr(sp + 1);
+    } else
         fail = "enclose_failed";
+    if (outcome == RecogOutcome::Enclose && enclose.reason.find("shape=") != std::string::npos)
+        rest = enclose.reason;
     const double shorter =
         std::min(enclose.fittedWorldBounds.width, enclose.fittedWorldBounds.height);
+    int minBar = int(kMinEncloseWithContent);
+    if (fail == "too_small_empty" || fail == "not_primitive"
+        || enclose.reason.find("shape=") != std::string::npos)
+        minBar = int(kMinEncloseEmpty);
     std::string s = "id=" + (strokeId.empty() ? std::string("-") : strokeId);
     s += " fail=" + fail;
     s += " gap=" + rnd(c.gap) + " lim=" + rnd(c.limit) + " L=" + rnd(c.pathLen);
-    s += " shorter=" + rnd(shorter) + " min=" + std::to_string(int(kMinEncloseWorld));
+    s += " shorter=" + rnd(shorter) + " min=" + std::to_string(minBar);
+    if (!rest.empty())
+        s += " " + rest;
     return s;
 }
 

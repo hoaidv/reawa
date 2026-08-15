@@ -510,8 +510,7 @@ viewed at scale, and saved.
   tablet changes?
 - Multi-document / document switching on the device — **owner:** pm — assumed out of scope this
   iter; confirm before [REQ-04](#device-document) is sliced.
-- Minimum fitted-rect size for enclose — **owner:** architect with qa evidence — **needed by:** first
-  [REQ-05](#device-ink-box) build. World units vs screen px, and the value itself.
+- Minimum fitted-rect size for enclose — **closed 2026-08-15 (pm):** adaptive **28** with content, **36** empty + primitive-shape gate.
 - LOD cutoff for on-device manipulation — **closed 2026-08-13 (architect).** Unavailable when the
   selected box's smaller **on-panel** axis is **< 96 du** (not `TILE_LOD_SCALE = 0.35`). Handle
   visual **28 du** / hit **56 du**. Binding: [SRS-EP-11](./features/ink-box/srs-logic.md) /

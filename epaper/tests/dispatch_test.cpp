@@ -156,7 +156,7 @@ static void test_d21_fall_through()
 
 static void test_g4_fixture_replay()
 {
-    CHECK(kMinEncloseWorld == 48);
+    CHECK(kMinEncloseWorld == 28);
     const char *names[] = {"successful.json", "too_small.json", "no_content.json", "pen_armed.json",
                            "already_grouped.json"};
     for (const char *name : names) {
