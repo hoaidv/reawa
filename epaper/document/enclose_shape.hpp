@@ -19,16 +19,18 @@ constexpr double kMinEncloseEmpty = 36;
 /** Backward alias: content-path floor (human 2026-08-15). */
 constexpr double kMinEncloseWorld = kMinEncloseWithContent;
 
-constexpr double kShapeDpFrac = 0.10;
-constexpr double kCircularityCircle = 0.70;
-constexpr double kCircularityEllipse = 0.52;
-constexpr double kFillMinNgon = 0.28;
-constexpr double kFillMinQuad = 0.40;
-constexpr double kSideCvRegular = 0.38;
-constexpr double kParallelAbsDot = 0.82;
-constexpr double kPerpAbsDot = 0.38;
-constexpr double kSquareAspectMax = 1.28;
-constexpr double kRadiusCvEllipse = 0.28;
+constexpr double kShapeDpFrac = 0.14;
+constexpr double kCuspPeelFrac = 0.20;
+constexpr double kCircularityCircle = 0.64;
+constexpr double kCircularityEllipse = 0.45;
+constexpr double kFillMinNgon = 0.22;
+constexpr double kFillMinQuad = 0.32;
+constexpr double kFillHandQuad = 0.42;
+constexpr double kSideCvRegular = 0.55;
+constexpr double kParallelAbsDot = 0.68;
+constexpr double kPerpAbsDot = 0.52;
+constexpr double kSquareAspectMax = 1.35;
+constexpr double kRadiusCvEllipse = 0.40;
 
 struct EmptyShapeVerdict {
     bool ok = false;
@@ -197,6 +199,51 @@ inline bool adjacentPerp(const std::vector<P> &r)
     return std::abs(dotU(e0, e1)) <= kPerpAbsDot;
 }
 
+/** Drop shallow extra cusps (hand-drawn square is never exactly 4 corners). */
+inline std::vector<P> peelShallowCusps(std::vector<P> ring, double eps, int target)
+{
+    while (int(ring.size()) > target) {
+        const int n = int(ring.size());
+        int best = -1;
+        double bestD = eps;
+        for (int i = 0; i < n; ++i) {
+            const P &prev = ring[size_t((i - 1 + n) % n)];
+            const P &cur = ring[size_t(i)];
+            const P &next = ring[size_t((i + 1) % n)];
+            const double d = pointSegDist(cur, prev, next);
+            if (d <= bestD) {
+                bestD = d;
+                best = i;
+            }
+        }
+        if (best < 0)
+            break;
+        ring.erase(ring.begin() + best);
+    }
+    return ring;
+}
+
+inline const char *nameQuad(const std::vector<P> &ring, double fill, double aspect)
+{
+    if (ring.size() != 4 || fill < kFillMinQuad)
+        return nullptr;
+    const auto sides = sideLens(ring);
+    const bool regularSides = cv(sides) <= kSideCvRegular;
+    const bool para = parallelOpp(ring);
+    const bool rectish = para && adjacentPerp(ring);
+    if (rectish && regularSides && aspect <= kSquareAspectMax)
+        return "square";
+    if (rectish)
+        return "rectangle";
+    if (regularSides && !rectish)
+        return (aspect <= kSquareAspectMax) ? "diamond" : "parallelogram";
+    if (para)
+        return "parallelogram";
+    if (fill >= kFillHandQuad)
+        return "rectangle";
+    return nullptr;
+}
+
 } // namespace shape_detail
 
 /** @implements [SRS-EP-10] empty-boundary primitive gate */
@@ -254,42 +301,26 @@ inline EmptyShapeVerdict classifyEmptyBoundaryShape(const std::vector<InkSample>
     if (v.nVerts < 3)
         return v;
 
+    // Hand-drawn primitives pick up extra cusps. Peel shallow ones toward 4, then 3.
+    if (v.nVerts > 4)
+        ring = peelShallowCusps(ring, kCuspPeelFrac * shorter, 4);
+    if (int(ring.size()) > 4 && int(ring.size()) <= 8)
+        ring = peelShallowCusps(ring, kCuspPeelFrac * shorter * 1.25, 4);
+    v.nVerts = int(ring.size());
+
     const auto sides = sideLens(ring);
     const bool regularSides = cv(sides) <= kSideCvRegular;
+    const double aspect = std::max(w, h) / std::min(w, h);
 
     if (v.nVerts == 3 && v.fill >= kFillMinNgon && regularSides) {
         v.ok = true;
         v.name = "triangle";
         return v;
     }
-    if (v.nVerts == 4 && v.fill >= kFillMinQuad) {
-        const double aspect = std::max(w, h) / std::min(w, h);
-        const bool para = parallelOpp(ring);
-        const bool rectish = para && adjacentPerp(ring);
-        if (rectish && regularSides && aspect <= kSquareAspectMax) {
+    if (v.nVerts == 4) {
+        if (const char *nm = nameQuad(ring, v.fill, aspect)) {
             v.ok = true;
-            v.name = "square";
-            return v;
-        }
-        if (rectish) {
-            v.ok = true;
-            v.name = "rectangle";
-            return v;
-        }
-        if (regularSides && !rectish) {
-            v.ok = true;
-            v.name = (aspect <= kSquareAspectMax) ? "diamond" : "parallelogram";
-            return v;
-        }
-        if (para) {
-            v.ok = true;
-            v.name = "parallelogram";
-            return v;
-        }
-        // Hand-drawn box: 4 corners + boxy fill, even if sides are not Euclidean-parallel.
-        if (v.fill >= 0.55) {
-            v.ok = true;
-            v.name = "rectangle";
+            v.name = nm;
             return v;
         }
         return v;

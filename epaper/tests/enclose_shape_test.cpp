@@ -75,6 +75,7 @@ int main()
         const RecogDispatchResult d = dispatchPenUp(doc, stroke, latch);
         CHECK(d.outcome == RecogOutcome::Ink);
         CHECK(d.enclose.reason.find("too_small_empty") != std::string::npos);
+        CHECK(doc.find("tiny_empty") && doc.find("tiny_empty")->kind == NodeKind::Ink);
     }
     {
         DeviceDocument doc;
@@ -106,6 +107,26 @@ int main()
         const RecogDispatchResult d = dispatchPenUp(doc, stroke, latch);
         CHECK(d.outcome == RecogOutcome::Ink);
         CHECK(d.enclose.reason.find("not_primitive") != std::string::npos);
+        CHECK(doc.find("zigzag") && doc.find("zigzag")->kind == NodeKind::Ink);
+    }
+    {
+        DeviceDocument doc;
+        EncloseStrokeInput stroke;
+        stroke.id = "cuspy_square";
+        // Perfect square + one mid-edge cusp — hand-drawn boxes always have extra corners.
+        stroke.samples = pts({{0, 0}, {50, 0}, {100, 0}, {100, 100}, {0, 100}, {0, 0}});
+        RecogLatch latch;
+        const RecogDispatchResult d = dispatchPenUp(doc, stroke, latch);
+        CHECK(d.outcome == RecogOutcome::Enclose);
+    }
+    {
+        DeviceDocument doc;
+        EncloseStrokeInput stroke;
+        stroke.id = "rot_diamond";
+        stroke.samples = pts({{80, 0}, {160, 80}, {80, 160}, {0, 80}, {80, 0}});
+        RecogLatch latch;
+        const RecogDispatchResult d = dispatchPenUp(doc, stroke, latch);
+        CHECK(d.outcome == RecogOutcome::Enclose);
     }
     {
         std::vector<InkSample> circ;
