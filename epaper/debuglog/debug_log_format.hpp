@@ -103,10 +103,14 @@ inline std::string formatEncloseLog(const std::string &kind, const std::string &
 }
 
 /** @implements [SRS-EP-10] one [recog] line per pen-up (ADR-0022) */
-inline std::string formatRecogLog(const std::string &outcome, const std::string &guard)
+inline std::string formatRecogLog(const std::string &outcome, const std::string &guard,
+                                 const std::string &encloseWhy = {})
 {
     std::string g = guard.empty() ? "none" : guard;
-    return "[recog] outcome=" + outcome + " guard=" + g;
+    std::string line = "[recog] outcome=" + outcome + " guard=" + g;
+    if (!encloseWhy.empty())
+        line += " " + encloseWhy;
+    return line;
 }
 
 } // namespace debuglog

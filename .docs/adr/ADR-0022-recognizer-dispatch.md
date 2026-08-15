@@ -35,7 +35,8 @@ one verdict. Tool and toggle states are those **latched at pen-down**.
 Selection tools never run this table (`sel_rect` / `sel_freeform` stay pick/marquee/lasso).
 
 Never flip a shipped outcome after it has been applied. One `[recog]` log line per pen-up:
-`outcome=enclose|membership|connector|ink guard=<reason>`.
+`outcome=enclose|membership|connector|ink guard=<reason>` plus enclose-test measurements
+(`fail=` `gap=` `lim=` `L=` `shorter=` `min=`) so a stayed-ink stroke shows why enclose did not fire.
 
 Closure classifier is a deterministic geometric test on the stroke (first/last sample distance
 relative to path length, plus a near-close gap cap). Exact constants live in SRS-EP-10; they

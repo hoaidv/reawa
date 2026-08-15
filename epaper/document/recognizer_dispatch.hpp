@@ -14,6 +14,7 @@
 #include <chrono>
 #include <cmath>
 #include <string>
+#include <vector>
 
 namespace epaper {
 namespace document {
@@ -38,6 +39,8 @@ enum class RecogOutcome {
 struct RecogDispatchResult {
     RecogOutcome outcome = RecogOutcome::Ink;
     std::string guard = "none";
+    /** Compact enclose-test breakdown for the [recog] line (does not affect verdict). */
+    std::string encloseWhy;
     EncloseResult enclose;
     MembershipResult membership;
     ApplyResult apply;
@@ -70,16 +73,54 @@ inline double polylineLength(const std::vector<InkSample> &s)
     return L;
 }
 
+struct ClosureMeas {
+    bool closed = false;
+    double gap = 0;
+    double pathLen = 0;
+    double limit = 0;
+};
+
+inline ClosureMeas measureClosure(const std::vector<InkSample> &s)
+{
+    ClosureMeas m;
+    if (s.size() < 2)
+        return m;
+    m.pathLen = polylineLength(s);
+    m.gap = std::hypot(s.front().x - s.back().x, s.front().y - s.back().y);
+    m.limit = std::max(kClosureGapCapWorld, kClosureGapFrac * m.pathLen);
+    m.closed = m.pathLen >= 1.0 && m.gap <= m.limit;
+    return m;
+}
+
 /** @implements [SRS-EP-10] closed-ish classifier before enclose */
 inline bool strokeIsClosedIsh(const std::vector<InkSample> &s)
 {
-    if (s.size() < 2)
-        return false;
-    const double L = polylineLength(s);
-    if (L < 1.0)
-        return false;
-    const double gap = std::hypot(s.front().x - s.back().x, s.front().y - s.back().y);
-    return gap <= std::max(kClosureGapCapWorld, kClosureGapFrac * L);
+    return measureClosure(s).closed;
+}
+
+inline std::string formatEncloseWhy(const std::string &strokeId, RecogLatch latch,
+                                    const ClosureMeas &c, const EncloseResult &enclose,
+                                    RecogOutcome outcome)
+{
+    auto rnd = [](double x) { return std::to_string(int(std::lround(x))); };
+    std::string fail;
+    if (!latch.inkBox)
+        fail = "recog_off";
+    else if (!c.closed)
+        fail = "open";
+    else if (outcome == RecogOutcome::Enclose)
+        fail = "none";
+    else if (!enclose.reason.empty())
+        fail = enclose.reason;
+    else
+        fail = "enclose_failed";
+    const double shorter =
+        std::min(enclose.fittedWorldBounds.width, enclose.fittedWorldBounds.height);
+    std::string s = "id=" + (strokeId.empty() ? std::string("-") : strokeId);
+    s += " fail=" + fail;
+    s += " gap=" + rnd(c.gap) + " lim=" + rnd(c.limit) + " L=" + rnd(c.pathLen);
+    s += " shorter=" + rnd(shorter) + " min=" + std::to_string(int(kMinEncloseWorld));
+    return s;
 }
 
 inline RecogDispatchResult dispatchPenUp(DeviceDocument &doc, EncloseStrokeInput stroke,
@@ -88,7 +129,8 @@ inline RecogDispatchResult dispatchPenUp(DeviceDocument &doc, EncloseStrokeInput
     RecogDispatchResult out;
     const auto t0 = std::chrono::steady_clock::now();
 
-    const bool closed = strokeIsClosedIsh(stroke.samples);
+    const ClosureMeas clo = measureClosure(stroke.samples);
+    const bool closed = clo.closed;
     if (closed && latch.inkBox) {
         stroke.armedAtPenDown = StrokeArmedTool::InkBox;
         out.enclose = commitStrokeWithEncloseRecognition(doc, stroke);
@@ -136,6 +178,7 @@ inline RecogDispatchResult dispatchPenUp(DeviceDocument &doc, EncloseStrokeInput
 
     const auto t1 = std::chrono::steady_clock::now();
     out.ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+    out.encloseWhy = formatEncloseWhy(stroke.id, latch, clo, out.enclose, out.outcome);
     return out;
 }
 

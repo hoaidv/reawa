@@ -599,7 +599,7 @@ void TabletCanvasItem::ingestCurrentStroke()
     else
         ++m_ingestRejected;
     qInfo().noquote() << QString::fromStdString(
-        epaper::debuglog::formatRecogLog(d.outcomeName(), d.guard));
+        epaper::debuglog::formatRecogLog(d.outcomeName(), d.guard, d.encloseWhy));
     if (d.outcome == RecogOutcome::Enclose && d.enclose.kind == EncloseKind::Created) {
         const std::string line = epaper::debuglog::formatEncloseLog(
             "Created", d.enclose.reason, d.enclose.smartGroupId, d.enclose.childIds);

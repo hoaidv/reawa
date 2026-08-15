@@ -106,9 +106,10 @@ static void test_one_verdict_one_log_line()
     RecogLatch latch;
     const RecogDispatchResult d = dispatchPenUp(doc, stroke, latch);
     CHECK(d.outcome == RecogOutcome::Enclose);
-    const std::string line = epaper::debuglog::formatRecogLog(d.outcomeName(), d.guard);
-    CHECK(line == "[recog] outcome=enclose guard=none");
-    CHECK(line.find("[recog]") == 0);
+    const std::string line = epaper::debuglog::formatRecogLog(d.outcomeName(), d.guard, d.encloseWhy);
+    CHECK(line.find("[recog] outcome=enclose guard=none") == 0);
+    CHECK(line.find("fail=none") != std::string::npos);
+    CHECK(line.find("id=enclose_1") != std::string::npos);
 }
 
 static void test_d21_fall_through()

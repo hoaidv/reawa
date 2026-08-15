@@ -85,6 +85,8 @@ int main()
           == "[recog] outcome=enclose guard=none");
     CHECK(epaper::debuglog::formatRecogLog("membership", "no_content")
           == "[recog] outcome=membership guard=no_content");
+    CHECK(epaper::debuglog::formatRecogLog("ink", "none", "id=s-1 fail=open gap=80 lim=48 L=200 shorter=10 min=48")
+          == "[recog] outcome=ink guard=none id=s-1 fail=open gap=80 lim=48 L=200 shorter=10 min=48");
 
     std::printf("debug_log_test OK\n");
     return 0;

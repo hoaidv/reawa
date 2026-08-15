@@ -20,7 +20,7 @@ namespace epaper {
 namespace document {
 
 /** ADR-0013 §6 / SRS-EP-10 — shorter side minimum in world units. */
-constexpr double kMinEncloseWorld = 48;
+constexpr double kMinEncloseWorld = 28;
 
 enum class StrokeArmedTool {
     Pen,

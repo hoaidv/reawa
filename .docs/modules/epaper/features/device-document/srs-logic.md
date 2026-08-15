@@ -381,6 +381,11 @@ Do not install a handler that writes the debug socket from the ink thread as a f
 Logging is a **side channel** after pen-up dispatch. It must not alter
 `recognize_enclose` guards, `create_smart_group` payloads, membership, or published ops.
 
+`[recog]` (every pen ingest): `outcome=` `guard=` plus enclose-test measurements
+`id=` `fail=` `gap=` `lim=` `L=` `shorter=` `min=`. `fail=open` means first/last too far
+(not closed-ish); `fail=too_small` shorter side below 48; `fail=no_content` closed inside
+an existing box (membership fall-through); `fail=recog_off` toggle off; `fail=none` enclose created.
+
 | When (latched tool at pen-down) | Log | Path |
 |---|---|---|
 | `pen` (ordinary ink) | Exactly one `qInfo` `[ink] id=<inkId>` after successful `append_ink` | [SRS-EP-07](#srs-ep-07-device-document) ingest only — **do not** call enclose recognition |
