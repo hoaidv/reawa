@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace {
@@ -604,6 +605,25 @@ void TabletCanvasItem::ingestCurrentStroke()
             "Created", d.enclose.reason, d.enclose.smartGroupId, d.enclose.childIds);
         qInfo().noquote() << QString::fromStdString(line);
         m_needEncloseRasterize = true;
+        if (const DocNode *sg = m_document.find(d.enclose.smartGroupId)) {
+            std::vector<std::string> ids;
+            collectSmartGroupInkIds(*sg, false, &ids);
+            beginRecogWidthBlink(ids);
+        }
+        clearMembershipHighlight();
+    } else if (d.outcome == RecogOutcome::Membership) {
+        if (const DocNode *sg = m_document.find(d.membership.smartGroupId)) {
+            std::vector<std::string> ids;
+            collectSmartGroupInkIds(*sg, true, &ids);
+            setMembershipHighlight(ids);
+        } else {
+            clearMembershipHighlight();
+        }
+        m_needEncloseRasterize = true;
+    } else {
+        if (!m_highlightInkIds.empty())
+            m_needEncloseRasterize = true;
+        clearMembershipHighlight();
     }
 }
 
@@ -700,7 +720,11 @@ void TabletCanvasItem::setToolMode(const QString &mode)
 {
     if (!m_chip.setExclusive(mode.toStdString()))
         return;
+    const bool hadHighlight = !m_highlightInkIds.empty();
     m_toolMode = QString::fromStdString(m_chip.exclusive);
+    clearMembershipHighlight();
+    if (hadHighlight && !m_strokeActive)
+        scheduleVectorRasterize(true);
     emit toolModeChanged();
     m_debugInfo = QStringLiteral("tool=%1 pickables=%2")
                       .arg(m_toolMode)
@@ -779,6 +803,7 @@ void TabletCanvasItem::applyHistoryRestore(bool isUndo)
     const UndoResult r = isUndo ? m_document.undo() : m_document.redo();
     (void)r;
     pruneSelectionAfterHistory();
+    clearMembershipHighlight();
     notifyHistory();
     scheduleVectorRasterize(true);
     refreshSelectionChrome();
@@ -1689,7 +1714,10 @@ void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode 
     const double rw = m_drawingRegion.valid ? (m_drawingRegion.maxX - m_drawingRegion.minX)
                                             : qMax(1.0, double(width()));
     const double sPanel = width() / qMax(1e-6, rw);
-    const qreal lineW = qMax<qreal>(1.0, worldSw * sPanel);
+    qreal mul = 1.0;
+    if ((m_blinkWidthMul > 1.0 && m_blinkInkIds.count(node.id)) || m_highlightInkIds.count(node.id))
+        mul = 2.0;
+    const qreal lineW = qMax<qreal>(1.0, worldSw * sPanel * mul);
 
     QPen pen(Qt::black);
     pen.setWidthF(lineW);
@@ -1788,4 +1816,54 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
     }
     qInfo() << "[sync] vector rasterize ink" << m_document.inkCount() << "nodes"
             << m_document.nodeCount() << "sharp" << sharp << "seq" << m_viewportSeq;
+}
+
+void TabletCanvasItem::collectSmartGroupInkIds(const epaper::document::DocNode &sg, bool boundaryOnly,
+                                               std::vector<std::string> *out) const
+{
+    using epaper::document::NodeKind;
+    if (!out)
+        return;
+    for (const auto &c : sg.children) {
+        if (c.kind != NodeKind::Ink)
+            continue;
+        const std::string role = c.role ? *c.role : std::string("content");
+        if (boundaryOnly && role != "boundary")
+            continue;
+        out->push_back(c.id);
+    }
+}
+
+/** @implements [SRS-EP-12] enclose one-shot width pulse (UI-EP-06 / CHL-0020) */
+void TabletCanvasItem::beginRecogWidthBlink(const std::vector<std::string> &inkIds)
+{
+    if (inkIds.empty())
+        return;
+    ++m_blinkToken;
+    const int token = m_blinkToken;
+    m_blinkInkIds.clear();
+    for (const auto &id : inkIds)
+        m_blinkInkIds.insert(id);
+    m_blinkWidthMul = 2.0;
+    QTimer::singleShot(250, this, [this, token]() {
+        if (token != m_blinkToken)
+            return;
+        m_blinkInkIds.clear();
+        m_blinkWidthMul = 1.0;
+        if (!m_strokeActive)
+            rasterizeVectors(true);
+    });
+}
+
+/** @implements [SRS-EP-12] last-join membership highlight, no blink (UI-EP-06) */
+void TabletCanvasItem::setMembershipHighlight(const std::vector<std::string> &boundaryInkIds)
+{
+    m_highlightInkIds.clear();
+    for (const auto &id : boundaryInkIds)
+        m_highlightInkIds.insert(id);
+}
+
+void TabletCanvasItem::clearMembershipHighlight()
+{
+    m_highlightInkIds.clear();
 }

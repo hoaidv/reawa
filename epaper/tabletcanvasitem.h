@@ -14,6 +14,7 @@
 #include <QStringList>
 #include <cstdint>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "document/device_document.hpp"
@@ -210,6 +211,11 @@ private:
     void notifyHistory();
     void scheduleVectorRasterize(bool sharp);
     void rasterizeVectors(bool sharp);
+    void beginRecogWidthBlink(const std::vector<std::string> &inkIds);
+    void setMembershipHighlight(const std::vector<std::string> &boundaryInkIds);
+    void clearMembershipHighlight();
+    void collectSmartGroupInkIds(const epaper::document::DocNode &sg, bool boundaryOnly,
+                                 std::vector<std::string> *out) const;
     QPointF worldToPanel(double wx, double wy) const;
     QPointF panelToWorld(const QPointF &panel) const;
     void drawDocNode(QPainter &p, const epaper::document::DocNode &node,
@@ -263,6 +269,11 @@ private:
     QString m_strokeArmedTool;
     QString m_lastStrokeLatch;
     bool m_needEncloseRasterize = false;
+    /** @implements [SRS-EP-12] UI-EP-06 enclose pulse + last-join highlight (CHL-0020) */
+    std::unordered_set<std::string> m_blinkInkIds;
+    std::unordered_set<std::string> m_highlightInkIds;
+    qreal m_blinkWidthMul = 1.0;
+    int m_blinkToken = 0;
     QRectF m_toolChipRect;
     QString m_selectedPickableId;
     QStringList m_selectedIds;
