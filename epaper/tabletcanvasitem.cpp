@@ -1894,10 +1894,20 @@ QRectF TabletCanvasItem::warpedConnectorPanelRect(const epaper::document::DocNod
 {
     if (conn.warpedSamples.empty())
         return {};
-    QRectF r(worldToPanel(conn.warpedSamples[0].x, conn.warpedSamples[0].y), QSizeF(0, 0));
-    for (const auto &s : conn.warpedSamples)
-        r = r.united(QRectF(worldToPanel(s.x, s.y), QSizeF(0, 0)));
-    return r.adjusted(-16, -16, 16, 16);
+    // @fix [STORY-EP-031] 0×0 QRectF is empty; united() never grew the connector AABB
+    const QPointF p0 = worldToPanel(conn.warpedSamples[0].x, conn.warpedSamples[0].y);
+    qreal minX = p0.x();
+    qreal maxX = p0.x();
+    qreal minY = p0.y();
+    qreal maxY = p0.y();
+    for (const auto &s : conn.warpedSamples) {
+        const QPointF p = worldToPanel(s.x, s.y);
+        minX = qMin(minX, p.x());
+        maxX = qMax(maxX, p.x());
+        minY = qMin(minY, p.y());
+        maxY = qMax(maxY, p.y());
+    }
+    return QRectF(QPointF(minX, minY), QPointF(maxX, maxY)).normalized().adjusted(-16, -16, 16, 16);
 }
 
 QRectF TabletCanvasItem::boundConnectorsPanelUnion(const std::string &sgId) const
