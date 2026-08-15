@@ -4,12 +4,13 @@ title: Recognize single-stroke and chained connectors
 kind: implement
 parent_srs: [SRS-EP-17]
 parent_req: [REQ-09]
-status: in-review
+status: done
 priority: P0
 iter: iter-004
 estimate: 5
 owner: dev
 depends_on: [STORY-EP-027, STORY-EP-029]
+human_verified: 2026-08-15
 acceptance_criteria:
   - "Given two SmartGroups and recog.connector armed, When the creator draws an open stroke A→C, Then create_connector commits with body, rest shape, anchors, warpStyle; visible p95 ≤500 ms; 0 peer messages; one undo restores ink (SRS-EP-17)."
   - "Given UX2 three strokes, When the last lands on C, Then one connector, one op, one undo; style from the merged spine (D6, D40)."

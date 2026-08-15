@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-15T06:35:07+00:00
+generated_at: 2026-08-15T07:32:27+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -36,7 +36,7 @@ generated_at: 2026-08-15T06:35:07+00:00
 | [STORY-EP-027](./iter-004/stories/STORY-EP-027.md) | Design connector blink and Ink/Curve selection chrome | design | designer | epaper | [SRS-EP-19] | done | iter-004 | 3 |
 | [STORY-EP-028](./iter-004/stories/STORY-EP-028.md) | ToolChip inventory: 3 exclusive tools + 2 recognizer toggles | implement | dev | epaper | [SRS-EP-04], [SRS-EP-05] | done | iter-004 | 3 |
 | [STORY-EP-029](./iter-004/stories/STORY-EP-029.md) | Closure-first recognizer dispatch (ADR-0022) | implement | dev | epaper | [SRS-EP-10], [SRS-EP-17] | done | iter-004 | 5 |
-| [STORY-EP-030](./iter-004/stories/STORY-EP-030.md) | Recognize single-stroke and chained connectors | implement | dev | epaper | [SRS-EP-17] | in-review | iter-004 | 5 |
+| [STORY-EP-030](./iter-004/stories/STORY-EP-030.md) | Recognize single-stroke and chained connectors | implement | dev | epaper | [SRS-EP-17] | done | iter-004 | 5 |
 | [STORY-EP-031](./iter-004/stories/STORY-EP-031.md) | Ink/Curve warp and live re-warp on bound-node drag | implement | dev | epaper | [SRS-EP-18], [SRS-EP-20] | ready | iter-004 | 8 |
 | [STORY-EP-032](./iter-004/stories/STORY-EP-032.md) | Architect: device UI chrome state machine | implement | unassigned | epaper | [SRS-EP-12] | draft | iter-004 | 5 |
 | [STORY-EP-033](./iter-004/stories/STORY-EP-033.md) | Reject origin/stale first sample on pen-down | implement | dev | epaper | [SRS-EP-01] | ready | iter-004 | 2 |
