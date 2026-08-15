@@ -4,7 +4,7 @@ title: Closure-first recognizer dispatch (ADR-0022)
 kind: implement
 parent_srs: [SRS-EP-10, SRS-EP-17]
 parent_req: [REQ-05, REQ-09]
-status: ready
+status: in-review
 priority: P0
 iter: iter-004
 estimate: 5
@@ -26,7 +26,7 @@ wireframe: ""
 
 Implements [ADR-0022](../../.docs/adr/ADR-0022-recognizer-dispatch.md) and the revised
 [SRS-EP-10](../../.docs/modules/epaper/features/ink-box/srs-logic.md) table.
-Needs the toggle latch from [STORY-EP-028](./STORY-EP-028.md).
+Needs the toggle latch from [STORY-EP-028](./STORY-EP-028.md). Dispatch is `epaper/document/recognizer_dispatch.hpp`. Connector commit remains [STORY-EP-030](./STORY-EP-030.md) (`guard=connector_pending`).
 
 ## Kind
 

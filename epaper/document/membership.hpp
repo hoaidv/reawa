@@ -4,7 +4,8 @@
  * @implements [SRS-EP-10] draw-into membership
  * @implements [SRS-EP-14] membership latency budget (caller times pen-up)
  *
- * Port of infini/src/document/membership.ts. Never runs on an Ink-box enclose stroke.
+ * Port of infini/src/document/membership.ts. After ADR-0022, also runs on a
+ * failed enclose (D21 fall-through).
  */
 
 #include "device_document.hpp"

@@ -81,6 +81,10 @@ int main()
              "children=[stroke_1,ink_a,ink_b] captured=2");
     CHECK(formatEncloseLog("OrdinaryInk", "too_small", "")
           == "[enclose] armed=ink_box outcome=stayed_ink guard=size captured=0");
+    CHECK(epaper::debuglog::formatRecogLog("enclose", "none")
+          == "[recog] outcome=enclose guard=none");
+    CHECK(epaper::debuglog::formatRecogLog("membership", "no_content")
+          == "[recog] outcome=membership guard=no_content");
 
     std::printf("debug_log_test OK\n");
     return 0;

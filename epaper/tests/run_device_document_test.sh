@@ -19,3 +19,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/one_way_sync_test.cpp -o /tmp/one_way
 /tmp/one_way_sync_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/toolchip_layout_test.cpp -o /tmp/toolchip_layout_test
 /tmp/toolchip_layout_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/dispatch_test.cpp -o /tmp/dispatch_test
+/tmp/dispatch_test

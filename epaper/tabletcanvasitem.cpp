@@ -2,7 +2,7 @@
 #include "strokesync.h"
 #include "epaperbridge.h"
 #include "latencyprobe/stub_document.hpp"
-#include "document/ingest_stroke.hpp"
+#include "document/recognizer_dispatch.hpp"
 #include "document/recognize_enclose.hpp"
 #include "document/membership.hpp"
 #include "document/surround_create.hpp"
@@ -548,7 +548,7 @@ void TabletCanvasItem::endStroke()
 }
 
 /** @implements [SRS-EP-07] finished stroke → append_ink at pen-up */
-/** @implements [SRS-EP-10] Ink-box latch → enclose; Pen → ordinary ink (no enclose path) */
+/** @implements [SRS-EP-10] ADR-0022 closure-first dispatch (one [recog] line) */
 /** @implements [SRS-EP-15] [ink] / [enclose] log sources after ingest */
 void TabletCanvasItem::ingestCurrentStroke()
 {
@@ -584,43 +584,27 @@ void TabletCanvasItem::ingestCurrentStroke()
         *wy = w.y();
     };
 
-    // Pen (and any non-ink_box latch): ordinary ingest + draw-into membership.
-    // Never recognize_enclose on this path (SRS-EP-10).
-    if (m_strokeArmedTool != QLatin1String("ink_box")) {
-        const IngestTiming t = ingestFinishedStrokeTimed(m_document, stroke, map);
-        m_ingestNs.push_back(t.ns);
-        if (t.result.applied) {
-            ++m_ingestApplied;
-            tryDrawIntoMembership(m_document, stroke.id);
-            qInfo().noquote() << QString::fromStdString(epaper::debuglog::formatInkLog(stroke.id));
-        } else {
-            ++m_ingestRejected;
-        }
+    const std::string tool = m_chip.latchedTool;
+    if (tool == "sel_rect" || tool == "sel_freeform")
         return;
-    }
 
-    const EncloseIngestTiming t =
-        ingestStrokeAtPenUp(m_document, stroke, map, StrokeArmedTool::InkBox);
-    {
-        std::string kindName = "Skipped";
-        if (t.result.kind == EncloseKind::Created)
-            kindName = "Created";
-        else if (t.result.kind == EncloseKind::OrdinaryInk)
-            kindName = "OrdinaryInk";
-        // Skip too_few_samples / Skipped — no enclose evaluation worth a line.
-        if (t.result.kind != EncloseKind::Skipped) {
-            const std::string line = epaper::debuglog::formatEncloseLog(
-                kindName, t.result.reason, t.result.smartGroupId, t.result.childIds);
-            qInfo().noquote() << QString::fromStdString(line);
-        }
-    }
-    m_ingestNs.push_back(t.ns);
-    if (t.apply.applied)
+    RecogLatch latch;
+    latch.inkBox = m_chip.latchedInkBox;
+    latch.connector = m_chip.latchedConnector;
+    const RecogDispatchResult d = dispatchFinishedStroke(m_document, stroke, map, latch);
+    m_ingestNs.push_back(d.ns);
+    if (d.apply.applied)
         ++m_ingestApplied;
     else
         ++m_ingestRejected;
-    if (t.result.kind == EncloseKind::Created)
+    qInfo().noquote() << QString::fromStdString(
+        epaper::debuglog::formatRecogLog(d.outcomeName(), d.guard));
+    if (d.outcome == RecogOutcome::Enclose && d.enclose.kind == EncloseKind::Created) {
+        const std::string line = epaper::debuglog::formatEncloseLog(
+            "Created", d.enclose.reason, d.enclose.smartGroupId, d.enclose.childIds);
+        qInfo().noquote() << QString::fromStdString(line);
         m_needEncloseRasterize = true;
+    }
 }
 
 void TabletCanvasItem::syncBegin()

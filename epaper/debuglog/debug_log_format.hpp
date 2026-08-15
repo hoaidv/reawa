@@ -102,5 +102,12 @@ inline std::string formatEncloseLog(const std::string &kind, const std::string &
     return line;
 }
 
+/** @implements [SRS-EP-10] one [recog] line per pen-up (ADR-0022) */
+inline std::string formatRecogLog(const std::string &outcome, const std::string &guard)
+{
+    std::string g = guard.empty() ? "none" : guard;
+    return "[recog] outcome=" + outcome + " guard=" + g;
+}
+
 } // namespace debuglog
 } // namespace epaper

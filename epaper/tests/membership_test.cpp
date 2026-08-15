@@ -6,8 +6,7 @@
  */
 
 #include "document/device_document.hpp"
-#include "document/membership.hpp"
-#include "document/recognize_enclose.hpp"
+#include "document/recognizer_dispatch.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -274,23 +273,24 @@ static void test_membership_undo()
     CHECK(doc.snapshotString() == before);
 }
 
-static void test_enclose_stroke_skips_membership()
+static void test_failed_enclose_falls_through_membership()
 {
     DeviceDocument doc;
     createSg(doc, "sg_1", 40, 40, 120, 120, {}, {0.5, 0.5});
-    // Ink-box latch: enclose path must not auto-join into an existing group.
     EncloseStrokeInput stroke;
     stroke.id = "box_stroke";
-    stroke.armedAtPenDown = StrokeArmedTool::InkBox;
     stroke.samples = pts({{50, 50}, {150, 50}, {150, 150}, {50, 150}, {50, 50}});
-    const EncloseResult er = commitStrokeWithEncloseRecognition(doc, stroke);
+    RecogLatch latch;
+    latch.inkBox = true;
+    latch.connector = true;
+    const RecogDispatchResult d = dispatchPenUp(doc, stroke, latch);
+    CHECK(d.outcome == RecogOutcome::Membership);
+    CHECK(d.enclose.kind == EncloseKind::OrdinaryInk);
     bool underSg = false;
     for (const auto &c : doc.find("sg_1")->children)
         if (c.id == "box_stroke")
             underSg = true;
-    CHECK(!underSg);
-    // Tablet never calls tryDrawIntoMembership on ink_box latch; enclose path alone must not join.
-    CHECK(er.kind == EncloseKind::OrdinaryInk || er.kind == EncloseKind::Created);
+    CHECK(underSg);
 }
 
 static void test_translated_group_local_samples()
@@ -347,7 +347,7 @@ int main()
     test_no_qualifying_group();
     test_no_reflow_existing();
     test_membership_undo();
-    test_enclose_stroke_skips_membership();
+    test_failed_enclose_falls_through_membership();
     test_translated_group_local_samples();
     test_fixed_ink_join_ignores_parent_scale();
 
