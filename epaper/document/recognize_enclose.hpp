@@ -304,10 +304,31 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
             capturable.push_back({ink->id, ink->samples, ink->style});
     }
     if (capturable.empty()) {
-        appendOrdinaryInk(doc, stroke);
-        out.kind = EncloseKind::OrdinaryInk;
-        out.reason = "no_content";
-        return out;
+        // Blank-canvas closed box is a legal create (boundary only). A closed
+        // stroke that already sits inside an existing group must fall through
+        // to membership (D21 / CHL-0011 — no nested enclose).
+        bool insideExisting = false;
+        for (const auto &n : doc.rootChildren) {
+            if (n.kind != NodeKind::SmartGroup)
+                continue;
+            const SmartBounds &b = n.smartBounds;
+            const SmartTransform &t = n.transform;
+            SmartBounds w;
+            w.x = t.x + b.x * t.scaleX;
+            w.y = t.y + b.y * t.scaleY;
+            w.width = b.width * t.scaleX;
+            w.height = b.height * t.scaleY;
+            if (fractionSamplesInside(stroke.samples, w) >= 0.8) {
+                insideExisting = true;
+                break;
+            }
+        }
+        if (insideExisting) {
+            appendOrdinaryInk(doc, stroke);
+            out.kind = EncloseKind::OrdinaryInk;
+            out.reason = "no_content";
+            return out;
+        }
     }
 
     // Local-space Smart Group: bounds origin at (0,0), transform carries world origin.

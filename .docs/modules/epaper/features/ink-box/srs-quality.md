@@ -19,7 +19,8 @@ Logic: [SRS-EP-10 / SRS-EP-11](./srs-logic.md). Document budgets:
 |---|---|---|
 | Enclose → box visible | p95 after **pen-up** | ≤500 ms |
 | Peer involvement in a create | Messages required from the desktop | **0** |
-| Guard correctness — negative set (empty area, below 48 world units, drawn in `pen` mode) | Boxes created | **0** |
+| Guard correctness — negative set (below 48 world units, drawn with ink-box recog off) | Boxes created | **0** |
+| Guard correctness — empty closed-ish ≥ min size | Boxes created | **1** (boundary only) |
 | Guard correctness — positive set | Boxes created | 1 per gesture, `bounds` matching the fitted rect ±1 world unit |
 | Boundary ink | Creates whose box has the creator's own stroke as `role: boundary` | **100%** |
 | Synthetic rectangles introduced | Count | **0** |

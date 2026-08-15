@@ -524,10 +524,10 @@ void TabletCanvasItem::endStroke()
     if (m_needEncloseRasterize) {
         m_needEncloseRasterize = false;
         rasterizeVectors(true);
-    }
-
-    // Run any viewport/snapshot refresh that was deferred while the pen was down.
-    if (m_rasterizeDeferredSharp) {
+        m_rasterizeDeferredSharp = false;
+        m_rasterizePending = false;
+        ++m_settleFollowUpToken;
+    } else if (m_rasterizeDeferredSharp) {
         m_rasterizeDeferredSharp = false;
         scheduleVectorRasterize(true);
     } else if (m_rasterizePending) {
@@ -612,14 +612,19 @@ void TabletCanvasItem::ingestCurrentStroke()
         }
         clearMembershipHighlight();
     } else if (d.outcome == RecogOutcome::Membership) {
+        bool highlightChanged = false;
         if (const DocNode *sg = m_document.find(d.membership.smartGroupId)) {
             std::vector<std::string> ids;
             collectSmartGroupInkIds(*sg, true, &ids);
-            setMembershipHighlight(ids);
+            highlightChanged = setMembershipHighlight(ids);
         } else {
+            highlightChanged = !m_highlightInkIds.empty();
             clearMembershipHighlight();
         }
-        m_needEncloseRasterize = true;
+        // Same parent already highlighted: live pixels are the new ink. A full
+        // white-clear rasterize here is what lagged Pen every few draw-intos.
+        if (highlightChanged)
+            m_needEncloseRasterize = true;
     } else {
         if (!m_highlightInkIds.empty())
             m_needEncloseRasterize = true;
@@ -1856,11 +1861,15 @@ void TabletCanvasItem::beginRecogWidthBlink(const std::vector<std::string> &inkI
 }
 
 /** @implements [SRS-EP-12] last-join membership highlight, no blink (UI-EP-06) */
-void TabletCanvasItem::setMembershipHighlight(const std::vector<std::string> &boundaryInkIds)
+bool TabletCanvasItem::setMembershipHighlight(const std::vector<std::string> &boundaryInkIds)
 {
-    m_highlightInkIds.clear();
+    std::unordered_set<std::string> next;
     for (const auto &id : boundaryInkIds)
-        m_highlightInkIds.insert(id);
+        next.insert(id);
+    if (next == m_highlightInkIds)
+        return false;
+    m_highlightInkIds = std::move(next);
+    return true;
 }
 
 void TabletCanvasItem::clearMembershipHighlight()

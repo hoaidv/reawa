@@ -18,7 +18,8 @@
 namespace epaper {
 namespace document {
 
-/** Closure classifier (ADR-0022). Not enclose size/content guards. */
+/** Closure classifier (ADR-0022 / SRS-EP-10). Near-close of a large box must count.
+ * Closed-ish iff first–last gap ≤ max(cap, frac × path length) — not AND. */
 constexpr double kClosureGapFrac = 0.15;
 constexpr double kClosureGapCapWorld = 48;
 
@@ -78,7 +79,7 @@ inline bool strokeIsClosedIsh(const std::vector<InkSample> &s)
     if (L < 1.0)
         return false;
     const double gap = std::hypot(s.front().x - s.back().x, s.front().y - s.back().y);
-    return gap <= kClosureGapCapWorld && (gap / L) <= kClosureGapFrac;
+    return gap <= std::max(kClosureGapCapWorld, kClosureGapFrac * L);
 }
 
 inline RecogDispatchResult dispatchPenUp(DeviceDocument &doc, EncloseStrokeInput stroke,

@@ -250,10 +250,9 @@ static void test_failed_guards_ordinary_ink()
     {
         DeviceDocument doc;
         const EncloseResult r = runFixture(doc, loadEnclose("no_content.json"));
-        CHECK(r.kind == EncloseKind::OrdinaryInk);
-        CHECK(r.reason == "no_content");
-        CHECK(smartGroupCount(doc) == 0);
-        CHECK(doc.find("empty_box") && doc.find("empty_box")->kind == NodeKind::Ink);
+        CHECK(r.kind == EncloseKind::Created);
+        CHECK(smartGroupCount(doc) == 1);
+        CHECK(doc.find("empty_box"));
     }
 }
 

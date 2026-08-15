@@ -3,7 +3,7 @@
  * @implements [SRS-IN-10] enclose recognition (no propose/accept)
  */
 
-import { seedLayoutOffset } from "./anchors";
+import { seedLayoutOffset, smartGroupWorldAabb } from "./anchors";
 import { tryDrawIntoMembership } from "./membership";
 import type { UndoRing } from "./UndoRing";
 import type { VectorDocument } from "./VectorDocument";
@@ -137,9 +137,23 @@ export function commitStrokeWithEncloseRecognition(
     (ink) => fractionSamplesInside(ink.samples, worldBounds) >= 0.8,
   );
   if (capturable.length === 0) {
-    appendOrdinary(tree, stroke);
-    tryDrawIntoMembership(tree, undo, stroke.id);
-    return { kind: "ordinary_ink", reason: "no_content" };
+    const insideExisting = tree.rootChildren.some((n) => {
+      if (n.kind !== "smart_group") return false;
+      const w = smartGroupWorldAabb(n);
+      return (
+        fractionSamplesInside(stroke.points, {
+          x: w.minX,
+          y: w.minY,
+          width: w.maxX - w.minX,
+          height: w.maxY - w.minY,
+        }) >= 0.8
+      );
+    });
+    if (insideExisting) {
+      appendOrdinary(tree, stroke);
+      tryDrawIntoMembership(tree, undo, stroke.id);
+      return { kind: "ordinary_ink", reason: "no_content" };
+    }
   }
 
   // Local-space Smart Group: bounds origin at (0,0), transform carries world origin.

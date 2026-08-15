@@ -212,7 +212,8 @@ private:
     void scheduleVectorRasterize(bool sharp);
     void rasterizeVectors(bool sharp);
     void beginRecogWidthBlink(const std::vector<std::string> &inkIds);
-    void setMembershipHighlight(const std::vector<std::string> &boundaryInkIds);
+    /** Returns true when the highlighted boundary set changed. */
+    bool setMembershipHighlight(const std::vector<std::string> &boundaryInkIds);
     void clearMembershipHighlight();
     void collectSmartGroupInkIds(const epaper::document::DocNode &sg, bool boundaryOnly,
                                  std::vector<std::string> *out) const;

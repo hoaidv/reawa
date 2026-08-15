@@ -49,7 +49,7 @@ the final say. This feature removes both.
 |---|---|---|
 | BR-B01 | **The device recognizes and creates.** Enclose evaluation, guards, capture, and the resulting Smart Group all happen on the device at pen-up. No peer message is required for the box to exist or to be visible. | replaces BR-09g placement |
 | BR-B02 | **Never created unprompted.** Creation requires **Ink-box recognition** armed when the enclosing stroke is drawn, or an explicit Smart Group command on a selection. Recognizers ship armed; a rectangle drawn with the toggle **off** is ordinary ink, forever. | BR-09a; BS-0001 D13/D22 |
-| BR-B03 | **Enclose guards.** An armed enclose creates a box only when the fitted rect is ≥ a fixed minimum size **and** contains ≥1 ink with ≥80% of its samples inside. Otherwise the stroke stays ordinary ink, with no error state. Enclosure is rectangle-only. | BR-09b |
+| BR-B03 | **Enclose guards.** An armed enclose creates a box when the fitted rect is ≥ a fixed minimum size. **A handwritten close (start near end) counts as closed.** Content ink is optional: an empty closed box is still a box. A closed stroke that already sits inside an existing box joins that box instead (no nested create). Enclosure is rectangle-only. | BR-09b |
 | BR-B04 | **Captures any ink.** No content test — handwriting, sketch, or shape all qualify. | BR-09c |
 | BR-B05 | **A box always reads as a box.** A successful create always has `role: boundary` ink — the creator's own stroke, never a synthetic rectangle. | BR-09d |
 | BR-B06 | **Selection create needs a surround stroke.** One selected stroke must contain ≥80% of each other selected stroke's samples (open stroke OK — tested via an artificial closed path). That stroke becomes `boundary`; the rest `content`. If none qualify, **creation is refused** with a visible reason. | BR-09j |
@@ -76,7 +76,7 @@ the final say. This feature removes both.
 
 | Case | Expected product behavior |
 |---|---|
-| Enclose stroke encloses nothing | No box; stroke stays ordinary ink; no error banner |
+| Enclose stroke encloses nothing | **Boundary-only box** if closed-ish and ≥ min size; no error banner |
 | Enclose stroke below the minimum size | Same — treated as ordinary ink (protects small annotations) |
 | Enclose stroke drawn in `Pen` mode | Ordinary ink, always; never grouped retroactively |
 | Enclose captures ink already inside another box | Ink with an existing Smart Group parent is skipped; the rest is captured |
@@ -98,10 +98,8 @@ the final say. This feature removes both.
 
 ## Acceptance (drives BDD / stories)
 
-- Given `Ink-box` armed and ink on the panel, When the creator draws an enclosure passing both
-  guards, Then a Smart Group exists locally and is visible with p95 ≤500 ms after pen-up, using
-  0 messages from the desktop.
-- Given the negative fixture set (empty area, below minimum size, `Pen` mode), When each gesture
+- Given `Ink-box` armed, When the creator draws a closed-ish enclosure (start near end) at or above the minimum size, Then a Smart Group exists locally even if the interior was empty.
+- Given the negative fixture set (below minimum size, `Pen` mode / recognizer off), When each gesture
   ends, Then 0 Smart Groups are created and every stroke remains ordinary ink.
 - Given a selection containing a surround stroke at the ≥80% bar, When the creator invokes Smart
   Group, Then the surround becomes `boundary`, the rest `content`, and `bounds` matches the surround's

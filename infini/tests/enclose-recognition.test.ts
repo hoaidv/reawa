@@ -101,7 +101,7 @@ describe("STORY-IN-010 / SRS-IN-10 enclose recognition", () => {
     );
   });
 
-  it("failed guards leave ordinary ink (too small / no content)", () => {
+  it("failed guards leave ordinary ink (too small)", () => {
     const tree = new VectorDocument();
     const undo = new UndoRing();
 
@@ -113,18 +113,20 @@ describe("STORY-IN-010 / SRS-IN-10 enclose recognition", () => {
     expect(small.kind).toBe("ordinary_ink");
     expect(small).toMatchObject({ reason: "too_small" });
     expect(tree.indexById().get("tiny")?.kind).toBe("ink");
+  });
 
+  it("empty closed enclose creates a boundary-only box", () => {
+    const tree = new VectorDocument();
+    const undo = new UndoRing();
     const empty = commitStrokeWithEncloseRecognition(tree, undo, {
       id: "empty_box",
       intent: "enclose",
       points: rectPoints(200, 200, 100, 100),
     });
-    expect(empty.kind).toBe("ordinary_ink");
-    expect(empty).toMatchObject({ reason: "no_content" });
-    expect(tree.indexById().get("empty_box")?.kind).toBe("ink");
+    expect(empty.kind).toBe("created");
     expect(
       [...tree.indexById().values()].filter((n) => n.kind === "smart_group"),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
   });
 
   it("skips ink already inside a Smart Group; captures remaining", () => {

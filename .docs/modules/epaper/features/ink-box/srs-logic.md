@@ -55,10 +55,11 @@ what the stroke means.
 | Step | Rule |
 |---|---|
 | Trigger | Pen-up of a closed-ish stroke with `recog.ink_box` armed (**changed** — was exclusive `ink_box` tool) |
+| Closed-ish | First–last sample gap ≤ **max**(48 world, 0.15 × polyline length). A handwritten close (start near end) on a large box **is** closed. **Changed 2026-08-15** — was AND of cap and fraction, which rejected near-closes on large boxes |
 | Candidate shape | Closed or near-closed polyline fitting an axis-aligned rect; **rectangle only** |
 | Fitted bounds | AABB of the enclose stroke samples → `(x, y, width, height)` |
 | Guard — size | Shorter side ≥ `MIN_ENCLOSE_WORLD` = **48 world units** ([ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md) §6, kept by ADR-0014 §7) |
-| Guard — content | ≥1 **free top-level Ink** with **≥80%** of its samples inside the fitted rect. **Capture inventory this campaign: Ink only.** Smart Group nodes are **not** capturable content ([CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md) — nested enclose is future) |
+| Guard — content | Prefer ≥1 **free top-level Ink** with **≥80%** of samples inside. **0 content is allowed**: a closed-ish stroke on empty canvas still creates a boundary-only Smart Group (**changed 2026-08-15**). If that stroke already qualifies as draw-into of an existing Smart Group (≥80% samples inside), **do not** create — fall through to membership (D21 / [CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)) |
 | Guard — already grouped | Ink whose parent is already a `SmartGroup` is **skipped**; remaining free ink still captures |
 | Commit | `create_smart_group` immediately — no proposal, no accept step. The enclose stroke becomes `role: boundary` ink; captured ink becomes `role: content` in group-local coordinates; `bounds` = fitted rect; **each content ink seeded with its own `layoutOffset` UV** |
 | Guard fails | **Fall through** to draw-into membership ([ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) step 2), then connector, then ordinary ink. No error state, no banner ([SRS-EP-12](./srs-ui.md)) |

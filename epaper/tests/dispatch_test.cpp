@@ -90,7 +90,8 @@ static RecogOutcome expectedDispatch(const char *name, RecogLatch latch)
 {
     if (std::string(name) == "pen_armed.json" || !latch.inkBox)
         return RecogOutcome::Ink;
-    if (std::string(name) == "successful.json" || std::string(name) == "already_grouped.json")
+    if (std::string(name) == "successful.json" || std::string(name) == "already_grouped.json"
+        || std::string(name) == "no_content.json")
         return RecogOutcome::Enclose;
     return RecogOutcome::Ink;
 }
@@ -193,10 +194,34 @@ static void test_dispatch_host_latency()
     std::cout << "dispatch host p95=" << p95 << "ns\n";
 }
 
+static void test_near_close_large_box_is_closed()
+{
+    // Human 2026-08-15: start near end on a large box must count as closed.
+    // Old AND (gap≤48 ∧ gap/L≤0.15) rejected an 80u gap on a ~1600u path.
+    const auto closed = pts({{0, 0}, {400, 0}, {400, 400}, {0, 400}, {0, 80}});
+    CHECK(strokeIsClosedIsh(closed));
+    const auto open = pts({{0, 0}, {400, 0}});
+    CHECK(!strokeIsClosedIsh(open));
+}
+
+static void test_empty_closed_box_creates()
+{
+    DeviceDocument doc;
+    EncloseStrokeInput stroke;
+    stroke.id = "empty_box";
+    stroke.samples = pts({{200, 200}, {300, 200}, {300, 300}, {200, 300}, {200, 200}});
+    RecogLatch latch;
+    const RecogDispatchResult d = dispatchPenUp(doc, stroke, latch);
+    CHECK(d.outcome == RecogOutcome::Enclose);
+    CHECK(d.enclose.kind == EncloseKind::Created);
+}
+
 int main()
 {
     test_one_verdict_one_log_line();
     test_d21_fall_through();
+    test_near_close_large_box_is_closed();
+    test_empty_closed_box_creates();
     test_g4_fixture_replay();
     test_dispatch_host_latency();
     if (g_fails) {
