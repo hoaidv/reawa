@@ -351,8 +351,25 @@ void TabletCanvasItem::paint(QPainter *painter)
         && !m_originPanelRect.isEmpty()) {
         // Punch only the original box — not origin∪live (that wipes a vertical strip).
         painter->fillRect(m_originPanelRect, Qt::white);
-        if (!m_originConnPunch.isEmpty())
-            painter->fillRect(m_originConnPunch, Qt::white);
+        // Connector origin hole: thick white stroke along the rest-pose polyline.
+        // fillRect(AABB) painted a white slab on a diagonal/curve (dirty during drag).
+        // Box AABB ≈ the box, so a rect punch stays clean. [SRS-EP-18] [CHL-0018]
+        if (!m_originConnStrokes.isEmpty()) {
+            painter->save();
+            painter->setRenderHint(QPainter::Antialiasing, false);
+            painter->setBrush(Qt::NoBrush);
+            for (const OriginConnStroke &st : m_originConnStrokes) {
+                if (st.panel.size() < 2)
+                    continue;
+                QPen erase(Qt::white);
+                erase.setWidthF(st.width + 16.0);
+                erase.setCapStyle(Qt::RoundCap);
+                erase.setJoinStyle(Qt::RoundJoin);
+                painter->setPen(erase);
+                painter->drawPolyline(st.panel.constData(), st.panel.size());
+            }
+            painter->restore();
+        }
     }
 }
 
@@ -1231,7 +1248,7 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
                 m_originPanelRect = QRectF();
         }
         refreshAllConnectorWarps(m_document);
-        m_originConnPunch = boundConnectorsPanelUnion(subject->id);
+        captureOriginConnectorPunches(subject->id);
         refreshSelectionChrome();
         redrawLiveManipRegion();
         return;
@@ -1341,6 +1358,7 @@ void TabletCanvasItem::commitLiveManip()
     const QRectF punch = m_originPanelRect.united(m_selectionChromeDirty).united(m_originConnPunch);
     m_originPanelRect = QRectF();
     m_originConnPunch = QRectF();
+    m_originConnStrokes.clear();
     if (!moved) {
         m_document.abortGesture();
         m_selectedPickableId = m_gesturePickableId;
@@ -1822,15 +1840,54 @@ void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode 
     }
 }
 
+qreal TabletCanvasItem::connectorPanelStrokeWidth(const epaper::document::DocNode &conn) const
+{
+    double worldSw = conn.style.strokeWidth;
+    if (worldSw <= 0.0 && !conn.children.empty())
+        worldSw = conn.children.front().style.strokeWidth;
+    if (worldSw <= 0.0)
+        worldSw = 2.0;
+    return qMax<qreal>(1.0, worldSw * panelScale());
+}
+
 void TabletCanvasItem::drawWarpedConnector(QPainter &p, const epaper::document::DocNode &conn)
 {
     if (conn.warpedSamples.size() < 2)
         return;
+    QPen pen(Qt::black);
+    pen.setWidthF(connectorPanelStrokeWidth(conn));
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    p.setPen(pen);
+    p.setBrush(Qt::NoBrush);
     QPainterPath path;
     path.moveTo(worldToPanel(conn.warpedSamples[0].x, conn.warpedSamples[0].y));
     for (size_t i = 1; i < conn.warpedSamples.size(); ++i)
         path.lineTo(worldToPanel(conn.warpedSamples[i].x, conn.warpedSamples[i].y));
     p.drawPath(path);
+}
+
+void TabletCanvasItem::captureOriginConnectorPunches(const std::string &sgId)
+{
+    m_originConnStrokes.clear();
+    m_originConnPunch = QRectF();
+    using epaper::document::NodeKind;
+    for (const auto &node : m_document.rootChildren) {
+        if (node.kind != NodeKind::Connector)
+            continue;
+        if (node.fromNodeId != sgId && node.toNodeId != sgId)
+            continue;
+        if (node.warpedSamples.size() < 2)
+            continue;
+        OriginConnStroke st;
+        st.width = connectorPanelStrokeWidth(node);
+        st.panel.reserve(int(node.warpedSamples.size()));
+        for (const auto &s : node.warpedSamples)
+            st.panel.append(worldToPanel(s.x, s.y));
+        m_originConnStrokes.append(st);
+        const QRectF r = warpedConnectorPanelRect(node);
+        m_originConnPunch = m_originConnPunch.isEmpty() ? r : m_originConnPunch.united(r);
+    }
 }
 
 QRectF TabletCanvasItem::warpedConnectorPanelRect(const epaper::document::DocNode &conn) const

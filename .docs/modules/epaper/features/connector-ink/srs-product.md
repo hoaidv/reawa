@@ -1,7 +1,7 @@
 ---
 feature: connector-ink
 parent_req: [REQ-09]
-version: 0.1.0
+version: 0.2.0
 lifecycle: active
 owner: pm
 ---
@@ -43,6 +43,7 @@ line, stay glued when a box moves, and not ask them to pick a routing tool. The 
 | BR-C08 | Delete of a bound box **keeps** connectors; missing node resolves from last live pose; undo glues back. | D39 |
 | BR-C09 | Recognition is best-effort plus **one undo**. Chrome: blink connector + both nodes **once**. Does not name the style. | D38, BR-B09 analogue |
 | BR-C10 | False-positive rate with both recognizers armed is a **ship gate** (≤2% of `pen` strokes, incl. first 20 of a fresh page). | D25 |
+| BR-C11 | A recognized connector is selected by (a) `sel_rect` / `sel_freeform` with ≥80% of **path samples** inside the gesture, or (b) **pen-down on the stroke**. AABB-only intersection or AABB-only press does not select. | REQ-09 2026-08-15 |
 
 ## Edge cases
 

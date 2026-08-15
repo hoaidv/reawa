@@ -224,8 +224,10 @@ private:
     void drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
                   const epaper::document::DocNode *smartParent);
     void drawWarpedConnector(QPainter &p, const epaper::document::DocNode &conn);
+    qreal connectorPanelStrokeWidth(const epaper::document::DocNode &conn) const;
     QRectF warpedConnectorPanelRect(const epaper::document::DocNode &conn) const;
     QRectF boundConnectorsPanelUnion(const std::string &sgId) const;
+    void captureOriginConnectorPunches(const std::string &sgId);
     double panelScale() const;
     QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const;
     bool lodOkPanel(const epaper::document::SmartBounds &wb) const;
@@ -295,6 +297,12 @@ private:
     QRectF m_modeChipRect;
     QRectF m_originPanelRect;
     QRectF m_originConnPunch;
+    /** Rest-pose connector polylines in panel space — CanvasLayer origin hole (stroke, not AABB). */
+    struct OriginConnStroke {
+        QVector<QPointF> panel;
+        qreal width = 4;
+    };
+    QVector<OriginConnStroke> m_originConnStrokes;
     QRectF m_encloseCtaRect;
     bool m_encloseVisible = false;
     QString m_encloseRefuseReason;

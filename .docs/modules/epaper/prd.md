@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.6.0
+version: 0.7.0
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -58,6 +58,8 @@ viewed at scale, and saved.
 | Connector recognized → visible on panel | p95 ≤500 ms after pen-up (same bar as enclose) | Manual / trace |
 | Connector re-warp during bound-node drag | ≥5 Hz partial refresh; 0 full-panel invalidations; committed geometry = last previewed | Manual QA |
 | Default-on recognizer false positives | ≤2% of `pen` strokes on a real corpus incl. a fresh page's first 20 strokes | EXP-0002 G1/G2 — **ship gate** |
+| Connector selectable (marquee or pen hit) | 100% of recognized connectors on a 10-connector fixture; 0 missed hits on the stroke, 0 AABB-only false hits | Manual QA |
+| Finger hit on ink-box → freeform + move | p95 ≤300 ms to `sel_freeform` + selection; move follows finger; 0 accidental resizes | Manual QA |
 
 ## [REQ-01] Local pen-matched ink {#local-pen-ink}
 - **Priority:** Must · **Traces:** [BRD-06]
@@ -105,8 +107,9 @@ viewed at scale, and saved.
   **Selection rect | Selection freeform | Pen ⟨space⟩ Ink-box recognition | Connector recognition ⟨space⟩ Undo | Redo**
   ([ADR-0021](../../adr/ADR-0021-connector-toolchip.md),
   [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)).
-  Switched by **finger touch**, so the pen stays free for content. `Pen` is the default and
-  leaves [REQ-01](#local-pen-ink) local ink behaviour unchanged.
+  Switched by **finger touch** on the chip, so the pen stays free for content. `Pen` is the default and
+  leaves [REQ-01](#local-pen-ink) local ink behaviour unchanged. Canvas **hand-touch** (finger on
+  ink, not on the chip) is [REQ-10](#hand-touch).
 - **Exclusive tools** (exactly three): `sel_rect` · `sel_freeform` · `pen`. There is no
   `ink_box` tool. The two Selection arms still replace a single mouse-like Selection button.
 - **Recognizer toggles** (independent, not tools): `recog.ink_box` ("Ink-box recognition")
@@ -253,11 +256,12 @@ viewed at scale, and saved.
 - **Outcome:** manipulating a box on the tablet feels like moving paper, not like filing a request.
   What the creator sees under the pen **is** the document — no advisory ghost, no peer correction,
   no snap-back.
-- **Pilot scope.**   Select by pressing a Smart Group; move by dragging inside the bounds (no prior
-  selection needed); resize via handles after explicit selection; toggle `inkScaleMode`
-  (`withBounds` | `fixedInk`); deselect by pressing empty canvas. **Rotation is out of scope this
-  iter** — it arrives with [REQ-08](#node-manipulation). **Connector attachment** is
-  [REQ-09](#device-connectors), this campaign.
+- **Pilot scope (pen).** Select by pressing a Smart Group with the **pen**; move by dragging inside
+  the bounds (no prior selection needed); resize via the **6 square anchors** after explicit
+  selection; toggle `inkScaleMode` (`withBounds` | `fixedInk`); deselect by pressing empty canvas.
+  **Rotation is out of scope this iter** — it arrives with [REQ-08](#node-manipulation).
+  **Connector attachment** is [REQ-09](#device-connectors). **Finger** select/move of a box is
+  [REQ-10](#hand-touch) — not a second resize grammar.
 - **`inkScaleMode` feel.** `withBounds`: content scales with the box. `fixedInk`: each content ink
   keeps its sample size fixed and tracks the box via **its own** relative offset / UV inside the box,
   so a newly drawn stroke never moves older content. Boundary ink always transforms with the frame.
@@ -373,9 +377,19 @@ viewed at scale, and saved.
   [ADR-0020](../../adr/ADR-0020-connector-ink-geometry.md).
 - **Live.** Moving or resizing a bound box re-warps attached connectors during the drag
   (partial refresh). Deleting a box **keeps** the connectors; they glue back if the delete is undone.
-- **Not this REQ.** Re-anchor as a generic node-manipulation verb, squared/rounded routing,
-  arrowheads, dash/double-line, non-SmartGroup targets — [REQ-08](#node-manipulation) / later.
-  Full product depth:
+- **Select (this campaign).** A recognized connector is a first-class selectable node, not only
+  chrome that appears after an unspecified pick. The creator selects it with:
+  1. **Selection rect / Selection freeform** — same membership grammar as ink/other nodes
+     ([REQ-05](#device-ink-box)): ≥80% of the connector's **path samples** (not its AABB) inside
+     the rectangle or closed polyline.
+  2. **Pen-touch** — press the connector **stroke** (hit-test along the path with a generous
+     on-panel tolerance). AABB-only press of the connector's bounding box does **not** select it
+     (avoids stealing box hits).
+  Selected chrome (Ink/Curve; per-end Edge/Centre) is already in
+  [connector-ink srs-ui](./features/connector-ink/srs-ui.md). Re-anchor as a generic verb stays
+  [REQ-08](#node-manipulation).
+- **Not this REQ.** Squared/rounded routing, arrowheads, dash/double-line, non-SmartGroup
+  targets — later. Full product depth:
   [features/connector-ink/srs-product.md](./features/connector-ink/srs-product.md).
 
 **Acceptance**
@@ -395,9 +409,58 @@ viewed at scale, and saved.
 - Given both recognizers armed as shipped, When a real writing corpus (incl. a fresh page's
   first 20 strokes) is replayed, Then unintended connector or enclose creations are ≤2% of
   `pen` strokes — **ship gate**.
+- Given `sel_rect` or `sel_freeform` and a recognized connector, When the marquee/lasso contains
+  ≥80% of that connector's path samples, Then the connector is in the selection (Ink/Curve chrome
+  visible). Given the same gesture that only intersects the connector AABB with <80% of samples,
+  Then the connector is **not** selected.
+- Given `Pen` (or any tool) and a recognized connector, When the creator **pen-downs on the
+  connector stroke**, Then that connector is selected with p95 ≤300 ms. Given a pen-down inside
+  the connector AABB but off the stroke, Then the connector is not selected (box or empty-canvas
+  rules apply).
 - **UI states / journeys to design:** recognition blink (connector + both nodes, once);
   selected connector (Ink/Curve; per-end Edge/Centre); dimmed toggles under Selection;
-  refuse/no-op (stroke stays ink, no banner).
+  refuse/no-op (stroke stays ink, no banner); marquee vs path-hit vs AABB-miss.
+
+## [REQ-10] Hand-touch on canvas (first slice) {#hand-touch}
+<!-- added: 2026-08-15 — start adopting capacitive finger on the document, not only ToolChip -->
+- **Priority:** Must · **Traces:** [BRD-07] · **Campaign:** this iteration, after connector select
+- Needs design: yes
+- **Outcome:** the creator can pick up and move an ink-box with a **finger** without first
+  hunting a Selection chip, while **fine chrome** stays pen-only. The pen remains the precision
+  instrument; the hand is for coarse, large targets.
+- **Hit-test → freeform.** A finger press whose hit is an **ink-box** (Smart Group world bounds,
+  at/above the LOD cutoff) **selects that box** and **switches the exclusive tool to
+  `sel_freeform`**. The chip updates with the same p95 ≤300 ms bar as [REQ-03](#tool-modes).
+  Finger on empty canvas does not switch tools and does not start a lasso (no accidental
+  selection while resting a palm — architect may keep the existing palm/reject filter).
+- **Move with finger.** Once a box is selected (by finger hit, or already selected), a finger
+  drag **inside the bounds** moves the box with the same live-direct contract as
+  [REQ-06](#device-manipulation) (actual ink follows; 0 px jump on lift). Finger may also start
+  a move on the same down that hit the box (no extra tap required).
+- **No subtle manipulation for hand-touch.** Finger does **not** drive the **6 square anchors**
+  or any control whose hit target is **< 64 du**. Resize stays **pen**. Enclose and ToolChip
+  tiles are 64 du → still finger-eligible under the size rule.
+- **Size rule (simple).** Finger may hit a control only if its **hit target is ≥ the primary
+  ToolChip tile**. That tile is **64×64 du** ([CHL-0019](../../../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md);
+  32 px was verified too small on RM2). Handles are 28 visual / 56 hit → **finger-ineligible**.
+  ToolChip tiles, Undo/Redo, recognizer toggles, and Enclose (64 du) stay finger-eligible.
+
+**Acceptance**
+- Given `Pen` active and a Smart Group at/above LOD, When the creator **finger-downs inside
+  the box**, Then the exclusive tool becomes `sel_freeform`, the box is selected, and the chip
+  shows freeform, all with p95 ≤300 ms.
+- Given that finger-down (or a following finger drag) inside the selected box, When the finger
+  moves, Then the box follows with the [REQ-06](#device-manipulation) live-direct bar (0 px jump
+  on lift; ≥5 Hz partial refresh).
+- Given a selected Smart Group, When the creator **finger-downs on a resize anchor** (or any
+  control whose hit target is **< 64 du**), Then **no** resize/scale-mode/end-kind gesture
+  starts (0 accidental transforms). Pen on the same anchor still resizes.
+- Given finger-down on empty canvas (no box hit), When the touch ends, Then the exclusive tool
+  is unchanged and 0 nodes are selected by that touch.
+- Given finger-down on a ToolChip primary tile (64 du), When the tap completes, Then
+  [REQ-03](#tool-modes) still holds (tool/toggle/undo) — this REQ does not steal chip hits.
+- **UI states / journeys to design:** finger hit box while `Pen`; finger move in progress;
+  finger on anchor no-op; finger empty canvas no-op; mixed pen-resize after finger-select.
 
 ## [REQ-08] Direct manipulation of any document node {#node-manipulation}
 - **Priority:** Should · **Traces:** [BRD-07] · **Campaign:** distinct iteration — thickened now,
@@ -443,7 +506,9 @@ viewed at scale, and saved.
 
 ## Non-Goals
 
-- **On-device pan / zoom / pinch** on the Epaper UI (deferred).
+- **On-device pan / zoom / pinch** on the Epaper UI (deferred). Finger on canvas is **not** a
+  pan — [REQ-10](#hand-touch) is hit-test / move only.
+- **Finger resize, rotation, or connector re-anchor** — Won't this slice. Fine gizmos stay pen.
 - Acting as a Reawa-style mouse/stylus driver for other Mac apps.
 - Cloud sync or multi-peer sessions.
 - **On-device persistence, offline work across app restarts, and sync-at-any-moment** — the device
@@ -510,6 +575,8 @@ viewed at scale, and saved.
   tablet changes?
 - Multi-document / document switching on the device — **owner:** pm — assumed out of scope this
   iter; confirm before [REQ-04](#device-document) is sliced.
+- Finger-eligible control size vs 32 vs 64 — **closed 2026-08-15 (pm):** primary tile is **64 du**
+  (CHL-0019). Hand-touch rule: hit target **< 64 du** → pen only ([REQ-10](#hand-touch)).
 - Minimum fitted-rect size for enclose — **closed 2026-08-15 (pm):** adaptive **28** with content, **36** empty + primitive-shape gate.
 - LOD cutoff for on-device manipulation — **closed 2026-08-13 (architect).** Unavailable when the
   selected box's smaller **on-panel** axis is **< 96 du** (not `TILE_LOD_SCALE = 0.35`). Handle
