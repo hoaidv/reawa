@@ -1,9 +1,9 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-16T15:36:51+00:00",
+  "generated_at": "2026-08-16T15:54:38+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 1,
+    "draft": 20,
     "ready": 1,
     "in-progress": 0,
     "in-review": 0,
@@ -18,12 +18,12 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 36,
+      "total": 52,
       "done": 28,
       "in_review": 0
     },
     "infini": {
-      "total": 32,
+      "total": 35,
       "done": 24,
       "in_review": 0
     }
@@ -60,6 +60,13 @@
       "status": "done",
       "cursor": "done \u2014 human verified 2026-08-16",
       "iter": "iter-004"
+    },
+    {
+      "id": "TRACK-005",
+      "kind": "planned",
+      "status": "active",
+      "cursor": "W0 /architect SRS bind \u2014 then /designer EP-037 \u2225 IN-034",
+      "iter": "iter-005"
     }
   ]
 }

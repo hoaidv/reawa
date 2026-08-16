@@ -3,17 +3,26 @@ updated: 2026-08-16
 current_iter: iter-005
 owner: sm
 
-# Campaign closed: TRACK-004. Iter-005 empty until human picks the next wave.
+# Campaign: TRACK-005 hand-on-paper (REQ-10…18 except REQ-15). Vertical · verified · wip 2.
 execution:
   direction: vertical
   scope:
     modules: [epaper, infini]
-    features: []
-  stop_line: srs-ready
-  autonomy: ask
+    features:
+      - epaper/ink-box
+      - epaper/tool-modes
+      - epaper/connector-ink
+      - epaper/region-sync
+      - epaper/local-pen-ink
+      - epaper/device-document
+      - infini/infinity-canvas
+      - infini/tablet-sync
+      - infini/vector-document
+  stop_line: verified
+  autonomy: bounded
   out_of_scope: backlog
-  wip: 0
-  validated_by: "2026-08-16 human — TRACK-004 / iter-004"
+  wip: 2
+  validated_by: ""
 ---
 
 # Master Plan
@@ -25,23 +34,21 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 | Field | Value | Why |
 |---|---|---|
-| Direction | **vertical** | Next campaign TBD — do not start a second feature |
-| Scope | `epaper`, `infini` — **no features locked** | Human picks the wave |
-| Stop line | **srs-ready** | No design/implement in-progress until PRD/SRS for the wave |
-| Autonomy | **ask** | Empty iter; confirm before slicing |
-| WIP | **0** | EP-035 is carry-over `ready`, not in flight |
-| Validated | 2026-08-16 human | TRACK-004 on-device connectors verified |
-
-**Closed campaign (TRACK-004):** REQ-09 + REQ-03 ToolChip human-confirmed; Infini live mirror. EP-036 gadget-restore **cancelled** (Linux USB inspect). EP-035 enclose A/L **carried**, not the next Must.
+| Direction | **vertical** | One campaign: hand-on-paper wave end-to-end |
+| Scope | epaper ink-box, tool-modes, connector-ink, region-sync, local-pen-ink, device-document; infini canvas, tablet-sync, vector-document | REQ-10…14, 17, 18 + infini REQ-05 |
+| Stop line | **verified** | design → BDD → implement → human confirm |
+| Autonomy | **bounded** | Run inside lock; sink REQ-15 / REQ-08 |
+| WIP | **2** | W1: EP-037 ∥ IN-034 |
+| Validated | — | Campaign just opened |
 
 **Out-of-scope log**
 
 | Date | What came up | Sink |
 |---|---|---|
-| 2026-08-16 | Software USB re-enum / gadget restore without unplug | **cancelled** EP-036 — see [memory](../.docs/memory/rm2-usb-gadget-no-software-unplug.md) |
-| 2026-08-13 | Generic manipulation of any document node | epaper `[REQ-08]` |
-| 2026-08-14 | Nested enclose (CHL-0011), FREE_FORM / align-content (CHL-0012) | backlog |
-| 2026-08-14 | Guard-corpus false-positive bar (EXP-0002 Initiative 2) | ship gate |
+| 2026-08-16 | Table recognition REQ-15 | backlog — human excluded from TRACK-005 |
+| 2026-08-16 | REQ-16 as separate id | retired → REQ-10 |
+| 2026-08-13 | Generic any-node manipulation | REQ-08 parked |
+| 2026-08-14 | Nested enclose / FREE_FORM | CHL-0011 / CHL-0012 backlog |
 
 ## History spine
 
@@ -49,49 +56,46 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 |---|---|---|---|---|
 | iter-000 | Traceability backfill | closed; retro-gate passed | BDD optional | [iter](./iter-000/iter.md) |
 | iter-001 | EXP-0001 + epaper promote | closed; S1 proven | → Infini REQs | [EXP-0001](./iter-001/explorations/EXP-0001-remarkable-canvas-sync.md) |
-| iter-002 | Infini + sync | **closed** — Must W4+W5 gated READY-WITH-CONCERNS | IN-010 → iter-003 | [iter](./iter-002/iter.md) · [retro](./iter-002/retro.md) |
-| iter-003 | Epaper owns the document (REQ-04…07) | **closed** — W12 human confirm; campaign exited | REQ-08 / CHL-0011 / CHL-0012 stay parked | [iter](./iter-003/iter.md) · [retro](./iter-003/retro.md) |
-| iter-004 | On-device connectors + ToolChip | **closed** — human verified 2026-08-16 | EP-035 → iter-005; EP-036 cancelled | [iter](./iter-004/iter.md) · [retro](./iter-004/retro.md) |
+| iter-002 | Infini + sync | **closed** | IN-010 → iter-003 | [iter](./iter-002/iter.md) |
+| iter-003 | Epaper owns the document | **closed** | REQ-08 parked | [iter](./iter-003/iter.md) |
+| iter-004 | On-device connectors + ToolChip | **closed** — verified 2026-08-16 | EP-035 parking | [iter](./iter-004/iter.md) · [retro](./iter-004/retro.md) |
 
 ## Now — iter-005
 
 ### Goal & capacity
 
-- Goal: **empty shell**. Human will pick the next feature wave and improvements. [STORY-EP-035](./iter-004/stories/STORY-EP-035.md) sits as one small enhancement — **not committed** until the wave is chosen.
-- Capacity: 0 pts committed.
-- Do **not** `/dev` EP-035 yet. Do **not** slice BS-0002 REQs until `/pm` names Musts.
+- Goal: **Hand-on-paper** — REQ-10 (finger pick/move + pan/zoom), erase, clipboard, connector ends + attachments, barrel buttons, manual create. **Not** REQ-15.
+- Capacity: ~77 pts committed, all `draft`. W0 is architect.
+- Risks: SRS not bound; BRD-07 still defers on-device pan (EP-039 slice).
 
 ### Tracks
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
-| TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
-| TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
-| TRACK-003 | planned | **done** | — | [track](./tracks/TRACK-003-smart-group-pilot.md) |
-| TRACK-004 | planned | **done** | campaign verified 2026-08-16 | [track](./tracks/TRACK-004-on-device-connectors.md) |
+| TRACK-001…004 | planned | **done** | — | [tracks](./tracks/) |
+| TRACK-005 | planned | **active** | **W0 `/architect`** then `/designer` EP-037 ∥ IN-034 | [track](./tracks/TRACK-005-hand-on-paper.md) |
 
 ### Open challenges / blocked
 
-- CHL-0011 / CHL-0012 **future**.
-- epaper `[REQ-08]` **future**.
-- EP-032 chrome ADR **parked** in iter-004 (`draft`).
-- Residue EP-007…011 / IN-020…026 remain **blocked** on iter-003.
+- CHL-0011 / CHL-0012 / REQ-08 **not this lock**.
+- EP-032 parked in iter-004.
 
 ### Design packages in flight
 
-- _none_ — UI-EP-04 / UI-EP-05 stay current in iter-004 packages.
+- [hand-touch](./iter-005/design/hand-touch/) — EP-037
+- [pen-button-map](./iter-005/design/pen-button-map/) — IN-034
+- (queued) erase-chrome, clipboard-chrome, connector-ends, connector-attach, manual-create
 
 ### Execution board(s)
 
-- [iter-005](./iter-005/iter.md) — no board until a lock + wave exists
-- [iter-004 execution-board](./iter-004/execution-board.md) — **frozen**
+- [iter-005 execution-board](./iter-005/execution-board.md) — **NOW W0** `/architect`
 
 ### Freeze notes
 
-- TRACK-004 **done**. Retro: [iter-004/retro.md](./iter-004/retro.md). Gate: [pm-retro-gate-pass](./iter-004/handoffs/2026-08-16-pm-retro-gate-pass.md).
+- TRACK-004 **done**. Gate: [pm-retro-gate-pass](./iter-004/handoffs/2026-08-16-pm-retro-gate-pass.md).
 
 ## Forward
 
-- Human picks next wave (notes: [BS-0002](./iter-004/brainstorms/BS-0002-iter-005-feature-wave.md), draft REQs 11–18 / infini REQ-05). Then `/pm` → `/architect` → `/sm` slice. Include EP-035 as a small enhancement beside the Musts.
-- Parked: REQ-08, CHL-0011, CHL-0012, EP-032.
+- After W0: **`/designer`** EP-037 ∥ IN-034, then `/qa` / `/dev` EP-038.
+- Parked: REQ-15, REQ-08, CHL-0011, CHL-0012, EP-035 measure.
 - Backlog: [backlog.md](./backlog.md)
