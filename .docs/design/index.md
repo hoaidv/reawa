@@ -25,4 +25,4 @@ lifecycle: active
 | 2026-08-13 | ink-box-ui | iter-003 | — | Marked deprecated — mouse/ghost; on-device chrome is UI-EP-02 |
 | 2026-08-13 | device-selection-chrome | — | iter-003 | SRS-EP-12 selection overlay (STORY-EP-012) |
 | 2026-08-14 | ToolChip recognizers | iter-003 UI-EP-01 | iter-004 UI-EP-04 | ADR-0021 3+2+Undo/Redo |
-| 2026-08-14 | Connector chrome | — | iter-004 UI-EP-05 | REQ-09 blink + selection |
+| 2026-08-16 | USB HUD icons | — | iter-004 assets | Promoted `icon-epaper-usb-*` (+ ToolChip SVGs) to `.docs/design/system/assets/` |

@@ -24,7 +24,7 @@ MoSCoW: [prioritization-iter-005-draft.md](../prioritization-iter-005-draft.md).
 |---|---|
 | Strength | Outcome-first REQs; Must cluster is paper-like edit (erase, clipboard, connector decorate, buttons). |
 | Strength | D9 button model: one catalogue item per Click / Hold-move; no 3-in-1 hold. |
-| Concern | [REQ-16] pan/zoom **conflicts with BRD-07** until analyst amends. Keep Should. |
+| Concern | [REQ-10] two-finger pan/zoom **conflicts with BRD-07** until analyst amends. Same REQ as one-finger pick/move; [REQ-16] retired. |
 | Concern | [REQ-15] tables vs EXP-0002 ≤2% FP — Could until corpus exists. |
 | Concern | [REQ-17] manual create vs “no general palette” — closed insert set only. |
 | Gap (accepted) | **AI** unspecified — no REQ. |

@@ -6,7 +6,7 @@ parent_srs: [SRS-EP-10]
 parent_req: [REQ-05]
 status: ready
 priority: P1
-iter: iter-004
+iter: iter-005
 estimate: 3
 owner: dev
 depends_on: []
@@ -24,6 +24,8 @@ wireframe: ""
 ---
 
 # STORY-EP-035 — Measure enclose area/length to separate handwriting from boundary ink
+
+**Carried to iter-005** (human 2026-08-16): small enhancement beside the next feature wave. Not NOW until `/pm` picks that wave. File stays in iter-004/stories; `iter:` is iter-005.
 
 Human 2026-08-16: handwriting `"his"` (two inks: `t` + `"his"`) became an ink-box. Do **not**
 fix that with containment/PIP in this story. First question: does **created area / path length**
@@ -43,7 +45,7 @@ No design story — logging + corpus, no new UI.
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Priority | **P1** — queued behind EP-033 device score; do not steal ingest |
+| Priority | **P1** — **iter-005 carry** — not NOW until the next wave is committed |
 
 ## Hypothesis
 

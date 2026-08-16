@@ -60,6 +60,7 @@ viewed at scale, and saved.
 | Default-on recognizer false positives | ≤2% of `pen` strokes on a real corpus incl. a fresh page's first 20 strokes | EXP-0002 G1/G2 — **ship gate** |
 | Connector selectable (marquee or pen hit) | 100% of recognized connectors on a 10-connector fixture; 0 missed hits on the stroke, 0 AABB-only false hits | Manual QA |
 | Finger hit on ink-box → freeform + move | p95 ≤300 ms to `sel_freeform` + selection; move follows finger; 0 accidental resizes | Manual QA |
+| Two-finger pan/zoom on tablet | Next pen sample uses new region p95 ≤100 ms; Infini view matches after settle | Manual QA — REQ-10 slice; BRD-07 block |
 | Erase stroke / selection-erase | p95 ≤50 ms after gesture end; 1 undo restores; 0 accidental ink | Manual QA — **iter-005 draft** |
 | Paste fidelity | Pasted subtree geometry ±1 px @ 100% zoom vs source | Manual QA — **iter-005 draft** |
 | Connector end style + warp | Style survives bound-node drag; endpoint ink stays on the end (0 orphaned ink) | Manual QA — **iter-005 draft** |
@@ -427,29 +428,16 @@ viewed at scale, and saved.
   selected connector (Ink/Curve; per-end Edge/Centre); dimmed toggles under Selection;
   refuse/no-op (stroke stays ink, no banner); marquee vs path-hit vs AABB-miss.
 
-## [REQ-10] Hand-touch on canvas (first slice) {#hand-touch}
-<!-- added: 2026-08-15 — start adopting capacitive finger on the document, not only ToolChip -->
-- **Priority:** Must · **Traces:** [BRD-07] · **Campaign:** this iteration, after connector select
+## [REQ-10] Hand-touch on canvas {#hand-touch}
+<!-- added: 2026-08-15; revised: 2026-08-16 — merged [REQ-16] two-finger pan/zoom into this REQ -->
+- **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
-- **Outcome:** the creator can pick up and move an ink-box with a **finger** without first
-  hunting a Selection chip, while **fine chrome** stays pen-only. The pen remains the precision
-  instrument; the hand is for coarse, large targets.
-- **Hit-test → freeform.** A finger press whose hit is an **ink-box** (Smart Group world bounds,
-  at/above the LOD cutoff) **selects that box** and **switches the exclusive tool to
-  `sel_freeform`**. The chip updates with the same p95 ≤300 ms bar as [REQ-03](#tool-modes).
-  Finger on empty canvas does not switch tools and does not start a lasso (no accidental
-  selection while resting a palm — architect may keep the existing palm/reject filter).
-- **Move with finger.** Once a box is selected (by finger hit, or already selected), a finger
-  drag **inside the bounds** moves the box with the same live-direct contract as
-  [REQ-06](#device-manipulation) (actual ink follows; 0 px jump on lift). Finger may also start
-  a move on the same down that hit the box (no extra tap required).
-- **No subtle manipulation for hand-touch.** Finger does **not** drive the **6 square anchors**
-  or any control whose hit target is **< 64 du**. Resize stays **pen**. Enclose and ToolChip
-  tiles are 64 du → still finger-eligible under the size rule.
-- **Size rule (simple).** Finger may hit a control only if its **hit target is ≥ the primary
-  ToolChip tile**. That tile is **64×64 du** ([CHL-0019](../../../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md);
-  32 px was verified too small on RM2). Handles are 28 visual / 56 hit → **finger-ineligible**.
-  ToolChip tiles, Undo/Redo, recognizer toggles, and Enclose (64 du) stay finger-eligible.
+- **Campaign:** **one grammar, two slices.** One-finger pick/move is this iteration (after connector select). Two-finger pan/zoom is the rest of the same REQ (iter-005 draft until [BRD-07](../../brd.md) on-device pan/zoom deferral is amended). [REQ-16](#device-pan-zoom) is **retired** — superseded by this section.
+- **Outcome:** the **hand** is how the creator moves around the page and shoves large objects; the **pen** stays the precision instrument. One coherent capacitive grammar — not a separate “pan product” and “hit-box product.”
+- **One finger — pick and move.** A finger press whose hit is an **ink-box** (Smart Group world bounds, at/above the LOD cutoff) **selects that box** and **switches the exclusive tool to `sel_freeform`**. The chip updates with the same p95 ≤300 ms bar as [REQ-03](#tool-modes). Finger on empty canvas does not switch tools and does not start a lasso (palm rest is not a selection). Once a box is selected (by this hit, or already selected), a finger drag **inside the bounds** moves it with the [REQ-06](#device-manipulation) live-direct contract. The same down that hits the box may start the move.
+- **Two fingers — pan and zoom.** Two-finger pan/pinch changes the **same viewport** Infini uses ([REQ-02](#region-sync)); the device **publishes** viewport so the desktop follows. Does not run while a one-finger box-move is in flight. Link down: local viewport still works.
+- **No subtle manipulation.** Finger does **not** drive the **6 square anchors** or any control whose hit target is **< 64 du**. Resize stays **pen**. Enclose and ToolChip tiles are 64 du → finger-eligible.
+- **Size rule.** Finger may hit a control only if its **hit target is ≥ the primary ToolChip tile** (**64×64 du**, [CHL-0019](../../../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md)). Handles 28 visual / 56 hit → pen-only.
 
 **Acceptance**
 - Given `Pen` active and a Smart Group at/above LOD, When the creator **finger-downs inside
@@ -457,16 +445,19 @@ viewed at scale, and saved.
   shows freeform, all with p95 ≤300 ms.
 - Given that finger-down (or a following finger drag) inside the selected box, When the finger
   moves, Then the box follows with the [REQ-06](#device-manipulation) live-direct bar (0 px jump
-  on lift; ≥5 Hz partial refresh).
+  on lift; ≥5 Hz partial refresh) and **0** viewport pan starts.
 - Given a selected Smart Group, When the creator **finger-downs on a resize anchor** (or any
   control whose hit target is **< 64 du**), Then **no** resize/scale-mode/end-kind gesture
   starts (0 accidental transforms). Pen on the same anchor still resizes.
-- Given finger-down on empty canvas (no box hit), When the touch ends, Then the exclusive tool
-  is unchanged and 0 nodes are selected by that touch.
+- Given **one** finger-down on empty canvas (no box hit), When the touch ends, Then the exclusive tool
+  is unchanged and 0 nodes are selected by that touch (0 accidental lassos; 0 pans).
+- Given **two** fingers on empty canvas (no box-move in flight), When the creator pans or pinches for ≥5 s, Then the drawing region translates/scales with p95 map apply ≤100 ms for the next pen sample, and Infini’s view matches after settle (0 divergent viewports).
+- Given Infini and the tablet both idle, When the creator pans on the tablet, Then Infini sends **0** competing viewport bursts that fight the tablet gesture (architect: last-writer or token — ADR).
 - Given finger-down on a ToolChip primary tile (64 du), When the tap completes, Then
-  [REQ-03](#tool-modes) still holds (tool/toggle/undo) — this REQ does not steal chip hits.
+  [REQ-03](#tool-modes) still holds — this REQ does not steal chip hits.
 - **UI states / journeys to design:** finger hit box while `Pen`; finger move in progress;
-  finger on anchor no-op; finger empty canvas no-op; mixed pen-resize after finger-select.
+  finger on anchor no-op; one-finger empty canvas no-op; two-finger pan in progress; pinch;
+  pan vs box-move conflict; link down (local viewport); mixed pen-resize after finger-select.
 
 ## [REQ-08] Direct manipulation of any document node {#node-manipulation}
 - **Priority:** Should · **Traces:** [BRD-07] · **Campaign:** distinct iteration — thickened now,
@@ -585,17 +576,15 @@ viewed at scale, and saved.
 - **UI states / journeys to design:** armed/disarmed; accepted grid; rejected (not a grid); undo.
 
 ## [REQ-16] Finger pan and zoom on the tablet {#device-pan-zoom}
-<!-- campaign: iter-005-draft — BS-0002. Proposes reversing BRD-07 / prior Non-Goal. -->
-- **Priority:** Should · **Traces:** [BRD-07]
-- Needs design: yes
-- **Campaign:** iter-005 **draft**. **Blocked on BRD amendment:** [BRD-07](../../brd.md) currently defers on-device pan/zoom and gives Infini exclusive navigation. This REQ is the product intent to reverse that; analyst must update the BRD before this REQ is Must.
-- **Outcome:** the creator can move around the page **on the tablet** with fingers when the desktop is out of reach. Two-finger pan/pinch changes the **same viewport** Infini uses ([REQ-02](#region-sync)); the device **publishes** viewport so the desktop follows. Does not steal [REQ-10](#hand-touch) one-finger box hit/move (one finger still select/move; two fingers navigate).
+<!-- lifecycle: retired -->
+<!-- superseded-by: [REQ-10] -->
+<!-- retired: 2026-08-16 — merged into [REQ-10](#hand-touch) (one-finger pick/move + two-finger pan/zoom). -->
+- **Priority:** Won't (retired) · **Traces:** [BRD-07]
+- Needs design: no
+- **Retired.** Two-finger pan/zoom is specified under [REQ-10](#hand-touch). Do not implement this id.
 
 **Acceptance**
-- Given two fingers on empty canvas (no box-move in flight), When the creator pans or pinches for ≥5 s, Then the drawing region translates/scales with p95 map apply ≤100 ms for the next pen sample, and Infini’s view matches after settle (0 divergent viewports).
-- Given one finger on a SmartGroup, When the creator moves, Then [REQ-10](#hand-touch) still holds (0 accidental pans).
-- Given Infini and the tablet both idle, When the creator pans on the tablet, Then Infini sends **0** competing viewport bursts that fight the tablet gesture (architect: last-writer or token — ADR).
-- **UI states / journeys to design:** two-finger pan in progress; pinch; conflict with box-move; link down (local viewport still works).
+- Given this id, When an auditor looks up pan/zoom, Then they follow [REQ-10](#hand-touch) (0 new stories tagged only REQ-16).
 
 ## [REQ-17] Manual creation of frames, connectors, attachments, and primitives {#manual-create}
 <!-- campaign: iter-005-draft — BS-0002. Ink-box manual/enclose already REQ-05. -->
@@ -635,9 +624,8 @@ viewed at scale, and saved.
 
 ## Non-Goals
 
-- **On-device pan / zoom / pinch** — **draft reversal** in [REQ-16](#device-pan-zoom) (Should;
-  blocked on BRD-07 amendment). Until that REQ is Must, one-finger canvas is [REQ-10](#hand-touch)
-  hit-test / move only.
+- **On-device pan / zoom / pinch** — specified as the two-finger half of [REQ-10](#hand-touch).
+  Still **blocked on BRD-07 amendment** before that slice ships. One-finger empty canvas is not a pan.
 - **Finger resize, rotation, or connector re-anchor** — Won't this slice. Fine gizmos stay pen.
 - Acting as a Reawa-style mouse/stylus driver for other Mac apps.
 - Cloud sync or multi-peer sessions.
@@ -695,8 +683,8 @@ viewed at scale, and saved.
 
 ## Open Questions
 
-- **Iter-005 draft REQs minted 2026-08-16** from [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md): [REQ-11](#erase)–[REQ-18](#pen-buttons). **Do not slice** until iter-004 retro-gate. **AI** still unspecified — no REQ. — **owner:** pm — **needed by:** iter-005 open.
-- [REQ-16](#device-pan-zoom) vs [BRD-07](../../brd.md) on-device pan/zoom deferral — **owner:** analyst — **needed by:** before REQ-16 can be Must.
+- **Iter-005 draft REQs minted 2026-08-16** from [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md): [REQ-11](#erase)–[REQ-18](#pen-buttons) ([REQ-16](#device-pan-zoom) **retired** into [REQ-10](#hand-touch)). **Do not slice** until iter-004 retro-gate. **AI** still unspecified — no REQ. — **owner:** pm — **needed by:** iter-005 open.
+- [REQ-10](#hand-touch) two-finger pan/zoom vs [BRD-07](../../brd.md) on-device pan/zoom deferral — **owner:** analyst — **needed by:** before the pan/zoom **slice** of REQ-10 ships.
 
 - Undo depth and affordance on the device — **closed 2026-08-14** ([CHL-0016](../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
   / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)): depth 20; on-panel Undo and Redo after

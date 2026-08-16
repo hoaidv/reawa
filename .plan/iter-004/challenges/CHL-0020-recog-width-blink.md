@@ -3,7 +3,8 @@ id: CHL-0020
 author: designer
 target: [SRS-EP-12]
 severity: low
-status: open
+status: resolved
+resolution: adopted
 opened: 2026-08-15
 iter: iter-004
 expedite: false
@@ -25,7 +26,9 @@ Spec: [UI-EP-06](../design/recog-blink/ui-spec.md).
 - Durable chrome state belongs in a later architect story (STORY-EP-032). This challenge is the product/UI contract only.
 
 ## Resolution
-<!-- PM fills after triage -->
+
+**Adopted 2026-08-16 (close-iter).** Membership blink replaced by last-join highlight in iter-004. Durable chrome owner remains [STORY-EP-032](../stories/STORY-EP-032.md) (`draft`, parked — not carried into empty iter-005).
 
 ## Product doc updates
-<!-- SRS-EP-12 inventory when adopted -->
+
+UI-EP-06 / SRS-EP-12 inventory already recorded during the iter; no further SRS edit at close.

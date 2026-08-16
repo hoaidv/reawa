@@ -150,6 +150,7 @@ Human 2026-08-16: will **not** assign three features to one hold-while-moving ge
 | D8 | Pen buttons: **accelerators**. B1 click = toggle current ↔ pinned (`sel_freeform` v1). B1 hold = empty→lasso / node→drag. B2 (if present) = erase (click toggle Pen↔eraser; hold = temporary erase). Never three hold-modes on one button. 0-button = chip only. | superseded | — | R2 |
 | D9 | Per barrel button: **Click** and **Hold-move** each bind to **exactly one** item from a **closed catalogue**. User configures (Infini). No silent 3-way hold. Context lasso-or-drag is allowed only as an explicit catalogue item, not as default stacking. Defaults: see R3-I5. Accelerators only. | decided | D8 | R3 |
 | D10 | Human asked to capture the wave as **iter-005 draft PRD**. Minted epaper REQ-11…18 + infini REQ-05. Still **do not open iter-005**; SM does not slice until retro-gate. | decided | D1 (no-REQ clause) | chat 2026-08-16 |
+| D11 | Merge [REQ-16] into [REQ-10]. One hand-touch grammar: 1-finger pick/move + 2-finger pan/zoom. REQ-16 retired (`superseded-by: REQ-10`). | decided | D3 (pan as separate Should REQ) | human 2026-08-16 |
 
 ## Assumptions & riskiest bets
 

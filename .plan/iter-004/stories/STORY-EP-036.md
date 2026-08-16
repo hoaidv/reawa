@@ -4,7 +4,7 @@ title: Detect USB gadget down and restore without unplug
 kind: implement
 parent_srs: [SRS-EP-08, SRS-EP-13]
 parent_req: [REQ-07]
-status: done
+status: cancelled
 priority: P1
 iter: iter-004
 estimate: 5
@@ -25,7 +25,11 @@ wireframe: ""
 
 # STORY-EP-036 — Detect USB gadget down and restore without unplug
 
-**Bug.** Human 2026-08-16: USB cable still plugged, **ping 10.11.99.1 times out**. Same class xochitl shows when Help omits `10.11.99.1` as the SSH address. Distinct from EP-034’s ping-alive Infini-down.
+**Cancelled 2026-08-16 (human).** Restoring `10.11.99.1` without a physical unplug/plug needs a deep Linux USB gadget / host re-enumeration inspect. UDC unbind, `modprobe -r g_ether`, and software unplug **brick the port until tablet reboot** (see `.cursor/rules/rm2-no-usb-software-unplug.mdc`). Do not resurrect this story as gadget restore.
+
+Keepalives and TCP retry that **did** ship stay under [STORY-EP-034](./STORY-EP-034.md). Physical cable unplug/plug remains the only safe re-enumeration.
+
+**Original bug.** Human 2026-08-16: USB cable still plugged, **ping 10.11.99.1 times out**. Same class xochitl shows when Help omits `10.11.99.1` as the SSH address. Distinct from EP-034’s ping-alive Infini-down.
 
 Wanted: **detect on epaper**, then **bring the gadget back without unplug**, then the existing StrokeSync session retry can connect again.
 
@@ -41,7 +45,7 @@ No design story — transport / gadget, not ToolChip UI. Status line log is enou
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Priority | **P1** — **done** 2026-08-16 human: connection stable |
+| Priority | **P1** — **cancelled** 2026-08-16 — no restore without Linux USB inspect |
 | Depends on | EP-034 |
 
 ## Diagnosis split

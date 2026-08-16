@@ -2,10 +2,10 @@
 iter: iter-004
 goal: "On-device connectors (REQ-09) + ToolChip 3 tools / 2 recognizer toggles / Undo+Redo (REQ-03)"
 start: 2026-08-14
-end: ""
+end: 2026-08-16
 capacity: 32
 committed_points: 34
-status: active
+status: closed
 ---
 
 # Iter 004 — On-device connectors
@@ -35,12 +35,12 @@ Prior campaign (Epaper owns the document, REQ-04…07) **closed** in
 
 ## Parked (track, not this cursor)
 
-- [STORY-EP-032](./stories/STORY-EP-032.md) — draft — `/architect` later — device UI chrome state machine
-- [STORY-EP-033](./stories/STORY-EP-033.md) — **done** — P0 origin/stale — human verified 2026-08-16
-- [STORY-EP-034](./stories/STORY-EP-034.md) — **in-review** — P1 USB/TCP keepalive — `/qa`
-- [STORY-EP-035](./stories/STORY-EP-035.md) — ready — P1 enclose A/L measure — queued
-- [STORY-IN-032](./stories/STORY-IN-032.md) — ready — P1 Infini demo mix with RM ink — queued
-- [STORY-EP-036](./stories/STORY-EP-036.md) — ready — P1 gadget restore without unplug — after EP-034
+- [STORY-EP-032](./stories/STORY-EP-032.md) — **draft** parked — `/architect` later
+- [STORY-EP-033](./stories/STORY-EP-033.md) — **done** — P0 origin/stale
+- [STORY-EP-034](./stories/STORY-EP-034.md) — **done** — USB/TCP keepalive
+- [STORY-EP-035](./stories/STORY-EP-035.md) — **carried** → iter-005 (`ready`, not committed)
+- [STORY-IN-032](./stories/STORY-IN-032.md) — **done**
+- [STORY-EP-036](./stories/STORY-EP-036.md) — **cancelled** — no gadget restore without Linux USB inspect
 
 ## Carry-over candidates (not committed)
 

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" aria-hidden="true">
+  <defs>
+    <mask id="usb-connected">
+      <rect width="48" height="48" fill="#fff"/>
+      <rect x="19" y="7" width="4" height="4" fill="#000"/>
+      <rect x="25" y="7" width="4" height="4" fill="#000"/>
+      <!-- Bold serif lowercase i (tittle + stemmed serifs), cutout -->
+      <circle cx="24" cy="18.2" r="2.5" fill="#000"/>
+      <path fill="#000" d="M19.2 22.4h9.6v2.4h-2.1v9.2h2.4v2.5H17.3v-2.5h2.4v-9.2h-2.5z"/>
+    </mask>
+  </defs>
+  <path fill="#000" mask="url(#usb-connected)"
+        d="M16 3h16v9h5v21a10 10 0 0 1-10 10h-6a10 10 0 0 1-10-10V12h5z"/>
+</svg>

@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-16T10:48:00+00:00
+generated_at: 2026-08-16T15:36:51+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -41,8 +41,8 @@ generated_at: 2026-08-16T10:48:00+00:00
 | [STORY-EP-032](./iter-004/stories/STORY-EP-032.md) | Architect: device UI chrome state machine | implement | unassigned | epaper | [SRS-EP-12] | draft | iter-004 | 5 |
 | [STORY-EP-033](./iter-004/stories/STORY-EP-033.md) | Reject origin/stale first sample on pen-down | implement | dev | epaper | [SRS-EP-01] | done | iter-004 | 2 |
 | [STORY-EP-034](./iter-004/stories/STORY-EP-034.md) | USB Ethernet stay-up and SSH/TCP keepalives | implement | dev | epaper | [SRS-EP-08], [SRS-EP-13] | done | iter-004 | 3 |
-| [STORY-EP-035](./iter-004/stories/STORY-EP-035.md) | Measure enclose area/length to separate handwriting from boundary ink | implement | dev | epaper | [SRS-EP-10] | ready | iter-004 | 3 |
-| [STORY-EP-036](./iter-004/stories/STORY-EP-036.md) | Detect USB gadget down and restore without unplug | implement | dev | epaper | [SRS-EP-08], [SRS-EP-13] | done | iter-004 | 5 |
+| [STORY-EP-035](./iter-004/stories/STORY-EP-035.md) | Measure enclose area/length to separate handwriting from boundary ink | implement | dev | epaper | [SRS-EP-10] | ready | iter-005 | 3 |
+| [STORY-EP-036](./iter-004/stories/STORY-EP-036.md) | Detect USB gadget down and restore without unplug | implement | dev | epaper | [SRS-EP-08], [SRS-EP-13] | cancelled | iter-004 | 5 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |

@@ -210,7 +210,7 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
   accepts is the initial full load ([REQ-03](#tablet-sync)).
 - **Multi-directional sync / modern document-synchronization algorithm / CRDT** — explicitly
   deferred to a later campaign.
-- On-device pan/zoom gestures on Epaper — **draft reversal** [epaper REQ-16](../epaper/prd.md#device-pan-zoom); Infini remains navigator until that REQ is Must and an ADR covers viewport last-writer.
+- On-device pan/zoom gestures on Epaper — two-finger half of [epaper REQ-10](../epaper/prd.md#hand-touch); Infini remains a navigator; ADR for viewport last-writer before that slice ships.
 - Reawa pen-relay / mouse emulation features inside Infini.
 - Multi-user collaborative editing; cloud sync.
 - Pressure-rich brushes, layers UI, or full illustration suite.
