@@ -920,6 +920,39 @@ private:
         return JsonValue::object(std::move(o));
     }
 
+    static void appendRestSpine(DocNode &n, const JsonValue *sp)
+    {
+        if (!sp || !sp->isArray())
+            return;
+        for (const auto &pt : sp->asArray()) {
+            if (pt.isObject())
+                n.restSpine.push_back({pt.getNumber("x"), pt.getNumber("y")});
+        }
+    }
+
+    static void appendRestOffsets(DocNode &n, const JsonValue *off)
+    {
+        if (!off || !off->isArray())
+            return;
+        for (const auto &pt : off->asArray()) {
+            if (pt.isObject())
+                n.restOffsets.push_back({pt.getNumber("s"), pt.getNumber("d")});
+        }
+    }
+
+    /** Infini snapshot uses restSpine; device wire uses restShape. */
+    static void fillConnectorRest(DocNode &n, const JsonValue &j)
+    {
+        if (const JsonValue *rs = j.get("restShape"); rs && rs->isObject()) {
+            appendRestSpine(n, rs->get("spine"));
+            appendRestOffsets(n, rs->get("offsets"));
+        }
+        if (n.restSpine.empty())
+            appendRestSpine(n, j.get("restSpine"));
+        if (n.restOffsets.empty())
+            appendRestOffsets(n, j.get("restOffsets"));
+    }
+
     /** @implements [SRS-EP-07] create_connector — device-authored; body + rest + anchors
      *  @implements [SRS-EP-17] commit envelope */
     void opCreateConnector(const JsonValue &p)
@@ -934,22 +967,7 @@ private:
         n.fromNodeId = n.fromAnchor.nodeId;
         n.toNodeId = n.toAnchor.nodeId;
         n.warpStyle = p.getString("warpStyle", "morph");
-        if (const JsonValue *rs = p.get("restShape"); rs && rs->isObject()) {
-            if (const JsonValue *sp = rs->get("spine"); sp && sp->isArray()) {
-                for (const auto &pt : sp->asArray()) {
-                    if (!pt.isObject())
-                        continue;
-                    n.restSpine.push_back({pt.getNumber("x"), pt.getNumber("y")});
-                }
-            }
-            if (const JsonValue *off = rs->get("offsets"); off && off->isArray()) {
-                for (const auto &pt : off->asArray()) {
-                    if (!pt.isObject())
-                        continue;
-                    n.restOffsets.push_back({pt.getNumber("s"), pt.getNumber("d")});
-                }
-            }
-        }
+        fillConnectorRest(n, p);
         if (const JsonValue *ids = p.get("captureIds"); ids && ids->isArray()) {
             for (const auto &idv : ids->asArray()) {
                 if (!idv.isString())
@@ -1244,20 +1262,9 @@ private:
             n.connectorInvalid = false;
             n.fromPose = DeviceDocument::poseFromJson(j.get("fromPose"));
             n.toPose = DeviceDocument::poseFromJson(j.get("toPose"));
-            if (const JsonValue *rs = j.get("restShape"); rs && rs->isObject()) {
-                if (const JsonValue *sp = rs->get("spine"); sp && sp->isArray()) {
-                    for (const auto &pt : sp->asArray()) {
-                        if (pt.isObject())
-                            n.restSpine.push_back({pt.getNumber("x"), pt.getNumber("y")});
-                    }
-                }
-                if (const JsonValue *off = rs->get("offsets"); off && off->isArray()) {
-                    for (const auto &pt : off->asArray()) {
-                        if (pt.isObject())
-                            n.restOffsets.push_back({pt.getNumber("s"), pt.getNumber("d")});
-                    }
-                }
-            }
+            // Infini toJSON uses restSpine; epaper wire uses restShape. Accept both
+            // or reconnect doc_load paints nodes but skips connectors (empty warp).
+            DeviceDocument::fillConnectorRest(n, j);
             if (const JsonValue *ch = j.get("children"); ch && ch->isArray()) {
                 for (const auto &c : ch->asArray())
                     n.children.push_back(nodeFromJson(c));

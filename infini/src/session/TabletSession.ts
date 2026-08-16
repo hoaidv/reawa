@@ -16,7 +16,7 @@ import {
 } from "../canvas/Viewport";
 import { drawablesToPrimitives } from "../document/toPrimitives";
 import type { VectorDocument } from "../document/VectorDocument";
-import type { DocOp } from "../document/types";
+import type { DocOp, DocNode, SmartBounds, SmartTransform } from "../document/types";
 import {
   docChangeToOp,
   messageToDocOp,
@@ -152,6 +152,10 @@ export class TabletSession {
       return;
     }
     this.lastAppliedSeq = lastSeq;
+    const incoming = msg.document as { rootChildren?: DocNode[] } | undefined;
+    if (incoming?.rootChildren && incoming.rootChildren.length > 0) {
+      this.tree.replaceTree(incoming.rootChildren);
+    }
     this.emitDocLoad();
   }
 
@@ -399,6 +403,19 @@ export class TabletSession {
     this.dropPreviewsForOp(op);
     this.paintMirror();
     return { applied: true, elapsedMs: this.lastApplyAtMs - t0 };
+  }
+
+  /**
+   * Advisory live manip (not seq / not undo). WorldLayer follows the device drag.
+   * @fix [STORY-IN-032] live set_smart_transform preview
+   */
+  applyManipPreview(id: string, transform: Record<string, unknown>, bounds?: Record<string, unknown>): boolean {
+    const t = transform as SmartTransform;
+    if (typeof t.x !== "number" || typeof t.y !== "number") return false;
+    const b = bounds as SmartBounds | undefined;
+    const ok = this.tree.applyLiveSmartGeometry(id, t, b);
+    if (ok) this.paintMirror();
+    return ok;
   }
 
   /**

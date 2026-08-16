@@ -3,6 +3,7 @@
  */
 #include "document/device_document.hpp"
 #include "document/recognizer_dispatch.hpp"
+#include "document/connector_warp.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -362,6 +363,59 @@ static void test_consecutive_stops_at_box()
     CHECK(d.connector.diag.find("stop=sg:") != std::string::npos);
 }
 
+/** Infini reconnect snapshot uses restSpine, not restShape — paint needs warp spine. */
+static void test_infini_snapshot_rest_spine_warps()
+{
+    DeviceDocument doc;
+    doc.onAcceptedDocLoad(parseJson(R"({
+      "version": 1,
+      "status": "open",
+      "rootChildren": [
+        {
+          "id": "A",
+          "kind": "smart_group",
+          "bounds": { "x": 0, "y": 0, "width": 80, "height": 80 },
+          "transform": { "x": 0, "y": 0, "rotation": 0, "scaleX": 1, "scaleY": 1 },
+          "inkScaleMode": "fixedInk",
+          "children": []
+        },
+        {
+          "id": "B",
+          "kind": "smart_group",
+          "bounds": { "x": 0, "y": 0, "width": 80, "height": 80 },
+          "transform": { "x": 200, "y": 0, "rotation": 0, "scaleX": 1, "scaleY": 1 },
+          "inkScaleMode": "fixedInk",
+          "children": []
+        },
+        {
+          "id": "c1",
+          "kind": "connector",
+          "from": { "nodeId": "A", "kind": "centre" },
+          "to": { "nodeId": "B", "kind": "centre" },
+          "warpStyle": "morph",
+          "restSpine": [
+            { "x": 40, "y": 40 },
+            { "x": 120, "y": 40 },
+            { "x": 240, "y": 40 }
+          ],
+          "restOffsets": [
+            { "s": 0, "d": 0 },
+            { "s": 0.5, "d": 0 },
+            { "s": 1, "d": 0 }
+          ],
+          "children": []
+        }
+      ]
+    })"));
+    const DocNode *c = doc.find("c1");
+    CHECK(c);
+    CHECK(c && c->kind == NodeKind::Connector);
+    CHECK(c && c->restSpine.size() >= 2);
+    refreshAllConnectorWarps(doc);
+    c = doc.find("c1");
+    CHECK(c && c->warpedSamples.size() >= 2);
+}
+
 int main()
 {
     test_ux1_create();
@@ -375,6 +429,7 @@ int main()
     test_ux2_any_order_and_z();
     test_ux2_crossing_splice();
     test_consecutive_stops_at_box();
+    test_infini_snapshot_rest_spine_warps();
     if (g_fails) {
         std::cerr << g_fails << " failure(s)\n";
         return 1;

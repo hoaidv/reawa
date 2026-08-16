@@ -780,6 +780,34 @@ void TabletCanvasItem::flushOneWayWire()
         m_sync->sendLine(QByteArray::fromStdString(line));
 }
 
+/** @fix [STORY-IN-032] live pose to Infini without a committed doc_change seq */
+void TabletCanvasItem::sendManipPreviewToInfini()
+{
+    if (!m_sync || !m_sync->isConnected())
+        return;
+    if (m_gesturePickableId.isEmpty())
+        return;
+    QJsonObject xf;
+    xf.insert(QStringLiteral("x"), m_liveT.x);
+    xf.insert(QStringLiteral("y"), m_liveT.y);
+    xf.insert(QStringLiteral("rotation"), 0);
+    xf.insert(QStringLiteral("scaleX"), m_liveT.scaleX);
+    xf.insert(QStringLiteral("scaleY"), m_liveT.scaleY);
+    QJsonObject o;
+    o.insert(QStringLiteral("type"), QStringLiteral("manip_preview"));
+    o.insert(QStringLiteral("id"), m_gesturePickableId);
+    o.insert(QStringLiteral("transform"), xf);
+    if (m_selGesture == SelGesture::Resize) {
+        QJsonObject b;
+        b.insert(QStringLiteral("x"), m_liveB.x);
+        b.insert(QStringLiteral("y"), m_liveB.y);
+        b.insert(QStringLiteral("width"), m_liveB.width);
+        b.insert(QStringLiteral("height"), m_liveB.height);
+        o.insert(QStringLiteral("bounds"), b);
+    }
+    m_sync->sendLine(QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
 void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
 {
     const QString inboundType = obj.value(QStringLiteral("type")).toString();
@@ -1377,6 +1405,7 @@ void TabletCanvasItem::updateSelectionGesture(const QPointF &canvasPos)
         && m_selectionGhostClock.elapsed() < kSelectionGhostMinIntervalMs)
         return;
     m_selectionGhostClock.restart();
+    sendManipPreviewToInfini();
     redrawLiveManipRegion();
 }
 

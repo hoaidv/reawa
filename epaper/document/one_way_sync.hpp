@@ -265,6 +265,8 @@ private:
         o.emplace_back("type", JsonValue::string("hello"));
         o.emplace_back("lastSeq", JsonValue::number(m_doc.lastSeq()));
         o.emplace_back("queued", JsonValue::number(queued));
+        if (queued == 0 && !m_doc.rootChildren.empty())
+            o.emplace_back("document", m_doc.toJSON());
         emitLine(JsonValue::object(std::move(o)));
     }
 
@@ -313,6 +315,15 @@ private:
         acceptLoad(msg);
     }
 
+    static bool incomingDocumentEmpty(const JsonValue &msg)
+    {
+        const JsonValue *document = msg.get("document");
+        if (!document || !document->isObject())
+            return true;
+        const JsonValue *kids = document->get("rootChildren");
+        return !kids || !kids->isArray() || kids->asArray().empty();
+    }
+
     static bool docLoadWellFormed(const JsonValue &msg)
     {
         const JsonValue *document = msg.get("document");
@@ -344,6 +355,18 @@ private:
         const JsonValue *document = msg.get("document");
         if (!document)
             return;
+        if (incomingDocumentEmpty(msg) && !m_doc.rootChildren.empty()) {
+            logReject("empty_doc_load_keep_local", false);
+            m_wireCursor = 0;
+            m_epochLive = true;
+            m_handshakeInFlight = false;
+            m_loadLegal = false;
+            m_awaitingDrainAck = false;
+            JsonValue::Object ack;
+            ack.emplace_back("type", JsonValue::string("load_ack"));
+            emitLine(JsonValue::object(std::move(ack)));
+            return;
+        }
         m_doc.onAcceptedDocLoad(*document);
         m_wireCursor = 0;
         m_epochLive = true;

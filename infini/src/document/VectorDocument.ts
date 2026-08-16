@@ -69,6 +69,24 @@ function parseRestOff(raw: unknown): RestOffset[] {
   return out;
 }
 
+/** Epaper wire uses restShape; Infini nodes use restSpine. */
+export function ingestConnectorRest(n: ConnectorNode): void {
+  const extra = n as ConnectorNode & {
+    restShape?: { spine?: Vec2[]; offsets?: RestOffset[] };
+  };
+  if ((n.restSpine?.length ?? 0) === 0 && extra.restShape?.spine?.length) {
+    n.restSpine = extra.restShape.spine;
+    n.restOffsets = extra.restShape.offsets ?? [];
+  }
+}
+
+function walkIngestConnectors(nodes: DocNode[]): void {
+  for (const n of nodes) {
+    if (n.kind === "connector") ingestConnectorRest(n);
+    if (n.kind === "frame" || n.kind === "group") walkIngestConnectors(n.children);
+  }
+}
+
 function parsePose(raw: unknown): ConnectorEndPose | undefined {
   const o = asRecord(raw);
   if (!o) return undefined;
@@ -97,13 +115,15 @@ export class VectorDocument {
 
   /** Deep snapshot for idempotency / tests. */
   toJSON(): VectorDocSnapshot {
+    const rootChildren = cloneJson(this.rootChildren);
+    walkIngestConnectors(rootChildren);
     return {
       version: 1,
       status: this.status,
       title: this.title,
       path: this.path,
       errorMessage: this.errorMessage,
-      rootChildren: cloneJson(this.rootChildren),
+      rootChildren,
     };
   }
 
@@ -139,6 +159,7 @@ export class VectorDocument {
    */
   replaceTree(nodes: DocNode[]): void {
     this.rootChildren = nodes;
+    walkIngestConnectors(this.rootChildren);
     this.appliedOpIds.clear();
     this.status = "open";
     this.errorMessage = undefined;
@@ -162,6 +183,20 @@ export class VectorDocument {
 
   hasAppliedOpId(opId: string): boolean {
     return this.appliedOpIds.has(opId);
+  }
+
+  /**
+   * Live drag/resize from the device — no opId, not a committed doc_change.
+   * @implements [SRS-IN-09] set_smart_transform live pose; 0 connector ops
+   * @fix [STORY-IN-032] Infini follows epaper drag
+   */
+  applyLiveSmartGeometry(id: string, transform: SmartTransform, bounds?: SmartBounds): boolean {
+    const node = this.indexById().get(id);
+    if (!node || node.kind !== "smart_group") return false;
+    node.transform = cloneJson(transform);
+    if (bounds) node.bounds = cloneJson(bounds);
+    this.refreshConnectors();
+    return true;
   }
 
   /**

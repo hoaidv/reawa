@@ -36,9 +36,21 @@ export type RmDocChangeMsg = {
 };
 
 /** @implements [SRS-IN-07] hello lastSeq queued */
-export type RmHelloMsg = { type: "hello"; lastSeq: number; queued: number };
+export type RmHelloMsg = {
+  type: "hello";
+  lastSeq: number;
+  queued: number;
+  document?: Record<string, unknown>;
+};
 export type RmQueueEmptyMsg = { type: "queue_empty" };
 export type RmLoadAckMsg = { type: "load_ack" };
+
+export type RmManipPreviewMsg = {
+  type: "manip_preview";
+  id: string;
+  transform: { x: number; y: number; rotation: number; scaleX: number; scaleY: number };
+  bounds?: { x: number; y: number; width: number; height: number };
+};
 
 export type RmInboundMsg =
   | RmStrokeMsg
@@ -46,7 +58,8 @@ export type RmInboundMsg =
   | RmDocChangeMsg
   | RmHelloMsg
   | RmQueueEmptyMsg
-  | RmLoadAckMsg;
+  | RmLoadAckMsg
+  | RmManipPreviewMsg;
 
 /** @implements [SRS-IN-17] inbound debug_log from Epaper on :9878 */
 export type DebugLogRecord = {

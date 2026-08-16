@@ -36,8 +36,11 @@ Prior campaign (Epaper owns the document, REQ-04…07) **closed** in
 ## Parked (track, not this cursor)
 
 - [STORY-EP-032](./stories/STORY-EP-032.md) — draft — `/architect` later — device UI chrome state machine
-- [STORY-EP-033](./stories/STORY-EP-033.md) — ready — P0 origin/stale pen-down — **NOW ∥ IN-030**
-- [STORY-EP-034](./stories/STORY-EP-034.md) — ready — P1 USB stay-up / keepalives — **queued; serial vs canvas**
+- [STORY-EP-033](./stories/STORY-EP-033.md) — **done** — P0 origin/stale — human verified 2026-08-16
+- [STORY-EP-034](./stories/STORY-EP-034.md) — **in-review** — P1 USB/TCP keepalive — `/qa`
+- [STORY-EP-035](./stories/STORY-EP-035.md) — ready — P1 enclose A/L measure — queued
+- [STORY-IN-032](./stories/STORY-IN-032.md) — ready — P1 Infini demo mix with RM ink — queued
+- [STORY-EP-036](./stories/STORY-EP-036.md) — ready — P1 gadget restore without unplug — after EP-034
 
 ## Carry-over candidates (not committed)
 

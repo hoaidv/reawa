@@ -1,11 +1,39 @@
 #include "strokesync.h"
+#include "net_retry.hpp"
 
-#include <QTimer>
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QNetworkProxy>
+#include <QTimer>
+
+#if defined(Q_OS_LINUX)
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#endif
+
+namespace {
+
+void applyTcpKeepaliveProbes(QTcpSocket &sock)
+{
+    sock.setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+#if defined(Q_OS_LINUX)
+    const qintptr fd = sock.socketDescriptor();
+    if (fd < 0)
+        return;
+    int idle = 5;
+    int intvl = 2;
+    int cnt = 4;
+    const int sfd = static_cast<int>(fd);
+    ::setsockopt(sfd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle));
+    ::setsockopt(sfd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl));
+    ::setsockopt(sfd, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(cnt));
+#endif
+}
+
+} // namespace
 
 StrokeSync::StrokeSync(QObject *parent)
     : QObject(parent)
@@ -15,9 +43,11 @@ StrokeSync::StrokeSync(QObject *parent)
         return;
 
     m_socket.setProxy(QNetworkProxy::NoProxy);
+    m_socket.setSocketOption(QAbstractSocket::KeepAliveOption, 1);
     connect(&m_socket, &QTcpSocket::readyRead, this, &StrokeSync::onReadyRead);
     connect(&m_socket, &QTcpSocket::connected, this, [this]() {
         qInfo() << "[sync] connected to" << m_socket.peerAddress().toString() << m_socket.peerPort();
+        applyTcpKeepaliveProbes(m_socket);
         emit socketConnected();
         flushQueue();
     });
@@ -33,7 +63,6 @@ StrokeSync::StrokeSync(QObject *parent)
             static_cast<void (QTcpSocket::*)(QAbstractSocket::SocketError)>(&QTcpSocket::error),
             this, [this](QAbstractSocket::SocketError) {
 #endif
-        // Abort so we never stick in ConnectingState / ClosingState across retries.
         qWarning() << "[sync] socket error" << m_socket.errorString();
         m_socket.abort();
         m_inbound.clear();
@@ -41,10 +70,11 @@ StrokeSync::StrokeSync(QObject *parent)
     });
 
     auto *retry = new QTimer(this);
-    retry->setInterval(2000);
+    retry->setInterval(epaper::kAppTcpRetryMs);
     connect(retry, &QTimer::timeout, this, [this]() {
-        if (m_socket.state() != QAbstractSocket::ConnectedState)
-            connectToMac();
+        if (m_socket.state() == QAbstractSocket::ConnectedState)
+            return;
+        connectToMac();
     });
     retry->start();
 }
@@ -56,14 +86,12 @@ void StrokeSync::connectToMac()
     if (m_socket.state() == QAbstractSocket::ConnectedState)
         return;
 
-    // Reset stuck Connecting / HostLookup / Closing before a fresh attempt.
     if (m_socket.state() != QAbstractSocket::UnconnectedState)
         m_socket.abort();
 
     const QByteArray host = qgetenv("RM_SYNC_HOST");
     if (host.isEmpty())
         return;
-    // Mac USB IP (e.g. 10.11.99.12) — never the tablet's own 10.11.99.1.
     qInfo() << "[sync] connecting to" << QString::fromUtf8(host) << "9877";
     m_socket.connectToHost(QString::fromUtf8(host), 9877);
 }

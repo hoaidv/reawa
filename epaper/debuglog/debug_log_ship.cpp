@@ -5,6 +5,7 @@
 
 #include "debug_log_ship.h"
 #include "debug_log_format.hpp"
+#include "net_retry.hpp"
 
 #include <QDateTime>
 #include <QJsonDocument>
@@ -72,6 +73,8 @@ public slots:
         // Create all QObjects on this worker thread (never parent to qApp).
         m_socket = new QTcpSocket(this);
         m_socket->setProxy(QNetworkProxy::NoProxy);
+        // @fix [STORY-EP-034] QTcpSocket KeepAliveOption — debug sidecar :9878
+        m_socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
         connect(m_socket, &QTcpSocket::readyRead, this, &DebugLogWorker::onReadyRead);
         connect(m_socket, &QTcpSocket::connected, this, &DebugLogWorker::onConnected);
         connect(m_socket, &QTcpSocket::disconnected, this, &DebugLogWorker::onDisconnected);
@@ -84,7 +87,7 @@ public slots:
 #endif
 
         auto *retry = new QTimer(this);
-        retry->setInterval(2000);
+        retry->setInterval(epaper::kAppTcpRetryMs);
         connect(retry, &QTimer::timeout, this, &DebugLogWorker::tryConnect);
         retry->start();
 
@@ -121,7 +124,7 @@ private slots:
             return;
         if (m_socket->state() == QAbstractSocket::ConnectedState)
             return;
-        // Abort stuck Connecting / HostLookup / Closing so the 2s timer always gets a fresh attempt.
+        // Abort stuck Connecting so the retry timer always gets a fresh attempt.
         if (m_socket->state() != QAbstractSocket::UnconnectedState)
             m_socket->abort();
 
@@ -149,6 +152,8 @@ private slots:
     void onConnected()
     {
         m_inbound.clear();
+        if (m_socket)
+            m_socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
         echoLocal(g_savedStderr >= 0 ? g_savedStderr : 2, QByteArray("[debug] connected"));
         drainQueue();
     }

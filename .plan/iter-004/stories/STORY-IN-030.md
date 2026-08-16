@@ -35,4 +35,4 @@ this campaign.
 | Kind | `implement` |
 | Owner | `dev` |
 | Depends on | EP-030 |
-| Parallel | **EP-033** (human 2026-08-16) |
+| Parallel | **IN-032** live drag — human verified 2026-08-16 |

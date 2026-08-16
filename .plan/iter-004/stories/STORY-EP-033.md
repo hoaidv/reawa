@@ -4,7 +4,7 @@ title: Reject origin/stale first sample on pen-down
 kind: implement
 parent_srs: [SRS-EP-01]
 parent_req: [REQ-01]
-status: in-review
+status: done
 priority: P0
 iter: iter-004
 estimate: 2
@@ -36,7 +36,7 @@ No design story — ingest defect, no new UI.
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Priority | **P0** — **NOW ∥ IN-030** (WIP 2) |
+| Priority | **P0** — **done** (human verified 2026-08-16) |
 
 ## Diagnosis (device)
 

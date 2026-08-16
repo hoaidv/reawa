@@ -31,3 +31,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/recog_warp_bench.cpp -o /tmp/recog_wa
 /tmp/recog_warp_bench
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/ingest_origin_guard_test.cpp -o /tmp/ingest_origin_guard_test
 /tmp/ingest_origin_guard_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/usbgadget_test.cpp -o /tmp/usbgadget_test
+/tmp/usbgadget_test

@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.7.0
+version: 0.8.0-draft
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -60,6 +60,11 @@ viewed at scale, and saved.
 | Default-on recognizer false positives | ≤2% of `pen` strokes on a real corpus incl. a fresh page's first 20 strokes | EXP-0002 G1/G2 — **ship gate** |
 | Connector selectable (marquee or pen hit) | 100% of recognized connectors on a 10-connector fixture; 0 missed hits on the stroke, 0 AABB-only false hits | Manual QA |
 | Finger hit on ink-box → freeform + move | p95 ≤300 ms to `sel_freeform` + selection; move follows finger; 0 accidental resizes | Manual QA |
+| Erase stroke / selection-erase | p95 ≤50 ms after gesture end; 1 undo restores; 0 accidental ink | Manual QA — **iter-005 draft** |
+| Paste fidelity | Pasted subtree geometry ±1 px @ 100% zoom vs source | Manual QA — **iter-005 draft** |
+| Connector end style + warp | Style survives bound-node drag; endpoint ink stays on the end (0 orphaned ink) | Manual QA — **iter-005 draft** |
+| Mid-attachment follows warp | Attachment stays on spine; 0 px jump on pen-up vs last preview | Manual QA — **iter-005 draft** |
+| Barrel button hold vs click | 0 click+hold double-fires on a 20-gesture fixture; missing buttons no-op | Manual QA — **iter-005 draft** |
 
 ## [REQ-01] Local pen-matched ink {#local-pen-ink}
 - **Priority:** Must · **Traces:** [BRD-06]
@@ -388,8 +393,9 @@ viewed at scale, and saved.
   Selected chrome (Ink/Curve; per-end Edge/Centre) is already in
   [connector-ink srs-ui](./features/connector-ink/srs-ui.md). Re-anchor as a generic verb stays
   [REQ-08](#node-manipulation).
-- **Not this REQ.** Squared/rounded routing, arrowheads, dash/double-line, non-SmartGroup
-  targets — later. Full product depth:
+- **Not this REQ.** Squared/rounded routing, dash/double-line, non-SmartGroup
+  targets — later. **Endpoint styles / arrowheads / endpoint ink** → [REQ-13](#connector-ends).
+  **Mid-attachments** → [REQ-14](#connector-attachments). Full product depth:
   [features/connector-ink/srs-product.md](./features/connector-ink/srs-product.md).
 
 **Acceptance**
@@ -502,12 +508,136 @@ viewed at scale, and saved.
   and duplicate; snapping guides; manipulation unavailable below LOD; conflicting capabilities in a
   mixed multi-selection.
 
+## [REQ-11] Erase like paper {#erase}
+<!-- campaign: iter-005-draft — BS-0002. Not TRACK-004. Do not slice until iter-004 retro-gate. -->
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes
+- **Campaign:** iter-005 **draft**. Not in the current lock.
+- **Outcome:** a mark the creator no longer wants is gone the way pencil paper works — flip or stroke it away, or delete what is already selected — without a round trip.
+- **Path A — hardware eraser nib** (when the stylus reports a distinct eraser tool): rubbing with that nib removes intersecting **ink samples** (and may delete a node that has no remaining samples). Does not start a new ink stroke.
+- **Path B — selection-erase:** with a non-empty selection, an **Erase** command (chip, barrel-click if bound, or equivalent) deletes the selected nodes. One undo restores them.
+- Barrel **hold-move = temporary erase** is an accelerator of Path A’s stroke-erase feel, bound via [REQ-18](#pen-buttons) — not a third grammar.
+
+**Acceptance**
+- Given a stylus with an eraser nib and ink on the panel, When the creator rubs the nib across that ink, Then intersecting samples are gone with p95 ≤50 ms after the gesture ends, **0** new Ink nodes are created, and one undo restores the pre-erase document (±1 px @ 100% zoom).
+- Given a stylus **without** an eraser nib, When the creator uses the pen tip, Then Path A does not fire (0 accidental erases); erase is Path B and/or a bound [REQ-18](#pen-buttons) hold-move.
+- Given a non-empty selection, When the creator invokes Erase, Then every selected node is removed from the local document (0 leftovers on the next settled frame) and one undo restores them.
+- Given empty selection, When Erase is invoked, Then 0 nodes change (no-op).
+- Given **no session**, When any erase path runs, Then the result matches the linked case.
+- **UI states / journeys to design:** eraser-nib in progress; selection-erase CTA; empty selection no-op; undo after erase; missing nib.
+
+## [REQ-12] Copy, cut, and paste on the device {#clipboard}
+<!-- campaign: iter-005-draft — BS-0002 -->
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes
+- **Campaign:** iter-005 **draft**.
+- **Outcome:** a cluster that is already right can be duplicated or moved as a copy **on the tablet**, without redrawing and without the desktop clipboard.
+- **Scope v1:** in-document clipboard only (copy/cut selected nodes; paste into the current document, offset so the paste is visible). One clipboard slot. Cut = copy + delete. Paste is one undoable op. Cross-app / OS paste is out.
+
+**Acceptance**
+- Given a non-empty selection, When the creator copies then pastes, Then a new subtree exists with new ids, geometry equal to the source translated by a documented offset (±1 px @ 100% zoom), and the source is unchanged.
+- Given a non-empty selection, When the creator cuts then pastes, Then the originals are gone after cut and the paste matches the cut content (geometry ±1 px @ 100% zoom); one undo of paste removes the copies; a second undo restores the cut originals.
+- Given an empty clipboard, When paste is invoked, Then 0 nodes change.
+- Given **no session**, When copy/cut/paste runs, Then behaviour matches the linked case; published ops still satisfy [REQ-07](#one-way-sync) when the link is up.
+- **UI states / journeys to design:** copy/cut/paste affordances on selection; empty clipboard; paste offset visible; undo stack after cut+paste.
+
+## [REQ-13] Connector endpoint styles {#connector-ends}
+<!-- campaign: iter-005-draft — BS-0002; was explicit Non-Goal of REQ-09 -->
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes
+- **Campaign:** iter-005 **draft**. Extends [REQ-09](#device-connectors); does not replace recognition or warp.
+- **Outcome:** a connection can *say* how it ends (arrow, empty arrow, star, one, many, …) and stay that way when boxes move.
+- **Path A — context toolbar** after the connector is created or selected: the creator sets **each end** independently from a closed style set. Needs design (e-ink chrome).
+- **Path B — endpoint ink:** strokes whose samples run over a connector **end** are recognized as **part of that end**, not ordinary ink / not a new connector. They are **preserved** through warp (they ride the end). Wrong recog costs one undo.
+
+**Acceptance**
+- Given a selected connector, When the creator picks an end style from the context toolbar, Then that end shows the style with p95 ≤300 ms and the other end is unchanged; one undo reverts the style.
+- Given a connector with end styles, When a bound box is dragged, Then styles remain on the correct ends and committed geometry equals last preview (0 px jump) — [REQ-09](#device-connectors) warp bar.
+- Given Connector recognition (or a dedicated endpoint-ink rule) and ink drawn over an existing connector end, When the stroke ends, Then the ink is bound as endpoint decoration of that end (0 new free Ink at that location; 0 second connector) and survives a subsequent bound-node drag (0 orphaned samples).
+- Given the same stroke over empty canvas or the connector **spine** (not an end), When the stroke ends, Then it is **not** stolen as endpoint style (ordinary ink / membership / connector rules apply).
+- **UI states / journeys to design:** post-create toolbar; selected connector per-end styles; endpoint-ink accepted; endpoint-ink refused; warp with decorated ends.
+
+## [REQ-14] Connector mid-attachments {#connector-attachments}
+<!-- campaign: iter-005-draft — BS-0002 -->
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes
+- **Campaign:** iter-005 **draft**.
+- **Outcome:** a label or figure hung on a connection **stays on the line** as the line warps — like text taped to a string.
+- Attachments are nodes (text, figures, ink clusters) bound to a parameter on the connector **rest spine**. Moving/resizing a bound box re-warps the connector **and** moves attachments with it. No rebake of rest shape ([REQ-09](#device-connectors) / ADR-0020).
+
+**Acceptance**
+- Given a connector and an attachment bound to it, When the creator moves a bound SmartGroup, Then the attachment stays on the spine (arc-length / `t` preserved) at ≥5 Hz partial refresh, and on pen-up its pose equals the last previewed pose (0 px jump).
+- Given that attachment, When the creator undoes the box move, Then both connector and attachment return to the pre-move pose (±1 px @ 100% zoom).
+- Given a connector with no attachments, When the box moves, Then [REQ-09](#device-connectors) still holds (0 regression).
+- **UI states / journeys to design:** place/bind an attachment; selected attachment on a connector; drag of bound box with attachments; empty connector.
+
+## [REQ-15] Table recognition {#table-recognition}
+<!-- campaign: iter-005-draft — BS-0002 -->
+- **Priority:** Could · **Traces:** [BRD-07]
+- Needs design: yes
+- **Campaign:** iter-005 **draft**. Not v1-core.
+- **Outcome:** a drawn grid can start behaving as a **table** (cells as structure), not only as ink lines. Best-effort plus undo. Must not blow the [REQ-09](#device-connectors) ≤2% false-positive ship gate when armed.
+
+**Acceptance**
+- Given table recognition armed and a fixture of a clear drawn grid, When the stroke set completes, Then a table node exists in the local document with p95 ≤500 ms after the last pen-up and 0 desktop messages required; one undo restores ink.
+- Given table recognition **disarmed**, When the same ink is drawn, Then 0 tables are created.
+- Given both existing recognizers plus table recognition on a writing corpus (incl. a fresh page’s first 20 strokes), When replayed, Then unintended table **or** connector **or** enclose creations remain ≤2% of `pen` strokes.
+- **UI states / journeys to design:** armed/disarmed; accepted grid; rejected (not a grid); undo.
+
+## [REQ-16] Finger pan and zoom on the tablet {#device-pan-zoom}
+<!-- campaign: iter-005-draft — BS-0002. Proposes reversing BRD-07 / prior Non-Goal. -->
+- **Priority:** Should · **Traces:** [BRD-07]
+- Needs design: yes
+- **Campaign:** iter-005 **draft**. **Blocked on BRD amendment:** [BRD-07](../../brd.md) currently defers on-device pan/zoom and gives Infini exclusive navigation. This REQ is the product intent to reverse that; analyst must update the BRD before this REQ is Must.
+- **Outcome:** the creator can move around the page **on the tablet** with fingers when the desktop is out of reach. Two-finger pan/pinch changes the **same viewport** Infini uses ([REQ-02](#region-sync)); the device **publishes** viewport so the desktop follows. Does not steal [REQ-10](#hand-touch) one-finger box hit/move (one finger still select/move; two fingers navigate).
+
+**Acceptance**
+- Given two fingers on empty canvas (no box-move in flight), When the creator pans or pinches for ≥5 s, Then the drawing region translates/scales with p95 map apply ≤100 ms for the next pen sample, and Infini’s view matches after settle (0 divergent viewports).
+- Given one finger on a SmartGroup, When the creator moves, Then [REQ-10](#hand-touch) still holds (0 accidental pans).
+- Given Infini and the tablet both idle, When the creator pans on the tablet, Then Infini sends **0** competing viewport bursts that fight the tablet gesture (architect: last-writer or token — ADR).
+- **UI states / journeys to design:** two-finger pan in progress; pinch; conflict with box-move; link down (local viewport still works).
+
+## [REQ-17] Manual creation of frames, connectors, attachments, and primitives {#manual-create}
+<!-- campaign: iter-005-draft — BS-0002. Ink-box manual/enclose already REQ-05. -->
+- **Priority:** Should · **Traces:** [BRD-07]
+- Needs design: yes
+- **Campaign:** iter-005 **draft**. Adjacent to [REQ-08](#node-manipulation) (manipulate vs **insert**).
+- **Outcome:** when recognition misses, the creator can still **place** a frame (artboard), a connector, an attachment, or a **beautiful** primitive on purpose — not a raw ink stand-in. Ink-box creation remains [REQ-05](#device-ink-box) (done). Not a general brush/color/layer palette.
+
+**Acceptance**
+- Given a manual Frame create control, When the creator places a frame, Then a Frame node exists at the drawn/placed bounds (±1 px @ 100% zoom) with p95 ≤300 ms and one undo removes it.
+- Given two bindable nodes, When the creator manually creates a connector between them, Then a connector exists with the same warp contract as [REQ-09](#device-connectors).
+- Given a connector, When the creator manually attaches a node, Then [REQ-14](#connector-attachments) holds.
+- Given a primitive create (ellipse/rect/line — closed set), When placed, Then the painted shape is the primitive geometry (not a polyline stand-in) and survives save/mirror ([REQ-07](#one-way-sync)).
+- **UI states / journeys to design:** entry into manual create (chip vs context); frame place; connector place; primitive place; cancel; conflict with Pen ink.
+
+## [REQ-18] Configurable pen barrel-button accelerators {#pen-buttons}
+<!-- campaign: iter-005-draft — BS-0002 D9 -->
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes *(Infini settings; chip only mirrors temporary tool)*
+- **Campaign:** iter-005 **draft**. [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md) **D9**.
+- **Outcome:** optional Wacom barrel buttons (0, 1, or 2) speed up erase / select / drag **without** making those the only path. Each button has two slots — **Click** and **Hold-move** — each bound to **exactly one** item from a **closed catalogue**. The user configures the binding ([infini REQ-05](../infini/prd.md#pen-button-map)). **Never** three jobs on one hold-while-moving gesture.
+- **Click** (button down+up, movement below threshold): discrete catalogue — toggle current exclusive tool ↔ pinned tool (v1 pin `sel_freeform`); toggle Pen ↔ eraser; Undo; Off.
+- **Hold-move** (button down + movement past threshold until release): temporary-tool catalogue — `sel_freeform`; `sel_rect`; erase; drag node under tip (miss → no-op, not a lasso); Off. Context “empty→lasso / node→drag” is **not** default; allowed later only as its **own** named catalogue item.
+- **Defaults:** 1-button → Click = Pen↔freeform toggle; Hold-move = temporary freeform. 2-button → B1 as 1-button; B2 Click = Pen↔eraser; B2 Hold-move = temporary erase.
+- Missing hardware: slots absent (0 misfires). Eraser **nib** is [REQ-11](#erase), not barrel 2. Accelerators only — ToolChip remains complete. Latch at button-down; rebind never changes a gesture in flight. Chip shows the temporary tool during hold-move, then restores unless the event was a click toggle.
+
+**Acceptance**
+- Given a 1-button pen and default map, When the creator **clicks** the button (no move), Then the exclusive tool toggles Pen ↔ `sel_freeform` with p95 ≤300 ms and **0** hold-move gesture runs.
+- Given the same pen, When the creator **hold-moves** with the button down, Then a temporary freeform selection runs until release (selection completes on release) and **0** click toggle fires on release.
+- Given a 2-button pen and defaults, When B2 is hold-moved, Then temporary erase runs until release ([REQ-11](#erase) Path A feel) and B1 is unchanged.
+- Given the creator rebinds Hold-move to “drag node under tip”, When they hold-move starting on a hittable node, Then that node moves with the [REQ-06](#device-manipulation) live-direct bar; when they start on empty canvas, Then 0 nodes move and 0 lasso starts.
+- Given a 0-button pen, When the creator draws, Then 0 button gestures fire and [REQ-03](#tool-modes) still works.
+- Given a 20-gesture fixture mixing clicks and holds, When executed, Then 0 events fire **both** click and hold-move.
+- **UI states / journeys to design:** Infini map editor (per slot, closed lists); device chip during hold-move; 0/1/2 button capability; rebound map mid-session (next gesture only).
+
 ---
 
 ## Non-Goals
 
-- **On-device pan / zoom / pinch** on the Epaper UI (deferred). Finger on canvas is **not** a
-  pan — [REQ-10](#hand-touch) is hit-test / move only.
+- **On-device pan / zoom / pinch** — **draft reversal** in [REQ-16](#device-pan-zoom) (Should;
+  blocked on BRD-07 amendment). Until that REQ is Must, one-finger canvas is [REQ-10](#hand-touch)
+  hit-test / move only.
 - **Finger resize, rotation, or connector re-anchor** — Won't this slice. Fine gizmos stay pen.
 - Acting as a Reawa-style mouse/stylus driver for other Mac apps.
 - Cloud sync or multi-peer sessions.
@@ -541,9 +671,9 @@ viewed at scale, and saved.
     draw-into.
   - This campaign keeps `inkScaleMode` (`withBounds` | `fixedInk`) only; membership does **not**
     expand bounds; no content align/reflow.
-- A general on-device tool palette — the toolbar is exactly the three exclusive tools,
-  two recognizer toggles, and Undo/Redo in [REQ-03](#tool-modes); no brushes, colors,
-  layers, or document browser.
+- A general on-device tool palette — no brushes, colors, layers, or document browser.
+  [REQ-17](#manual-create) is a **closed** insert set (frame, connector, attachment, primitive),
+  not an illustration suite. ToolChip exclusive tools stay three unless a later ADR adds an entry.
 - Production use of `regionsync/` `append_ink` NetSink until wired into the Qt binary
   (library remains the future ADR-0009 shape).
 
@@ -565,7 +695,8 @@ viewed at scale, and saved.
 
 ## Open Questions
 
-- **Next campaign (iter-005) — parked, no REQs yet.** Human 2026-08-15 list in [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md): eraser (pencil + selection-erase); copy/cut/paste; connector endpoint styles (context toolbar + preserve endpoint ink); connector mid-attachments that follow warp; table recognition; finger pan/zoom on tablet; manual frame + beautiful connectors/attachments/primitives (ink-box already done); AI unspecified. Finger pan/zoom still a **Non-Goal** / [BRD-07](../../brd.md) defer until PM adopts. Author REQs only after iter-004 retro-gate.
+- **Iter-005 draft REQs minted 2026-08-16** from [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md): [REQ-11](#erase)–[REQ-18](#pen-buttons). **Do not slice** until iter-004 retro-gate. **AI** still unspecified — no REQ. — **owner:** pm — **needed by:** iter-005 open.
+- [REQ-16](#device-pan-zoom) vs [BRD-07](../../brd.md) on-device pan/zoom deferral — **owner:** analyst — **needed by:** before REQ-16 can be Must.
 
 - Undo depth and affordance on the device — **closed 2026-08-14** ([CHL-0016](../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
   / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)): depth 20; on-panel Undo and Redo after

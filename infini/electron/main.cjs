@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, powerMonitor } = require("electron");
 const net = require("node:net");
 const path = require("node:path");
 const {
@@ -7,6 +7,7 @@ const {
   pushDebugRing,
   controlLine,
 } = require("./debugLogChannel.cjs");
+const { enableTcpKeepAlive } = require("./tcpKeepAlive.cjs");
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
@@ -64,6 +65,7 @@ function sendToRmClients(obj) {
 function startStrokeIngestServer() {
   if (strokeServer) return;
   strokeServer = net.createServer((socket) => {
+    enableTcpKeepAlive(socket);
     let buf = "";
     rmClients.add(socket);
     console.log("[stroke-ingest] client connected", socket.remoteAddress, "n=", rmClients.size);
@@ -130,6 +132,7 @@ function pushDebugClientSync(webContents) {
 function startDebugLogServer() {
   if (debugServer) return;
   debugServer = net.createServer((socket) => {
+    enableTcpKeepAlive(socket);
     let buf = "";
     debugClients.add(socket);
     console.log("[debug-log] client connected", socket.remoteAddress, "n=", debugClients.size);
@@ -205,10 +208,38 @@ function createWindow() {
   });
 }
 
+function dropAllRmSockets(reason) {
+  console.log("[stroke-ingest] drop clients", reason, "n=", rmClients.size);
+  for (const socket of [...rmClients]) {
+    try {
+      socket.destroy();
+    } catch (e) {
+      console.warn("[stroke-ingest] destroy", e.message);
+    }
+  }
+  rmClients.clear();
+  for (const socket of [...debugClients]) {
+    try {
+      socket.destroy();
+    } catch (e) {
+      console.warn("[debug-log] destroy", e.message);
+    }
+  }
+  debugClients.clear();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("rm-client", { type: "closed", n: 0 });
+    mainWindow.webContents.send("debug-client", { type: "closed", n: 0 });
+  }
+}
+
 app.whenReady().then(() => {
   startStrokeIngestServer();
   startDebugLogServer();
   createWindow();
+  if (powerMonitor && typeof powerMonitor.on === "function") {
+    powerMonitor.on("suspend", () => dropAllRmSockets("suspend"));
+    powerMonitor.on("resume", () => dropAllRmSockets("resume"));
+  }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

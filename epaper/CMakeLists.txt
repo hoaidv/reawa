@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Network)
+find_package(Threads REQUIRED)
 qt_standard_project_setup(REQUIRES 6.5)
 
 qt_add_executable(epaper_bin
@@ -15,6 +16,8 @@ qt_add_executable(epaper_bin
     strokesync.cpp
     epaperbridge.cpp
     debuglog/debug_log_ship.cpp
+    usbgadget.cpp
+    usb_link.cpp
 )
 qt_add_qml_module(epaper_bin
     URI epaper
@@ -46,7 +49,7 @@ qt_add_resources(epaper_bin "epaper_tool_icons"
         icons/icon-epaper-recog-connector-inv.png
 )
 
-target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network ${CMAKE_DL_LIBS})
+target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network Threads::Threads ${CMAKE_DL_LIBS})
 set_target_properties(epaper_bin PROPERTIES
     OUTPUT_NAME epaper
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"

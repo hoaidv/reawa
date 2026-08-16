@@ -26,7 +26,7 @@ line, stay glued when a box moves, and not ask them to pick a routing tool. The 
 | Ink / Curve warp styles, auto-picked from the rest spine | Squared / rounded / obstacle routing; quadratic bezier |
 | Live re-warp during bound-node drag | Physics rope; interior pins |
 | Keep connectors when a bound box is deleted | Mark invalid / auto-delete the connector |
-| Selection chrome: Ink/Curve; per-end Edge/Centre | Arrowheads, dash, double-line, width presets |
+| Selection chrome: Ink/Curve; per-end Edge/Centre | Dash, double-line, width presets. **Endpoint styles / arrowheads / endpoint ink** → epaper [REQ-13](../../prd.md#connector-ends). **Mid-attachments** → [REQ-14](../../prd.md#connector-attachments) |
 | One-shot blink of connector + both nodes on create | Persistent "recognized" badge; style-named toast |
 
 ## Business rules

@@ -329,6 +329,50 @@ describe("SRS-IN-09 set_smart_transform emits 0 connector ops", () => {
   });
 });
 
+describe("STORY-IN-032 live manip_preview follows drag", () => {
+  it("updates box+connector without a doc_change seq", () => {
+    const tree = new VectorDocument();
+    const world = new InfiniDocument();
+    const transport = new MemoryTransport();
+    const session = new TabletSession({
+      tree,
+      world,
+      transport,
+      cssWidth: 800,
+      cssHeight: 600,
+    });
+    session.connect();
+    addSmartGroup(tree, "A", 0, 0, 80, 80);
+    addSmartGroup(tree, "C", 300, 0, 80, 80);
+    tree.applyOp({
+      opId: "conn1",
+      type: "create_connector",
+      payload: {
+        id: "conn_1",
+        from: fromEnv,
+        to: toEnv,
+        warpStyle: "morph",
+        restShape: REST,
+      },
+    });
+    const before = tree.indexById().get("conn_1");
+    if (before?.kind !== "connector") return;
+    const x0 = before.warpedSamples?.[0]?.x ?? before.path?.[0]?.x ?? 0;
+
+    expect(
+      session.applyManipPreview("A", { x: 40, y: 0, rotation: 0, scaleX: 1, scaleY: 1 }),
+    ).toBe(true);
+    expect(transport.docOps).toHaveLength(0);
+
+    const after = tree.indexById().get("conn_1");
+    if (after?.kind !== "connector") return;
+    const x1 = after.warpedSamples?.[0]?.x ?? after.path?.[0]?.x ?? 0;
+    expect(Math.abs(x1 - x0)).toBeGreaterThan(1);
+    const prims = world.all();
+    expect(prims.some((p) => p.id === "conn_1")).toBe(true);
+  });
+});
+
 describe("SRS-IN-09 missing bound node uses last live pose", () => {
   it("stays drawn and is not marked invalid (D39)", () => {
     const doc = new VectorDocument();

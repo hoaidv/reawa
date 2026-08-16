@@ -326,6 +326,35 @@ static void test_hello_retransmit_until_load()
     CHECK(countType(sync.takeOutbound(), "hello") == 0);
 }
 
+static void test_hello_carries_document_when_queue_empty()
+{
+    DeviceDocument doc;
+    doc.onAcceptedDocLoad(loadedDoc());
+    OneWaySyncSession sync(doc);
+    sync.onLinkUp();
+    auto lines = sync.takeOutbound();
+    CHECK(countType(lines, "hello") == 1);
+    const JsonValue hello = parseJson(lines.front());
+    CHECK(hello.getNumber("queued") == 0);
+    const JsonValue *document = hello.get("document");
+    CHECK(document && document->isObject());
+    const JsonValue *kids = document->get("rootChildren");
+    CHECK(kids && kids->isArray() && !kids->asArray().empty());
+}
+
+static void test_empty_doc_load_does_not_wipe_local_tree()
+{
+    DeviceDocument doc;
+    doc.applyOp(makeAppendInkOp("keep"));
+    OneWaySyncSession sync(doc);
+    sync.onLinkUp();
+    sync.takeOutbound();
+    sync.handleInbound(docLoadMsg(emptyDoc()));
+    CHECK(sync.epochLive());
+    CHECK(doc.find("keep"));
+    CHECK(countType(sync.takeOutbound(), "load_ack") == 1);
+}
+
 int main()
 {
     test_after_initial_load_only_viewport();
@@ -337,6 +366,8 @@ int main()
     test_preview_stroke_not_document_change();
     test_load_mid_gesture_deferred();
     test_hello_retransmit_until_load();
+    test_hello_carries_document_when_queue_empty();
+    test_empty_doc_load_does_not_wipe_local_tree();
 
     if (g_fails) {
         std::cerr << g_fails << " failure(s)\n";

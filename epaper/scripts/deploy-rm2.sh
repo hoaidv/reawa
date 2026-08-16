@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 # Deploy and launch epaper on connected RM2 (USB 10.11.99.1).
+#
+# [STORY-EP-034] Diagnose BEFORE unplugging USB:
+#   ping-dead / en* 169.254  → USB gadget or Mac USB power. SSH keepalives will not revive it.
+#   ping-alive, SSH hang     → dropbear / leftover ssh children.
+#   ping-alive, Infini "RM disconnected" → StrokeSync TCP only (observed 2026-08-16).
+# Do not unplug for the ping-alive Infini-down class.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -11,13 +17,15 @@ REMOTE="${RM_REMOTE_PATH:-/home/root/epaper}"
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/deploy-rm2.sh [--build] [--restore]
+  ./scripts/deploy-rm2.sh [--build] [--restore] [--usb-stay]
 
 Deploy epaper to RM2 over USB Ethernet, stop xochitl, and launch.
 
 Options:
   --build     Run ./scripts/build.sh first
   --restore   Kill epaper and start xochitl (no deploy)
+  --usb-stay  Ping-dead class only: one-shot disable usb0 autosuspend.
+              SSH keepalives are NOT a gadget-death fix. Safe to skip when ping works.
   -h, --help  Show this help
 
 Env:
@@ -44,17 +52,49 @@ EOF
 
 DO_BUILD=0
 DO_RESTORE=0
+DO_USB_STAY=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --build) DO_BUILD=1; shift ;;
     --restore) DO_RESTORE=1; shift ;;
+    --usb-stay) DO_USB_STAY=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; usage >&2; exit 1 ;;
   esac
 done
 
+# @fix [STORY-EP-034] SSH client keepalives — detect dead path without unplug
+SSH_OPTS=(
+  -i "$KEY"
+  -o StrictHostKeyChecking=no
+  -o ConnectTimeout=8
+  -o ServerAliveInterval=15
+  -o ServerAliveCountMax=4
+  -o TCPKeepAlive=yes
+)
+
 ssh_rm() {
-  ssh -i "$KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=8 "$HOST" "$@"
+  ssh "${SSH_OPTS[@]}" "$HOST" "$@"
+}
+
+# Ping-dead gadget class only. Keepalives will not revive L3 death.
+# @fix [STORY-EP-034] usb0 autosuspend off while tethered
+usb_stay_remote() {
+  ssh_rm bash -s <<'REMOTE'
+set +e
+# Best-effort; kernel paths differ. Do not treat failure as deploy failure.
+for f in \
+  /sys/class/net/usb0/device/power/control \
+  /sys/devices/platform/soc/*/udc/*/power/control
+do
+  for p in $f; do
+    [ -w "$p" ] && echo on > "$p" && echo "usb-stay: $p -> on"
+  done
+done
+for f in /sys/class/net/usb0/device/power/autosuspend_delay_ms; do
+  [ -w "$f" ] && echo -1 > "$f" && echo "usb-stay: $f -> -1"
+done
+REMOTE
 }
 
 if [[ ! -f "$KEY" ]]; then
@@ -66,6 +106,12 @@ fi
 if [[ "$DO_RESTORE" -eq 1 ]]; then
   echo "Restoring xochitl on $HOST ..."
   ssh_rm 'killall epaper rm-canvas-spike 2>/dev/null || true; systemctl start xochitl; pgrep -a xochitl || true'
+  exit 0
+fi
+
+if [[ "$DO_USB_STAY" -eq 1 ]]; then
+  echo "usb-stay (ping-dead class only; skip if ping to 10.11.99.1 already works) ..."
+  usb_stay_remote || true
   exit 0
 fi
 
@@ -93,7 +139,7 @@ echo "Stopping remote epaper (if any) ..."
 ssh_rm 'killall epaper rm-canvas-spike 2>/dev/null || true; sleep 0.3' || true
 
 echo "Deploying $(basename "$BIN") ($(ls -lh "$BIN" | awk '{print $5}')) to $HOST:$REMOTE ..."
-scp -i "$KEY" -o StrictHostKeyChecking=no "$BIN" "$HOST:$REMOTE"
+scp "${SSH_OPTS[@]}" "$BIN" "$HOST:$REMOTE"
 
 FORWARDED=(RM_SYNC_HOST RM_INK_MODE RM_INK_BEACON RM_INK_TRACE RM_EP_SWAP
            RM_EP_SCREEN_MODE RM_EP_CONTENT_TYPE
@@ -133,3 +179,5 @@ EOF
 
 echo "OK: epaper running on RM2. Draw to verify ink. Restore with:"
 echo "  $0 --restore"
+echo "If ping to the tablet is dead while USB is plugged (gadget class), not Infini-down:"
+echo "  $0 --usb-stay"

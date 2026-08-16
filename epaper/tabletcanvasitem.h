@@ -185,6 +185,7 @@ private:
     void syncEnd();
     void syncToolIntent(const QJsonObject &obj);
     void flushOneWayWire();
+    void sendManipPreviewToInfini();
     void onHostMessage(const QJsonObject &obj);
     void applyViewport(const QJsonObject &obj);
     void applyDocSnapshot(const QJsonObject &obj);

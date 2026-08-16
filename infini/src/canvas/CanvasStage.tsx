@@ -51,7 +51,7 @@ function get2dContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | nul
   return canvas.getContext("2d", { alpha: false }) ?? canvas.getContext("2d");
 }
 
-export function CanvasStage({ populated = true }: CanvasStageProps) {
+export function CanvasStage({ populated = false }: CanvasStageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const zoomElRef = useRef<HTMLDivElement>(null);
@@ -138,10 +138,7 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
   const paintMirror = () => {
     const session = sessionRef.current;
     session?.paintMirror();
-    const fromMirror = [...docRef.current.all()];
-    if (populated && fromMirror.length === 0) {
-      docRef.current.setPrimitives(demoPrimitives());
-    }
+    // @fix [STORY-IN-032] never re-seed demoPrimitives onto the live mirror
     if (docRef.current.size) setEmptyHint(false);
     rendererRef.current.invalidateTiles();
     schedulePaint();
@@ -309,6 +306,11 @@ export function CanvasStage({ populated = true }: CanvasStageProps) {
       }
       if (msg.type === "doc_change") {
         sessionRef.current?.receiveDocChange(msg as DocChangeMessage);
+        paintMirror();
+        return;
+      }
+      if (msg.type === "manip_preview") {
+        sessionRef.current?.applyManipPreview(msg.id, msg.transform, msg.bounds);
         paintMirror();
         return;
       }

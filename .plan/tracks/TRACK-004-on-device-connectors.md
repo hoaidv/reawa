@@ -6,10 +6,10 @@ status: active
 iter: iter-004
 goal: "On-device connectors: recognize hand-drawn ink between SmartGroups and keep it attached when a node moves"
 scope: [epaper/connector-ink, epaper/tool-modes, epaper/ink-box, infini/vector-document]
-stories: [STORY-EP-026, STORY-EP-027, STORY-EP-028, STORY-EP-029, STORY-EP-030, STORY-EP-031, STORY-IN-030, STORY-IN-031, STORY-EP-032, STORY-EP-033, STORY-EP-034]
-cursor: "STORY-IN-030 ∥ STORY-EP-033 · /dev"
+stories: [STORY-EP-026, STORY-EP-027, STORY-EP-028, STORY-EP-029, STORY-EP-030, STORY-EP-031, STORY-IN-030, STORY-IN-031, STORY-EP-032, STORY-EP-033, STORY-EP-034, STORY-EP-035, STORY-IN-032, STORY-EP-036]
+cursor: "STORY-EP-034 · /qa ∥ IN-030 live review"
 paused_reason: ""
-interrupts: [STORY-EP-033, STORY-EP-034]
+interrupts: [STORY-EP-033, STORY-EP-034, STORY-EP-035, STORY-IN-032, STORY-EP-036]
 ---
 
 # TRACK-004 — On-device connectors
@@ -43,17 +43,18 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 | [STORY-EP-029](../iter-004/stories/STORY-EP-029.md) | implement | **done** | Human verified 2026-08-15 |
 | [STORY-EP-030](../iter-004/stories/STORY-EP-030.md) | implement | **done** | UX1/UX2 recognition — human verified 2026-08-15 |
 | [STORY-EP-031](../iter-004/stories/STORY-EP-031.md) | implement | **done** | Ink/Curve warp + live drag — human verified 2026-08-15 |
-| [STORY-IN-030](../iter-004/stories/STORY-IN-030.md) | implement | ready | Infini envelope + derived warp — **NOW ∥ EP-033** |
+| [STORY-IN-030](../iter-004/stories/STORY-IN-030.md) | implement | **done** | Infini envelope + derived warp |
 | [STORY-IN-031](../iter-004/stories/STORY-IN-031.md) | implement | **done** | Remove Infini ToolStrip |
 | [STORY-EP-032](../iter-004/stories/STORY-EP-032.md) | implement | **draft** | `/architect` later — chrome state machine |
-| [STORY-EP-033](../iter-004/stories/STORY-EP-033.md) | implement | ready | P0 origin/stale pen-down — **NOW ∥ IN-030** |
-| [STORY-EP-034](../iter-004/stories/STORY-EP-034.md) | implement | ready | P1 USB gadget / SSH+TCP keepalive — queued |
+| [STORY-EP-033](../iter-004/stories/STORY-EP-033.md) | implement | **done** | P0 origin/stale — human verified 2026-08-16 |
+| [STORY-EP-034](../iter-004/stories/STORY-EP-034.md) | implement | **in-review** | P1 USB/TCP keepalive — `/qa`; ping-alive Infini-down |
+| [STORY-EP-035](../iter-004/stories/STORY-EP-035.md) | implement | ready | P1 enclose A/L measure — queued |
+| [STORY-IN-032](../iter-004/stories/STORY-IN-032.md) | implement | ready | P1 demo figures mix with RM ink — queued |
+| [STORY-EP-036](../iter-004/stories/STORY-EP-036.md) | implement | ready | P1 gadget-down detect + restore without unplug — after EP-034 |
 
 ## Cursor
 
-**Next:** `/dev` [STORY-IN-030](../iter-004/stories/STORY-IN-030.md) **∥** [STORY-EP-033](../iter-004/stories/STORY-EP-033.md)
-
-Human 2026-08-16: run both in parallel (WIP 2). Write sets do not overlap (`infini/` vs ingest). EP-034 queued. EP-032 and REQ-09 select / REQ-10 wait on `/architect`.
+**Next:** `/qa` [STORY-EP-034](../iter-004/stories/STORY-EP-034.md). Human IN-030 live review once sync is up. Queued: [STORY-IN-032](../iter-004/stories/STORY-IN-032.md) (demo mix) then [STORY-EP-036](../iter-004/stories/STORY-EP-036.md) (gadget restore). EP-035 still queued.
 
 ## Execution board
 
@@ -82,3 +83,7 @@ Human 2026-08-16: run both in parallel (WIP 2). Write sets do not overlap (`infi
 | 2026-08-15 | EP-030 **done** (human verified). Cursor **move one** → `/dev` EP-031. IN-030 optional ∥. EP-033/034 queued. |
 | 2026-08-15 | EP-031 **done** (human verified; live connector dirty-rect clip fixed). Cursor **move one** → `/dev` IN-030. EP-033 unblocked (optional ∥). |
 | 2026-08-16 | Human: run **IN-030 ∥ EP-033**. Dual cursor `/dev`. |
+| 2026-08-16 | IN-030 **done**. EP-033 **in-review** — host analog PASS; device visual WAIT. Cursor → human score. EP-034/035 queued. |
+| 2026-08-16 | Human verified EP-033 (4 ACs). Cursor **EP-034 ∥ EP-035** `/dev`. |
+| 2026-08-16 | Human: start EP-034; keep IN-030 live review. Ping `10.11.99.1` OK, Infini/epaper not connected → StrokeSync TCP. EP-035 queued. |
+| 2026-08-16 | Bugs: Infini demo mix (IN-032); ping-dead gadget still plugged (EP-036). EP-034 stays `/qa`. |

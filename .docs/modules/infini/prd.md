@@ -1,7 +1,7 @@
 ---
 title: PRD — Infini
 module: infini
-version: 0.4.0
+version: 0.5.0-draft
 lifecycle: active
 parent_brd: [BRD-07]
 owner: pm
@@ -187,6 +187,19 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
 - Given the Sync orientation control, When the user cycles gut poses, Then tall/wide frame
   aspect and axis mapping match the chosen pose (vertical gut-to-left verified correct).
 
+## [REQ-05] Pen-button map (desktop settings) {#pen-button-map}
+<!-- campaign: iter-005-draft — peer of epaper REQ-18 -->
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes
+- **Campaign:** iter-005 **draft**. Not TRACK-004.
+- **Outcome:** the creator sets what each barrel button **Click** and **Hold-move** does, on the desktop, from the closed catalogues in [epaper REQ-18](../epaper/prd.md#pen-buttons). Infini persists the map and **publishes** it to the tablet (this is settings, not a document edit). The tablet does not host a 5-way radio on the chip.
+
+**Acceptance**
+- Given a 1- or 2-button capability reported by the session, When the creator assigns each present slot to one catalogue item and saves, Then the next tablet gesture uses that map (p95 ≤300 ms after publish) and in-flight gestures are unchanged.
+- Given a 0-button pen, When the settings UI is shown, Then barrel slots are absent or disabled (0 fake bindings).
+- Given a live session, When the map is published, Then Infini still sends **0** document messages for that publish (settings channel or equivalent — architect).
+- **UI states / journeys to design:** 0/1/2 button layouts; each slot’s closed list; invalid/stale map; offline edit then publish on reconnect.
+
 ---
 
 ## Non-Goals
@@ -197,7 +210,7 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
   accepts is the initial full load ([REQ-03](#tablet-sync)).
 - **Multi-directional sync / modern document-synchronization algorithm / CRDT** — explicitly
   deferred to a later campaign.
-- On-device pan/zoom gestures on Epaper (deferred).
+- On-device pan/zoom gestures on Epaper — **draft reversal** [epaper REQ-16](../epaper/prd.md#device-pan-zoom); Infini remains navigator until that REQ is Must and an ADR covers viewport last-writer.
 - Reawa pen-relay / mouse emulation features inside Infini.
 - Multi-user collaborative editing; cloud sync.
 - Pressure-rich brushes, layers UI, or full illustration suite.
@@ -228,6 +241,6 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
 
 ## Linked Modules
 
-- [epaper](../epaper/prd.md) — owns the working document; publishes changes, consumes viewport
+- [epaper](../epaper/prd.md) — owns the working document; publishes changes, consumes viewport; iter-005 draft [REQ-11](../epaper/prd.md#erase)–[REQ-18](../epaper/prd.md#pen-buttons)
 - [reawa](../reawa/prd.md) — sibling pen-driver product; not in this campaign scope
 - Exploration: [EXP-0001](../../../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md)

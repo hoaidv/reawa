@@ -10,7 +10,7 @@ import { DeviceLogChrome } from "./debuglog/DeviceLogChrome";
 export function App() {
   return (
     <div data-region="WindowFrame" data-platform="desktop">
-      <CanvasStage populated />
+      <CanvasStage />
       <DeviceLogChrome />
     </div>
   );

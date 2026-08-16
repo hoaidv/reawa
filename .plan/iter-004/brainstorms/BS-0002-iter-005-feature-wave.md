@@ -111,6 +111,18 @@ Human 2026-08-16: optional 1–2 Wacom pen buttons; proposed click-toggle, hold-
 - **R2-I7** (designer): While a hold-gesture is live, ToolChip shows the **temporary** exclusive tool (partial refresh). On button-up, chip returns to the pre-hold tool unless the gesture was a **click toggle**.
 - **Feedback gate**: paused — human accept/reject the B1/B2 split.
 
+### Round 3 — converge · technique: human adopt + closed catalogue
+
+Human 2026-08-16: will **not** assign three features to one hold-while-moving gesture. Instead the user **configures** that gesture to **one** of a designated, carefully studied set.
+
+- **R3-I1** (pm): Adopt. Hardcoded B1 empty→lasso / node→drag (D8) is **two jobs on one hold** — reject that as a default *binding*, even as a clever context split. Context-split may exist only as **one named catalogue item** (e.g. “Smart drag-or-lasso”), never as three silent meanings.
+- **R3-I2** (pm): Two slots per barrel button, independently bound: **Click** (one catalogue item) and **Hold-move** (one catalogue item). Missing hardware → slots absent, not empty misfires.
+- **R3-I3** (pm): Hold-move catalogue is **closed** and motion-shaped only (temporary tool for the press). Click catalogue is **closed** and discrete only (toggle / action). Do not offer click-shaped jobs on hold-move (Undo, toggle) or hold-shaped jobs on click (lasso, erase stroke).
+- **R3-I4** (pm): Configuration lives on **Infini** (settings), not a new on-panel picker — e-ink + 64 du chip cannot host a 5-way radio. Device applies the last published map; 0-button pens ignore it.
+- **R3-I5** (pm): v1 **defaults** (unconfigured): 1-button → Click = toggle Pen↔`sel_freeform`; Hold-move = temporary `sel_freeform`. 2-button → B1 as above; B2 Click = toggle Pen↔eraser; B2 Hold-move = temporary erase. User may rebind any slot to any item in that slot’s catalogue.
+- **R3-I6** (qa): Rebind must not change mid-gesture; latch at button-down like recognizers.
+- **Feedback gate**: adopted — configuration model replaces D8 hardcoded split.
+
 ## Research & sources
 
 - [R1-I5] `.docs/modules/epaper/prd.md` REQ-09 “Not this REQ: … arrowheads …” — (fact)
@@ -135,7 +147,9 @@ Human 2026-08-16: optional 1–2 Wacom pen buttons; proposed click-toggle, hold-
 | D5 | Manual frame + beautiful primitives/connectors = **Should**, after or with REQ-08; ink-box manual already done | decided | — | R1-I9 |
 | D6 | AI = **Won't** until the human writes the bucket | decided | — | R1-I10 |
 | D7 | Nested enclose (CHL-0011) and FREE_FORM (CHL-0012) stay **parked unless human pulls them into this wave** | decided | — | existing lock |
-| D8 | Pen buttons: **accelerators**. B1 click = toggle current ↔ pinned (`sel_freeform` v1). B1 hold = empty→lasso / node→drag. B2 (if present) = erase (click toggle Pen↔eraser; hold = temporary erase). Never three hold-modes on one button. 0-button = chip only. | decided | — | R2 |
+| D8 | Pen buttons: **accelerators**. B1 click = toggle current ↔ pinned (`sel_freeform` v1). B1 hold = empty→lasso / node→drag. B2 (if present) = erase (click toggle Pen↔eraser; hold = temporary erase). Never three hold-modes on one button. 0-button = chip only. | superseded | — | R2 |
+| D9 | Per barrel button: **Click** and **Hold-move** each bind to **exactly one** item from a **closed catalogue**. User configures (Infini). No silent 3-way hold. Context lasso-or-drag is allowed only as an explicit catalogue item, not as default stacking. Defaults: see R3-I5. Accelerators only. | decided | D8 | R3 |
+| D10 | Human asked to capture the wave as **iter-005 draft PRD**. Minted epaper REQ-11…18 + infini REQ-05. Still **do not open iter-005**; SM does not slice until retro-gate. | decided | D1 (no-REQ clause) | chat 2026-08-16 |
 
 ## Assumptions & riskiest bets
 
@@ -212,4 +226,4 @@ AI ─────────────────────── unspeci
 - [ ] After iter-004 retro-gate: `/pm` author-prd for Must cluster → `/architect` → `/sm` new iter
 - [ ] Human: fill **AI** or confirm empty; confirm pan/zoom Non-Goal reversal; confirm table Could vs Must
 - [ ] Architect spike (when wave starts): RM2 eraser events **and** Wacom barrel button bits
-- [ ] Human: accept/reject D8 pen-button map before PRD authoring
+- [x] Human: reject 3-in-1 hold; adopt configurable one-of-catalogue (D9)

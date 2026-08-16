@@ -281,3 +281,63 @@ describe("STORY-IN-028 retired snapshot pickables and tool_intent are not emitte
     expect(JSON.stringify(transport.outbound)).not.toMatch(/"intent"/);
   });
 });
+
+describe("reconnect hello document hydrates Infini connectors", () => {
+  it("replaceTree from hello restShape then doc_load keeps restSpine", () => {
+    const { session, tree, transport } = liveSession();
+    session.receiveHello({
+      type: "hello",
+      lastSeq: 0,
+      queued: 0,
+      document: {
+        version: 1,
+        status: "open",
+        rootChildren: [
+          {
+            id: "A",
+            kind: "smart_group",
+            bounds: { x: 0, y: 0, width: 80, height: 80 },
+            transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+            inkScaleMode: "fixedInk",
+            children: [],
+          },
+          {
+            id: "B",
+            kind: "smart_group",
+            bounds: { x: 0, y: 0, width: 80, height: 80 },
+            transform: { x: 200, y: 0, rotation: 0, scaleX: 1, scaleY: 1 },
+            inkScaleMode: "fixedInk",
+            children: [],
+          },
+          {
+            id: "c1",
+            kind: "connector",
+            from: { nodeId: "A", kind: "centre" },
+            to: { nodeId: "B", kind: "centre" },
+            warpStyle: "morph",
+            restShape: {
+              spine: [
+                { x: 40, y: 40 },
+                { x: 240, y: 40 },
+              ],
+              offsets: [
+                { s: 0, d: 0 },
+                { s: 1, d: 0 },
+              ],
+            },
+            children: [],
+          },
+        ],
+      },
+    });
+    const conn = tree.indexById().get("c1");
+    expect(conn?.kind).toBe("connector");
+    if (conn?.kind !== "connector") return;
+    expect(conn.restSpine?.length).toBeGreaterThanOrEqual(2);
+    expect((conn.warpedSamples?.length ?? 0) + (conn.path?.length ?? 0)).toBeGreaterThan(1);
+    const load = transport.docLoads[0];
+    expect(load.type).toBe("doc_load");
+    const kids = (load.document as { rootChildren: { id: string }[] }).rootChildren;
+    expect(kids.some((n) => n.id === "c1")).toBe(true);
+  });
+});

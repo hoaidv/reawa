@@ -4,7 +4,7 @@ title: USB Ethernet stay-up and SSH/TCP keepalives
 kind: implement
 parent_srs: [SRS-EP-08, SRS-EP-13]
 parent_req: [REQ-07]
-status: ready
+status: done
 priority: P1
 iter: iter-004
 estimate: 3
@@ -37,7 +37,7 @@ No design story — transport, not UI.
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Priority | **P1** — queued on TRACK-004; **do not steal EP-030 cursor** |
+| Priority | **P1** — **done** 2026-08-16 human: connection stable |
 
 ## Diagnosis (do not skip)
 
@@ -53,7 +53,13 @@ When it happens, **before unplugging**:
 | Ping OK, SSH hangs/refused | dropbear / leftover SSH children / probe leak |
 | Ping OK, SSH OK, Infini “RM disconnected” | StrokeSync TCP only |
 
-USBWatcher TCP-probes `:22` every 3s (Reawa). An aborted handshake can exhaust dropbear while ping still works — in-lock this story does **not** change Reawa; note it if ping-alive/ssh-dead.
+## Field note (2026-08-16)
+
+Human: **ping `10.11.99.1` OK** (13/13, ~0.8 ms) while **epaper ↔ Infini are not connected**.
+
+Treat as **StrokeSync TCP only** (row 3), not USB-gadget/L3 death. Do not unplug to “fix” this class. Primary ACs: keepalive + existing 2s retry on `:9877` / `:9878` until Infini shows RM connected again without a USB replug.
+
+USB stay-up (AC1/AC4) stays in the story for the ping-dead class; it is **not** the observed failure today.
 
 ## Fix intent (do not expand)
 

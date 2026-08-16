@@ -43,6 +43,8 @@ export interface HelloMessage {
   type: "hello";
   lastSeq: number;
   queued: number;
+  /** Present when queued is 0 and the device already has a tree (reconnect). */
+  document?: Record<string, unknown>;
 }
 
 /** Epaper → Infini: drain complete. @implements [SRS-IN-07] queue_empty */
