@@ -95,8 +95,11 @@ StrokeSync::StrokeSync(QObject *parent)
     retry->start();
 
     m_retriesLeft = epaper::kTcpRetryLimit;
-    if (auto *usb = epaper::UsbLink::instance())
+    if (auto *usb = epaper::UsbLink::instance()) {
         connect(usb, &epaper::UsbLink::requestAppReconnect, this, &StrokeSync::armReconnect);
+        connect(this, &StrokeSync::socketConnected, usb, &epaper::UsbLink::refreshHud);
+        connect(this, &StrokeSync::socketDisconnected, usb, &epaper::UsbLink::refreshHud);
+    }
     QTimer::singleShot(0, this, [this]() {
         if (!epaper::usbEthernetLive() || m_socket.state() == QAbstractSocket::ConnectedState)
             return;

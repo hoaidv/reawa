@@ -1,5 +1,5 @@
 /**
- * Infra: USB gadget probe + HUD. Never UDC unbind. Manual recover = usb0 addr + TCP retry.
+ * Infra: USB HUD probe. Never UDC unbind. Manual recover = usb0 addr + TCP retry.
  * @fix [STORY-EP-036]
  */
 #pragma once
@@ -34,6 +34,8 @@ public:
 
     /** Button: USB bring-up if needed, then Infini TCP apps get 3 retries. */
     Q_INVOKABLE void recoverInfini();
+    /** Extra HUD refresh (TCP up/down). Periodic probe is kUsbLinkCheckMs. */
+    Q_INVOKABLE void refreshHud();
 
 signals:
     void hudChanged();

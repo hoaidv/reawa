@@ -6,7 +6,7 @@ namespace epaper {
 inline constexpr int kAppTcpRetryMs = 5000;
 inline constexpr int kTcpRetryLimit = 3;
 
-/** UsbLink worker: HUD probe only. Never restore/ioctl on this interval. */
-inline constexpr int kUsbLinkCheckMs = 1000;
+/** UsbLink HUD probe. Read-only sysfs; never restore/ioctl on this interval. */
+inline constexpr int kUsbLinkCheckMs = 5000;
 
 } // namespace epaper

@@ -175,6 +175,8 @@ private slots:
         if (m_socket)
             m_socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
         echoLocal(g_savedStderr >= 0 ? g_savedStderr : 2, QByteArray("[debug] connected"));
+        if (auto *usb = epaper::UsbLink::instance())
+            QMetaObject::invokeMethod(usb, "refreshHud", Qt::QueuedConnection);
         drainQueue();
     }
 
@@ -187,6 +189,8 @@ private slots:
         m_wasConnected = false;
         echoLocal(g_savedStderr >= 0 ? g_savedStderr : 2,
                   QByteArray("[debug] disconnected"));
+        if (auto *usb = epaper::UsbLink::instance())
+            QMetaObject::invokeMethod(usb, "refreshHud", Qt::QueuedConnection);
     }
 
     void onSocketError(QAbstractSocket::SocketError)

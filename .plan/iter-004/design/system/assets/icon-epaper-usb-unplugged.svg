@@ -1,6 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-  <path d="M18 14h12v8H18z" stroke="#000" stroke-width="2.5"/>
-  <path d="M22 14V8M26 14V8" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M20 22v6M28 22v6" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M14 36l20-20" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" aria-hidden="true">
+  <defs>
+    <mask id="usb-unplugged">
+      <rect width="48" height="48" fill="#fff"/>
+      <rect x="19" y="7" width="4" height="4" fill="#000"/>
+      <rect x="25" y="7" width="4" height="4" fill="#000"/>
+      <path d="M17 18l14 14M31 18L17 32" stroke="#000" stroke-width="3.5" stroke-linecap="square"/>
+    </mask>
+  </defs>
+  <path fill="#000" mask="url(#usb-unplugged)"
+        d="M16 3h16v9h5v21a10 10 0 0 1-10 10h-6a10 10 0 0 1-10-10V12h5z"/>
 </svg>

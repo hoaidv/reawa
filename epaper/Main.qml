@@ -416,14 +416,13 @@ TabletWindow {
         y: 8
         width: 64
         height: 64
-        color: UsbHud.linkState === "connected" ? "black" : "white"
+        color: "white"
         border.color: "black"
-        border.width: UsbHud.linkState === "unplugged" ? 1 : 3
+        border.width: 1
         Image {
-            x: 4
-            y: 2
-            width: 28
-            height: 28
+            anchors.centerIn: parent
+            width: parent.width * 0.72
+            height: parent.height * 0.72
             fillMode: Image.PreserveAspectFit
             smooth: false
             source: UsbHud.linkState === "connected"
@@ -431,19 +430,6 @@ TabletWindow {
                     : UsbHud.linkState === "unplugged"
                       ? "qrc:/icons/icons/icon-epaper-usb-unplugged.png"
                       : "qrc:/icons/icons/icon-epaper-usb-plugged.png"
-        }
-        Text {
-            x: 4
-            y: 32
-            width: 56
-            height: 28
-            font.pixelSize: 22
-            font.bold: true
-            color: UsbHud.linkState === "connected" ? "white" : "black"
-            horizontalAlignment: Text.AlignHCenter
-            text: UsbHud.linkState === "connected" ? "OK"
-                  : UsbHud.linkState === "unplugged" ? "U"
-                  : "P"
         }
     }
     // @implements [STORY-EP-036]

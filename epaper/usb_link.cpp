@@ -3,14 +3,11 @@
 #include "usb_path.hpp"
 #include "usbgadget.hpp"
 
-#include <QDebug>
 #include <QMetaObject>
 #include <QStringList>
 #include <QTimer>
 
-#include <chrono>
 #include <cstdio>
-#include <cstring>
 #include <dirent.h>
 #include <string>
 
@@ -96,9 +93,9 @@ public slots:
     {
         auto *tick = new QTimer(this);
         tick->setInterval(kUsbLinkCheckMs);
-        connect(tick, &QTimer::timeout, this, &UsbLinkWorker::onTick);
+        connect(tick, &QTimer::timeout, this, &UsbLinkWorker::refresh);
         tick->start();
-        onTick();
+        refresh();
     }
 
 signals:
@@ -111,21 +108,15 @@ public slots:
         using usbgadget::assignUsb0Address;
         m_recoverNote = QStringLiteral("recover: usb0 addr + Infini 3 tries (no UDC write)");
         assignUsb0Address();
-        onTick();
+        refresh();
         emit recoverApps();
     }
 
-private slots:
-    void onTick()
+    void refresh()
     {
-        using usbgadget::classify;
         using usbgadget::probe;
 
         const auto snap = probe();
-        const auto cls = classify(snap);
-        const auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                               std::chrono::steady_clock::now().time_since_epoch())
-                               .count();
 
         bool ssh = false;
         bool stroke = false;
@@ -142,21 +133,10 @@ private slots:
         const bool tcpStroke = stroke;
         const bool tcpLog = log;
         const bool tcpSsh = ssh;
-        // Do not advertise STROKE/LOG while UDC is suspended (stale ESTABLISHED).
         const bool allowTcpHud = !udcSuspended && pathLive;
         stroke = allowTcpHud && tcpStroke;
         log = allowTcpHud && tcpLog;
         ssh = allowTcpHud && tcpSsh;
-
-        if (stroke) {
-            if (m_strokeUpMs == 0)
-                m_strokeUpMs = nowMs;
-            m_strokeDownMs = 0;
-        } else {
-            if (m_strokeDownMs == 0)
-                m_strokeDownMs = nowMs;
-            m_strokeUpMs = 0;
-        }
 
         const bool unplugged = udc.empty()
             ? !(snap.ifacePresent && snap.hasTabletAddr)
@@ -186,33 +166,14 @@ private slots:
         else if (pathLive && stroke)
             linkState = QStringLiteral("connected");
 
-        QString debug = QStringLiteral("udc=%1 vbus/plug=%2 usb0=%3 up=%4 addr=%5 carrier=%6 class=%7")
-                            .arg(QString::fromStdString(udc.empty() ? "?" : udc))
-                            .arg(udcConfigured ? 1 : 0)
-                            .arg(snap.ifacePresent ? 1 : 0)
-                            .arg(snap.flagsUp ? 1 : 0)
-                            .arg(snap.hasTabletAddr ? 1 : 0)
-                            .arg(snap.carrier ? 1 : 0)
-                            .arg(QLatin1String(usbgadget::classLabel(cls)));
-        if (stroke && m_strokeUpMs)
-            debug += QStringLiteral(" | Infini up %1s").arg((nowMs - m_strokeUpMs) / 1000);
-        else if (!stroke && !unplugged && m_strokeDownMs)
-            debug += QStringLiteral(" | Infini down %1s").arg((nowMs - m_strokeDownMs) / 1000);
+        QString debug;
         if (udcSuspended)
-            debug += QStringLiteral(" | host USB suspend (lid/sleep) — TCP hold");
-        if (udcConfigured && !snap.carrier)
-            debug += QStringLiteral(" | carrier=0 (g_ether; ignore if ping works)");
-        if ((tcpStroke || tcpLog || tcpSsh) && !pathLive)
-            debug += QStringLiteral(" | ignore stale TCP ESTABLISHED");
-        if (unplugged)
-            debug += QStringLiteral(" | cable/host not attached");
-        else if (!udcSuspended && !snap.hasTabletAddr)
-            debug += QStringLiteral(" | no 10.11.99.1");
-        else if (pathLive && !stroke)
-            debug += QStringLiteral(" | :9877 not established");
-        debug += QStringLiteral(" | no UDC write; Infini 3 tries on Plugged / button");
-        if (!m_recoverNote.isEmpty())
-            debug += QStringLiteral(" | ") + m_recoverNote;
+            debug = QStringLiteral("host USB suspend (lid/sleep) — TCP hold");
+        if (!m_recoverNote.isEmpty()) {
+            if (!debug.isEmpty())
+                debug += QStringLiteral(" | ");
+            debug += m_recoverNote;
+        }
 
         const bool pluggedNow = !unplugged && !udcSuspended;
         if (pluggedNow && !m_wasPlugged && !stroke) {
@@ -225,8 +186,6 @@ private slots:
     }
 
 private:
-    qint64 m_strokeUpMs = 0;
-    qint64 m_strokeDownMs = 0;
     QString m_recoverNote;
     bool m_wasPlugged = false;
 };
@@ -270,6 +229,13 @@ void UsbLink::recoverInfini()
     if (!m_worker)
         return;
     QMetaObject::invokeMethod(m_worker, "recover", Qt::QueuedConnection);
+}
+
+void UsbLink::refreshHud()
+{
+    if (!m_worker)
+        return;
+    QMetaObject::invokeMethod(m_worker, "refresh", Qt::QueuedConnection);
 }
 
 void UsbLink::onRecoverApps()
