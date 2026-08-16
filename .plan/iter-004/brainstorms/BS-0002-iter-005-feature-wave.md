@@ -74,6 +74,9 @@ Question to frame: *what is the next outcome wave after on-device connectors, an
 | Frame / artboard | A clip/layout container (REQ-08 already names Frame as a kind) |
 | Manual create | Explicit tool/gesture that inserts a node without recognition |
 | Table recognition | Best-effort convert of drawn grid/ink into a table node |
+| Barrel button | Optional Wacom EMR side switch (0, 1, or 2). Accelerator only — ToolChip remains complete. |
+| Click (button) | Button down+up with movement below threshold — not a stroke |
+| Hold-gesture | Button stays down past movement threshold — temporary tool until release |
 
 ## Session history
 
@@ -95,6 +98,19 @@ Human asked for **notes**, not a diverge session. One capture round.
 - **R1-I12** (sm lens): Do not slice stories until retro-gate. Carry-overs still parked: REQ-08, CHL-0011 nested enclose, CHL-0012 FREE_FORM.
 - **Feedback gate**: paused — human can reorder MoSCoW or fill **AI** before PRD authoring.
 
+### Round 2 — build & challenge · technique: steelman + disambiguation (pen barrel buttons)
+
+Human 2026-08-16: optional 1–2 Wacom pen buttons; proposed click-toggle, hold-to-select, hold-to-erase, hold-to-drag.
+
+- **R2-I1** (pm): Job is *stay in the flow* — reach erase / select / move without hunting the 64 du chip. Buttons are **accelerators**, never the only path (0-button pens and RM2 stock marker still work via REQ-03 / REQ-10).
+- **R2-I2** (pm): The four hold-while-moving ideas are **the same physical gesture**. Shipping all four as peers is unlearnable and will steal ink (false hold vs draw). **One hold meaning per button.**
+- **R2-I3** (pm): Click vs hold is valid **if** release-without-move ≠ hold-with-move (movement threshold; hold consumes the click). Same latch idea as recognizers at pen-down.
+- **R2-I4** (pm): **Recommended map (v1):** Button 1 = select/manipulate family; Button 2 = erase family. Context on B1 hold (empty → lasso, node → drag) recovers the user's third hold without a third button.
+- **R2-I5** (qa): Click/hold threshold and “start on node vs empty” must be fixture-tested; AABB-only node hit is already a known fail (REQ-09). Drag-hold uses the same hit as pen-select / REQ-10 box hit, not the connector AABB.
+- **R2-I6** (architect): Need distinct evdev/Wacom button bits vs eraser *nib*. Marker Plus flip-eraser is not barrel B2. Spike before REQ.
+- **R2-I7** (designer): While a hold-gesture is live, ToolChip shows the **temporary** exclusive tool (partial refresh). On button-up, chip returns to the pre-hold tool unless the gesture was a **click toggle**.
+- **Feedback gate**: paused — human accept/reject the B1/B2 split.
+
 ## Research & sources
 
 - [R1-I5] `.docs/modules/epaper/prd.md` REQ-09 “Not this REQ: … arrowheads …” — (fact)
@@ -104,6 +120,9 @@ Human asked for **notes**, not a diverge session. One capture round.
 - [R1-I9] REQ-08 already lists Frame, Primitive, Connector re-anchor, Text — (fact)
 - [R1-I7] EXP-0002 ≤2% FP ship gate — (fact)
 - Analog: paper notebooks — eraser + arrows + labels on lines; whiteboards — tables. Not cited as requirements. (analog)
+- [R2-I2] REQ-03 exclusive tools latch at pen-down; mixing three hold tools on one button fights that model — (fact)
+- [R2-I4] REQ-10 already gives finger-move of a box; barrel-drag is the **pen** analogue, not a new verb — (fact)
+- Analog: Photoshop / Clip Studio barrel = alternate tool while held — (analog)
 
 ## Decision Log
 
@@ -116,6 +135,7 @@ Human asked for **notes**, not a diverge session. One capture round.
 | D5 | Manual frame + beautiful primitives/connectors = **Should**, after or with REQ-08; ink-box manual already done | decided | — | R1-I9 |
 | D6 | AI = **Won't** until the human writes the bucket | decided | — | R1-I10 |
 | D7 | Nested enclose (CHL-0011) and FREE_FORM (CHL-0012) stay **parked unless human pulls them into this wave** | decided | — | existing lock |
+| D8 | Pen buttons: **accelerators**. B1 click = toggle current ↔ pinned (`sel_freeform` v1). B1 hold = empty→lasso / node→drag. B2 (if present) = erase (click toggle Pen↔eraser; hold = temporary erase). Never three hold-modes on one button. 0-button = chip only. | decided | — | R2 |
 
 ## Assumptions & riskiest bets
 
@@ -126,6 +146,8 @@ Human asked for **notes**, not a diverge session. One capture round.
 | Mid-attachments can follow warp without rebaking rest shape (BR-C06) | Wrong model = snap/jump like CHL-0006 | fixture drag | architect | with attachment SRS | untested |
 | Device pan/zoom can publish viewport without breaking REQ-02/REQ-07 one-way rules | Session contract change | product + ADR | pm + architect | before gesture REQ | untested |
 | In-document clipboard is enough (no OS paste) | Scope explosion | human confirm | pm | PRD authoring | untested |
+| Barrel button events are distinct from eraser nib and from tip | Wrong channel → stolen ink or dead buttons | device spike | architect | before button REQ | untested |
+| Click vs hold can be split by movement without costing REQ-01 latency | False holds while drawing | fixture | qa | with button SRS | untested |
 
 ## Goal prioritisation & metric tree
 
@@ -173,6 +195,7 @@ AI ─────────────────────── unspeci
 | Mid-attachment parameter | `t` on rest spine vs world offset | follow warp ≥5 Hz, 0 jump | likely (extends ADR-0020) |
 | Table as node vs ink group | Structured cells vs SmartGroup of lines | new kind vs CHL-0011 nesting | yes if Could promoted |
 | Creation palette vs chip Non-Goal | Manual connectors/primitives need UI | context toolbar vs 4th tool | design + ADR |
+| Pen button channel | 0/1/2 buttons + optional eraser nib | capability at session start; no-op if absent | yes |
 
 ## Conclusion
 
@@ -188,4 +211,5 @@ AI ─────────────────────── unspeci
 - [x] Epaper PRD Open Questions pointer (no new REQ)
 - [ ] After iter-004 retro-gate: `/pm` author-prd for Must cluster → `/architect` → `/sm` new iter
 - [ ] Human: fill **AI** or confirm empty; confirm pan/zoom Non-Goal reversal; confirm table Could vs Must
-- [ ] Architect spike (when wave starts): RM2 eraser events
+- [ ] Architect spike (when wave starts): RM2 eraser events **and** Wacom barrel button bits
+- [ ] Human: accept/reject D8 pen-button map before PRD authoring
