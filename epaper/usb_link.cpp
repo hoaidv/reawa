@@ -210,9 +210,16 @@ private slots:
             debug += QStringLiteral(" | no 10.11.99.1");
         else if (pathLive && !stroke)
             debug += QStringLiteral(" | :9877 not established");
-        debug += QStringLiteral(" | no UDC write; Infini 3 tries / button");
+        debug += QStringLiteral(" | no UDC write; Infini 3 tries on Plugged / button");
         if (!m_recoverNote.isEmpty())
             debug += QStringLiteral(" | ") + m_recoverNote;
+
+        const bool pluggedNow = !unplugged && !udcSuspended;
+        if (pluggedNow && !m_wasPlugged && !stroke) {
+            m_recoverNote = QStringLiteral("plugged: Infini 3 tries");
+            emit recoverApps();
+        }
+        m_wasPlugged = pluggedNow;
 
         emit hud(status, debug, linkState);
     }
@@ -221,6 +228,7 @@ private:
     qint64 m_strokeUpMs = 0;
     qint64 m_strokeDownMs = 0;
     QString m_recoverNote;
+    bool m_wasPlugged = false;
 };
 
 UsbLink *UsbLink::s_instance = nullptr;

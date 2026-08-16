@@ -290,6 +290,9 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
     m_lastPoint = canvasPos;
     m_lastRaw = pos;
 
+    if (tryDebugChromeAtWindowPos(pos) || tryDebugChromeAtWindowPos(canvasPos))
+        return;
+
     const bool isPress = (type == QEvent::TabletPress || type == QEvent::MouseButtonPress);
     const bool isMove = (type == QEvent::TabletMove || type == QEvent::MouseMove);
     const bool isRelease = (type == QEvent::TabletRelease || type == QEvent::MouseButtonRelease);
@@ -932,18 +935,31 @@ QString TabletCanvasItem::toolChipHitAt(const QPointF &canvasPos) const
     return QString::fromLatin1(epaper::toolchip::hitId(epaper::toolchip::hitAtRelX(relX)));
 }
 
-bool TabletCanvasItem::tryArmToolAtCanvasPos(const QPointF &canvasPos)
+bool TabletCanvasItem::tryDebugChromeAtWindowPos(const QPointF &windowPos)
 {
-    if (kXochitlSwitchRect.contains(canvasPos)) {
+    qreal w = width();
+    if (w < 2.0 && window())
+        w = window()->width();
+    if (window() && window()->width() > w)
+        w = window()->width();
+    constexpr qreal pad = 80.0;
+    if (QRectF(0, 0, pad, pad).contains(windowPos)) {
         if (EpaperBridge *b = EpaperBridge::instance())
             b->restoreXochitl();
         return true;
     }
-    if (infiniReconnectRect(width()).contains(canvasPos)) {
+    if (w > pad && QRectF(w - pad, 0, pad, pad).contains(windowPos)) {
         if (auto *u = epaper::UsbLink::instance())
             u->recoverInfini();
         return true;
     }
+    return false;
+}
+
+bool TabletCanvasItem::tryArmToolAtCanvasPos(const QPointF &canvasPos)
+{
+    if (tryDebugChromeAtWindowPos(canvasPos))
+        return true;
     const QString hit = toolChipHitAt(canvasPos);
     if (hit.isEmpty())
         return false;

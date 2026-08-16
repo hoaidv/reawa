@@ -416,14 +416,14 @@ TabletWindow {
         y: 8
         width: 64
         height: 64
-        color: "white"
+        color: UsbHud.linkState === "connected" ? "black" : "white"
         border.color: "black"
-        border.width: 1
+        border.width: UsbHud.linkState === "unplugged" ? 1 : 3
         Image {
-            x: parent.width * 0.19
-            y: parent.height * 0.19
-            width: parent.width * 0.62
-            height: parent.height * 0.62
+            x: 4
+            y: 2
+            width: 28
+            height: 28
             fillMode: Image.PreserveAspectFit
             smooth: false
             source: UsbHud.linkState === "connected"
@@ -432,7 +432,19 @@ TabletWindow {
                       ? "qrc:/icons/icons/icon-epaper-usb-unplugged.png"
                       : "qrc:/icons/icons/icon-epaper-usb-plugged.png"
         }
-        // No MouseArea — ghost click at QML load called recoverInfini() and UDC-unbound a live Mac.
+        Text {
+            x: 4
+            y: 32
+            width: 56
+            height: 28
+            font.pixelSize: 22
+            font.bold: true
+            color: UsbHud.linkState === "connected" ? "white" : "black"
+            horizontalAlignment: Text.AlignHCenter
+            text: UsbHud.linkState === "connected" ? "OK"
+                  : UsbHud.linkState === "unplugged" ? "U"
+                  : "P"
+        }
     }
     // @implements [STORY-EP-036]
     Rectangle {

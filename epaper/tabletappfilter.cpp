@@ -5,6 +5,7 @@
 #include <QTouchEvent>
 #include <QEventPoint>
 #include <QPointingDevice>
+#include <QQuickWindow>
 #include <QDebug>
 
 TabletAppFilter::TabletAppFilter(QObject *parent)
@@ -39,7 +40,12 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                 if (tp.state() != QEventPoint::State::Released)
                     continue;
                 const QPointF canvasPos = m_canvas->mapFromGlobal(tp.globalPosition());
-                if (m_canvas->tryArmToolAtCanvasPos(canvasPos))
+                QPointF winPos = canvasPos;
+                if (QQuickWindow *win = m_canvas->window())
+                    winPos = win->mapFromGlobal(tp.globalPosition().toPoint());
+                if (m_canvas->tryDebugChromeAtWindowPos(winPos)
+                    || m_canvas->tryDebugChromeAtWindowPos(canvasPos)
+                    || m_canvas->tryArmToolAtCanvasPos(canvasPos))
                     return true;
             }
         }

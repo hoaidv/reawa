@@ -120,6 +120,8 @@ public:
     std::string ingestDumpText() const;
     /** @implements [SRS-EP-04] finger/pen tap on ToolChip tile or toggle */
     bool tryArmToolAtCanvasPos(const QPointF &canvasPos);
+    /** Window-space debug chips (Switch / Infini). Touch uses this; canvas mapping misses top-right. */
+    bool tryDebugChromeAtWindowPos(const QPointF &windowPos);
 
     void paint(QPainter *painter) override;
 
