@@ -67,6 +67,8 @@ done
 SSH_OPTS=(
   -i "$KEY"
   -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null
+  -o GlobalKnownHostsFile=/dev/null
   -o ConnectTimeout=8
   -o ServerAliveInterval=15
   -o ServerAliveCountMax=4

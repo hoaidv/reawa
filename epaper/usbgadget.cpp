@@ -102,7 +102,7 @@ void rebindConfigfsUdc()
     }
 }
 
-bool assignUsb0Address()
+bool bringUpUsb0Addr()
 {
     writeSys("/sys/class/net/usb0/device/power/control", "on");
     writeSys("/sys/class/net/usb0/device/power/autosuspend_delay_ms", "-1");
@@ -149,6 +149,15 @@ bool assignUsb0Address()
 
 } // namespace
 
+bool assignUsb0Address()
+{
+#ifdef __linux__
+    return bringUpUsb0Addr();
+#else
+    return false;
+#endif
+}
+
 Snapshot probe()
 {
     Snapshot s;
@@ -180,6 +189,11 @@ Snapshot probe()
     }
     freeifaddrs(list);
     s.carrier = usb0CarrierUp();
+    for (const std::string &name : listDir("/sys/class/udc")) {
+        const std::string st = readFileTrim((std::string("/sys/class/udc/") + name + "/state").c_str());
+        if (!st.empty() && st != "not attached")
+            s.physicallyPlugged = true;
+    }
 #endif
     return s;
 }

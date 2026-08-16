@@ -51,7 +51,7 @@ int main()
     noCarrier.flagsUp = true;
     noCarrier.hasTabletAddr = true;
     noCarrier.carrier = false;
-    CHECK(classify(noCarrier) == LinkClass::GadgetDown);
+    CHECK(classify(noCarrier) == LinkClass::GadgetUp);
 
     Snapshot infiniDownUsbAlive;
     infiniDownUsbAlive.ifacePresent = true;

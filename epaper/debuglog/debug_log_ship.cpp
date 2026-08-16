@@ -6,11 +6,14 @@
 #include "debug_log_ship.h"
 #include "debug_log_format.hpp"
 #include "net_retry.hpp"
+#include "usb_link.hpp"
+#include "usb_path.hpp"
 
 #include <QDateTime>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QMetaObject>
 #include <QNetworkProxy>
 #include <QSocketNotifier>
 #include <QTcpSocket>
@@ -114,16 +117,31 @@ public slots:
             m_queue->tryPush(std::move(rec));
         }
 
+        m_retriesLeft = epaper::kTcpRetryLimit;
         tryConnect();
     }
 
 private slots:
+    void armReconnect()
+    {
+        m_retriesLeft = epaper::kTcpRetryLimit;
+        tryConnect();
+    }
+
     void tryConnect()
     {
         if (!m_socket)
             return;
+        if (!epaper::usbEthernetLive()) {
+            if (m_socket->state() != QAbstractSocket::UnconnectedState)
+                m_socket->abort();
+            return;
+        }
         if (m_socket->state() == QAbstractSocket::ConnectedState)
             return;
+        if (m_retriesLeft <= 0)
+            return;
+        --m_retriesLeft;
         // Abort stuck Connecting so the retry timer always gets a fresh attempt.
         if (m_socket->state() != QAbstractSocket::UnconnectedState)
             m_socket->abort();
@@ -152,6 +170,8 @@ private slots:
     void onConnected()
     {
         m_inbound.clear();
+        m_wasConnected = true;
+        m_retriesLeft = epaper::kTcpRetryLimit;
         if (m_socket)
             m_socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
         echoLocal(g_savedStderr >= 0 ? g_savedStderr : 2, QByteArray("[debug] connected"));
@@ -162,8 +182,11 @@ private slots:
     {
         m_shipping = false;
         m_inbound.clear();
+        if (m_wasConnected)
+            m_retriesLeft = epaper::kTcpRetryLimit;
+        m_wasConnected = false;
         echoLocal(g_savedStderr >= 0 ? g_savedStderr : 2,
-                  QByteArray("[debug] disconnected — will retry"));
+                  QByteArray("[debug] disconnected"));
     }
 
     void onSocketError(QAbstractSocket::SocketError)
@@ -207,6 +230,12 @@ private slots:
 
     void drainQueue()
     {
+        if (!epaper::usbEthernetLive()) {
+            m_shipping = false;
+            if (m_socket && m_socket->state() != QAbstractSocket::UnconnectedState)
+                m_socket->abort();
+            return;
+        }
         if (!m_shipping)
             return;
         if (!m_socket || m_socket->state() != QAbstractSocket::ConnectedState)
@@ -260,6 +289,8 @@ private:
     int m_stderrFd = -1;
     bool m_stdioOk = false;
     bool m_shipping = false;
+    bool m_wasConnected = false;
+    int m_retriesLeft = 0;
 };
 
 DebugLogShip::DebugLogShip(QObject *parent)
@@ -337,6 +368,13 @@ void DebugLogShip::startIfEnabled()
     connect(&m_thread, &QThread::started, m_worker, &DebugLogWorker::start);
     connect(&m_thread, &QThread::finished, m_worker, &QObject::deleteLater);
     m_thread.start();
+}
+
+void DebugLogShip::armReconnect()
+{
+    if (!m_enabled || !m_worker)
+        return;
+    QMetaObject::invokeMethod(m_worker, "armReconnect", Qt::QueuedConnection);
 }
 
 void DebugLogShip::tryEnqueue(const char *logger, const char *level, const QString &msg)

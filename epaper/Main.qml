@@ -386,14 +386,90 @@ TabletWindow {
         }
     }
 
+    // Debug: 64px chip chrome — quit epaper, start xochitl.
+    Rectangle {
+        id: xochitlSwitch
+        z: 30
+        x: 8
+        y: 8
+        width: 64
+        height: 64
+        color: "white"
+        border.color: "black"
+        border.width: 1
+        Image {
+            anchors.centerIn: parent
+            width: parent.width * 0.62
+            height: parent.height * 0.62
+            fillMode: Image.PreserveAspectFit
+            smooth: false
+            source: "qrc:/icons/icons/icon-epaper-switch.png"
+        }
+        // No MouseArea — TabletAppFilter is installed after QML load; a synthetic
+        // click here would quit epaper. Pen/finger hit-test is C++.
+    }
+
+    Rectangle {
+        id: infiniReconnect
+        z: 30
+        x: root.width - width - 8
+        y: 8
+        width: 64
+        height: 64
+        color: "white"
+        border.color: "black"
+        border.width: 1
+        Image {
+            x: parent.width * 0.19
+            y: parent.height * 0.19
+            width: parent.width * 0.62
+            height: parent.height * 0.62
+            fillMode: Image.PreserveAspectFit
+            smooth: false
+            source: UsbHud.linkState === "connected"
+                    ? "qrc:/icons/icons/icon-epaper-usb-connected.png"
+                    : UsbHud.linkState === "unplugged"
+                      ? "qrc:/icons/icons/icon-epaper-usb-unplugged.png"
+                      : "qrc:/icons/icons/icon-epaper-usb-plugged.png"
+        }
+        // No MouseArea — ghost click at QML load called recoverInfini() and UDC-unbound a live Mac.
+    }
+    // @implements [STORY-EP-036]
+    Rectangle {
+        id: usbHud
+        z: 30
+        x: 8
+        y: root.height - height - 8
+        width: root.width - 16
+        height: 36
+        color: "white"
+        border.color: "black"
+        border.width: 2
+        Text {
+            x: 8
+            y: 0
+            width: parent.width - 16
+            height: parent.height
+            font.pixelSize: 14
+            color: "black"
+            verticalAlignment: Text.AlignVCenter
+            wrapMode: Text.NoWrap
+            elide: Text.ElideRight
+            text: "USB  " + UsbHud.status + "  " + UsbHud.debugLine
+        }
+    }
+
     Text {
         z: 10
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.margins: 8
-        anchors.topMargin: drawCanvas.toolChipRect.y < height / 2
-                           ? drawCanvas.toolChipRect.y + drawCanvas.toolChipRect.height + 6
-                           : 8
+        anchors.topMargin: {
+            var chip = drawCanvas.toolChipRect.y < height / 2
+                       ? drawCanvas.toolChipRect.y + drawCanvas.toolChipRect.height + 6
+                       : 8
+            return Math.max(chip, xochitlSwitch.y + xochitlSwitch.height + 6)
+        }
         font.pixelSize: 14
         color: "black"
         text: EpaperBridge.status

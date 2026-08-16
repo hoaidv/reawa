@@ -59,6 +59,9 @@ public:
     Q_INVOKABLE void beginStrokeBlock();
     Q_INVOKABLE void endStrokeBlock();
 
+    /** Debug: quit epaper, then start xochitl (same as deploy --restore). */
+    Q_INVOKABLE void restoreXochitl();
+
     // --- Ink latency tracing (RM_INK_TRACE=1) ---
     bool tracing() const { return m_tracing; }
     void traceArrival();

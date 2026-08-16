@@ -15,7 +15,7 @@ namespace epaper {
 namespace {
 
 constexpr int kBeatMs = 32;
-constexpr int kLogMs = 50;
+constexpr int kLogMs = 1000;
 
 QTimer *g_beat = nullptr;
 std::uint64_t g_lastMs = 0;

@@ -2,6 +2,7 @@
 #include "ui_stall.hpp"
 #include "strokesync.h"
 #include "epaperbridge.h"
+#include "usb_link.hpp"
 #include "latencyprobe/stub_document.hpp"
 #include "document/connector_warp.hpp"
 #include "document/recognizer_dispatch.hpp"
@@ -41,6 +42,14 @@ bool envFlag(const char *name, bool fallback)
         return fallback;
     const QByteArray v = qgetenv(name).trimmed().toLower();
     return !(v == "0" || v == "false" || v == "off" || v == "no");
+}
+
+/** Debug Switch chip — must match Main.qml xochitlSwitch geometry. */
+constexpr QRectF kXochitlSwitchRect(8, 8, 64, 64);
+
+QRectF infiniReconnectRect(qreal panelW)
+{
+    return QRectF(panelW - 8.0 - 64.0, 8.0, 64.0, 64.0);
 }
 
 /** Context toolbar under the box — south of the bottom handle (28 du visual). */
@@ -336,6 +345,14 @@ void TabletCanvasItem::applyContactPress(const QPointF &canvasPos, const IngestC
 {
     // Pen on ToolChip — not ink; arm via tile hit-test (pen-on-chip fallback).
     // First plausible sample, including Move-after-stale-Press (STORY-EP-033).
+    if (kXochitlSwitchRect.contains(canvasPos)) {
+        tryArmToolAtCanvasPos(canvasPos);
+        return;
+    }
+    if (infiniReconnectRect(width()).contains(canvasPos)) {
+        tryArmToolAtCanvasPos(canvasPos);
+        return;
+    }
     if (pointInToolChip(canvasPos)) {
         tryArmToolAtCanvasPos(canvasPos);
         return;
@@ -917,6 +934,16 @@ QString TabletCanvasItem::toolChipHitAt(const QPointF &canvasPos) const
 
 bool TabletCanvasItem::tryArmToolAtCanvasPos(const QPointF &canvasPos)
 {
+    if (kXochitlSwitchRect.contains(canvasPos)) {
+        if (EpaperBridge *b = EpaperBridge::instance())
+            b->restoreXochitl();
+        return true;
+    }
+    if (infiniReconnectRect(width()).contains(canvasPos)) {
+        if (auto *u = epaper::UsbLink::instance())
+            u->recoverInfini();
+        return true;
+    }
     const QString hit = toolChipHitAt(canvasPos);
     if (hit.isEmpty())
         return false;

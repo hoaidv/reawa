@@ -1,5 +1,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlEngine>
 #include <QQmlContext>
 #include <QTimer>
 #include <QDebug>
@@ -45,6 +46,8 @@ int main(int argc, char *argv[])
     // Sidecar :9878 — worker thread; env-gated. Before QML so paint never installs it.
     auto *debugShip = new DebugLogShip(&app);
     debugShip->startIfEnabled();
+    QObject::connect(usbLink, &epaper::UsbLink::requestAppReconnect, debugShip,
+                     &DebugLogShip::armReconnect);
 
     // Resolve libqsgepaper symbols once the QPA/epaper plugins are loaded.
     EpaperBridge *bridge = EpaperBridge::instance();
@@ -53,6 +56,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<ToolCanvasItem>("epaper", 1, 0, "ToolCanvas");
     qmlRegisterType<TabletWindow>("epaper", 1, 0, "TabletWindow");
     qmlRegisterSingletonInstance("epaper", 1, 0, "EpaperBridge", bridge);
+    qmlRegisterSingletonInstance("epaper", 1, 0, "UsbHud", usbLink);
 
     QQmlApplicationEngine engine;
     QObject::connect(

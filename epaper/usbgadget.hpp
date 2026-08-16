@@ -30,11 +30,14 @@ struct Snapshot {
     bool flagsUp = false;
     bool hasTabletAddr = false;
     bool carrier = true;
+    /** UDC not in "not attached" — cable/host session, not Mac Infini. */
+    bool physicallyPlugged = false;
 };
 
 inline LinkClass classify(const Snapshot &s)
 {
-    if (s.hasTabletAddr && s.flagsUp && s.carrier)
+    // g_ether often reports sysfs carrier=0 while Mac ping works. Address + IFF_UP is the link.
+    if (s.hasTabletAddr && s.flagsUp)
         return LinkClass::GadgetUp;
     return LinkClass::GadgetDown;
 }
@@ -55,7 +58,9 @@ inline const char *classLabel(LinkClass c)
 }
 
 Snapshot probe();
-/** Blocking sysfs/ioctl. Call only off the GUI/ink thread. */
+/** Set usb0 10.11.99.1 / IFF_UP. Does not unbind UDC. Off GUI thread. */
+bool assignUsb0Address();
+/** Blocking sysfs/ioctl. Do not call from a timer — UDC unbind bricks Mac USB until tablet reboot. */
 bool restoreWithoutUnplug();
 
 inline constexpr const char *kRestoreOrder[] = {

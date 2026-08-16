@@ -44,6 +44,10 @@ qt_add_resources(epaper_bin "epaper_tool_icons"
         icons/icon-epaper-enclose-inv.png
         icons/icon-epaper-undo.png
         icons/icon-epaper-redo.png
+        icons/icon-epaper-switch.png
+        icons/icon-epaper-usb-unplugged.png
+        icons/icon-epaper-usb-plugged.png
+        icons/icon-epaper-usb-connected.png
         icons/icon-epaper-recog-ink-box.png
         icons/icon-epaper-recog-ink-box-inv.png
         icons/icon-epaper-recog-connector.png

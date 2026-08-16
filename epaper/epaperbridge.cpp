@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QMetaEnum>
 #include <QMetaObject>
+#include <QProcess>
 #include <QDebug>
 #include <QtGlobal>
 #include <algorithm>
@@ -364,4 +365,13 @@ void EpaperBridge::dumpTraceStats() const
     };
     dump("arrival->flush", m_arrivalToFlushUs);
     dump("flush->swap", m_flushToSwapUs);
+}
+
+void EpaperBridge::restoreXochitl()
+{
+    // Detach first so xochitl starts after we release the panel.
+    QProcess::startDetached(QStringLiteral("/bin/sh"),
+                            {QStringLiteral("-c"),
+                             QStringLiteral("sleep 0.5; systemctl start xochitl")});
+    QCoreApplication::quit();
 }

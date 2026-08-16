@@ -23,6 +23,8 @@ public:
     void startIfEnabled();
     bool enabled() const { return m_enabled; }
 
+    void armReconnect();
+
     /** Qt message handler — enqueue or drop; never writes the socket. */
     static void messageHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg);
 

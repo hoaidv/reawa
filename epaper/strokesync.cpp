@@ -1,5 +1,7 @@
 #include "strokesync.h"
 #include "net_retry.hpp"
+#include "usb_link.hpp"
+#include "usb_path.hpp"
 
 #include <QDebug>
 #include <QJsonDocument>
@@ -47,12 +49,17 @@ StrokeSync::StrokeSync(QObject *parent)
     connect(&m_socket, &QTcpSocket::readyRead, this, &StrokeSync::onReadyRead);
     connect(&m_socket, &QTcpSocket::connected, this, [this]() {
         qInfo() << "[sync] connected to" << m_socket.peerAddress().toString() << m_socket.peerPort();
+        m_wasConnected = true;
+        m_retriesLeft = epaper::kTcpRetryLimit;
         applyTcpKeepaliveProbes(m_socket);
         emit socketConnected();
         flushQueue();
     });
     connect(&m_socket, &QTcpSocket::disconnected, this, [this]() {
-        qInfo() << "[sync] disconnected — will retry";
+        qInfo() << "[sync] disconnected";
+        if (m_wasConnected)
+            m_retriesLeft = epaper::kTcpRetryLimit;
+        m_wasConnected = false;
         m_inbound.clear();
         emit socketDisconnected();
     });
@@ -72,17 +79,59 @@ StrokeSync::StrokeSync(QObject *parent)
     auto *retry = new QTimer(this);
     retry->setInterval(epaper::kAppTcpRetryMs);
     connect(retry, &QTimer::timeout, this, [this]() {
+        if (!epaper::usbEthernetLive()) {
+            if (m_socket.state() != QAbstractSocket::UnconnectedState)
+                m_socket.abort();
+            return;
+        }
         if (m_socket.state() == QAbstractSocket::ConnectedState)
             return;
+        if (m_retriesLeft <= 0)
+            return;
+        --m_retriesLeft;
+        qInfo() << "[sync] retry left" << m_retriesLeft;
         connectToMac();
     });
     retry->start();
+
+    m_retriesLeft = epaper::kTcpRetryLimit;
+    if (auto *usb = epaper::UsbLink::instance())
+        connect(usb, &epaper::UsbLink::requestAppReconnect, this, &StrokeSync::armReconnect);
+    QTimer::singleShot(0, this, [this]() {
+        if (!epaper::usbEthernetLive() || m_socket.state() == QAbstractSocket::ConnectedState)
+            return;
+        if (m_retriesLeft <= 0)
+            return;
+        --m_retriesLeft;
+        connectToMac();
+    });
+}
+
+void StrokeSync::armReconnect()
+{
+    m_retriesLeft = epaper::kTcpRetryLimit;
+    if (!epaper::usbEthernetLive()) {
+        if (m_socket.state() != QAbstractSocket::UnconnectedState)
+            m_socket.abort();
+        return;
+    }
+    if (m_socket.state() == QAbstractSocket::ConnectedState)
+        return;
+    if (m_retriesLeft <= 0)
+        return;
+    --m_retriesLeft;
+    connectToMac();
 }
 
 void StrokeSync::connectToMac()
 {
     if (!m_enabled)
         return;
+    if (!epaper::usbEthernetLive()) {
+        if (m_socket.state() != QAbstractSocket::UnconnectedState)
+            m_socket.abort();
+        return;
+    }
     if (m_socket.state() == QAbstractSocket::ConnectedState)
         return;
 
@@ -123,8 +172,14 @@ void StrokeSync::scheduleFlush()
     m_flushScheduled = true;
     QTimer::singleShot(0, this, [this]() {
         m_flushScheduled = false;
+        if (!epaper::usbEthernetLive()) {
+            if (m_socket.state() != QAbstractSocket::UnconnectedState)
+                m_socket.abort();
+            return;
+        }
         if (m_socket.state() != QAbstractSocket::ConnectedState) {
-            connectToMac();
+            if (m_retriesLeft > 0)
+                connectToMac();
             return;
         }
         flushQueue();

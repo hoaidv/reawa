@@ -24,6 +24,9 @@ public:
     bool enabled() const { return m_enabled; }
     bool isConnected() const;
 
+public slots:
+    void armReconnect();
+
 signals:
     void hostMessage(const QJsonObject &obj);
     void socketConnected();
@@ -40,5 +43,7 @@ private:
     QByteArray m_inbound;
     QVector<QByteArray> m_queue;
     bool m_flushScheduled = false;
+    bool m_wasConnected = false;
+    int m_retriesLeft = 0;
     static constexpr int kMaxQueue = 256;
 };
