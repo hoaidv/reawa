@@ -1,4 +1,5 @@
 #include "tabletcanvasitem.h"
+#include "ui_stall.hpp"
 #include "strokesync.h"
 #include "epaperbridge.h"
 #include "latencyprobe/stub_document.hpp"
@@ -121,6 +122,7 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     m_refreshClock.start();
     connect(m_sync, &StrokeSync::hostMessage, this, &TabletCanvasItem::onHostMessage);
     connect(m_sync, &StrokeSync::socketConnected, this, [this]() {
+        epaper::UiStallSection stall("onLinkUp-hello");
         m_oneWay.onLinkUp();
         flushOneWayWire();
     });
@@ -128,7 +130,7 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
         m_oneWay.onLinkDown();
     });
     auto *helloRetry = new QTimer(this);
-    helloRetry->setInterval(2000);
+    helloRetry->setInterval(5000);
     connect(helloRetry, &QTimer::timeout, this, [this]() {
         if (!m_sync->isConnected() || m_oneWay.epochLive())
             return;
@@ -810,6 +812,7 @@ void TabletCanvasItem::sendManipPreviewToInfini()
 
 void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
 {
+    epaper::UiStallSection stall("onHostMessage");
     const QString inboundType = obj.value(QStringLiteral("type")).toString();
     if (inboundType != QLatin1String("viewport"))
         qInfo() << "[sync] inbound" << inboundType << "live" << m_oneWay.epochLive()
@@ -2044,6 +2047,7 @@ void TabletCanvasItem::drawTree(QPainter &p, const std::vector<epaper::document:
 
 void TabletCanvasItem::rasterizeVectors(bool sharp)
 {
+    epaper::UiStallSection stall("rasterizeVectors");
     using epaper::document::refreshAllConnectorWarps;
     refreshAllConnectorWarps(m_document);
     if (!m_paintsInk)

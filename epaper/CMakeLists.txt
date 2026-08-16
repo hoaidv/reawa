@@ -18,6 +18,7 @@ qt_add_executable(epaper_bin
     debuglog/debug_log_ship.cpp
     usbgadget.cpp
     usb_link.cpp
+    ui_stall.cpp
 )
 qt_add_qml_module(epaper_bin
     URI epaper

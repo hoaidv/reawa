@@ -52,6 +52,7 @@ private slots:
                     didRestore, restoreOk);
     }
 
+private:
     qint64 m_lastRestoreMs = 0;
 };
 

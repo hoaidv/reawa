@@ -14,6 +14,7 @@
 #include "epaperbridge.h"
 #include "debuglog/debug_log_ship.h"
 #include "usb_link.hpp"
+#include "ui_stall.hpp"
 #include "latencyprobe/stub_document.hpp"
 
 namespace {
@@ -39,6 +40,7 @@ int main(int argc, char *argv[])
     // Infra: USB gadget stay-up (worker thread). Independent of TCP apps.
     auto *usbLink = new epaper::UsbLink(&app);
     usbLink->start();
+    epaper::startUiStallWatchdog();
 
     // Sidecar :9878 — worker thread; env-gated. Before QML so paint never installs it.
     auto *debugShip = new DebugLogShip(&app);

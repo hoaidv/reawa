@@ -132,6 +132,7 @@ public:
      */
     void onLocalCommit()
     {
+        m_helloCache.clear();
         maybeAcceptDeferredLoad();
         if (m_linked && m_epochLive && !m_handshakeInFlight && !m_awaitingDrainAck)
             publishFromCursor();
@@ -256,18 +257,32 @@ private:
     std::set<std::string> m_loggedOnce;
     JsonValue m_lastViewport;
     std::vector<std::int64_t> m_publishLatencyNs;
+    std::string m_helloCache;
+    int m_helloCacheQueued = -1;
+    int m_helloCacheSeq = -1;
 
     void emitLine(const JsonValue &j) { m_outbound.push_back(stringify(j)); }
 
     void emitHello(int queued)
     {
+        if (queued == 0 && m_helloCacheQueued == 0 && m_helloCacheSeq == m_doc.lastSeq()
+            && !m_helloCache.empty()) {
+            m_outbound.push_back(m_helloCache);
+            return;
+        }
         JsonValue::Object o;
         o.emplace_back("type", JsonValue::string("hello"));
         o.emplace_back("lastSeq", JsonValue::number(m_doc.lastSeq()));
         o.emplace_back("queued", JsonValue::number(queued));
         if (queued == 0 && !m_doc.rootChildren.empty())
             o.emplace_back("document", m_doc.toJSON());
-        emitLine(JsonValue::object(std::move(o)));
+        const std::string line = stringify(JsonValue::object(std::move(o)));
+        if (queued == 0) {
+            m_helloCache = line;
+            m_helloCacheQueued = 0;
+            m_helloCacheSeq = m_doc.lastSeq();
+        }
+        m_outbound.push_back(line);
     }
 
     void drainQueueThenMarkLegal()
@@ -352,6 +367,8 @@ private:
      */
     void acceptLoad(const JsonValue &msg)
     {
+        m_helloCache.clear();
+        m_helloCacheQueued = -1;
         const JsonValue *document = msg.get("document");
         if (!document)
             return;
