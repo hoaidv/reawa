@@ -1,5 +1,5 @@
 /**
- * Infra: USB gadget probe + HUD. Writes (addr/UDC) only on manual Infini recover.
+ * Infra: USB gadget probe + HUD. Never UDC unbind. Manual recover = usb0 addr + TCP retry.
  * @fix [STORY-EP-036]
  */
 #pragma once
@@ -51,7 +51,6 @@ private:
     QString m_debug;
     QString m_linkState = QStringLiteral("unplugged");
     bool m_started = false;
-    qint64 m_startedMs = 0;
 };
 
 } // namespace epaper

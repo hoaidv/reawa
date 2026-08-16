@@ -109,33 +109,8 @@ public slots:
     void recover()
     {
         using usbgadget::assignUsb0Address;
-        using usbgadget::probe;
-        using usbgadget::restoreWithoutUnplug;
-
-        m_recoverNote = QStringLiteral("recover: xochitl-style usb0 addr (no UDC pull)");
+        m_recoverNote = QStringLiteral("recover: usb0 addr + Infini 3 tries (no UDC write)");
         assignUsb0Address();
-        auto snap = probe();
-        std::string udc = firstUdcState();
-        bool live = (udc == "configured") && snap.hasTabletAddr && snap.flagsUp;
-        // UDC unbind is a USB disconnect. Do it only if the host has no session.
-        // configured/suspended = Mac still owns the gadget (incl. lid). Rebind kills ping.
-        const bool hostSession = (udc == "configured" || udc == "suspended"
-                                  || udc == "addressed" || udc == "attached"
-                                  || udc == "powered");
-        if (!live && !hostSession) {
-            m_recoverNote = QStringLiteral("recover: UDC rebind (not attached)");
-            restoreWithoutUnplug();
-            snap = probe();
-            udc = firstUdcState();
-            live = (udc == "configured") && snap.hasTabletAddr && snap.flagsUp;
-        }
-        epaper::setUsbEthernetLive(live);
-        if (live)
-            m_recoverNote = QStringLiteral("recover: usb0 live — Infini 3 tries");
-        else
-            m_recoverNote = QStringLiteral("recover: usb0 still down (udc=%1 carrier=%2)")
-                                .arg(QString::fromStdString(udc.empty() ? "?" : udc))
-                                .arg(snap.carrier ? 1 : 0);
         onTick();
         emit recoverApps();
     }
@@ -167,9 +142,11 @@ private slots:
         const bool tcpStroke = stroke;
         const bool tcpLog = log;
         const bool tcpSsh = ssh;
-        stroke = pathLive && tcpStroke;
-        log = pathLive && tcpLog;
-        ssh = pathLive && tcpSsh;
+        // Do not advertise STROKE/LOG while UDC is suspended (stale ESTABLISHED).
+        const bool allowTcpHud = !udcSuspended && pathLive;
+        stroke = allowTcpHud && tcpStroke;
+        log = allowTcpHud && tcpLog;
+        ssh = allowTcpHud && tcpSsh;
 
         if (stroke) {
             if (m_strokeUpMs == 0)
@@ -182,8 +159,9 @@ private slots:
         }
 
         const bool unplugged = udc.empty()
-            ? !(snap.ifacePresent && snap.carrier)
+            ? !(snap.ifacePresent && snap.hasTabletAddr)
             : (udc == "not attached");
+
         QString status;
         if (udcSuspended) {
             status = QStringLiteral("Suspended");
@@ -232,7 +210,7 @@ private slots:
             debug += QStringLiteral(" | no 10.11.99.1");
         else if (pathLive && !stroke)
             debug += QStringLiteral(" | :9877 not established");
-        debug += QStringLiteral(" | no auto Infini (3 tries then Infini button)");
+        debug += QStringLiteral(" | no UDC write; Infini 3 tries / button");
         if (!m_recoverNote.isEmpty())
             debug += QStringLiteral(" | ") + m_recoverNote;
 
@@ -277,19 +255,11 @@ void UsbLink::start()
     connect(m_worker, &UsbLinkWorker::recoverApps, this, &UsbLink::onRecoverApps,
             Qt::QueuedConnection);
     m_thread.start();
-    m_startedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                      std::chrono::steady_clock::now().time_since_epoch())
-                      .count();
 }
 
 void UsbLink::recoverInfini()
 {
     if (!m_worker)
-        return;
-    const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
-                         std::chrono::steady_clock::now().time_since_epoch())
-                         .count();
-    if (m_startedMs && now - m_startedMs < 3000)
         return;
     QMetaObject::invokeMethod(m_worker, "recover", Qt::QueuedConnection);
 }
