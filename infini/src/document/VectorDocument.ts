@@ -4,9 +4,11 @@
  */
 
 import { resolveAnchor, seedLayoutOffset } from "./anchors";
+import { refreshConnectorWarp } from "./connectorWarp";
 import { flattenDrawables } from "./flatten";
 import type {
   Anchor,
+  ConnectorEndPose,
   ConnectorNode,
   DocNode,
   DocOp,
@@ -19,12 +21,14 @@ import type {
   InkSample,
   PrimitiveGeom,
   PrimitiveNode,
+  RestOffset,
   SmartBounds,
   SmartGroupNode,
   SmartTransform,
   Style,
   TextNode,
   TextRun,
+  Vec2,
   VectorDocSnapshot,
 } from "./types";
 import { DEFAULT_STYLE, IDENTITY_SMART_TRANSFORM } from "./types";
@@ -35,6 +39,46 @@ function cloneJson<T>(v: T): T {
 
 function isContainer(n: DocNode): n is FrameNode | GroupNode {
   return n.kind === "frame" || n.kind === "group";
+}
+
+function asRecord(v: unknown): Record<string, unknown> | null {
+  return v !== null && typeof v === "object" && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : null;
+}
+
+function parseRestPts(raw: unknown): Vec2[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Vec2[] = [];
+  for (const pt of raw) {
+    const o = asRecord(pt);
+    if (!o) continue;
+    out.push({ x: Number(o.x), y: Number(o.y) });
+  }
+  return out;
+}
+
+function parseRestOff(raw: unknown): RestOffset[] {
+  if (!Array.isArray(raw)) return [];
+  const out: RestOffset[] = [];
+  for (const pt of raw) {
+    const o = asRecord(pt);
+    if (!o) continue;
+    out.push({ s: Number(o.s), d: Number(o.d) });
+  }
+  return out;
+}
+
+function parsePose(raw: unknown): ConnectorEndPose | undefined {
+  const o = asRecord(raw);
+  if (!o) return undefined;
+  return {
+    x: Number(o.x ?? 0),
+    y: Number(o.y ?? 0),
+    fx: Number(o.fx ?? 1),
+    fy: Number(o.fy ?? 0),
+    valid: true,
+  };
 }
 
 export class VectorDocument {
@@ -75,6 +119,9 @@ export class VectorDocument {
         if (n.kind === "frame" || n.kind === "group") visit(n.children);
         if (n.kind === "smart_group") {
           for (const c of n.children) map.set(c.id, c);
+        }
+        if (n.kind === "connector") {
+          for (const c of n.children ?? []) map.set(c.id, c);
         }
       }
     };
@@ -274,19 +321,45 @@ export class VectorDocument {
     this.insertUnder(p.parentId as string | undefined, node);
   }
 
+  /**
+   * Apply device create_connector: store envelope 0-loss; derive warp on refresh.
+   * @implements [SRS-IN-09] create_connector envelope; never stream warped samples
+   */
   private opCreateConnector(p: Record<string, unknown>): void {
     const id = String(p.id);
     this.assertUniqueId(id);
-    const from = cloneJson(p.from as Anchor);
-    const to = cloneJson(p.to as Anchor);
-    const byId = this.indexById();
-    const invalid = !byId.has(from.nodeId) || !byId.has(to.nodeId);
+    const from = cloneJson((p.from ?? { nodeId: "" }) as Anchor);
+    const to = cloneJson((p.to ?? { nodeId: "" }) as Anchor);
+    const rest = asRecord(p.restShape);
+    const restSpine = rest ? parseRestPts(rest.spine) : [];
+    const restOffsets = rest ? parseRestOff(rest.offsets) : [];
+    const children: InkNode[] = [];
+    if (Array.isArray(p.body)) {
+      for (const c of p.body) {
+        const ink = cloneJson(c as InkNode);
+        if (ink.kind !== "ink") throw new Error("connector_body_ink_only");
+        if (this.indexById().has(ink.id)) throw new Error(`duplicate_id:${ink.id}`);
+        children.push(ink);
+      }
+    }
+    const captureIds = (p.captureIds as string[] | undefined) ?? [];
+    for (const cid of captureIds) {
+      const detached = this.detachInk(cid);
+      if (!detached) throw new Error(`capture_missing:${cid}`);
+      children.push(detached);
+    }
     const node: ConnectorNode = {
       id,
       kind: "connector",
       from,
       to,
-      invalid,
+      warpStyle: typeof p.warpStyle === "string" ? p.warpStyle : "morph",
+      restSpine,
+      restOffsets,
+      children,
+      fromPose: parsePose(p.fromPose),
+      toPose: parsePose(p.toPose),
+      invalid: false,
     };
     this.insertUnder(p.parentId as string | undefined, node);
   }
@@ -519,6 +592,13 @@ export class VectorDocument {
             return free;
           }
         }
+        if (n.kind === "connector" && n.children) {
+          const idx = n.children.findIndex((c) => c.id === id);
+          if (idx >= 0) {
+            const [ink] = n.children.splice(idx, 1);
+            return ink;
+          }
+        }
       }
       return null;
     };
@@ -593,16 +673,24 @@ export class VectorDocument {
     prune(this.rootChildren);
   }
 
-  /** Re-resolve connector validity + cached straight path after moves. */
+  /**
+   * Re-derive connector geometry. Missing bound nodes use last live pose (D39).
+   * @implements [SRS-IN-09] refreshConnectors; set_smart_transform emits 0 connector ops
+   */
   private refreshConnectors(): void {
     const byId = this.indexById();
+    const find = (id: string) => byId.get(id);
     const visit = (nodes: DocNode[]) => {
       for (const n of nodes) {
         if (n.kind === "connector") {
-          const from = resolveAnchor(n.from, byId);
-          const to = resolveAnchor(n.to, byId);
-          n.invalid = !from || !to;
-          n.path = from && to ? [from, to] : undefined;
+          n.invalid = false;
+          if ((n.restSpine?.length ?? 0) >= 2) {
+            refreshConnectorWarp(n, find);
+          } else {
+            const from = resolveAnchor(n.from, byId);
+            const to = resolveAnchor(n.to, byId);
+            if (from && to) n.path = [from, to];
+          }
         } else if (n.kind === "frame" || n.kind === "group") {
           visit(n.children);
         }

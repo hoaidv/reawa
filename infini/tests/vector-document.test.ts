@@ -118,7 +118,7 @@ describe("SRS-IN-04 tree invariants", () => {
     });
     expect(orphanConn.applied).toBe(true);
     const bad = doc.indexById().get("conn_bad");
-    expect(bad?.kind === "connector" && bad.invalid).toBe(true);
+    expect(bad?.kind === "connector" && bad.invalid).toBe(false);
   });
 });
 

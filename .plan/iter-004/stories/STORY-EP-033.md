@@ -4,7 +4,7 @@ title: Reject origin/stale first sample on pen-down
 kind: implement
 parent_srs: [SRS-EP-01]
 parent_req: [REQ-01]
-status: ready
+status: in-review
 priority: P0
 iter: iter-004
 estimate: 2
@@ -36,7 +36,7 @@ No design story — ingest defect, no new UI.
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Priority | **P0** — queued on TRACK-004; do not steal EP-030 cursor |
+| Priority | **P0** — **NOW ∥ IN-030** (WIP 2) |
 
 ## Diagnosis (device)
 
@@ -47,7 +47,7 @@ No design story — ingest defect, no new UI.
 3. ToolChip hit-test swallows **Press** only — a Move onto the Pen tile still inks.
 4. App-wide filter also maps **mouse** `position()` (widget-local) through the landscape digitizer transform, so a synthesized mouse press at local `(0,0)` produces the same origin stroke.
 
-Writes: `epaper/tabletappfilter.cpp`, `epaper/tabletcanvasitem.cpp` (`ingestPoint` / `beginStroke` / chip hit). **Conflicts with EP-030** on `tabletcanvasitem.cpp` — do not parallel those two.
+Writes: `epaper/tabletappfilter.cpp`, `epaper/tabletcanvasitem.cpp` (`ingestPoint` / `beginStroke` / chip hit). **∥ [STORY-IN-030](./STORY-IN-030.md)** (`infini/` only). Do not parallel other `tabletcanvasitem.cpp` work.
 
 ## Fix intent (do not expand)
 

@@ -187,7 +187,8 @@ describe("STORY-IN-028 orientation and Infini-side actions send zero doc_load", 
     session.publishViewport({ translate: { x: 10, y: 10 }, scale: 1.2 }, { force: true });
 
     expect(transport.docLoads).toHaveLength(loads);
-    expect(transport.outbound.some((m) => m.type === "doc_snapshot")).toBe(false);
+    const types: string[] = transport.outbound.map((m) => m.type);
+    expect(types).not.toContain("doc_snapshot");
   });
 });
 

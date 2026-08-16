@@ -130,11 +130,35 @@ function serializeNode(node: DocNode, indent: string): string {
     case "connector": {
       const from = serializeAnchor("from", node.from);
       const to = serializeAnchor("to", node.to);
+      const pts =
+        node.warpedSamples && node.warpedSamples.length >= 2
+          ? node.warpedSamples
+          : node.path && node.path.length >= 2
+            ? node.path
+            : [];
       const d =
-        node.path && node.path.length >= 2
-          ? `M ${node.path[0].x} ${node.path[0].y} L ${node.path[1].x} ${node.path[1].y}`
+        pts.length >= 2
+          ? `M ${pts[0].x} ${pts[0].y}${pts.slice(1).map((p) => ` L ${p.x} ${p.y}`).join("")}`
           : "M 0 0";
-      return `${indent}<path data-infini-kind="connector" ${id} ${from} ${to} d="${escAttr(d)}" fill="none" stroke="#5B6B7C" stroke-width="1.5" />`;
+      const extra: string[] = [];
+      if (node.warpStyle) extra.push(`data-infini-warp-style="${escAttr(node.warpStyle)}"`);
+      if ((node.restSpine?.length ?? 0) > 0 || (node.restOffsets?.length ?? 0) > 0) {
+        extra.push(
+          `data-infini-rest-shape="${escAttr(JSON.stringify({ spine: node.restSpine ?? [], offsets: node.restOffsets ?? [] }))}"`,
+        );
+      }
+      extra.push(`data-infini-from-json="${escAttr(JSON.stringify(node.from))}"`);
+      extra.push(`data-infini-to-json="${escAttr(JSON.stringify(node.to))}"`);
+      if (node.fromPose?.valid) {
+        extra.push(`data-infini-from-pose="${escAttr(JSON.stringify(node.fromPose))}"`);
+      }
+      if (node.toPose?.valid) {
+        extra.push(`data-infini-to-pose="${escAttr(JSON.stringify(node.toPose))}"`);
+      }
+      if (node.children && node.children.length > 0) {
+        extra.push(`data-infini-body="${escAttr(JSON.stringify(node.children))}"`);
+      }
+      return `${indent}<path data-infini-kind="connector" ${id} ${from} ${to} ${extra.join(" ")} d="${escAttr(d)}" fill="none" stroke="#5B6B7C" stroke-width="1.5" />`;
     }
   }
 }
@@ -253,6 +277,10 @@ function parseAnchor(
   attrs: Record<string, string>,
   prefix: "from" | "to",
 ): Anchor {
+  const jsonRaw = attrs[`data-infini-${prefix}-json`];
+  if (jsonRaw) {
+    return JSON.parse(jsonRaw) as Anchor;
+  }
   const nodeId = attrs[`data-infini-${prefix}`];
   if (!nodeId) throw new Error(`missing connector ${prefix}`);
   const port = attrs[`data-infini-${prefix}-port`];
@@ -441,6 +469,26 @@ function decodeNode(el: XmlEl, warnings: string[]): DocNode | null {
         from: parseAnchor(el.attrs, "from"),
         to: parseAnchor(el.attrs, "to"),
       };
+      if (el.attrs["data-infini-warp-style"]) {
+        node.warpStyle = el.attrs["data-infini-warp-style"];
+      }
+      if (el.attrs["data-infini-rest-shape"]) {
+        const rs = JSON.parse(el.attrs["data-infini-rest-shape"]) as {
+          spine?: { x: number; y: number }[];
+          offsets?: { s: number; d: number }[];
+        };
+        node.restSpine = rs.spine ?? [];
+        node.restOffsets = rs.offsets ?? [];
+      }
+      if (el.attrs["data-infini-from-pose"]) {
+        node.fromPose = JSON.parse(el.attrs["data-infini-from-pose"]);
+      }
+      if (el.attrs["data-infini-to-pose"]) {
+        node.toPose = JSON.parse(el.attrs["data-infini-to-pose"]);
+      }
+      if (el.attrs["data-infini-body"]) {
+        node.children = JSON.parse(el.attrs["data-infini-body"]);
+      }
       return node;
     }
     default:

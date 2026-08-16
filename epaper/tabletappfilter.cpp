@@ -1,7 +1,6 @@
 #include "tabletappfilter.h"
 #include "tabletcanvasitem.h"
 
-#include <QMouseEvent>
 #include <QTabletEvent>
 #include <QTouchEvent>
 #include <QEventPoint>
@@ -88,12 +87,12 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
     }
     case QEvent::MouseButtonPress:
     case QEvent::MouseMove:
-    case QEvent::MouseButtonRelease: {
-        auto *mouse = static_cast<QMouseEvent *>(event);
-        const qreal pressure = event->type() == QEvent::MouseButtonRelease ? 0.0 : 0.75;
-        m_canvas->ingestPoint(event->type(), mouse->position(), pressure);
+    case QEvent::MouseButtonRelease:
+        // @fix [STORY-EP-033] tablet-only ingest. Mouse is a different coordinate
+        // space; mapping it through mapInputToCanvas paints from panel bottom-left.
+        // Qt often synthesizes MouseButtonPress before TabletPress. Chrome hit-test
+        // is C++ on the tablet path (applyContactPress).
         return true;
-    }
     default:
         return false;
     }

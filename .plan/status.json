@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-15T08:29:19+00:00",
+  "generated_at": "2026-08-16T02:15:34+00:00",
   "current_iter": "iter-004",
   "by_status": {
     "draft": 1,
-    "ready": 3,
+    "ready": 1,
     "in-progress": 0,
-    "in-review": 1,
-    "done": 113,
+    "in-review": 2,
+    "done": 114,
     "blocked": 13
   },
   "by_module": {
@@ -18,13 +18,13 @@
     },
     "epaper": {
       "total": 34,
-      "done": 25,
+      "done": 26,
       "in_review": 1
     },
     "infini": {
       "total": 31,
       "done": 22,
-      "in_review": 0
+      "in_review": 1
     }
   },
   "open_challenges": 1,
@@ -57,7 +57,7 @@
       "id": "TRACK-004",
       "kind": "planned",
       "status": "active",
-      "cursor": "STORY-EP-031 \u00b7 /dev",
+      "cursor": "STORY-IN-030 \u2225 STORY-EP-033 \u00b7 /dev",
       "iter": "iter-004"
     }
   ]

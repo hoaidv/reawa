@@ -7,6 +7,12 @@ export { VectorDocument } from "./VectorDocument";
 export { flattenDrawables, drawableBoundsUnion } from "./flatten";
 export { resolveAnchor, smartGroupWorldAabb, smartLocalToWorld, inkSamplesCentroid, seedLayoutOffset } from "./anchors";
 export {
+  warpConnector,
+  restShapeReconstruction,
+  refreshConnectorWarp,
+  connectorWirePayload,
+} from "./connectorWarp";
+export {
   pickSmartGroupAt,
   pickingAllowed,
   handleSelectionPointer,

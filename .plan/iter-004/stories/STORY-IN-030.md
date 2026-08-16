@@ -4,7 +4,7 @@ title: Mirror create_connector envelope and derived warp
 kind: implement
 parent_srs: [SRS-IN-09]
 parent_req: [REQ-09]
-status: ready
+status: in-review
 priority: P0
 iter: iter-004
 estimate: 5
@@ -35,3 +35,4 @@ this campaign.
 | Kind | `implement` |
 | Owner | `dev` |
 | Depends on | EP-030 |
+| Parallel | **EP-033** (human 2026-08-16) |

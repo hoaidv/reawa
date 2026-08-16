@@ -3,7 +3,7 @@
  * @implements [SRS-IN-04] flattenDrawables projection
  */
 
-import { inkSamplesCentroid, nodeWorldAabb, resolveAnchor, smartLocalToWorld } from "./anchors";
+import { inkSamplesCentroid, nodeWorldAabb, smartLocalToWorld } from "./anchors";
 import type {
   Aabb,
   ConnectorDrawable,
@@ -46,11 +46,7 @@ function inkDrawable(node: InkNode, samples = node.samples): InkDrawable {
   };
 }
 
-function walk(
-  nodes: readonly DocNode[],
-  byId: Map<string, DocNode>,
-  out: Drawable[],
-): void {
+function walk(nodes: readonly DocNode[], out: Drawable[]): void {
   for (const node of nodes) {
     switch (node.kind) {
       case "ink":
@@ -79,33 +75,43 @@ function walk(
       }
       case "frame":
       case "group":
-        walk(node.children, byId, out);
+        walk(node.children, out);
         break;
       case "smart_group":
         out.push(...flattenSmartGroup(node));
         break;
       case "connector": {
-        const from = resolveAnchor(node.from, byId);
-        const to = resolveAnchor(node.to, byId);
         const path: Vec2[] =
-          from && to ? (node.path?.length ? node.path : [from, to]) : [];
+          node.warpedSamples && node.warpedSamples.length >= 2
+            ? node.warpedSamples
+            : node.path && node.path.length >= 2
+              ? node.path
+              : [];
         let bounds: Aabb = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
-        if (from && to) {
+        if (path.length >= 1) {
           bounds = {
-            minX: Math.min(from.x, to.x),
-            minY: Math.min(from.y, to.y),
-            maxX: Math.max(from.x, to.x),
-            maxY: Math.max(from.y, to.y),
+            minX: path[0].x,
+            minY: path[0].y,
+            maxX: path[0].x,
+            maxY: path[0].y,
           };
+          for (const p of path) {
+            bounds.minX = Math.min(bounds.minX, p.x);
+            bounds.minY = Math.min(bounds.minY, p.y);
+            bounds.maxX = Math.max(bounds.maxX, p.x);
+            bounds.maxY = Math.max(bounds.maxY, p.y);
+          }
         }
+        const fromPt = path[0] ?? { x: 0, y: 0 };
+        const toPt = path.length > 0 ? path[path.length - 1] : { x: 0, y: 0 };
         const d: ConnectorDrawable = {
           id: node.id,
           kind: "connector",
-          from: from ?? { x: 0, y: 0 },
-          to: to ?? { x: 0, y: 0 },
+          from: fromPt,
+          to: toPt,
           path,
           bounds,
-          invalid: node.invalid || !from || !to,
+          invalid: node.invalid === true,
         };
         out.push(d);
         break;
@@ -139,9 +145,8 @@ function flattenSmartGroup(sg: SmartGroupNode): InkDrawable[] {
  * @implements [SRS-IN-04] flattenDrawables for WorldLayer
  */
 export function flattenDrawables(doc: FlattenSource): Drawable[] {
-  const byId = doc.indexById();
   const out: Drawable[] = [];
-  walk(doc.rootChildren, byId, out);
+  walk(doc.rootChildren, out);
   return out;
 }
 

@@ -33,7 +33,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Scope | `epaper/{connector-ink, tool-modes, ink-box}`, `infini/vector-document` | REQ-09 + the ToolChip split that arms it |
 | Stop line | **verified** | `/designer`, `/qa`, `/dev` may all work; campaign ends on human confirm |
 | Autonomy | **bounded** | Run inside the lock; stop at REQ-08 / CHL-0011 / CHL-0012 |
-| WIP | **2** | EP-031 NOW; IN-030 optional ∥; EP-033 + EP-034 queued |
+| WIP | **2** | IN-030 ∥ EP-033 NOW; EP-034 queued |
 
 **Re-locked 2026-08-14 (human):** flip horizontal/`design-validated` → vertical/`verified`. Exit criteria: REQ-09 + REQ-03 ToolChip human-confirmed on device; Infini mirror 0 divergent connector nodes; EP-016/017 replay under ADR-0022. EXP-0002 guard corpus (≤2% FP) remains a **ship** gate, not a wave blocker. UI implement still `depends_on` done design stories (EP-026 → EP-028; EP-027 → EP-030).
 
@@ -78,7 +78,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | TRACK-001 | planned | **done** | — | [track](./tracks/TRACK-001-infini-infinity-canvas.md) |
 | TRACK-002 | planned | **done** | — | [track](./tracks/TRACK-002-infini-vector-document.md) |
 | TRACK-003 | planned | **done** | campaign exited 2026-08-14 | [track](./tracks/TRACK-003-smart-group-pilot.md) |
-| TRACK-004 | planned | **active** | **EP-031** · `/dev` | [track](./tracks/TRACK-004-on-device-connectors.md) |
+| TRACK-004 | planned | **active** | **IN-030 ∥ EP-033** · `/dev` | [track](./tracks/TRACK-004-on-device-connectors.md) |
 
 ### Open challenges / blocked
 
@@ -94,7 +94,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [iter-004 execution-board](./iter-004/execution-board.md) — **NOW** `/dev` EP-031
+- [iter-004 execution-board](./iter-004/execution-board.md) — **NOW** `/dev` IN-030 ∥ EP-033
 - [iter-003 execution-board](./iter-003/execution-board.md) — **frozen** (campaign closed)
 
 ### Freeze notes
@@ -103,6 +103,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ## Forward
 
-- **Now:** `/dev` **EP-031** (Ink/Curve warp). EP-030 human-verified. IN-030 optional ∥. EP-033 + EP-034 queued.
+- **Now:** `/dev` **IN-030 ∥ EP-033**. EP-031 human-verified. EP-034 queued.
 - Parked (not committed): epaper `[REQ-08]`, nested enclose (CHL-0011), FREE_FORM / align-content (CHL-0012).
+- **Next wave (iter-005, not opened):** [BS-0002](./iter-004/brainstorms/BS-0002-iter-005-feature-wave.md) — natural pen-on-paper (erase, copy/cut/paste, connector ends + mid-attachments); finger pan/zoom and manual frame/primitives parked pending Non-Goal reversal; AI unspecified. **Do not open iter-005 until retro-gate.**
 - Backlog: [backlog.md](./backlog.md)

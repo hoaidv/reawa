@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-15T08:29:19+00:00
+generated_at: 2026-08-16T02:15:34+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -37,9 +37,9 @@ generated_at: 2026-08-15T08:29:19+00:00
 | [STORY-EP-028](./iter-004/stories/STORY-EP-028.md) | ToolChip inventory: 3 exclusive tools + 2 recognizer toggles | implement | dev | epaper | [SRS-EP-04], [SRS-EP-05] | done | iter-004 | 3 |
 | [STORY-EP-029](./iter-004/stories/STORY-EP-029.md) | Closure-first recognizer dispatch (ADR-0022) | implement | dev | epaper | [SRS-EP-10], [SRS-EP-17] | done | iter-004 | 5 |
 | [STORY-EP-030](./iter-004/stories/STORY-EP-030.md) | Recognize single-stroke and chained connectors | implement | dev | epaper | [SRS-EP-17] | done | iter-004 | 5 |
-| [STORY-EP-031](./iter-004/stories/STORY-EP-031.md) | Ink/Curve warp and live re-warp on bound-node drag | implement | dev | epaper | [SRS-EP-18], [SRS-EP-20] | in-review | iter-004 | 8 |
+| [STORY-EP-031](./iter-004/stories/STORY-EP-031.md) | Ink/Curve warp and live re-warp on bound-node drag | implement | dev | epaper | [SRS-EP-18], [SRS-EP-20] | done | iter-004 | 8 |
 | [STORY-EP-032](./iter-004/stories/STORY-EP-032.md) | Architect: device UI chrome state machine | implement | unassigned | epaper | [SRS-EP-12] | draft | iter-004 | 5 |
-| [STORY-EP-033](./iter-004/stories/STORY-EP-033.md) | Reject origin/stale first sample on pen-down | implement | dev | epaper | [SRS-EP-01] | ready | iter-004 | 2 |
+| [STORY-EP-033](./iter-004/stories/STORY-EP-033.md) | Reject origin/stale first sample on pen-down | implement | dev | epaper | [SRS-EP-01] | in-review | iter-004 | 2 |
 | [STORY-EP-034](./iter-004/stories/STORY-EP-034.md) | USB Ethernet stay-up and SSH/TCP keepalives | implement | dev | epaper | [SRS-EP-08], [SRS-EP-13] | ready | iter-004 | 3 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
@@ -70,7 +70,7 @@ generated_at: 2026-08-15T08:29:19+00:00
 | [STORY-IN-027](./iter-003/stories/STORY-IN-027.md) | Desktop doc_change applier | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | done | iter-003 | 5 |
 | [STORY-IN-028](./iter-003/stories/STORY-IN-028.md) | Desktop handshake-gated doc_load | implement | dev | infini | [SRS-IN-07], [SRS-IN-08] | done | iter-003 | 3 |
 | [STORY-IN-029](./iter-003/stories/STORY-IN-029.md) | Device Log panel and :9878 listener | implement | dev | infini | [SRS-IN-17], [SRS-IN-18], [SRS-IN-19] | done | iter-003 | 3 |
-| [STORY-IN-030](./iter-004/stories/STORY-IN-030.md) | Mirror create_connector envelope and derived warp | implement | dev | infini | [SRS-IN-09] | ready | iter-004 | 5 |
+| [STORY-IN-030](./iter-004/stories/STORY-IN-030.md) | Mirror create_connector envelope and derived warp | implement | dev | infini | [SRS-IN-09] | in-review | iter-004 | 5 |
 | [STORY-IN-031](./iter-004/stories/STORY-IN-031.md) | Remove Infini desktop editing ToolStrip | implement | dev | infini | [SRS-IN-14] | done | iter-004 | 2 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |

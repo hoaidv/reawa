@@ -4,7 +4,7 @@ title: Ink/Curve warp and live re-warp on bound-node drag
 kind: implement
 parent_srs: [SRS-EP-18, SRS-EP-20]
 parent_req: [REQ-09]
-status: in-review
+status: done
 priority: P0
 iter: iter-004
 estimate: 8
@@ -31,6 +31,9 @@ wireframe: ""
 
 Reimplement [ADR-0020](../../.docs/adr/ADR-0020-connector-ink-geometry.md) in production
 (do not copy the EXP probe). Shared fixtures with [STORY-IN-030](./STORY-IN-030.md).
+
+**Human verified 2026-08-15** on device (live re-warp; dirty-rect clip to the dragging node’s
+box fixed — connector AABB no longer `QRectF(0×0).united`).
 
 ## Kind
 

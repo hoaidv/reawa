@@ -7,7 +7,7 @@ iter: iter-004
 goal: "On-device connectors: recognize hand-drawn ink between SmartGroups and keep it attached when a node moves"
 scope: [epaper/connector-ink, epaper/tool-modes, epaper/ink-box, infini/vector-document]
 stories: [STORY-EP-026, STORY-EP-027, STORY-EP-028, STORY-EP-029, STORY-EP-030, STORY-EP-031, STORY-IN-030, STORY-IN-031, STORY-EP-032, STORY-EP-033, STORY-EP-034]
-cursor: "STORY-EP-031 · /dev"
+cursor: "STORY-IN-030 ∥ STORY-EP-033 · /dev"
 paused_reason: ""
 interrupts: [STORY-EP-033, STORY-EP-034]
 ---
@@ -42,18 +42,18 @@ Spike (numeric reference only): [EXP-0002](../iter-004/explorations/EXP-0002-con
 | [STORY-EP-028](../iter-004/stories/STORY-EP-028.md) | implement | **done** | ToolChip inventory — **∥ IN-031** |
 | [STORY-EP-029](../iter-004/stories/STORY-EP-029.md) | implement | **done** | Human verified 2026-08-15 |
 | [STORY-EP-030](../iter-004/stories/STORY-EP-030.md) | implement | **done** | UX1/UX2 recognition — human verified 2026-08-15 |
-| [STORY-EP-031](../iter-004/stories/STORY-EP-031.md) | implement | ready | Ink/Curve warp + live drag — **NOW** |
-| [STORY-IN-030](../iter-004/stories/STORY-IN-030.md) | implement | ready | Infini envelope + derived warp — optional ∥ |
+| [STORY-EP-031](../iter-004/stories/STORY-EP-031.md) | implement | **done** | Ink/Curve warp + live drag — human verified 2026-08-15 |
+| [STORY-IN-030](../iter-004/stories/STORY-IN-030.md) | implement | ready | Infini envelope + derived warp — **NOW ∥ EP-033** |
 | [STORY-IN-031](../iter-004/stories/STORY-IN-031.md) | implement | **done** | Remove Infini ToolStrip |
 | [STORY-EP-032](../iter-004/stories/STORY-EP-032.md) | implement | **draft** | `/architect` later — chrome state machine |
-| [STORY-EP-033](../iter-004/stories/STORY-EP-033.md) | implement | ready | P0 origin/stale pen-down — queued, not this cursor |
+| [STORY-EP-033](../iter-004/stories/STORY-EP-033.md) | implement | ready | P0 origin/stale pen-down — **NOW ∥ IN-030** |
 | [STORY-EP-034](../iter-004/stories/STORY-EP-034.md) | implement | ready | P1 USB gadget / SSH+TCP keepalive — queued |
 
 ## Cursor
 
-**Next:** `/dev` [STORY-EP-031](../iter-004/stories/STORY-EP-031.md)
+**Next:** `/dev` [STORY-IN-030](../iter-004/stories/STORY-IN-030.md) **∥** [STORY-EP-033](../iter-004/stories/STORY-EP-033.md)
 
-Human verified EP-030. Optional ∥ [STORY-IN-030](../iter-004/stories/STORY-IN-030.md) (Infini). EP-033 stays **queued** — do not parallel on `tabletcanvasitem.cpp`. EP-034 queued. EP-032 waits on `/architect`.
+Human 2026-08-16: run both in parallel (WIP 2). Write sets do not overlap (`infini/` vs ingest). EP-034 queued. EP-032 and REQ-09 select / REQ-10 wait on `/architect`.
 
 ## Execution board
 
@@ -80,3 +80,5 @@ Human verified EP-030. Optional ∥ [STORY-IN-030](../iter-004/stories/STORY-IN-
 | 2026-08-15 | Human verified through EP-029. Cursor **move one** → `/dev` EP-030. EP-033 queued. |
 | 2026-08-15 | **P1** [STORY-EP-034](../iter-004/stories/STORY-EP-034.md): RM2 USB unreachable until unplug/replug. Cursor stays EP-030. |
 | 2026-08-15 | EP-030 **done** (human verified). Cursor **move one** → `/dev` EP-031. IN-030 optional ∥. EP-033/034 queued. |
+| 2026-08-15 | EP-031 **done** (human verified; live connector dirty-rect clip fixed). Cursor **move one** → `/dev` IN-030. EP-033 unblocked (optional ∥). |
+| 2026-08-16 | Human: run **IN-030 ∥ EP-033**. Dual cursor `/dev`. |

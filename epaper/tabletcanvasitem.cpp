@@ -12,6 +12,7 @@
 #include "debuglog/debug_log_format.hpp"
 #include "toolcanvasitem.h"
 #include "toolchip_layout.hpp"
+#include "ingest_origin_guard.hpp"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -252,6 +253,14 @@ QPointF TabletCanvasItem::mapInputToCanvas(const QPointF &raw) const
     return QPointF(rx, ry);
 }
 
+qreal TabletCanvasItem::ingestPanelHeight() const
+{
+    qreal h = height();
+    if (h < 2.0 && window())
+        h = window()->height();
+    return qMax<qreal>(1.0, h);
+}
+
 void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure)
 {
     IngestChannels ch;
@@ -270,31 +279,35 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
     m_lastPoint = canvasPos;
     m_lastRaw = pos;
 
+    const bool isPress = (type == QEvent::TabletPress || type == QEvent::MouseButtonPress);
+    const bool isMove = (type == QEvent::TabletMove || type == QEvent::MouseMove);
+    const bool isRelease = (type == QEvent::TabletRelease || type == QEvent::MouseButtonRelease);
+    const qreal panelH = ingestPanelHeight();
+    const bool stale = epaper::ingest::isStaleOriginSample(
+        double(pos.x()), double(pos.y()), double(canvasPos.x()), double(canvasPos.y()),
+        double(panelH));
+    // @fix [STORY-EP-033] reject origin/stale first sample on pen-down
+    const auto guard = epaper::ingest::decideOriginPress(
+        isPress, isMove, isRelease, stale, &m_awaitingPlausiblePress);
+    if (guard == epaper::ingest::OriginGuardAction::Discard
+        || guard == epaper::ingest::OriginGuardAction::DropContact) {
+        return;
+    }
+    const bool treatAsPress =
+        isPress || guard == epaper::ingest::OriginGuardAction::PromoteToPress;
+
     // @implements [SRS-EP-13] hit-test probe on ingest, not in paint()
     if (g_docProbe) {
-        const bool press = (type == QEvent::TabletPress || type == QEvent::MouseButtonPress);
-        epaper::latencyprobe::harness().onIngest(float(canvasPos.x()), float(canvasPos.y()), press);
+        epaper::latencyprobe::harness().onIngest(float(canvasPos.x()), float(canvasPos.y()),
+                                                 treatAsPress);
     }
 
-    // Pen on ToolChip — not ink; arm via tile hit-test (pen-on-chip fallback).
-    if (pointInToolChip(canvasPos)
-        && (type == QEvent::TabletPress || type == QEvent::MouseButtonPress)) {
-        tryArmToolAtCanvasPos(canvasPos);
+    if (treatAsPress) {
+        applyContactPress(canvasPos, bounded);
         return;
     }
 
     switch (type) {
-    case QEvent::TabletPress:
-    case QEvent::MouseButtonPress:
-        if (pointInEncloseCta(canvasPos)) {
-            encloseSelection();
-            return;
-        }
-        if (isSelectionTool())
-            beginSelectionGesture(canvasPos);
-        else
-            beginStroke(canvasPos, bounded);
-        break;
     case QEvent::TabletMove:
     case QEvent::MouseMove:
         // @implements [SRS-EP-10] mid-stroke tool switch does not change the latch
@@ -315,6 +328,24 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
     default:
         break;
     }
+}
+
+void TabletCanvasItem::applyContactPress(const QPointF &canvasPos, const IngestChannels &ch)
+{
+    // Pen on ToolChip — not ink; arm via tile hit-test (pen-on-chip fallback).
+    // First plausible sample, including Move-after-stale-Press (STORY-EP-033).
+    if (pointInToolChip(canvasPos)) {
+        tryArmToolAtCanvasPos(canvasPos);
+        return;
+    }
+    if (pointInEncloseCta(canvasPos)) {
+        encloseSelection();
+        return;
+    }
+    if (isSelectionTool())
+        beginSelectionGesture(canvasPos);
+    else
+        beginStroke(canvasPos, ch);
 }
 
 int TabletCanvasItem::documentInkCount() const
@@ -482,9 +513,20 @@ void TabletCanvasItem::beginStroke(const QPointF &canvasPos, const IngestChannel
     m_strokeActive = true;
     m_pendingDirty = QRectF();
     m_flushClock.restart();
+    m_strokePreviewSent = false;
+
+    // @fix [STORY-EP-033] do not stamp a speckle at digitizer origin, and do not
+    // preview it to Infini (stroke_begin/point is device→desktop, not the reverse).
+    if (epaper::ingest::isStaleOriginSample(double(m_lastRaw.x()), double(m_lastRaw.y()),
+                                           double(canvasPos.x()), double(canvasPos.y()),
+                                           double(ingestPanelHeight()))) {
+        m_hasEmitted = false;
+        return;
+    }
 
     syncBegin();
     syncPoint(m_current.last());
+    m_strokePreviewSent = true;
 
     emitSegment(m_lastEmitted, m_lastEmitted);
     m_hasEmitted = true;
@@ -498,8 +540,38 @@ void TabletCanvasItem::appendPoint(const QPointF &canvasPos, const IngestChannel
         return;
     }
 
+    const qreal panelH = ingestPanelHeight();
+    // Origin sample after a real press (tip → bottom-left) must not be appended.
+    if (epaper::ingest::isStaleOriginSample(
+            double(m_lastRaw.x()), double(m_lastRaw.y()), double(canvasPos.x()),
+            double(canvasPos.y()), double(panelH))) {
+        return;
+    }
+
+    if (m_current.size() == 1
+        && epaper::ingest::isImplausibleOriginJump(
+            double(m_current.first().pos.x()), double(m_current.first().pos.y()),
+            double(canvasPos.x()), double(canvasPos.y()), double(panelH))) {
+        // @fix [STORY-EP-033] replace stale origin start; do not emit the diagonal
+        m_current[0] = makePoint(canvasPos, ch);
+        m_lastEmitted = m_current[0];
+        if (!m_strokePreviewSent) {
+            syncBegin();
+            m_strokePreviewSent = true;
+        }
+        syncPoint(m_current[0]);
+        emitSegment(m_lastEmitted, m_lastEmitted);
+        m_hasEmitted = true;
+        flushPending();
+        return;
+    }
+
     Point next = makePoint(canvasPos, ch);
     m_current.append(next);
+    if (!m_strokePreviewSent) {
+        syncBegin();
+        m_strokePreviewSent = true;
+    }
     syncPoint(next);
 
     emitSegment(m_lastEmitted, next);
@@ -538,6 +610,7 @@ void TabletCanvasItem::endStroke()
     m_current.clear();
     m_hasEmitted = false;
     m_strokeActive = false;
+    m_strokePreviewSent = false;
     m_chip.penUp();
 
     // Rasterize after enclose so group-local ink is visible (not in paint()).

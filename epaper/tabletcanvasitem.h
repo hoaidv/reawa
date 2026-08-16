@@ -167,7 +167,9 @@ private:
     };
 
     QPointF mapInputToCanvas(const QPointF &raw) const;
+    qreal ingestPanelHeight() const;
     Point makePoint(const QPointF &canvasPos, const IngestChannels &ch) const;
+    void applyContactPress(const QPointF &canvasPos, const IngestChannels &ch);
     void beginStroke(const QPointF &canvasPos, const IngestChannels &ch);
     void appendPoint(const QPointF &canvasPos, const IngestChannels &ch);
     void endStroke();
@@ -257,6 +259,10 @@ private:
     bool m_beacons = true;
     bool m_hasEmitted = false;
     bool m_strokeActive = false;
+    /** @fix [STORY-EP-033] wait for a non-origin sample after a stale Press. */
+    bool m_awaitingPlausiblePress = false;
+    /** True after stroke_begin went to Infini — origin starts must not preview. */
+    bool m_strokePreviewSent = false;
     /** Reawa-style gut pose; legacy "portrait"/"landscape" normalized on ingest. */
     QString m_orientation = QStringLiteral("gutToLeft");
     qreal m_activeWorldStrokeWidth = 2.5;

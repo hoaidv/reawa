@@ -565,6 +565,8 @@ viewed at scale, and saved.
 
 ## Open Questions
 
+- **Next campaign (iter-005) — parked, no REQs yet.** Human 2026-08-15 list in [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md): eraser (pencil + selection-erase); copy/cut/paste; connector endpoint styles (context toolbar + preserve endpoint ink); connector mid-attachments that follow warp; table recognition; finger pan/zoom on tablet; manual frame + beautiful connectors/attachments/primitives (ink-box already done); AI unspecified. Finger pan/zoom still a **Non-Goal** / [BRD-07](../../brd.md) defer until PM adopts. Author REQs only after iter-004 retro-gate.
+
 - Undo depth and affordance on the device — **closed 2026-08-14** ([CHL-0016](../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
   / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)): depth 20; on-panel Undo and Redo after
   a gap on the primary strip. Exclusive tools are three as of [ADR-0021](../../adr/ADR-0021-connector-toolchip.md).
