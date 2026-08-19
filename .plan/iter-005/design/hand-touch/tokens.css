@@ -1,0 +1,32 @@
+:root {
+  --color-paper: #ffffff;
+  --color-ink: #000000;
+  --color-rule: #000000;
+  --chip-btn: 64px;
+  --chip-icon: 24px;
+  --chip-gap: 32px;
+  --chip-radius: 0;
+  --chip-inset: 8px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --font-caption: 11px;
+  --font-label: 12px;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --panel-portrait-w: 1404px;
+  --panel-portrait-h: 1872px;
+  --panel-w: 1872px;
+  --panel-h: 1404px;
+  --handle-visual: 28px;
+  --handle-hit: 56px;
+  --finger-min: 64px;
+  --lod-min-axis: 96px;
+  --bounds-outer: 3px;
+  --bounds-gap: 2px;
+  --bounds-inner: 1px;
+  --mode-toggle-h: 36px;
+  --z-world: 1;
+  --z-overlay: 2;
+  --z-gesture: 3;
+  --z-chip: 5;
+}

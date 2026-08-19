@@ -61,9 +61,73 @@ No toast, no persistent badge, no style name in the blink.
 
 ### Out of scope
 
-Arrowheads, dash picker, width presets, routing-style names other than Ink/Curve.
+<!-- CHL-0022: “Arrowheads” below is superseded as a product out-of-scope for REQ-13. Parent of endpoint styles is [SRS-EP-36](#srs-ep-36-endpoint-toolbar), not this section. Dash picker / width / extra routing names remain out. -->
+
+Dash picker, width presets, routing-style names other than Ink/Curve. **Endpoint styles** are specified in [SRS-EP-36](#srs-ep-36-endpoint-toolbar).
 
 ### Trace
 
 - Design package: `.plan/iter-004/design/connector-chrome/`
 - ToolChip package: `.plan/iter-004/design/toolchip-recognizers/`
+
+---
+
+## [SRS-EP-36] Endpoint style toolbar {#srs-ep-36-endpoint-toolbar}
+
+<!-- lifecycle: active -->
+<!-- needs_design: yes -->
+
+**Parent:** [REQ-13](../../prd.md#connector-ends). **Logic:** [SRS-EP-34](./srs-logic.md#srs-ep-34-end-styles), [SRS-EP-35](./srs-logic.md#srs-ep-35-endpoint-ink). **Quality:** [SRS-EP-37](./srs-quality.md#srs-ep-37-endpoint-quality). **Platform:** epaper-device.
+
+### Purpose
+
+Set **each end** independently after create or on selected connector. Announce endpoint-ink accept/refuse. e-ink chrome — no color.
+
+### Closed style set (ids — do not invent)
+
+`none` · `arrow` · `arrow_empty` · `star` · `one` · `many`
+
+### Closed controls
+
+| id | Notes |
+|---|---|
+| `toolbar.conn_end_style` | Post-create or selected-connector; **per end**; items from the closed set |
+| `ind.endpoint_ink_ok` | Path B accepted |
+| `ind.endpoint_ink_refuse` | Stroke stayed ordinary ink / connector — no banner required |
+
+Hit: style chips ≥64 du if finger; otherwise pen-only. End-kind Edge/Centre stays [SRS-EP-19](#srs-ep-19-connector-chrome) (`tgl.conn_end_kind`).
+
+### States (PRD)
+
+`conn.post_create_toolbar` · `conn.end_style_start` / `conn.end_style_finish` · `endpoint_ink.accepted` · `endpoint_ink.refused` · `conn.warp_decorated_ends`
+
+### Anti-patterns
+
+- One style applied to both ends with no per-end control
+- Stealing spine ink as an “end” in the UI copy
+
+---
+
+## [SRS-EP-39] Attachment bind chrome {#srs-ep-39-attachment-ui}
+
+<!-- lifecycle: active -->
+<!-- needs_design: yes -->
+
+**Parent:** [REQ-14](../../prd.md#connector-attachments). **Logic:** [SRS-EP-38](./srs-logic.md#srs-ep-38-attachment-t). **Quality:** [SRS-EP-40](./srs-quality.md#srs-ep-40-attachment-quality). **Platform:** epaper-device.
+
+### Closed controls
+
+| id | Notes |
+|---|---|
+| `cta.attach_to_connector` | Place/bind — Designer entry; ≥64 du if finger |
+| `ovl.attachment_on_spine` | Selected attachment riding the connector |
+
+No rebake affordance. Designer must not invent a “reshape rest” control.
+
+### States (PRD)
+
+`attach.place` · `attach.selected_on_connector` · `attach.live_box_drag` · `attach.empty_connector`
+
+### UI-driving fields
+
+`attachment.t`, `attachment.d` — not Designer-invented.

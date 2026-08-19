@@ -2,7 +2,7 @@
 id: STORY-EP-052
 title: Barrel click vs hold-move dispatch from catalogue
 kind: implement
-parent_srs: [SRS-EP-04]
+parent_srs: [SRS-EP-41, SRS-EP-42, SRS-EP-43]
 parent_req: [REQ-18]
 status: draft
 priority: P0
@@ -18,10 +18,17 @@ acceptance_criteria:
   - "Given a 0-button pen, When drawing, Then 0 button gestures fire and REQ-03 still works."
   - "Given a 20-gesture fixture mixing clicks and holds, When executed, Then 0 events fire both click and hold-move."
   - "Given a rebind mid-session, When a gesture is in flight, Then the in-flight binding does not change."
-design_package: ""
-ui_spec: ""
-scenes: []
-hifi: ""
+design_package: ".plan/iter-005/design/pen-button-map/"
+ui_spec: ".plan/iter-005/design/pen-button-map/ui-spec.md"
+scenes:
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-0.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-2.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-click.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-hold.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-invalid-stale.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-offline-then-publish.html"
+hifi: ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
 wireframe: ""
 ---
 

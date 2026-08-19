@@ -198,6 +198,98 @@ a creator unable to tell which mode they were resizing in until after they relea
 
 ---
 
+## [SRS-EP-22] Hand-touch chrome and hit rules {#srs-ep-22-hand-touch-ui}
+
+<!-- lifecycle: active -->
+<!-- needs_design: yes -->
+
+**Parent:** [REQ-10](../../prd.md#hand-touch). **Logic:** [SRS-EP-21](./srs-logic.md#srs-ep-21-one-finger), [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport). **Quality:** [SRS-EP-25](./srs-quality.md#srs-ep-25-one-finger-quality). **Platform:** **epaper-device** (`data-platform: epaper`) — same profile as [SRS-EP-12](#srs-ep-12-selection-chrome). **Do not parent on SRS-EP-12.**
+
+### Purpose
+
+One job: make **finger** pick/move vs **two-finger** pan/zoom legible and hittable without turning fine gizmos into finger targets.
+
+### Hit rules (binding — Designer must not loosen)
+
+| Target | Min hit | Pointer |
+|---|---|---|
+| SmartGroup bounds (LOD ok) | AABB as painted | Finger **and** pen |
+| ToolChip primary tile | **64×64 du** | Finger-eligible |
+| Enclose CTA | 64 du | Finger-eligible |
+| Resize / 6 square anchors | visual 28 / hit **56 du** (&lt; 64) | **Pen only** |
+| Connector end-kind / other &lt;64 du | as specified | **Pen only** |
+
+### Closed control inventory (additive — do not invent)
+
+| id | Kind | Notes |
+|---|---|---|
+| *(existing SRS-EP-12 overlay)* | — | Reused; no new gizmo for finger resize |
+| `ind.finger_anchor_noop` | transient | Finger hit a &lt;64 du control — **0** transform; optional 1-bit blink of that handle only |
+| `ind.two_finger_pan` | in-progress | Two-finger pan/pinch active — **no** extra chrome required; Designer may use existing region marker **only if** it does not fight Infini ([ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md)) |
+
+No pan-mode tool, no finger-resize handles, no “hand tool” tile.
+
+### States matrix (journeys from PRD — do not add)
+
+| State id | When |
+|---|---|
+| `hand.finger_hit_box` | Finger-down on box; tool → `sel_freeform` |
+| `hand.finger_moving` | Finger drag inside selected box |
+| `hand.finger_anchor_noop` | Finger on &lt;64 du control |
+| `hand.one_finger_empty` | One finger empty canvas — no-op |
+| `hand.two_finger_pan` | Two-finger pan in progress |
+| `hand.pinch` | Pinch in progress |
+| `hand.pan_vs_move` | Two-finger ignored because box-move in flight |
+| `hand.link_down_local_view` | Two-finger still pans locally |
+| `hand.pen_resize_after_finger_select` | Pen on anchor after finger select — resize allowed |
+
+### UI-driving fields
+
+`touch.fingerCount`, `hit.kind`, `toolMode`, `viewportOwner` — Designer must not invent extra modes.
+
+### Anti-patterns
+
+- Finger-eligible resize handles
+- One-finger empty canvas as pan
+- Hover/focus/cursor
+- Phone chrome; this is RM2 1872×1404 landscape preview
+
+---
+
+## [SRS-EP-32] Clipboard affordances {#srs-ep-32-clipboard-ui}
+
+<!-- lifecycle: active -->
+<!-- needs_design: yes -->
+
+**Parent:** [REQ-12](../../prd.md#clipboard). **Logic:** [SRS-EP-31](../device-document/srs-logic.md#srs-ep-31-clipboard). **Quality:** [SRS-EP-33](../device-document/srs-quality.md#srs-ep-33-clipboard-quality). **Platform:** epaper-device.
+
+### Purpose
+
+Copy / cut / paste the **current selection** on-device. Not OS paste, not a second clipboard UI on Infini.
+
+### Closed control inventory
+
+| id | Kind | Enabled when |
+|---|---|---|
+| `cta.copy` | action | Selection non-empty |
+| `cta.cut` | action | Selection non-empty |
+| `cta.paste` | action | Slot non-empty |
+| `ind.clipboard_empty` | indicator | Paste invoked or shown while slot empty — no-op; **0** banners required |
+
+Placement: selection overlay **or** chip cluster — Designer; must stay ≥64 du if finger-eligible. Offset **(24 u, 24 u)** is logic — do not invent a drag-to-place paste in v1.
+
+### States
+
+`clip.idle` · `clip.copied` · `clip.cut` · `clip.pasted` · `clip.empty_paste_noop` · `clip.undo_after_cut_paste`
+
+### Anti-patterns
+
+- macOS pasteboard affordance
+- Multi-slot clipboard
+- Inventing paste offset in the Spec
+
+---
+
 ## Superseded
 
 New section. Inherits the *intent* of infini

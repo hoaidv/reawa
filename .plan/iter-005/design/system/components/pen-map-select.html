@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PenMapSelect — component preview</title>
+  <style>
+    :root {
+      --color-surface: #f2f4f7;
+      --color-surface-elevated: #ffffff;
+      --color-ink: #1c2430;
+      --color-ink-muted: #5b6573;
+      --color-primary: #0f766e;
+      --color-focus: #0f766e;
+      --color-border: #d0d5dd;
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --radius-control: 6px;
+      --font-body: 14px;
+      --font-caption: 12px;
+      --target-desktop: 24px;
+    }
+    body { margin: 0; font-family: "DM Sans", system-ui, sans-serif; background: var(--color-surface); color: var(--color-ink); }
+    .c-preview { padding: 1.5rem; max-width: 28rem; }
+    .c-preview__title { margin: 0 0 0.5rem; font-size: 1.125rem; }
+    .c-preview__note { margin: 0 0 1.5rem; color: var(--color-ink-muted); font-size: 0.875rem; }
+    .c-states { display: flex; flex-direction: column; gap: 1.25rem; }
+    .c-states__label { display: block; font-size: 0.75rem; color: var(--color-ink-muted); margin-bottom: 0.35rem; }
+    .c-pen-map-select {
+      display: flex; align-items: center; gap: var(--space-sm); width: 100%;
+      min-height: var(--target-desktop); padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--color-border); border-radius: var(--radius-control);
+      background: var(--color-surface-elevated); color: var(--color-ink);
+      font: inherit; font-size: var(--font-body); text-align: left; cursor: pointer;
+      transition: background-color .15s ease, border-color .15s ease, transform .1s ease;
+    }
+    .c-pen-map-select:hover { border-color: var(--color-primary); background: var(--color-surface); }
+    .c-pen-map-select:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .c-pen-map-select:active, .c-pen-map-select.is-pressed { transform: scale(.985); }
+    .c-pen-map-select[aria-expanded="true"] { border-color: var(--color-primary); }
+    .c-pen-map-select[aria-invalid="true"] { border-style: dashed; border-color: var(--color-ink); }
+    .c-pen-map-select[disabled], .c-pen-map-select[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+    .c-pen-map-list {
+      display: flex; flex-direction: column; margin: var(--space-xs) 0 0; padding: var(--space-xs);
+      list-style: none; border: 1px solid var(--color-border); border-radius: var(--radius-control);
+      background: var(--color-surface-elevated);
+    }
+    .c-pen-map-list__legend { margin: 0; padding: var(--space-xs) var(--space-sm); font-size: var(--font-caption); font-weight: 600; color: var(--color-ink-muted); }
+    .c-pen-map-option {
+      display: flex; align-items: center; gap: var(--space-sm); width: 100%;
+      min-height: var(--target-desktop); padding: var(--space-sm) var(--space-md);
+      border: 0; border-radius: var(--radius-control); background: transparent;
+      color: var(--color-ink); font: inherit; font-size: var(--font-body); text-align: left; cursor: pointer;
+      transition: background-color .15s ease, transform .1s ease;
+    }
+    .c-pen-map-option:hover { background: var(--color-surface); }
+    .c-pen-map-option:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .c-pen-map-option:active, .c-pen-map-option.is-pressed { transform: scale(.985); }
+    .c-pen-map-option[aria-selected="true"] { font-weight: 600; color: var(--color-primary); }
+    .c-pen-map-option__id { margin-left: auto; font-size: var(--font-caption); color: var(--color-ink-muted); font-weight: 400; }
+    @media (prefers-reduced-motion: reduce) { .c-pen-map-select, .c-pen-map-option { transition: none; } }
+  </style>
+</head>
+<body>
+  <main class="c-preview">
+    <h1 class="c-preview__title">PenMapSelect</h1>
+    <p class="c-preview__note">Closed catalogue list. Click instance is discrete-only; Hold-move instance is temporary-tool-only. Do not mix catalogues.</p>
+    <div class="c-states">
+      <div>
+        <span class="c-states__label">closed (default / hover / focus)</span>
+        <button type="button" class="c-pen-map-select" data-interactive aria-haspopup="listbox" aria-expanded="false">Pen ↔ freeform</button>
+      </div>
+      <div>
+        <span class="c-states__label">open — Click catalogue (4 ids)</span>
+        <button type="button" class="c-pen-map-select" aria-haspopup="listbox" aria-expanded="true" aria-controls="click-list">Pen ↔ freeform</button>
+        <div id="click-list" class="c-pen-map-list" role="listbox" aria-label="Click">
+          <p class="c-pen-map-list__legend">Click — discrete</p>
+          <button type="button" class="c-pen-map-option" role="option" aria-selected="true">Pen ↔ freeform <span class="c-pen-map-option__id">toggle_pen_freeform</span></button>
+          <button type="button" class="c-pen-map-option" role="option" aria-selected="false">Pen ↔ eraser <span class="c-pen-map-option__id">toggle_pen_eraser</span></button>
+          <button type="button" class="c-pen-map-option" role="option" aria-selected="false">Undo <span class="c-pen-map-option__id">undo</span></button>
+          <button type="button" class="c-pen-map-option" role="option" aria-selected="false">Off <span class="c-pen-map-option__id">off</span></button>
+        </div>
+      </div>
+      <div>
+        <span class="c-states__label">invalid / stale</span>
+        <button type="button" class="c-pen-map-select" aria-invalid="true" aria-describedby="bad-hint">legacy_bind</button>
+        <p id="bad-hint" style="margin:8px 0 0;font-size:12px;color:var(--color-ink-muted)">Unknown id — device treats as Off.</p>
+      </div>
+      <div>
+        <span class="c-states__label">disabled</span>
+        <button type="button" class="c-pen-map-select" disabled>Off</button>
+      </div>
+    </div>
+  </main>
+  <script>
+    (() => {
+      for (const el of document.querySelectorAll("[data-interactive], .c-pen-map-option")) {
+        el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+        for (const ev of ["pointerup", "pointerleave", "blur"]) {
+          el.addEventListener(ev, () => el.classList.remove("is-pressed"));
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

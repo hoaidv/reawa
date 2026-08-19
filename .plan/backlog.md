@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-16T15:54:38+00:00
+generated_at: 2026-08-19T11:09:05+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -43,22 +43,22 @@ generated_at: 2026-08-16T15:54:38+00:00
 | [STORY-EP-034](./iter-004/stories/STORY-EP-034.md) | USB Ethernet stay-up and SSH/TCP keepalives | implement | dev | epaper | [SRS-EP-08], [SRS-EP-13] | done | iter-004 | 3 |
 | [STORY-EP-035](./iter-004/stories/STORY-EP-035.md) | Measure enclose area/length to separate handwriting from boundary ink | implement | dev | epaper | [SRS-EP-10] | ready | iter-005 | 3 |
 | [STORY-EP-036](./iter-004/stories/STORY-EP-036.md) | Detect USB gadget down and restore without unplug | implement | dev | epaper | [SRS-EP-08], [SRS-EP-13] | cancelled | iter-004 | 5 |
-| [STORY-EP-037](./iter-005/stories/STORY-EP-037.md) | Design hand-touch: one-finger pick/move and two-finger pan/zoom | design | designer | epaper | [SRS-EP-11], [SRS-EP-12], [SRS-EP-04] | draft | iter-005 | 5 |
-| [STORY-EP-038](./iter-005/stories/STORY-EP-038.md) | One-finger hit box: select freeform and move | implement | dev | epaper | [SRS-EP-11], [SRS-EP-04] | draft | iter-005 | 5 |
-| [STORY-EP-039](./iter-005/stories/STORY-EP-039.md) | Two-finger pan and pinch; publish viewport | implement | dev | epaper | [SRS-EP-02], [SRS-EP-08] | draft | iter-005 | 5 |
-| [STORY-EP-040](./iter-005/stories/STORY-EP-040.md) | Design erase: nib feedback and selection-erase CTA | design | designer | epaper | [SRS-EP-05], [SRS-EP-12] | draft | iter-005 | 3 |
-| [STORY-EP-041](./iter-005/stories/STORY-EP-041.md) | Hardware eraser nib stroke-erase | implement | dev | epaper | [SRS-EP-01], [SRS-EP-07] | draft | iter-005 | 5 |
-| [STORY-EP-042](./iter-005/stories/STORY-EP-042.md) | Selection-erase deletes selected nodes | implement | dev | epaper | [SRS-EP-11], [SRS-EP-07] | draft | iter-005 | 3 |
-| [STORY-EP-043](./iter-005/stories/STORY-EP-043.md) | Design copy/cut/paste on selection overlay | design | designer | epaper | [SRS-EP-12] | draft | iter-005 | 3 |
-| [STORY-EP-044](./iter-005/stories/STORY-EP-044.md) | In-document copy cut paste ops | implement | dev | epaper | [SRS-EP-07] | draft | iter-005 | 5 |
-| [STORY-EP-045](./iter-005/stories/STORY-EP-045.md) | Design connector endpoint style toolbar | design | designer | epaper | [SRS-EP-19] | draft | iter-005 | 3 |
-| [STORY-EP-046](./iter-005/stories/STORY-EP-046.md) | Apply per-end connector styles from toolbar | implement | dev | epaper | [SRS-EP-19], [SRS-EP-18] | draft | iter-005 | 5 |
-| [STORY-EP-047](./iter-005/stories/STORY-EP-047.md) | Recognize and preserve endpoint ink | implement | dev | epaper | [SRS-EP-17], [SRS-EP-18] | draft | iter-005 | 5 |
-| [STORY-EP-048](./iter-005/stories/STORY-EP-048.md) | Design connector mid-attachments | design | designer | epaper | [SRS-EP-19] | draft | iter-005 | 3 |
-| [STORY-EP-049](./iter-005/stories/STORY-EP-049.md) | Mid-attachments follow connector warp | implement | dev | epaper | [SRS-EP-18] | draft | iter-005 | 5 |
-| [STORY-EP-050](./iter-005/stories/STORY-EP-050.md) | Design manual create: frame connector primitive | design | designer | epaper | [SRS-EP-05] | draft | iter-005 | 5 |
-| [STORY-EP-051](./iter-005/stories/STORY-EP-051.md) | Manual insert frame connector primitive | implement | dev | epaper | [SRS-EP-07] | draft | iter-005 | 8 |
-| [STORY-EP-052](./iter-005/stories/STORY-EP-052.md) | Barrel click vs hold-move dispatch from catalogue | implement | dev | epaper | [SRS-EP-04] | draft | iter-005 | 5 |
+| [STORY-EP-037](./iter-005/stories/STORY-EP-037.md) | Design hand-touch: one-finger pick/move and two-finger pan/zoom | design | designer | epaper | [SRS-EP-21], [SRS-EP-22], [SRS-EP-23], [SRS-EP-24] | done | iter-005 | 5 |
+| [STORY-EP-038](./iter-005/stories/STORY-EP-038.md) | One-finger hit box: select freeform and move | implement | dev | epaper | [SRS-EP-21], [SRS-EP-23], [SRS-EP-25] | draft | iter-005 | 5 |
+| [STORY-EP-039](./iter-005/stories/STORY-EP-039.md) | Two-finger pan and pinch; publish viewport | implement | dev | epaper | [SRS-EP-24], [SRS-EP-26] | draft | iter-005 | 5 |
+| [STORY-EP-040](./iter-005/stories/STORY-EP-040.md) | Design erase: nib feedback and selection-erase CTA | design | designer | epaper | [SRS-EP-29], [SRS-EP-27], [SRS-EP-28] | draft | iter-005 | 3 |
+| [STORY-EP-041](./iter-005/stories/STORY-EP-041.md) | Hardware eraser nib stroke-erase | implement | dev | epaper | [SRS-EP-27], [SRS-EP-30] | draft | iter-005 | 5 |
+| [STORY-EP-042](./iter-005/stories/STORY-EP-042.md) | Selection-erase deletes selected nodes | implement | dev | epaper | [SRS-EP-28], [SRS-EP-30] | draft | iter-005 | 3 |
+| [STORY-EP-043](./iter-005/stories/STORY-EP-043.md) | Design copy/cut/paste on selection overlay | design | designer | epaper | [SRS-EP-32], [SRS-EP-31] | draft | iter-005 | 3 |
+| [STORY-EP-044](./iter-005/stories/STORY-EP-044.md) | In-document copy cut paste ops | implement | dev | epaper | [SRS-EP-31], [SRS-EP-33] | draft | iter-005 | 5 |
+| [STORY-EP-045](./iter-005/stories/STORY-EP-045.md) | Design connector endpoint style toolbar | design | designer | epaper | [SRS-EP-36], [SRS-EP-34] | draft | iter-005 | 3 |
+| [STORY-EP-046](./iter-005/stories/STORY-EP-046.md) | Apply per-end connector styles from toolbar | implement | dev | epaper | [SRS-EP-34], [SRS-EP-37] | draft | iter-005 | 5 |
+| [STORY-EP-047](./iter-005/stories/STORY-EP-047.md) | Recognize and preserve endpoint ink | implement | dev | epaper | [SRS-EP-35], [SRS-EP-37] | draft | iter-005 | 5 |
+| [STORY-EP-048](./iter-005/stories/STORY-EP-048.md) | Design connector mid-attachments | design | designer | epaper | [SRS-EP-39], [SRS-EP-38] | draft | iter-005 | 3 |
+| [STORY-EP-049](./iter-005/stories/STORY-EP-049.md) | Mid-attachments follow connector warp | implement | dev | epaper | [SRS-EP-38], [SRS-EP-40] | draft | iter-005 | 5 |
+| [STORY-EP-050](./iter-005/stories/STORY-EP-050.md) | Design manual create: frame connector primitive | design | designer | epaper | [SRS-EP-47], [SRS-EP-44] | draft | iter-005 | 5 |
+| [STORY-EP-051](./iter-005/stories/STORY-EP-051.md) | Manual insert frame connector primitive | implement | dev | epaper | [SRS-EP-45], [SRS-EP-46], [SRS-EP-48] | draft | iter-005 | 8 |
+| [STORY-EP-052](./iter-005/stories/STORY-EP-052.md) | Barrel click vs hold-move dispatch from catalogue | implement | dev | epaper | [SRS-EP-41], [SRS-EP-42], [SRS-EP-43] | draft | iter-005 | 5 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |
@@ -91,9 +91,9 @@ generated_at: 2026-08-16T15:54:38+00:00
 | [STORY-IN-030](./iter-004/stories/STORY-IN-030.md) | Mirror create_connector envelope and derived warp | implement | dev | infini | [SRS-IN-09] | done | iter-004 | 5 |
 | [STORY-IN-031](./iter-004/stories/STORY-IN-031.md) | Remove Infini desktop editing ToolStrip | implement | dev | infini | [SRS-IN-14] | done | iter-004 | 2 |
 | [STORY-IN-032](./iter-004/stories/STORY-IN-032.md) | WorldLayer is device mirror only — no demo mix | implement | dev | infini | [SRS-IN-07], [SRS-IN-09] | done | iter-004 | 3 |
-| [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) | Infini follows tablet-published viewport | implement | dev | infini | [SRS-IN-07], [SRS-IN-02] | draft | iter-005 | 3 |
-| [STORY-IN-034](./iter-005/stories/STORY-IN-034.md) | Design Infini pen-button map settings | design | designer | infini | [SRS-IN-05] | draft | iter-005 | 3 |
-| [STORY-IN-035](./iter-005/stories/STORY-IN-035.md) | Persist and publish pen-button map to tablet | implement | dev | infini | [SRS-IN-07] | draft | iter-005 | 3 |
+| [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) | Infini follows tablet-published viewport | implement | dev | infini | [SRS-IN-20], [SRS-IN-21], [SRS-IN-22] | draft | iter-005 | 3 |
+| [STORY-IN-034](./iter-005/stories/STORY-IN-034.md) | Design Infini pen-button map settings | design | designer | infini | [SRS-IN-24], [SRS-IN-23] | done | iter-005 | 3 |
+| [STORY-IN-035](./iter-005/stories/STORY-IN-035.md) | Persist and publish pen-button map to tablet | implement | dev | infini | [SRS-IN-23], [SRS-IN-25] | draft | iter-005 | 3 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |
 | [STORY-RW-003](./iter-000/stories/STORY-RW-003.md) | Accessibility permission gate | implement | dev | reawa | [SRS-RW-03] | done | iter-000 | 1 |

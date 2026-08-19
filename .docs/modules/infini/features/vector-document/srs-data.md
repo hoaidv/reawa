@@ -183,6 +183,12 @@ Exact attribute grammar may tighten in an appendix without changing ADR-0010.
 | `create_smart_group` | `{ id, bounds, transform?, inkScaleMode?, children: InkNode[] }` (code) — older fixtures may use `childIds` |
 | `set_smart_transform` | `{ id, transform }` |
 | `set_ink_scale_mode` | `{ id, inkScaleMode }` |
+| `set_connector_end_style` | `{ connectorId, end: "start"\|"finish", style }` — closed styles in [domain/vector-document](../../../../domain/vector-document.md) |
+| `bind_endpoint_ink` | `{ connectorId, end, samples }` — rest spine not rebaked ([ADR-0026](../../../../adr/ADR-0026-endpoint-ink-membership.md)) |
+| `bind_attachment` | `{ connectorId, nodeId, t, d }` — `t` on rest spine S ([ADR-0027](../../../../adr/ADR-0027-attachment-t-rest-spine.md)) |
+| `duplicate_subtree` | `{ nodes: Node[], dxy: {x: 24, y: 24} }` ([ADR-0024](../../../../adr/ADR-0024-in-document-clipboard.md)) |
+| `create_frame` | `{ id, bounds }` root Frame |
+| `create_primitive` | `{ id, kind: "line"\|"rect"\|"ellipse", geometry }` — not a polyline stand-in |
 
 Op envelope: `{ opId, type, payload, ts?, source? }`. Apply is idempotent on `opId`.
 

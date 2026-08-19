@@ -1,6 +1,6 @@
 ---
 feature: ink-box
-parent_req: [REQ-05, REQ-06]
+parent_req: [REQ-05, REQ-06, REQ-10, REQ-12]
 lifecycle: active
 module: epaper
 needs_design: true
@@ -21,14 +21,16 @@ Semantics inherited from the deprecated infini sections [SRS-IN-10], [SRS-IN-11]
 - Experience (start here): [srs-experience.md](./srs-experience.md) — journeys
 - Product depth: [srs-product.md](./srs-product.md) — PM-owned
 - Logic: [srs-logic.md](./srs-logic.md) — [SRS-EP-10] recognition, guards, membership ·
-  [SRS-EP-11] selection, hit-test, live manipulation
-- UI: [srs-ui.md](./srs-ui.md) — [SRS-EP-12] selection overlay and manipulation chrome,
-  **needs design** (affordances are real, not a ghost)
-- Quality: [srs-quality.md](./srs-quality.md) — [SRS-EP-14] create latency, commit fidelity, refresh
-  budget, offline parity, CHL-0004…0007 regression bars
+  [SRS-EP-11] selection, hit-test, live manipulation ·
+  [SRS-EP-21] one-finger pick/move ([REQ-10](../../prd.md#hand-touch))
+- UI: [srs-ui.md](./srs-ui.md) — [SRS-EP-12] selection overlay ·
+  [SRS-EP-22] hand-touch chrome · [SRS-EP-32] clipboard affordances
+- Quality: [srs-quality.md](./srs-quality.md) — [SRS-EP-14] create/manipulate bars ·
+  [SRS-EP-25] one-finger hand-touch bars
 - BDD: [bdd/](./bdd/) — inherited from the deprecated infini features and re-tagged
 - Decisions: [ADR-0011](../../../../adr/ADR-0011-smart-group.md) (semantics survive) ·
-  [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) (where they run)
+  [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) (where they run) ·
+  [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md) (one-finger does not claim viewport)
 - Forward constraint: must conform to [node-manipulation](../node-manipulation/srs-product.md)
   ([REQ-08](../../prd.md#node-manipulation))
 - Siblings: [tool-modes](../tool-modes/index.md) (how a tool is armed) ·

@@ -2,7 +2,7 @@
 id: STORY-EP-045
 title: Design connector endpoint style toolbar
 kind: design
-parent_srs: [SRS-EP-19]
+parent_srs: [SRS-EP-36, SRS-EP-34]
 parent_req: [REQ-13]
 status: draft
 priority: P1

@@ -2,7 +2,7 @@
 id: STORY-EP-038
 title: One-finger hit box: select freeform and move
 kind: implement
-parent_srs: [SRS-EP-11, SRS-EP-04]
+parent_srs: [SRS-EP-21, SRS-EP-23, SRS-EP-25]
 parent_req: [REQ-10]
 status: draft
 priority: P0
@@ -16,10 +16,19 @@ acceptance_criteria:
   - "Given finger-down on a resize anchor (<64 du), When the touch ends, Then 0 resize starts; pen on the same anchor still resizes."
   - "Given one finger on empty canvas, When the touch ends, Then tool is unchanged and 0 nodes are selected (0 lasso, 0 pan)."
   - "Given finger on a 64 du ToolChip tile, When tapped, Then REQ-03 still holds."
-design_package: ""
-ui_spec: ""
-scenes: []
-hifi: ""
+design_package: ".plan/iter-005/design/hand-touch/"
+ui_spec: ".plan/iter-005/design/hand-touch/ui-spec.md"
+scenes:
+  - ".plan/iter-005/design/hand-touch/hand-touch-finger-hit-box.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-finger-moving.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-finger-anchor-noop.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-two-finger-pan.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-pinch.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-pan-vs-move.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-link-down-local-view.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-pen-resize-after-finger-select.html"
+hifi: ".plan/iter-005/design/hand-touch/hand-touch-finger-hit-box.html"
 wireframe: ""
 ---
 

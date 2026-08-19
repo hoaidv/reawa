@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <!-- 1-bit finger contact  annotation, not a tool tile -->
+  <circle cx="12" cy="12" r="9" stroke="#000" stroke-width="2"/>
+  <circle cx="12" cy="12" r="3" fill="#000"/>
+  <path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="#000" stroke-width="2" stroke-linecap="square"/>
+</svg>

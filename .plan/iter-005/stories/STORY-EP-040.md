@@ -2,7 +2,7 @@
 id: STORY-EP-040
 title: Design erase: nib feedback and selection-erase CTA
 kind: design
-parent_srs: [SRS-EP-05, SRS-EP-12]
+parent_srs: [SRS-EP-29, SRS-EP-27, SRS-EP-28]
 parent_req: [REQ-11]
 status: draft
 priority: P0

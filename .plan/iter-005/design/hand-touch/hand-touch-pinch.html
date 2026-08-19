@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>hand.pinch — hand-touch</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    a.c-tool-btn { text-decoration: none; color: inherit; }
+  </style>
+</head>
+<body data-state="hand.pinch">
+  <div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world is-pinched">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <div class="ink-cluster">
+          <svg viewBox="0 0 420 240" aria-hidden="true">
+            <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+            <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+            <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+            <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+            <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+          </svg>
+        </div>
+        <div data-region="SelectionOverlay" class="is-hidden"></div>
+        <div data-region="GestureAnnotate">
+          <span class="c-finger" style="left:36%;top:48%">
+            <img src="../system/assets/icon-hand-touch-pinch.svg" alt="" />
+          </span>
+          <a class="c-finger" href="./hand-touch-two-finger-pan.html" style="left:46%;top:52%;pointer-events:auto" aria-label="Continue pan">
+            <img src="../system/assets/icon-hand-touch-pinch.svg" alt="" />
+          </a>
+        </div>
+      </div>
+      <p class="scene-caption">
+        hand.pinch — uniform scale only (no rotate). Contacts closer than pan.
+        <a href="./hand-touch-two-finger-pan.html">Pan</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">viewportOwner=epaper · fingers=2 · pinch scale · 0 rotate</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

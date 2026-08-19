@@ -2,7 +2,7 @@
 id: STORY-EP-049
 title: Mid-attachments follow connector warp
 kind: implement
-parent_srs: [SRS-EP-18]
+parent_srs: [SRS-EP-38, SRS-EP-40]
 parent_req: [REQ-14]
 status: draft
 priority: P1

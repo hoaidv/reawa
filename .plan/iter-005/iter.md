@@ -17,14 +17,14 @@ Lock: **vertical · verified · wip 2**.
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 
-Stories are **draft** until `/architect` binds dedicated SRS (parents today are nearest existing sections).
+W0 bind **done** 2026-08-19. W1 design [STORY-EP-037](./stories/STORY-EP-037.md) and [STORY-IN-034](./stories/STORY-IN-034.md) **done**. Other committed stories stay **draft** until their wave.
 
 ## Committed
 
 ### Design (W1+)
 
-- [STORY-EP-037](./stories/STORY-EP-037.md) — design — 5 — hand-touch
-- [STORY-IN-034](./stories/STORY-IN-034.md) — design — 3 — pen-button map **∥ EP-037**
+- [STORY-EP-037](./stories/STORY-EP-037.md) — design — 5 — hand-touch — **done** (W1-A) [UI-EP-06](./design/hand-touch/)
+- [STORY-IN-034](./stories/STORY-IN-034.md) — design — 3 — pen-button map **∥ EP-037** — **done** (W1-B) [UI-IN-03](./design/pen-button-map/)
 - [STORY-EP-040](./stories/STORY-EP-040.md) — design — 3 — erase
 - [STORY-EP-043](./stories/STORY-EP-043.md) — design — 3 — clipboard
 - [STORY-EP-045](./stories/STORY-EP-045.md) — design — 3 — connector ends
@@ -56,9 +56,10 @@ Stories are **draft** until `/architect` binds dedicated SRS (parents today are 
 
 ## Risks
 
-- SRS not yet decomposed — architect is W0
-- REQ-10 two-finger pan still needs BRD-07 amendment
-- Vertical wip 2 vs many features — waves are serial after W1 pair
+- CHL-0022 shipped “no pan / no arrowheads” prose vs new ids — Product Manager adopt
+- REQ-10 two-finger **ship** still needs BRD-07 amendment (SRS-EP-24 exists)
+- Product Manager experience/product Software Requirements Specification not thickened (architect Concern)
+- Vertical work-in-progress 2 vs many features — waves are serial after W1 pair
 
 ## Links
 

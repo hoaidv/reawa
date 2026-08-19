@@ -48,7 +48,7 @@ Auth: none in v0 (trusted local link). Default listen: `0.0.0.0:9877`.
 | **Preview stroke** | Epaper | Infini | Continuous during a stroke — advisory, never persisted |
 
 **Invariant (testable by message type):** after the load completes, Infini sends **0** document
-messages for the rest of the session. Only `viewport` may flow down.
+messages for the rest of the session. Only `viewport` may flow down **while Infini owns the token**. Settings: [SRS-IN-23](#srs-in-23-pen-map-publish). Tablet viewport: [SRS-IN-21](#srs-in-21-viewport-token).
 
 ### Tablet drawing frame (CSS) and `drawingRegion` (world)
 
@@ -411,6 +411,41 @@ and `doc_op` carries these edits in both directions.
 | `tool_intent` for a node deleted meanwhile | Ignore; next snapshot re-syncs the device |
 | Snapshot arrives mid-ghost | Ghost discarded; authoritative geometry wins, even if it "jumps" |
 | Device never receives `pickables` | Selection tool inert on device; pen and ink-box unaffected |
+
+---
+
+## [SRS-IN-21] Viewport last-writer session rules {#srs-in-21-viewport-token}
+
+<!-- lifecycle: active -->
+
+**Parent:** Epaper [REQ-10](../../../epaper/prd.md#hand-touch). **Decision:** [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md). **Canvas apply:** [SRS-IN-20](../infinity-canvas/srs-logic.md#srs-in-20-follow-viewport).
+
+| Rule | Value |
+|---|---|
+| Idle | `viewportOwner = infini`; `viewport` down as [SRS-IN-07](#srs-in-07) |
+| Inbound `viewport` `source: epaper` | Apply; set owner `epaper`; **send 0** competing `viewport` until steal or release |
+| Steal | New Infini pan/pinch starts → owner `infini`, resume down `viewport` |
+| Document channel | Unchanged — 0 `doc_load` / `doc_change` from this feature |
+
+QA: *Given both idle, When the creator pans on the tablet, Then Infini sends 0 competing viewport bursts.*
+
+---
+
+## [SRS-IN-23] Pen-button map persist and settings publish {#srs-in-23-pen-map-publish}
+
+<!-- lifecycle: active -->
+
+**Parent:** Infini [REQ-05](../../prd.md#pen-button-map). **Decision:** [ADR-0028](../../../../adr/ADR-0028-pen-button-map-settings-channel.md). **Not a parent of [SRS-IN-05](../vector-document/srs-ui.md)** (open/save chrome). **Anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). Device consume: [SRS-EP-41](../../../epaper/features/tool-modes/srs-logic.md#srs-ep-41-barrel-dispatch).
+
+| Rule | Value |
+|---|---|
+| Persist | Infini **app settings**, never SVG / VectorDocument |
+| Publish | `pen_button_map` on `:9877` after save; once after hello if a map exists |
+| Document messages | **0** for that publish (assert by type: not `doc_load` / `doc_change` / `doc_snapshot`) |
+| Capability | Consume `pen_capability` `{ buttonCount: 0\|1\|2 }` |
+| In-flight | Device keeps latched map; next gesture uses new map; p95 ≤300 ms after device apply |
+| Offline | Edit locally; publish after ADR-0015 handshake, still as settings |
+| 0-button | Do not publish fake slots |
 
 ---
 

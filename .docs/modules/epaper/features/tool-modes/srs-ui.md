@@ -179,7 +179,8 @@ disarmed.
 
 ### Out of scope (UI)
 
-- Pan / zoom chrome (PRD Non-Goal), page navigation, document browser.
+- Pan / zoom **chrome** (two-finger has no dedicated tool tile — [SRS-EP-22](../ink-box/srs-ui.md#srs-ep-22-hand-touch-ui)).
+- Page navigation, document browser.
 - Rotation, multi-select, marquee, align/distribute affordances — [REQ-08](../../prd.md#node-manipulation).
 - A `doc_load` confirmation dialog — the handshake makes a load safe by construction; the creator
   sees `session.reloading`, not a decision.
@@ -193,3 +194,81 @@ disarmed.
   1-bit partial refresh. Binding inventory is closed here; painting is [STORY-EP-026](../../../../../.plan/iter-004/stories/STORY-EP-026.md).
 - **`inkScaleMode` toggle placement** — it belongs to a selected box, not to the chip; specified in
   [SRS-EP-12](../ink-box/srs-ui.md).
+
+---
+
+## [SRS-EP-29] Erase chrome {#srs-ep-29-erase-ui}
+
+<!-- lifecycle: active -->
+<!-- needs_design: yes -->
+
+**Parent:** [REQ-11](../../prd.md#erase). **Logic:** [SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib), [SRS-EP-28](../device-document/srs-logic.md#srs-ep-28-selection-erase). **Platform:** epaper-device.
+
+### Closed erase paths (Designer must not add a third grammar)
+
+| id | Path |
+|---|---|
+| `erase.nib` | Hardware eraser nib in progress |
+| `cta.erase` | Selection-erase (chip or overlay) — **64 du** if finger |
+| `erase.empty_noop` | Empty selection + Erase |
+| `erase.no_nib` | Pen without eraser tool — Path A absent |
+
+Barrel hold-move temp erase is REQ-18 chrome ([SRS-EP-42](#srs-ep-42-chip-temp-tool)), not a fourth path.
+
+### States
+
+`erase.nib_active` · `erase.selection_cta` · `erase.empty_noop` · `erase.undo` · `erase.missing_nib`
+
+### Anti-patterns
+
+- Treating barrel 2 as the nib
+- Banner on empty-selection no-op (status on chip is enough)
+
+---
+
+## [SRS-EP-42] Chip mirrors temporary tool {#srs-ep-42-chip-temp-tool}
+
+<!-- lifecycle: active -->
+<!-- needs_design: yes -->
+
+**Parent:** [REQ-18](../../prd.md#pen-buttons). **Logic:** [SRS-EP-41](./srs-logic.md#srs-ep-41-barrel-dispatch). Infini map editor is **not** this surface ([SRS-IN-24](../../../infini/features/tablet-sync/srs-ui.md#srs-in-24-pen-map-ui)).
+
+### Purpose
+
+Show the **temporary** exclusive tool (or erase) **during hold-move**, then restore unless Click toggled. Tablet does **not** host a 5-way radio.
+
+### Closed inventory (chip only)
+
+Reuse `ind.tool_active`. No extra barrel-map editor on device.
+
+### States
+
+`barrel.hold_temp_freeform` · `barrel.hold_temp_rect` · `barrel.hold_temp_erase` · `barrel.click_toggled` · `barrel.capability_0` (slots absent)
+
+### Hit
+
+Chip tiles remain 64 du. Barrel itself has no on-panel hit target.
+
+---
+
+## [SRS-EP-47] Manual create chrome {#srs-ep-47-manual-create-ui}
+
+<!-- lifecycle: active -->
+<!-- needs_design: yes -->
+
+**Parent:** [REQ-17](../../prd.md#manual-create) (Should). **Logic:** [SRS-EP-44](./srs-logic.md#srs-ep-44-manual-create-routing). **Platform:** epaper-device.
+
+### Closed create ids
+
+`create.frame` · `create.connector` · `create.attach` · `create.primitive.ellipse` · `create.primitive.rect` · `create.primitive.line`
+
+Finger-eligible controls ≥64 du. Primitive place is pen-precise (drawn bounds).
+
+### States (from PRD)
+
+`create.entry` · `create.frame_place` · `create.connector_place` · `create.primitive_place` · `create.cancel` · `create.vs_pen_ink`
+
+### Anti-patterns
+
+- Brush / color / layer palette
+- Re-specifying ink-box enclose as a new create tool

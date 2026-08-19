@@ -8,10 +8,8 @@ needs_design: false
 
 # SRS — Tablet sync Infini (UI)
 
-Debug chrome for [REQ-03](../../prd.md#tablet-sync). Canvas navigation stays
-[infinity-canvas SRS-IN-02](../infinity-canvas/srs-ui.md) (which already lists tablet-sync
-chrome as out of its inventory). **needs_design: false** — human-specified overlay; not a
-product surface for Designer.
+Debug chrome for [REQ-03](../../prd.md#tablet-sync) is [SRS-IN-18](#srs-in-18-device-log-panel) (`needs_design: false`).
+Pen-button map editor is [SRS-IN-24](#srs-in-24-pen-map-ui) (`needs_design: yes`) — not document chrome.
 
 Logic: [SRS-IN-17](./srs-logic.md#srs-in-17-debug-log-channel). Quality: [SRS-IN-19](./srs-quality.md#srs-in-19-debug-log-isolation).
 
@@ -107,11 +105,55 @@ the field restores the full buffer view. Filter never round-trips to the device.
 - Canvas-world chrome (markers, selection) inside the overlay
 - On-panel Epaper undo / Device Log chrome (tablet has **0** of this UI)
 - Persist-to-disk, upload, or apply-to-document from a log line
+- Pen-button **map editor** — that is [SRS-IN-24](#srs-in-24-pen-map-ui), not this overlay
 
 ### Platform
 
 Desktop Electron, pointer + keyboard. Overlay is a single scene with the states above —
 not a multi-scene graph.
+
+---
+
+## [SRS-IN-24] Pen-button map settings {#srs-in-24-pen-map-ui}
+
+<!-- lifecycle: active -->
+<!-- needs_design: yes -->
+
+**Parent:** Infini [REQ-05](../../prd.md#pen-button-map). **Logic:** [SRS-IN-23](./srs-logic.md#srs-in-23-pen-map-publish). **Quality:** [SRS-IN-25](./srs-quality.md#srs-in-25-map-publish-quality). **Do not parent on [SRS-IN-05](../vector-document/srs-ui.md)** (open/save). **Platform:** **desktop** Electron (`data-platform: desktop`). Catalogues: [domain/pen-button-map](../../../../domain/pen-button-map.md).
+
+### Purpose
+
+Assign each **present** barrel slot (Click and Hold-move) to **exactly one** closed-catalogue item and save. Not document chrome.
+
+### Closed catalogues (Designer must not add items)
+
+**Click:** `toggle_pen_freeform` · `toggle_pen_eraser` · `undo` · `off`  
+**Hold-move:** `temp_sel_freeform` · `temp_sel_rect` · `temp_erase` · `drag_node_under_tip` · `off`
+
+### Layout (contract, not craft)
+
+| Region | Role |
+|---|---|
+| MapEditor | One row per present button (1 or 2) |
+| SlotClick | Closed list for Click |
+| SlotHoldMove | Closed list for Hold-move |
+| Save | Persist + publish |
+
+0-button: slots **absent or disabled** (0 fake bindings). Hover **required** on desktop. Targets ≥24 px.
+
+### States (PRD)
+
+`map.layout_0` · `map.layout_1` · `map.layout_2` · `map.slot_click` · `map.slot_hold` · `map.invalid_stale` · `map.offline_then_publish`
+
+### UI-driving fields
+
+`pen.buttonCount`, `pen.map.buttons[].click`, `pen.map.buttons[].holdMove` — Designer must not invent a third slot type (e.g. “click-hold-move”).
+
+### Anti-patterns
+
+- 5-way radio on the tablet chip
+- Saving the map into the SVG
+- Document open/save mixed into this surface
 
 ---
 

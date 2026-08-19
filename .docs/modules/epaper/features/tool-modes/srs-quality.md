@@ -74,3 +74,36 @@ Both described behaviour this rework deletes.
 | `manipulation.unavailable` | ink-box package | below LOD; 0 accidental transforms |
 | `touch.unavailable` | tool-modes package | fallback to pen; reason visible |
 | `orient.gutOnTop` | tool-modes package | chip on oriented top; exclusion rect follows |
+
+---
+
+## [SRS-EP-43] Barrel dispatch quality {#srs-ep-43-barrel-quality}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-18](../../prd.md#pen-buttons). **Constrains:** [SRS-EP-41](./srs-logic.md#srs-ep-41-barrel-dispatch). Does **not** steal [SRS-EP-06](#srs-ep-06) parent (REQ-03).
+
+| Scenario | Target |
+|---|---|
+| 1-button default Click (no move) | Toggle `pen` ↔ `sel_freeform` p95 ≤**300 ms**; **0** hold-move |
+| 1-button default Hold-move | Temporary freeform until release; **0** click toggle on release |
+| 2-button default B2 Hold-move | Temporary erase until release; B1 unchanged |
+| Rebind Hold-move `drag_node_under_tip` on node | Live-direct bar (0 px / ≥5 Hz); empty canvas: **0** move, **0** lasso |
+| 0-button pen | **0** button gestures; REQ-03 still works |
+| 20-gesture mixed click/hold fixture | **0** events fire **both** click and hold-move |
+| Map apply after Infini publish | Next gesture uses map p95 ≤**300 ms**; in-flight unchanged |
+
+---
+
+## [SRS-EP-48] Manual create quality {#srs-ep-48-manual-create-quality}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-17](../../prd.md#manual-create) (Should). **Constrains:** [SRS-EP-44](./srs-logic.md#srs-ep-44-manual-create-routing), [SRS-EP-45](../device-document/srs-logic.md#srs-ep-45-manual-insert), [SRS-EP-46](../connector-ink/srs-logic.md#srs-ep-46-manual-connector).
+
+| Scenario | Target |
+|---|---|
+| Place Frame | Node at placed bounds ±1 px @ 100% zoom; p95 ≤**300 ms**; one undo removes it |
+| Manual connector between two bindable nodes | Same warp contract as REQ-09 |
+| Manual attach | SRS-EP-40 bars hold |
+| Primitive ellipse/rect/line | Parameterized geometry (not polyline stand-in); survives REQ-07 mirror |

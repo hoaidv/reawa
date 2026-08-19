@@ -58,7 +58,8 @@ Shared semantics: [domain/vector-document](../../domain/vector-document.md).
 | Tool mode | **Device-local UI state**, never on the wire ([ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) §1) |
 | Document change | `doc_change { seq, opId, op, baseSeq }` — the only inbound document truth |
 | Document load | `doc_load` — one per epoch, handshake-gated, the only outbound document message |
-| Viewport | translate, scale, gut orientation, tablet CSS frame → drawingRegion |
+| Viewport | translate, scale, gut orientation, tablet CSS frame → drawingRegion; **last-writer token** [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md) |
+| Pen-button map | Settings message `pen_button_map` — [domain/pen-button-map](../../domain/pen-button-map.md), **not** SVG |
 | Session | TCP JSON-lines Epaper ↔ Infini |
 
 Retired with [SRS-IN-13](./features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport):
@@ -130,6 +131,8 @@ flowchart TB
 - [ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) — ink-box tool modes (§1 and §6 survive; §2–§5 superseded)
 - [ADR-0014](../../adr/ADR-0014-document-ownership-inversion.md) — the device owns the working document
 - [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md) — one-way sync contract v1
+- [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md) — tablet vs Infini viewport token
+- [ADR-0028](../../adr/ADR-0028-pen-button-map-settings-channel.md) — pen-button map is settings, not `doc_*`
 - Sync bind: [tablet-sync SRS-IN-07](./features/tablet-sync/srs-logic.md) shipped wire + change applier
 - Debug sidecar: [tablet-sync SRS-IN-17](./features/tablet-sync/srs-logic.md#srs-in-17-debug-log-channel) TCP `:9878` (not ADR-0015)
 - Device bind: [epaper SRS-EP-08](../epaper/features/device-document/srs-logic.md) the other end of the contract

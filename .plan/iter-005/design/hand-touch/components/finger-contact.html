@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>FingerContact — design-preview annotation</title>
+  <style>
+    :root { --color-ink: #000; --color-paper: #fff; --finger-min: 64px; }
+    body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; }
+    .row { display: flex; gap: 24px; align-items: flex-end; }
+    .cell { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+    .stage { position: relative; width: 120px; height: 120px; background: #fff; border: 1px solid #000; }
+    .c-finger {
+      position: absolute; left: 50%; top: 50%;
+      width: var(--finger-min); height: var(--finger-min);
+      margin: calc(var(--finger-min) / -2) 0 0 calc(var(--finger-min) / -2);
+      border: 2px solid var(--color-ink); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: repeating-linear-gradient(-45deg, #fff, #fff 3px, #000 3px, #000 4px);
+    }
+    .c-finger.is-ignored { background: #fff; border-style: dashed; }
+    .c-finger img { width: 24px; height: 24px; background: #fff; border: 1px solid #000; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <p>Preview-only. Not a product control. 64 du mark = finger-eligible size language.</p>
+  <div class="row">
+    <div class="cell">one finger
+      <div class="stage"><span class="c-finger"><img src="../../system/assets/icon-hand-touch-finger.svg" alt="" /></span></div>
+    </div>
+    <div class="cell">two fingers
+      <div class="stage">
+        <span class="c-finger" style="left:35%;top:45%"><img src="../../system/assets/icon-hand-touch-two-finger.svg" alt="" /></span>
+        <span class="c-finger" style="left:70%;top:60%"><img src="../../system/assets/icon-hand-touch-two-finger.svg" alt="" /></span>
+      </div>
+    </div>
+    <div class="cell">ignored (pan vs move)
+      <div class="stage"><span class="c-finger is-ignored"><img src="../../system/assets/icon-hand-touch-two-finger.svg" alt="" /></span></div>
+    </div>
+  </div>
+</body>
+</html>

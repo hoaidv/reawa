@@ -169,9 +169,9 @@ against known RM2 panel DPI. They are implement locks for EP-019. Do not fall ba
 `TILE_LOD_SCALE = 0.35`. First-device miss-rate may file a `CHL-*` with a new **du** number — never
 a desktop constant.
 
-Below the cutoff the press **falls through to nothing** — not to pan, because there is no on-device
-pan ([epaper Non-Goals](../../prd.md)). That is the one line of [SRS-IN-11] that could not be
-inherited as written.
+Below the cutoff the press **falls through to nothing** — not to pan **from this section**.
+One-finger empty canvas pan remains forbidden; **two-finger** pan is [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport) ([REQ-10](../../prd.md#hand-touch)), not this parent.
+<!-- CHL-0022: do not treat this paragraph as “no on-device pan forever”; REQ-10 two-finger is a new id. -->
 
 ### Gestures
 
@@ -238,6 +238,51 @@ the descriptor is a logic requirement here and not merely a product aspiration.
 | Selected node not present after a `doc_load` | Selection clears silently — the load is a new epoch |
 | Gesture starts while a refresh is in flight | The gesture wins; feedback uses partial refresh |
 | Transform would produce a degenerate box (zero width/height) | Clamp to the minimum and commit the clamped value — never a zero-area node |
+
+---
+
+## [SRS-EP-21] One-finger pick and move {#srs-ep-21-one-finger}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-10](../../prd.md#hand-touch). **Links (not parents):** [SRS-EP-11](#srs-ep-11-device-manipulation) live-direct move, [SRS-EP-04](../tool-modes/srs-logic.md) exclusive tools, [SRS-EP-23](../tool-modes/srs-logic.md#srs-ep-23-finger-tool-switch). **Decision:** [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md) (viewport is **not** claimed by one-finger).
+
+Does **not** overload SRS-EP-11. Pen pick/move stays there. This section is **finger** only.
+
+### Hit rules (closed)
+
+| Pointer | Target | Eligible? |
+|---|---|---|
+| Finger | SmartGroup world `bounds` at/above LOD ([SRS-EP-11](#srs-ep-11-device-manipulation) 96 du min-axis when scale &lt; 1) | **Yes** — pick + move |
+| Finger | Resize anchors / 6 square anchors / any control whose **hit target &lt; 64 du** | **No** — 0 transform, 0 scale-mode, 0 end-kind. Pen still may |
+| Finger | ToolChip primary tile (64 du) | Chip wins — this REQ does not steal ([SRS-EP-05](../tool-modes/srs-ui.md)) |
+| Finger | Empty canvas (no box hit), one finger | **No-op**: exclusive tool unchanged; **0** nodes selected; **0** lasso; **0** pan |
+| Two fingers | — | Not this section — [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport) |
+
+1 du = 1 panel pixel @ 226 dpi. Finger-eligible floor = primary ToolChip tile **64×64 du** ([CHL-0019](../../../../../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md)).
+
+### Gesture
+
+| Step | Rule |
+|---|---|
+| Finger-down inside a hittable SmartGroup | Select that box; exclusive tool → `sel_freeform` ([SRS-EP-23](../tool-modes/srs-logic.md#srs-ep-23-finger-tool-switch)); chip updates with p95 ≤300 ms |
+| Same down, or following finger drag, inside the selected box | **Move** with [REQ-06](../../prd.md#device-manipulation) live-direct contract: 0 px jump on lift; ≥5 Hz partial refresh; ToolCanvasLayer live node ([SRS-EP-11](#srs-ep-11-device-manipulation)) |
+| During this move | **0** viewport pan; two-finger does not start; token stays idle/`infini` ([ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md)) |
+| Finger-down on a &lt;64 du control | No-op (table above) |
+| Already selected box, finger-down inside bounds | May start the move on that same down |
+
+### UI-driving fields
+
+| Field | Drives |
+|---|---|
+| `touch.fingerCount` | 1 vs 2 (2 → not this section) |
+| `hit.kind` | `box` \| `anchor_lt64` \| `chip` \| `empty` |
+| `toolMode` | Must become `sel_freeform` on box hit |
+| `sel.moving` | Live-direct chrome ([SRS-EP-22](./srs-ui.md#srs-ep-22-hand-touch-ui)) |
+
+### Out of scope
+
+Finger resize, rotation, connector re-anchor ([REQ-08](../../prd.md#node-manipulation)). Two-finger pan. REQ-15 tables.
 
 ---
 

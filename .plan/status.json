@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-16T15:54:38+00:00",
+  "generated_at": "2026-08-19T11:09:05+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 20,
+    "draft": 18,
     "ready": 1,
     "in-progress": 0,
     "in-review": 0,
-    "done": 118,
+    "done": 120,
     "blocked": 13,
     "cancelled": 1
   },
@@ -19,18 +19,18 @@
     },
     "epaper": {
       "total": 52,
-      "done": 28,
+      "done": 29,
       "in_review": 0
     },
     "infini": {
       "total": 35,
-      "done": 24,
+      "done": 25,
       "in_review": 0
     }
   },
-  "open_challenges": 0,
+  "open_challenges": 1,
   "resolved_challenges_this_iter": 0,
-  "sync_orphans": 22,
+  "sync_orphans": 132,
   "master_plan": true,
   "tracks": [
     {
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "W0 /architect SRS bind \u2014 then /designer EP-037 \u2225 IN-034",
+      "cursor": "W2 /qa BDD EP-038 then /dev EP-038 \u2014 human visual on W1 packages first",
       "iter": "iter-005"
     }
   ]

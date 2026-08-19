@@ -2,7 +2,7 @@
 id: STORY-EP-047
 title: Recognize and preserve endpoint ink
 kind: implement
-parent_srs: [SRS-EP-17, SRS-EP-18]
+parent_srs: [SRS-EP-35, SRS-EP-37]
 parent_req: [REQ-13]
 status: draft
 priority: P1

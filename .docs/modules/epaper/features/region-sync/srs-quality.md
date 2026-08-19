@@ -41,3 +41,26 @@ Parent REQ: [REQ-02](../../prd.md#region-sync).
 - Ghosting is a *timing* allowance, never a *content* allowance: a settled frame that disagrees with
   the local document is a defect, not slow e-ink.
 - Library `RegionSession` coalesce semantics remain the target for a future Qt wiring story.
+
+---
+
+## [SRS-EP-26] Two-finger map-apply quality {#srs-ep-26-two-finger-quality}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-10](../../prd.md#hand-touch). **Constrains:** [SRS-EP-24](./srs-logic.md#srs-ep-24-two-finger-viewport). Does **not** steal [SRS-EP-03](#srs-ep-03) parent (REQ-02). **Decision:** [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md).
+
+| Scenario | Metric | Target |
+|---|---|---|
+| Two-finger pan/pinch ≥5 s → next pen sample map | p95 map apply | ≤**100 ms** |
+| After settle, Infini view vs tablet region | Divergent viewports | **0** |
+| Infini competing `viewport` while tablet owns token | Count | **0** |
+| Link down, two-finger | Local map still updates | Always |
+
+---
+
+## Superseded
+
+Prior “production `append_ink` + RegionSession owns map” wording is **target architecture**;
+**shipped** path is documented above (0.4.0, 2026-08-11).
+SRS-EP-26 is additive (REQ-10); it does not supersede SRS-EP-03.

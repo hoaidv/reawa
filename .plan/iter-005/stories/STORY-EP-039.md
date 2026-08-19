@@ -2,7 +2,7 @@
 id: STORY-EP-039
 title: Two-finger pan and pinch; publish viewport
 kind: implement
-parent_srs: [SRS-EP-02, SRS-EP-08]
+parent_srs: [SRS-EP-24, SRS-EP-26]
 parent_req: [REQ-10]
 status: draft
 priority: P0
@@ -15,10 +15,19 @@ acceptance_criteria:
   - "Given a live session, When the tablet viewport changes from this gesture, Then Infini view matches after settle (0 divergent viewports) — peer IN-033."
   - "Given a one-finger box-move in flight, When a second finger lands, Then 0 pan starts until the move ends."
   - "Given the link down, When the creator two-finger pans, Then local viewport still changes."
-design_package: ""
-ui_spec: ""
-scenes: []
-hifi: ""
+design_package: ".plan/iter-005/design/hand-touch/"
+ui_spec: ".plan/iter-005/design/hand-touch/ui-spec.md"
+scenes:
+  - ".plan/iter-005/design/hand-touch/hand-touch-finger-hit-box.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-finger-moving.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-finger-anchor-noop.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-two-finger-pan.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-pinch.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-pan-vs-move.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-link-down-local-view.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-pen-resize-after-finger-select.html"
+hifi: ".plan/iter-005/design/hand-touch/hand-touch-finger-hit-box.html"
 wireframe: ""
 ---
 

@@ -145,6 +145,39 @@ behavior is the Qt canvas item above.
 
 ---
 
+## [SRS-EP-24] Two-finger pan/zoom and viewport publish {#srs-ep-24-two-finger-viewport}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-10](../../prd.md#hand-touch) (two-finger half; [REQ-16](../../prd.md#device-pan-zoom) retired). **Decision:** [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md). **Links (not parents):** [SRS-EP-02](#srs-ep-02) inbound Infini map apply, [SRS-EP-08](../device-document/srs-logic.md).
+
+Ship of this slice stays blocked on a [BRD-07](../../../../brd.md) amendment; the behaviour below is the bind SM/QA/Dev will use once that gate opens.
+
+### Gesture
+
+| Rule | Value |
+|---|---|
+| Fingers | **Two** on empty canvas (or not claiming a one-finger box-move) |
+| One-finger box-move in flight | Two-finger **does not run**; 0 pan from the move ([SRS-EP-21](../ink-box/srs-logic.md#srs-ep-21-one-finger)) |
+| Pan | Translate `drawingRegion` / equivalent `translate` |
+| Pinch | Uniform `scale` only (no rotate/skew) |
+| Local map | Apply **immediately** so the next pen sample is correct (p95 ≤100 ms map apply — [SRS-EP-26](./srs-quality.md#srs-ep-26-two-finger-quality)) |
+| Publish | `viewport` **up** with `source: epaper` while token is `epaper` |
+| Link down | Local map still updates; publish waits/drops with the session |
+| Token | Claim on two-finger start; flush `settle: true` on end; release after 150 ms idle two-finger ([ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md)) |
+
+Does not change digitizer→panel Round 19 ([SRS-EP-01](../local-pen-ink/srs-logic.md)). Does not paint from a peer picture.
+
+### UI-driving fields
+
+| Field | Drives |
+|---|---|
+| `touch.fingerCount` | Must be 2 |
+| `viewportOwner` | `epaper` during gesture |
+| `viewport.{translate,scale,drawingRegion,settle}` | Map + Infini follow |
+
+---
+
 ## Superseded
 
 Prior “production `append_ink` + RegionSession owns map” wording is **target architecture**;

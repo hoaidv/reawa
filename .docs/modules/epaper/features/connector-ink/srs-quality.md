@@ -40,6 +40,37 @@ Does not relax [SRS-EP-01](../local-pen-ink/srs-logic.md) ink latency or
 | Recall intended UX1/UX2 | ≥90% |
 | EP-016 / EP-017 under new dispatch | 0 changed verdicts except deliberate D21 fall-through |
 
+---
+
+## [SRS-EP-37] Endpoint style and endpoint-ink quality {#srs-ep-37-endpoint-quality}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-13](../../prd.md#connector-ends). **Constrains:** [SRS-EP-34](./srs-logic.md#srs-ep-34-end-styles), [SRS-EP-35](./srs-logic.md#srs-ep-35-endpoint-ink). Does **not** steal [SRS-EP-20](#srs-ep-20-connector-quality) parent (REQ-09).
+
+| Scenario | Target |
+|---|---|
+| Pick end style on selected connector | Visible p95 ≤**300 ms**; other end unchanged; one undo reverts |
+| Bound box drag with styles | Styles stay on correct ends; committed geometry = last preview (**0 px** jump) |
+| Endpoint-ink over an end | **0** new free Ink there; **0** second connector; survives bound-node drag (**0** orphaned samples) |
+| Same stroke on spine or empty | **0** endpoint-ink steals |
+| Unintended endpoint-ink on writing corpus | Counts toward ≤**2%** false-positive ship gate with REQ-09 recognizers |
+
+---
+
+## [SRS-EP-40] Attachment warp-follow quality {#srs-ep-40-attachment-quality}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-14](../../prd.md#connector-attachments). **Constrains:** [SRS-EP-38](./srs-logic.md#srs-ep-38-attachment-t).
+
+| Scenario | Target |
+|---|---|
+| Bound SmartGroup move with attachment | Attachment stays on spine (`t` preserved) at ≥**5 Hz**; pen-up pose = last preview (**0 px** jump) |
+| Undo box move | Connector **and** attachment pre-move pose ±1 px @ 100% zoom |
+| Connector with 0 attachments | REQ-09 / SRS-EP-20 bars still hold (**0** regression) |
+| Rest spine rebake during drag | **0** (ADR-0020 I1) |
+
 ### State coverage (dual-ask)
 
 | State id | Designer | QA |
@@ -49,6 +80,8 @@ Does not relax [SRS-EP-01](../local-pen-ink/srs-logic.md) ink latency or
 | `conn.rejected` | required | required |
 | `conn.live_warp` | required | required |
 | `conn.orphan` | required | required |
+| `conn.end_style_*` | required ([SRS-EP-36](./srs-ui.md)) | required ([SRS-EP-37](#srs-ep-37-endpoint-quality)) |
+| `attach.*` | required ([SRS-EP-39](./srs-ui.md)) | required ([SRS-EP-40](#srs-ep-40-attachment-quality)) |
 
 ## Non-goals
 

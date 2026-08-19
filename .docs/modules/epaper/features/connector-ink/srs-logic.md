@@ -71,5 +71,77 @@ Shared fixtures with Infini: same rest shape + endpoints + style → byte-compar
 
 ---
 
+## [SRS-EP-34] Per-end endpoint styles {#srs-ep-34-end-styles}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-13](../../prd.md#connector-ends) Path A. **Decision:** [ADR-0026](../../../../adr/ADR-0026-endpoint-ink-membership.md). **Warp:** [SRS-EP-18](#srs-ep-18-connector-warp) / [ADR-0020](../../../../adr/ADR-0020-connector-ink-geometry.md). **UI:** [SRS-EP-36](./srs-ui.md#srs-ep-36-endpoint-toolbar).
+
+Closed style set (Designer must not invent others): `none` · `arrow` · `arrow_empty` · `star` · `one` · `many`.
+
+| Rule | Value |
+|---|---|
+| Scope | **Each end independently** on a **selected** connector |
+| Op | `set_connector_end_style { connectorId, end: start\|finish, style }` |
+| Latency | Style visible p95 ≤300 ms; **other** end unchanged |
+| Undo | One undo reverts that end's style |
+| Warp | Styles remain on the correct ends; committed geometry = last preview (0 px jump) — REQ-09 bar |
+| Default | `none` at recognition unless Path B binds ink |
+
+Does not replace recognition or warp (REQ-09). Does not steal spine ink (Path B is SRS-EP-35).
+
+---
+
+## [SRS-EP-35] Endpoint-ink membership {#srs-ep-35-endpoint-ink}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-13](../../prd.md#connector-ends) Path B. **Decision:** [ADR-0026](../../../../adr/ADR-0026-endpoint-ink-membership.md) (amends [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)).
+
+Pen-up order: enclose → membership → **this test** → new connector → ordinary ink.
+
+| Region | Steal? |
+|---|---|
+| ≥80% samples in **one** end of **one** existing connector | **Yes** — `bind_endpoint_ink`; 0 free Ink there; 0 second connector; decoration rides warp (0 orphaned samples on bound-node drag) |
+| Spine (`s ∈ (0.08, 0.92)`) or empty canvas | **No** — ordinary ink / membership / connector rules |
+| Mixed / two ends | **No** |
+
+Wrong bind: one undo. Rest spine **not** rebaked. Log `[recog] outcome=endpoint_ink`.
+
+---
+
+## [SRS-EP-38] Mid-attachment parameter t {#srs-ep-38-attachment-t}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-14](../../prd.md#connector-attachments). **Decision:** [ADR-0027](../../../../adr/ADR-0027-attachment-t-rest-spine.md). **UI:** [SRS-EP-39](./srs-ui.md#srs-ep-39-attachment-ui).
+
+| Rule | Value |
+|---|---|
+| Bind | `{ nodeId, t ∈ [0,1] on rest spine S, d }` via `bind_attachment` |
+| Live | Bound-box drag re-warps connector **and** re-places attachment at ≥5 Hz; 0 full-panel invalidations |
+| Commit | Pose on pen-up = last preview (0 px jump) |
+| Undo box move | Connector **and** attachment return to pre-move pose (±1 px @ 100% zoom) |
+| Zero attachments | REQ-09 / SRS-EP-18 unchanged (0 regression) |
+| Rebake | **Forbidden** |
+
+Connector is not a spatial parent. 0 extra ops per drag frame (still `set_smart_transform` on the box).
+
+---
+
+## [SRS-EP-46] Manual connector and attach {#srs-ep-46-manual-connector}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-17](../../prd.md#manual-create) (Should). **Warp:** same as [REQ-09](../../prd.md#device-connectors) / SRS-EP-18. **Attach:** [SRS-EP-38](#srs-ep-38-attachment-t) must hold.
+
+| Gesture | Result |
+|---|---|
+| Manual connector between two bindable nodes | `create_connector` with same rest/warp contract as recognition (creator-drawn or straight rest per place UI — Designer; geometry still ADR-0020) |
+| Manual attach an existing node to a connector | `bind_attachment` with `t` from place point on **S** |
+
+---
+
 ## Superseded
 _None in this file._ Dispatch retires clauses in [SRS-EP-10](../ink-box/srs-logic.md).
+REQ-13 Path A chrome was listed out of scope on [SRS-EP-19](./srs-ui.md); new parent is [SRS-EP-36](./srs-ui.md#srs-ep-36-endpoint-toolbar) ([CHL-0022](../../../../../.plan/iter-005/challenges/CHL-0022-shipped-no-device-pan.md)).

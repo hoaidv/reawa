@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PenMapStatus — component preview</title>
+  <style>
+    :root {
+      --color-surface: #f2f4f7;
+      --color-ink: #1c2430;
+      --color-primary: #0f766e;
+      --color-border: #d0d5dd;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --radius-control: 6px;
+      --font-caption: 12px;
+    }
+    body { margin: 0; font-family: "DM Sans", system-ui, sans-serif; background: var(--color-surface); color: var(--color-ink); }
+    .c-preview { padding: 1.5rem; max-width: 36rem; display: flex; flex-direction: column; gap: 1rem; }
+    .c-pen-map-status {
+      display: flex; align-items: flex-start; gap: var(--space-sm);
+      margin: 0; padding: var(--space-sm) var(--space-md);
+      border: 1px solid var(--color-border); border-radius: var(--radius-control);
+      background: var(--color-surface); font-size: var(--font-caption); line-height: 1.45;
+    }
+    .c-pen-map-status img { width: 20px; height: 20px; margin-top: 1px; }
+    .c-pen-map-status.is-published { border-color: var(--color-primary); }
+  </style>
+</head>
+<body>
+  <main class="c-preview">
+    <p class="c-pen-map-status">
+      <img src="../../system/assets/icon-pen-map-stale.svg" alt="" />
+      Map not yet published to the tablet. Unknown ids apply as Off.
+    </p>
+    <p class="c-pen-map-status">
+      <img src="../../system/assets/icon-pen-map-offline.svg" alt="" />
+      Offline. Edit is kept on this computer; publish after reconnect.
+    </p>
+    <p class="c-pen-map-status is-published">
+      <img src="../../system/assets/icon-pen-map-save.svg" alt="" />
+      Published on reconnect. Next tablet gesture uses this map.
+    </p>
+  </main>
+</body>
+</html>

@@ -2,9 +2,9 @@
 id: STORY-IN-034
 title: Design Infini pen-button map settings
 kind: design
-parent_srs: [SRS-IN-05]
+parent_srs: [SRS-IN-24, SRS-IN-23]
 parent_req: [REQ-05]
-status: draft
+status: done
 priority: P0
 iter: iter-005
 estimate: 3
@@ -14,9 +14,16 @@ acceptance_criteria:
   - "Given 0, 1, and 2 button capability, When the package ships, Then each layout has a scene and ui-spec-gate passes."
   - "Given Click vs Hold-move catalogues, When shown, Then click list is discrete-only and hold-move list is temporary-tool-only (D9)."
 design_package: ".plan/iter-005/design/pen-button-map/"
-ui_spec: ""
-scenes: []
-hifi: ""
+ui_spec: ".plan/iter-005/design/pen-button-map/ui-spec.md"
+scenes:
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-0.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-2.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-click.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-hold.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-invalid-stale.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-offline-then-publish.html"
+hifi: ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
 wireframe: ""
 ---
 
@@ -34,4 +41,4 @@ Package `pen-button-map/`. Desktop settings: 0/1/2 button layouts; Click and Hol
 | Owner | `designer` |
 | Depends on | — |
 
-Stories stay **draft** until `/architect` binds dedicated SRS (current parent_srs is the nearest existing section).
+Parents bound 2026-08-19: [SRS-IN-24] pen-button map settings · [SRS-IN-23] persist and settings publish. **Not** [SRS-IN-05] document chrome. Status **ready** for Wave 1 paint.

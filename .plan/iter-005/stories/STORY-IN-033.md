@@ -2,7 +2,7 @@
 id: STORY-IN-033
 title: Infini follows tablet-published viewport
 kind: implement
-parent_srs: [SRS-IN-07, SRS-IN-02]
+parent_srs: [SRS-IN-20, SRS-IN-21, SRS-IN-22]
 parent_req: [REQ-03]
 status: draft
 priority: P0

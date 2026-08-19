@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>hand-touch — scene navigator</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f5; }
+    .nav-shell { display: flex; min-height: 100vh; }
+    .nav-side {
+      width: 16rem; flex-shrink: 0; padding: 1rem;
+      border-right: 1px solid #d4d4d8; background: #fff;
+    }
+    .nav-side strong { display: block; margin-bottom: 0.75rem; font-size: 14px; }
+    .nav-side a {
+      display: block; padding: 0.4rem 0.5rem; margin: 0.1rem 0;
+      border-radius: 0.35rem; color: inherit; text-decoration: none; font-size: 12px;
+    }
+    .nav-side a:hover, .nav-side a:focus-visible { background: #e4e4e7; outline: none; }
+    .nav-side a[aria-current="page"] { background: #e4e4e7; font-weight: 600; }
+    .nav-main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 1rem; min-width: 0; overflow: auto; }
+    .hint { align-self: stretch; margin: 0 0 0.75rem; font-size: 0.875rem; color: #52525b; }
+    .preview-stage { display: flex; justify-content: center; width: 100%; }
+    .preview-scale {
+      position: relative;
+      transform-origin: top center;
+      background: #fff;
+      box-shadow: 0 1px 8px rgb(0 0 0 / 12%);
+    }
+    .preview-scale iframe {
+      position: absolute; inset: 0;
+      display: block; border: 0; width: 100%; height: 100%;
+      background: #52525b;
+    }
+    /* Touch / epaper — 80% of RM2 landscape 1872×1404 (campaign lock) */
+    .preview-stage[data-preview-scale="mobile"] .preview-scale {
+      width: 1872px;
+      height: 1404px;
+      transform: scale(0.8);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      border: 1px solid #a1a1aa;
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-shell" data-platform="epaper">
+    <nav class="nav-side" aria-label="Scenes">
+      <strong>hand-touch</strong>
+      <a href="./hand-touch-finger-hit-box.html" target="scene-preview" aria-current="page">hand.finger_hit_box</a>
+      <a href="./hand-touch-finger-moving.html" target="scene-preview">hand.finger_moving</a>
+      <a href="./hand-touch-finger-anchor-noop.html" target="scene-preview">hand.finger_anchor_noop</a>
+      <a href="./hand-touch-one-finger-empty.html" target="scene-preview">hand.one_finger_empty</a>
+      <a href="./hand-touch-two-finger-pan.html" target="scene-preview">hand.two_finger_pan</a>
+      <a href="./hand-touch-pinch.html" target="scene-preview">hand.pinch</a>
+      <a href="./hand-touch-pan-vs-move.html" target="scene-preview">hand.pan_vs_move</a>
+      <a href="./hand-touch-link-down-local-view.html" target="scene-preview">hand.link_down_local_view</a>
+      <a href="./hand-touch-pen-resize-after-finger-select.html" target="scene-preview">hand.pen_resize_after_finger_select</a>
+      <a href="./hand-touch-states.html" target="scene-preview">States showcase</a>
+    </nav>
+    <main class="nav-main">
+      <p class="hint">
+        RM2 landscape 1872×1404 @ <strong>80%</strong> · UI-EP-06 · 1-bit · REQ-10 grammar (not “finger ignored”).
+        Finger ≥64 du · handles 56 du pen-only.
+      </p>
+      <div class="preview-stage" data-preview-scale="mobile">
+        <div class="preview-scale">
+          <iframe name="scene-preview" title="Scene preview" src="./hand-touch-finger-hit-box.html"></iframe>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    document.querySelectorAll('.nav-side a[target="scene-preview"]').forEach((a) => {
+      a.addEventListener("click", () => {
+        document.querySelectorAll(".nav-side a").forEach((l) => l.removeAttribute("aria-current"));
+        a.setAttribute("aria-current", "page");
+      });
+    });
+  </script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 id: STORY-EP-043
 title: Design copy/cut/paste on selection overlay
 kind: design
-parent_srs: [SRS-EP-12]
+parent_srs: [SRS-EP-32, SRS-EP-31]
 parent_req: [REQ-12]
 status: draft
 priority: P0

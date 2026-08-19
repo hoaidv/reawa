@@ -76,6 +76,21 @@ Prioritised for this slice: **(1)** document/paint isolation **(2)** bounded mem
 
 ---
 
+## [SRS-IN-25] Pen-button map publish quality {#srs-in-25-map-publish-quality}
+
+<!-- lifecycle: active -->
+
+**Parent:** Infini [REQ-05](../../prd.md#pen-button-map). **Constrains:** [SRS-IN-23](./srs-logic.md#srs-in-23-pen-map-publish). Does **not** steal [SRS-IN-08](#srs-in-08) parent (REQ-03).
+
+| Scenario | Target |
+|---|---|
+| Save map → next tablet gesture uses it | p95 ≤**300 ms** after device apply; in-flight unchanged |
+| Publish `pen_button_map` | **0** `doc_load` / `doc_change` / `doc_snapshot` for that publish |
+| 0-button UI | Slots absent or disabled; **0** fake bindings |
+
+---
+
 ## Superseded
 
 _None. SRS-IN-19 is additive._
+SRS-IN-25 is additive.

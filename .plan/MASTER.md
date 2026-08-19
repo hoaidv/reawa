@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-16
+updated: 2026-08-19
 current_iter: iter-005
 owner: sm
 
@@ -39,7 +39,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Stop line | **verified** | design → BDD → implement → human confirm |
 | Autonomy | **bounded** | Run inside lock; sink REQ-15 / REQ-08 |
 | WIP | **2** | W1: EP-037 ∥ IN-034 |
-| Validated | — | Campaign just opened |
+| Validated | — | W0 bind 2026-08-19; W1 paint open |
 
 **Out-of-scope log**
 
@@ -65,30 +65,31 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 ### Goal & capacity
 
 - Goal: **Hand-on-paper** — REQ-10 (finger pick/move + pan/zoom), erase, clipboard, connector ends + attachments, barrel buttons, manual create. **Not** REQ-15.
-- Capacity: ~77 pts committed, all `draft`. W0 is architect.
-- Risks: SRS not bound; BRD-07 still defers on-device pan (EP-039 slice).
+- Capacity: ~77 pts committed. W0 architect **done**. W1 design EP-037 and IN-034 **done**. Next: Quality Assurance Engineer EP-038.
+- Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); BRD-07 still defers on-device pan ship (EP-039); PM experience not thickened.
 
 ### Tracks
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
 | TRACK-001…004 | planned | **done** | — | [tracks](./tracks/) |
-| TRACK-005 | planned | **active** | **W0 `/architect`** then `/designer` EP-037 ∥ IN-034 | [track](./tracks/TRACK-005-hand-on-paper.md) |
+| TRACK-005 | planned | **active** | **W2 `/qa` EP-038** (W1 design done) | [track](./tracks/TRACK-005-hand-on-paper.md) |
 
 ### Open challenges / blocked
 
 - CHL-0011 / CHL-0012 / REQ-08 **not this lock**.
+- [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md) (Shipped “no device pan / no arrowheads” prose vs TRACK-005) — open; implement against new ids until Product Manager adopts.
 - EP-032 parked in iter-004.
 
 ### Design packages in flight
 
-- [hand-touch](./iter-005/design/hand-touch/) — EP-037
-- [pen-button-map](./iter-005/design/pen-button-map/) — IN-034
+- [hand-touch](./iter-005/design/hand-touch/) — EP-037 **done** (UI-EP-06)
+- [pen-button-map](./iter-005/design/pen-button-map/) — IN-034 **done** (UI-IN-03)
 - (queued) erase-chrome, clipboard-chrome, connector-ends, connector-attach, manual-create
 
 ### Execution board(s)
 
-- [iter-005 execution-board](./iter-005/execution-board.md) — **NOW W0** `/architect`
+- [iter-005 execution-board](./iter-005/execution-board.md) — **NOW W2** `/qa` EP-038 (W1 design done)
 
 ### Freeze notes
 
@@ -96,6 +97,6 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ## Forward
 
-- After W0: **`/designer`** EP-037 ∥ IN-034, then `/qa` / `/dev` EP-038.
+- After W2 scenarios: **`/dev`** EP-038. Product Manager: adopt CHL-0022, accept ADR-0023…26, clean PRD campaign comments, optional experience thicken.
 - Parked: REQ-15, REQ-08, CHL-0011, CHL-0012, EP-035 measure.
 - Backlog: [backlog.md](./backlog.md)

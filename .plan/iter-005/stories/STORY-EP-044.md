@@ -2,7 +2,7 @@
 id: STORY-EP-044
 title: In-document copy cut paste ops
 kind: implement
-parent_srs: [SRS-EP-07]
+parent_srs: [SRS-EP-31, SRS-EP-33]
 parent_req: [REQ-12]
 status: draft
 priority: P0

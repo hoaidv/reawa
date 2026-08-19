@@ -35,7 +35,7 @@ stories:
   - STORY-IN-034
   - STORY-EP-052
   - STORY-IN-035
-cursor: "W0 /architect SRS bind — then /designer EP-037 ∥ IN-034"
+cursor: "W2 /qa BDD EP-038 then /dev EP-038 — human visual on W1 packages first"
 paused_reason: ""
 interrupts: []
 ---
@@ -82,11 +82,11 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 | [EP-052](../iter-005/stories/STORY-EP-052.md) | implement | P0 | barrel dispatch · depends IN-034 |
 | [IN-035](../iter-005/stories/STORY-IN-035.md) | implement | P0 | publish map |
 
-All **draft** until architect binds SRS.
+W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). EP-037 and IN-034 are **ready**. Other committed stories stay **draft** until their wave.
 
 ## Cursor
 
-**Next:** `/architect` bind SRS for REQ-10…18 (except 15). Then **W1** `/designer` **EP-037 ∥ IN-034** (wip 2).
+**Next:** Human visual check of W1 packages, then Quality Assurance Engineer behavior-driven scenarios for **EP-038**, then Developer.
 
 ## Execution board
 
@@ -97,3 +97,5 @@ All **draft** until architect binds SRS.
 | Date | Event |
 |---|---|
 | 2026-08-16 | Opened. Human: REQ-10→18 except REQ-15; lock TRACK-005 vertical. |
+| 2026-08-19 | W0 architect bind landed (READY-WITH-CONCERNS). Stories retargeted. Cursor → W1 designer. |
+| 2026-08-19 | W1 designer EP-037 ∥ IN-034 **done**. Cursor → W2 QA EP-038 after human visual. |

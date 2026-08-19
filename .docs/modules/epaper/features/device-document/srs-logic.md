@@ -430,6 +430,67 @@ Example (informative):
 
 ---
 
+## [SRS-EP-28] Selection-erase and undo {#srs-ep-28-selection-erase}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-11](../../prd.md#erase) Path B. **Links:** [SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib) Path A, [SRS-EP-07](#srs-ep-07-device-document) undo ring, [SRS-EP-41](../tool-modes/srs-logic.md#srs-ep-41-barrel-dispatch) if Click bound to erase.
+
+| Rule | Value |
+|---|---|
+| Trigger | **Erase** command: chip CTA, bound barrel Click that resolves to erase, or equivalent — **not** the nib |
+| Non-empty selection | `remove_node` every selected node (and SmartGroup cleanup per existing empty-group rules). **0** leftovers on the next settled frame |
+| Empty selection | **No-op**: 0 nodes change, 0 undo entries |
+| Undo | One undo restores the removed nodes (snapshot exactness ±1 px @ 100% zoom) |
+| No session | Same local result; publish when linked |
+| Does not | Start a new ink stroke; run Path A unless the command was `temp_erase` hold-move (that path is SRS-EP-27 mutation via barrel) |
+
+Additional device ops (extend the SRS-EP-07 table without replacing it): `remove_node` from this command; Path A may emit `remove_node` plus in-place sample edits — v1 **locks sample erase as a snapshot-backed mutation** (one ring entry) so Infini converges via `restore_snapshot` if no `erase_samples` op exists yet. Prefer `restore_snapshot` for Path A until a `erase_samples` wire op is added to [SRS-IN-09](../../../infini/features/vector-document/srs-data.md).
+
+---
+
+## [SRS-EP-31] In-document clipboard ops {#srs-ep-31-clipboard}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-12](../../prd.md#clipboard). **Decision:** [ADR-0024](../../../../adr/ADR-0024-in-document-clipboard.md). Slot shape: [SRS-EP-09](./srs-data.md) (device-local).
+
+| Op | Precondition | Document | Slot | Undo |
+|---|---|---|---|---|
+| Copy | Non-empty selection | Unchanged | Replaced with clone (old ids in slot) | **0** entries |
+| Cut | Non-empty selection | Selection removed (`remove_node` / snapshot) | Replaced with clone | **1** — restores originals |
+| Paste | Slot non-empty | Insert clones with **new ids**, AABB min += **(24 u, 24 u)**; clamp into `drawingRegion` if needed | Unchanged | **1** — removes copies |
+| Paste | Slot empty | **0** nodes change | Unchanged | **0** |
+| Copy/cut | Empty selection | No-op | Unchanged | **0** |
+
+Cut then paste: undo paste removes copies (originals still gone, slot still full); second undo restores originals. Geometry ±1 px @ 100% zoom vs source translated by the offset. No session: same local behaviour; cut/paste still satisfy [REQ-07](../../prd.md#one-way-sync) when linked (`duplicate_subtree` / `remove_node`). OS / cross-app paste **out**.
+
+### UI-driving fields
+
+| Field | Drives |
+|---|---|
+| `selection.empty` | Enable copy/cut |
+| `clipboard.empty` | Enable paste |
+| `clipboard.offset` | **24, 24** world — Designer must not invent a different default |
+
+---
+
+## [SRS-EP-45] Manual insert Frame and Primitive {#srs-ep-45-manual-insert}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-17](../../prd.md#manual-create) (Should). **Routing:** [SRS-EP-44](../tool-modes/srs-logic.md#srs-ep-44-manual-create-routing). Connector/attach: [SRS-EP-46](../connector-ink/srs-logic.md#srs-ep-46-manual-connector).
+
+| Kind | Commit | Geometry | Undo | Latency |
+|---|---|---|---|---|
+| Frame | `create_frame` at drawn/placed bounds | Root-only Frame; ±1 px @ 100% zoom | One undo removes it | p95 ≤300 ms visible |
+| Primitive | `create_primitive` `{ ellipse \| rect \| line }` | **Parameterized geometry**, not a polyline stand-in | One undo removes it | p95 ≤300 ms |
+| Save/mirror | Same ops on the wire | Survives [REQ-07](../../prd.md#one-way-sync) round-trip | — | — |
+
+Ink-box manual/enclose remains REQ-05. No general brush/color/layer palette.
+
+---
+
 ## Superseded
 
 New sections. They inherit, on the device:

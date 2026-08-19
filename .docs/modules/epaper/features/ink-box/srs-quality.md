@@ -97,9 +97,35 @@ its whole premise.
 
 ---
 
+## [SRS-EP-25] One-finger hand-touch quality {#srs-ep-25-one-finger-quality}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-10](../../prd.md#hand-touch). **Constrains:** [SRS-EP-21](./srs-logic.md#srs-ep-21-one-finger), [SRS-EP-23](../tool-modes/srs-logic.md#srs-ep-23-finger-tool-switch). Does **not** steal [SRS-EP-14](#srs-ep-14-ink-box-quality) parent (REQ-05/06).
+
+| Field | Value |
+|---|---|
+| Source | Creator finger |
+| Stimulus | Down on box / drag / down on anchor / empty canvas |
+| Artifact | Exclusive tool, selection, box transform, viewport |
+| Environment | Normal; link up or down |
+| Response | Tool switch, live move, or no-op |
+| Response measure | See table |
+
+| Scenario | Target |
+|---|---|
+| Finger-down on box → `sel_freeform` + chip + selected | p95 ≤**300 ms** |
+| Finger move inside selected box | 0 px jump on lift; ≥**5 Hz** partial refresh; **0** viewport pan |
+| Finger on &lt;64 du anchor | **0** accidental transforms |
+| One-finger empty canvas | Exclusive tool unchanged; **0** nodes selected; **0** lassos; **0** pans |
+| ToolChip 64 du tile tap | REQ-03 still holds (this REQ does not steal) |
+
+---
+
 ## Superseded
 
 New section. Replaces, for the device, the Smart Group budgets of infini
 [srs-quality](../../../infini/features/vector-document/srs-quality.md) that assumed desktop
 execution, and the round-trip enclose budget formerly in
 [SRS-EP-06](../tool-modes/srs-quality.md).
+SRS-EP-25 is additive (REQ-10); it does not supersede SRS-EP-14.

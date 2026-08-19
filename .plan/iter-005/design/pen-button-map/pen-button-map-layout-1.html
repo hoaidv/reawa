@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="desktop">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pen-button map — 1-button</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    .c-pen-map-btn:hover { background: var(--color-primary); color: var(--color-on-primary); }
+    .c-pen-map-select:hover { border-color: var(--color-primary); background: var(--color-surface); }
+    .c-pen-map-option:hover { background: var(--color-surface); }
+    .c-pen-map-btn:focus-visible,
+    .c-pen-map-select:focus-visible,
+    .c-pen-map-option:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .c-pen-map-btn:active,
+    .c-pen-map-select:active,
+    .c-pen-map-option:active { transform: scale(0.985); }
+  </style>
+</head>
+<body>
+  <div data-region="WindowFrame" data-platform="desktop" data-state="map.layout_1">
+    <div class="app-mark">Infini</div>
+    <section class="c-pen-map-editor" data-region="MapEditor">
+      <h1 class="c-pen-map-editor__title">
+        <img class="c-icon" src="../system/assets/icon-pen-map.svg" alt="" />
+        Pen-button map
+      </h1>
+      <p data-region="CapabilityStatus">Tablet reports 1 barrel button.</p>
+      <p class="c-pen-map-editor__note">App settings — not part of the document.</p>
+      <p class="c-pen-map-editor__nib">Eraser nib is hardware, not a barrel slot.</p>
+      <article class="c-pen-map-row" data-region="ButtonRow" data-button-index="1">
+        <h2 class="c-pen-map-row__heading">
+          <img src="../system/assets/icon-pen-map-button-1.svg" alt="" />
+          Button 1
+        </h2>
+        <div class="c-pen-map-slot" data-region="SlotClick">
+          <span class="c-pen-map-slot__label"><img src="../system/assets/icon-pen-map-click.svg" alt="" /> Click</span>
+          <a class="c-pen-map-select" href="pen-button-map-slot-click.html" aria-haspopup="listbox" aria-expanded="false">
+            <img src="../system/assets/icon-pen-map-pen.svg" alt="" />
+            <span class="c-pen-map-select__value">Pen ↔ freeform</span>
+          </a>
+        </div>
+        <div class="c-pen-map-slot" data-region="SlotHoldMove">
+          <span class="c-pen-map-slot__label"><img src="../system/assets/icon-pen-map-hold.svg" alt="" /> Hold-move</span>
+          <a class="c-pen-map-select" href="pen-button-map-slot-hold.html" aria-haspopup="listbox" aria-expanded="false">
+            <img src="../system/assets/icon-pen-map-freeform.svg" alt="" />
+            <span class="c-pen-map-select__value">Temporary freeform</span>
+          </a>
+        </div>
+      </article>
+      <div data-region="Save">
+        <button type="button" class="c-pen-map-btn" data-interactive>
+          <img src="../system/assets/icon-pen-map-save.svg" alt="" />
+          <span class="c-pen-map-btn__label">Save and publish</span>
+        </button>
+        <p class="c-pen-map-save-hint">Publishes <code>pen_button_map</code> — 0 document messages.</p>
+      </div>
+    </section>
+  </div>
+  <script>
+    (() => {
+      for (const el of document.querySelectorAll(".c-pen-map-btn:not([disabled]), .c-pen-map-select, .c-pen-map-option")) {
+        el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+        for (const ev of ["pointerup", "pointerleave", "blur"]) {
+          el.addEventListener(ev, () => el.classList.remove("is-pressed"));
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 id: STORY-EP-050
 title: Design manual create: frame connector primitive
 kind: design
-parent_srs: [SRS-EP-05]
+parent_srs: [SRS-EP-47, SRS-EP-44]
 parent_req: [REQ-17]
 status: draft
 priority: P2

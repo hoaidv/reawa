@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PenMapEditor — component preview</title>
+  <style>
+    :root {
+      --color-surface: #f2f4f7;
+      --color-surface-elevated: #ffffff;
+      --color-ink: #1c2430;
+      --color-ink-muted: #5b6573;
+      --color-border: #d0d5dd;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --radius-control: 6px;
+      --font-display: 22px;
+      --font-caption: 12px;
+      --font-display-face: "Source Serif 4", Georgia, serif;
+    }
+    body { margin: 0; font-family: "DM Sans", system-ui, sans-serif; background: var(--color-surface); color: var(--color-ink); }
+    .c-preview { padding: 1.5rem; }
+    .c-pen-map-editor {
+      display: flex; flex-direction: column; gap: var(--space-md);
+      max-width: 40rem; padding: var(--space-lg);
+      background: var(--color-surface-elevated);
+      border: 1px solid var(--color-border); border-radius: var(--radius-control);
+    }
+    .c-pen-map-editor__title {
+      display: flex; align-items: center; gap: var(--space-sm);
+      margin: 0; font-family: var(--font-display-face); font-size: var(--font-display); font-weight: 600;
+    }
+    .c-pen-map-editor__note { margin: 0; font-size: var(--font-caption); color: var(--color-ink-muted); line-height: 1.45; }
+    .c-pen-map-editor__title img { width: 24px; height: 24px; }
+  </style>
+</head>
+<body>
+  <main class="c-preview">
+    <section class="c-pen-map-editor" data-region="MapEditor">
+      <h1 class="c-pen-map-editor__title">
+        <img src="../../system/assets/icon-pen-map.svg" alt="" />
+        Pen-button map
+      </h1>
+      <p class="c-pen-map-editor__note" data-region="CapabilityStatus">Tablet reports 1 barrel button.</p>
+      <p class="c-pen-map-editor__note">App settings — not part of the document.</p>
+    </section>
+  </main>
+</body>
+</html>

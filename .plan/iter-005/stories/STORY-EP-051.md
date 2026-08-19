@@ -2,7 +2,7 @@
 id: STORY-EP-051
 title: Manual insert frame connector primitive
 kind: implement
-parent_srs: [SRS-EP-07]
+parent_srs: [SRS-EP-45, SRS-EP-46, SRS-EP-48]
 parent_req: [REQ-17]
 status: draft
 priority: P2

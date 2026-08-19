@@ -2,7 +2,7 @@
 id: STORY-EP-046
 title: Apply per-end connector styles from toolbar
 kind: implement
-parent_srs: [SRS-EP-19, SRS-EP-18]
+parent_srs: [SRS-EP-34, SRS-EP-37]
 parent_req: [REQ-13]
 status: draft
 priority: P1

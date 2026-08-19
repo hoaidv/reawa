@@ -1,6 +1,6 @@
 ---
 feature: connector-ink
-parent_req: [REQ-09]
+parent_req: [REQ-09, REQ-13, REQ-14, REQ-17]
 lifecycle: active
 owner: architect
 ---
@@ -10,12 +10,15 @@ owner: architect
 - **Parent Requirement:** [REQ-09 On-device connectors](../../prd.md#device-connectors)
 - **Experience Spec:** [srs-experience.md](./srs-experience.md)
 - **Product Spec:** [srs-product.md](./srs-product.md)
-- **UI Spec:** [srs-ui.md](./srs-ui.md) — [SRS-EP-19]
-- **Logic Spec:** [srs-logic.md](./srs-logic.md) — [SRS-EP-17] recognition · [SRS-EP-18] warp
-- **Quality Spec:** [srs-quality.md](./srs-quality.md) — [SRS-EP-20]
+- **UI Spec:** [srs-ui.md](./srs-ui.md) — [SRS-EP-19] · [SRS-EP-36] endpoint toolbar · [SRS-EP-39] attachments
+- **Logic Spec:** [srs-logic.md](./srs-logic.md) — [SRS-EP-17] recognition · [SRS-EP-18] warp ·
+  [SRS-EP-34] end styles · [SRS-EP-35] endpoint-ink · [SRS-EP-38] attachment `t` · [SRS-EP-46] manual connector
+- **Quality Spec:** [srs-quality.md](./srs-quality.md) — [SRS-EP-20] · [SRS-EP-37] ends · [SRS-EP-40] attachments
 - **Decisions:** [ADR-0020](../../../../adr/ADR-0020-connector-ink-geometry.md) geometry ·
   [ADR-0021](../../../../adr/ADR-0021-connector-toolchip.md) ToolChip ·
-  [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) dispatch
+  [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) dispatch ·
+  [ADR-0026](../../../../adr/ADR-0026-endpoint-ink-membership.md) endpoint-ink ·
+  [ADR-0027](../../../../adr/ADR-0027-attachment-t-rest-spine.md) attachment `t`
 - **Brainstorm / EXP:** [BS-0001](../../../../.plan/iter-004/brainstorms/BS-0001-auto-connector-ink.md) ·
   [EXP-0002](../../../../.plan/iter-004/explorations/EXP-0002-connector-ink-warp.md)
 - **Active iter:** [iter-004](../../../../.plan/iter-004/iter.md)

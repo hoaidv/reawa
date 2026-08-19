@@ -134,6 +134,21 @@ logs cannot fit under those ceilings, the shipper changes — not the ink budget
 
 ---
 
+## [SRS-EP-33] Clipboard fidelity {#srs-ep-33-clipboard-quality}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-12](../../prd.md#clipboard). **Constrains:** [SRS-EP-31](./srs-logic.md#srs-ep-31-clipboard). Does **not** steal [SRS-EP-13](#srs-ep-13-device-document-quality) parents (REQ-04/07).
+
+| Scenario | Target |
+|---|---|
+| Copy then paste | New subtree, new ids; geometry = source + **(24 u, 24 u)** ±1 px @ 100% zoom; source unchanged |
+| Cut then paste | Originals gone after cut; paste matches cut content ±1 px; undo paste removes copies; second undo restores originals |
+| Empty slot paste | **0** nodes change |
+| No session | Same local result; published ops satisfy REQ-07 when linked |
+
+---
+
 ## Superseded
 
 SRS-EP-13: new section. Replaces, for the device, the round-trip-shaped budgets formerly in
@@ -141,3 +156,4 @@ SRS-EP-13: new section. Replaces, for the device, the round-trip-shaped budgets 
 [SRS-EP-03](../region-sync/srs-quality.md).
 
 SRS-EP-16: additive — debug sidecar isolation; does not supersede SRS-EP-13.
+SRS-EP-33: additive — clipboard; does not supersede SRS-EP-13.

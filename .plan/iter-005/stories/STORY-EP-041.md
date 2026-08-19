@@ -2,7 +2,7 @@
 id: STORY-EP-041
 title: Hardware eraser nib stroke-erase
 kind: implement
-parent_srs: [SRS-EP-01, SRS-EP-07]
+parent_srs: [SRS-EP-27, SRS-EP-30]
 parent_req: [REQ-11]
 status: draft
 priority: P0

@@ -29,7 +29,7 @@ Authority: [ADR-0010](../adr/ADR-0010-tree-of-vectors.md) (structure) ·
 | `Primitive` | `line` \| `rect` \| `ellipse` | Parameterized geometry |
 | `Group` | Children, nestable anywhere | World-space children in v0 (no local transform) |
 | `Frame` | Children, **root only** | Artboard / work-area metaphor |
-| `Connector` | References two node ids | Endpoints attach to a node's **boundary** |
+| `Connector` | References two node ids; rest spine; warp style; per-end terminal; optional attachments | Endpoints attach to a node's **boundary**. Terminal + attachments: below |
 | `SmartGroup` | Ink children tagged `role: content \| boundary` | The ink-box — see below |
 
 ### Invariants
@@ -90,9 +90,42 @@ apply is a no-op and an unknown op type must not crash.
 | `reparent` | Move a node between parents (draw-into membership) |
 | `remove` | Delete a node |
 | `restore_snapshot` | Replace the document wholesale — how undo publishes ([ADR-0014](../adr/ADR-0014-document-ownership-inversion.md) §5) |
+| `set_connector_end_style` | Set `terminal[end].style` on one connector end ([ADR-0026](../adr/ADR-0026-endpoint-ink-membership.md) Path A) |
+| `bind_endpoint_ink` | Bind a stroke as `terminal[end].ink` (Path B); does not rebake rest spine |
+| `bind_attachment` | Bind `nodeId` to connector rest-spine `t` ([ADR-0027](../adr/ADR-0027-attachment-t-rest-spine.md)) |
+| `duplicate_subtree` | Paste: insert already-minted node bodies ([ADR-0024](../adr/ADR-0024-in-document-clipboard.md)) |
+| `create_frame` | Insert a root `Frame` at placed bounds ([REQ-17](../modules/epaper/prd.md#manual-create) — epaper) |
+| `create_primitive` | Insert `line` \| `rect` \| `ellipse` geometry (not a polyline stand-in) |
 
 Wire framing for ops is **not** here — see [ADR-0015](../adr/ADR-0015-one-way-sync-contract.md) §2
 and the module SRS.
+
+## Connector terminals and attachments
+
+Shared anatomy consumed by epaper (author) and infini (mirror + SVG). Behaviour IDs stay in module SRS.
+
+### Terminal (per end)
+
+| Field | Shape | Notes |
+|---|---|---|
+| `style` | closed id | v1: `none` \| `arrow` \| `arrow_empty` \| `star` \| `one` \| `many` ([REQ-13](../modules/epaper/prd.md#connector-ends)) |
+| `ink` | optional polyline in end frame | Endpoint decoration; `(s, d)` against **rest** spine at bind ([ADR-0026](../adr/ADR-0026-endpoint-ink-membership.md)) |
+
+Styles ride warp with the end. They are not a second connector and not free Ink.
+
+### Attachments
+
+| Field | Shape | Notes |
+|---|---|---|
+| `nodeId` | existing node | Text, Primitive, Ink, or SmartGroup in v1 — not Frame |
+| `t` | `[0, 1]` | Normalized arc-length on **rest spine S**, never on warped `V` ([ADR-0027](../adr/ADR-0027-attachment-t-rest-spine.md)) |
+| `offset.d` | world units | Signed perpendicular offset at bind; may be 0 |
+
+The connector remains **not** a spatial parent. Attachment world pose is derived: point on warped `V` at `t`, plus `d` along the local normal. Moving a bound box does not emit attachment ops.
+
+## Device clipboard (not a document node)
+
+The in-document clipboard slot is **session state on Epaper**, not a tree kind and not SVG ([ADR-0024](../adr/ADR-0024-in-document-clipboard.md)). Infini never authors it; it only applies the `duplicate_subtree` / `remove` ops that paste and cut publish.
 
 ## Ownership and authority
 

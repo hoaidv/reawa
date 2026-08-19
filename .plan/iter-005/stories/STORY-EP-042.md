@@ -2,7 +2,7 @@
 id: STORY-EP-042
 title: Selection-erase deletes selected nodes
 kind: implement
-parent_srs: [SRS-EP-11, SRS-EP-07]
+parent_srs: [SRS-EP-28, SRS-EP-30]
 parent_req: [REQ-11]
 status: draft
 priority: P0

@@ -2,7 +2,7 @@
 id: STORY-EP-048
 title: Design connector mid-attachments
 kind: design
-parent_srs: [SRS-EP-19]
+parent_srs: [SRS-EP-39, SRS-EP-38]
 parent_req: [REQ-14]
 status: draft
 priority: P1
