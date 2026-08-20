@@ -56,7 +56,7 @@ Iter-local UI design for [SRS-EP-50](../../../../.docs/modules/epaper/features/r
 | Target frames | Landscape **246 mm × 187 mm** (1872×1404). Body 187×246 mm. Not phone chrome |
 | Responsive strategy | per-target — one panel size; no reflow |
 | Breakpoints / resize | N/A — fixed panel |
-| Safe areas / fixed regions | ToolChip floats orientation-top **center** (UI-EP-04). FollowToggle floats orientation-top **trailing** (panel inset), not inside the chip |
+| Safe areas / fixed regions | ToolChip floats orientation-top **center** (UI-EP-04). FollowToggle floats orientation-top **trailing row**, one 10 mm tile **left of** the USB link tile (same baseline — not stacked). Debug tile is left of Follow. Not inside the chip |
 | Input model | **Pen** for content; **finger** for chip + follow tile (≥10 mm). No keyboard |
 | Nav paradigm | In-scene states on one surface — no push / sheet / modal |
 | Target minimum | Finger-eligible **10 mm × 10 mm (1 cm)** — same as primary ToolChip tile |
@@ -91,7 +91,7 @@ Environmental hops (drop / reconnect) have no presenting control — listed in t
 | ToolChip | DeviceScreen | Unchanged UI-EP-04 three clusters | `ToolChip` |
 | FollowToggle | DeviceScreen | Lone 10 mm icon toggle — **not** inside ToolChip | `FollowToggle` |
 
-**Placement (this design story):** FollowToggle is a squared 1-bit cluster at orientation-top **trailing** (`right` + `chip-inset` when gut is not on top). Same 10 mm tile and 1 px outline language as a chip cluster, separated by paper from the history cluster so it cannot be read as a fourth exclusive tool. ToolChip stays the UI-EP-04 centered 3-cluster row. Regions do not overlap; chip hits still win when the finger is on the chip.
+**Placement (this design story):** FollowToggle is a squared 1-bit cluster at orientation-top in the **trailing row** with the USB link tile: reading left-to-right **Debug | Follow Infini | USB link**. Follow sits **one tile + inset left of** USB (USB owns `right` + `chip-inset`). Same 10 mm tile and 1 px outline language as a chip cluster, separated by paper from the history cluster so it cannot be read as a fourth exclusive tool. **Do not stack Follow under USB.** ToolChip stays the UI-EP-04 centered 3-cluster row. Regions do not overlap; chip hits still win when the finger is on the chip.
 
 ## Composition / containment
 

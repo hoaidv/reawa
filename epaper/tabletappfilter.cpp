@@ -1,5 +1,6 @@
 #include "tabletappfilter.h"
 #include "tabletcanvasitem.h"
+#include "document/hand_touch.hpp"
 
 #include <QTabletEvent>
 #include <QTouchEvent>
@@ -8,10 +9,51 @@
 #include <QDebug>
 #include <QList>
 #include <QVector>
+#include <QTimer>
 
 TabletAppFilter::TabletAppFilter(QObject *parent)
     : QObject(parent)
 {
+    m_penIdle = new QTimer(this);
+    m_penIdle->setSingleShot(true);
+    m_penIdle->setInterval(600);
+    connect(m_penIdle, &QTimer::timeout, this, [this]() {
+        if (!m_penDown)
+            m_penNear = false;
+    });
+}
+
+void TabletAppFilter::notePenNear(bool contact)
+{
+    m_penNear = true;
+    if (contact)
+        m_penDown = true;
+    suppressCanvasTouch();
+    m_penIdle->start();
+}
+
+void TabletAppFilter::notePenLeave()
+{
+    m_penNear = false;
+    m_penDown = false;
+    m_penIdle->stop();
+}
+
+void TabletAppFilter::suppressCanvasTouch()
+{
+    if (m_canvas)
+        m_canvas->cancelHandTouch();
+    if (m_fingerId >= 0 || m_twoFinger) {
+        m_ignoreUntilUp = true;
+        m_fingerId = -1;
+        m_fingerId2 = -1;
+        m_twoFinger = false;
+    }
+}
+
+bool TabletAppFilter::canvasHandTouchOn() const
+{
+    return epaper::handtouch::handTouchEnabled(m_penNear, m_penDown);
 }
 
 static const QEventPoint *findPointId(const QList<QEventPoint> &pts, int id)
@@ -66,11 +108,22 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                 m_fingerId2 = -1;
                 m_twoFinger = false;
                 m_ignoreUntilUp = false;
+                m_qmlOwnsTouch = false;
             };
 
             if (event->type() == QEvent::TouchBegin) {
                 if (m_ignoreUntilUp)
                     return true;
+                if (!pressed.isEmpty()) {
+                    const QPointF pos0 = canvasOf(*pressed[0]);
+                    if (m_canvas->debugLogVisible() && m_canvas->debugLogRect().contains(pos0)
+                        && !m_canvas->isChromeHit(pos0)) {
+                        m_qmlOwnsTouch = true;
+                        return false;
+                    }
+                    if (!canvasHandTouchOn() && !m_canvas->isChromeHit(pos0))
+                        return true;
+                }
                 if (pressed.size() >= 2) {
                     m_fingerId = pressed[0]->id();
                     m_fingerId2 = pressed[1]->id();
@@ -91,6 +144,8 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                 return true;
             }
             if (event->type() == QEvent::TouchUpdate) {
+                if (m_qmlOwnsTouch)
+                    return false;
                 if (m_ignoreUntilUp)
                     return true;
                 if (m_twoFinger) {
@@ -111,7 +166,8 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                         m_canvas->updateTwoFingerTouch(canvasOf(*a), canvasOf(*b));
                     return true;
                 }
-                if (pressed.size() >= 2 && m_canvas->canPromoteToTwoFinger()) {
+                if (pressed.size() >= 2 && canvasHandTouchOn()
+                    && m_canvas->canPromoteToTwoFinger()) {
                     m_fingerId = pressed[0]->id();
                     m_fingerId2 = pressed[1]->id();
                     m_twoFinger = m_canvas->beginTwoFingerTouch(canvasOf(*pressed[0]),
@@ -127,6 +183,10 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                 return true;
             }
             if (event->type() == QEvent::TouchEnd || event->type() == QEvent::TouchCancel) {
+                if (m_qmlOwnsTouch) {
+                    resetFingers();
+                    return false;
+                }
                 if (m_twoFinger) {
                     m_canvas->endTwoFingerTouch();
                 } else if (!m_ignoreUntilUp && m_fingerId >= 0) {
@@ -156,10 +216,25 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
         return false;
 
     switch (event->type()) {
+    case QEvent::TabletEnterProximity:
+        m_penNear = true;
+        suppressCanvasTouch();
+        return false;
+    case QEvent::TabletLeaveProximity:
+        notePenLeave();
+        return false;
     case QEvent::TabletPress:
     case QEvent::TabletMove:
     case QEvent::TabletRelease: {
         auto *tablet = static_cast<QTabletEvent *>(event);
+        if (event->type() == QEvent::TabletPress)
+            notePenNear(true);
+        else if (event->type() == QEvent::TabletRelease) {
+            m_penDown = false;
+            m_penNear = true;
+            m_penIdle->start();
+        } else
+            notePenNear(tablet->pressure() > 0.01);
         TabletCanvasItem::IngestChannels ch;
         // @implements [SRS-EP-09] retain digitizer-reported channels on the node
         ch.pressure = tablet->pressure();

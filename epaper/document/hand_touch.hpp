@@ -48,6 +48,18 @@ inline bool travelPastPalm(double panelDx, double panelDy)
     return travelDu(panelDx, panelDy) > kPalmTravelDu;
 }
 
+/** Canvas hand-touch runs only when the pen is neither near nor in contact. */
+inline bool handTouchEnabled(bool penNear, bool penContact)
+{
+    return !penNear && !penContact;
+}
+
+/** Empty-canvas lift with travel at/below palm threshold: deselect, 0 pan, 0 tool switch. */
+inline bool emptyTapClearsSelection(double travelDuValue)
+{
+    return travelDuValue <= kPalmTravelDu;
+}
+
 /** Chip > knob > box > empty. Box/knob/chip win over empty pan. */
 inline HitKind classifyHit(bool chip, bool knob, bool box)
 {

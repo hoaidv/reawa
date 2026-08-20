@@ -174,12 +174,12 @@ html[data-platform="epaper"] body {
 }
 a.c-tool-btn { text-decoration: none; color: inherit; }
 
-/* FollowToggle — sibling of ToolChip, trailing, not a fourth exclusive */
+/* FollowToggle — sibling of ToolChip, trailing row left of USB (not stacked). */
 [data-region="FollowToggle"] {
   position: absolute;
   z-index: var(--z-follow);
   top: var(--chip-inset);
-  right: var(--chip-inset);
+  right: calc(var(--chip-inset) + var(--follow-btn) + var(--chip-inset));
 }
 [data-orientation="gutOnTop"] [data-region="FollowToggle"] {
   bottom: var(--chip-inset);

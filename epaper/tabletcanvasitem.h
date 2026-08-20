@@ -57,7 +57,11 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(bool recogTogglesDimmed READ recogTogglesDimmed NOTIFY toolModeChanged)
     Q_PROPERTY(QString lastStrokeLatch READ lastStrokeLatch NOTIFY lastStrokeLatchChanged)
     Q_PROPERTY(QRectF toolChipRect READ toolChipRect NOTIFY toolChipRectChanged)
-    Q_PROPERTY(QRectF followToggleRect READ followToggleRect NOTIFY followToggleRectChanged)
+    Q_PROPERTY(QRectF followToggleRect READ followToggleRect NOTIFY trailingChromeChanged)
+    Q_PROPERTY(QRectF usbLinkRect READ usbLinkRect NOTIFY trailingChromeChanged)
+    Q_PROPERTY(QRectF debugToggleRect READ debugToggleRect NOTIFY trailingChromeChanged)
+    Q_PROPERTY(QRectF debugLogRect READ debugLogRect NOTIFY trailingChromeChanged)
+    Q_PROPERTY(bool debugLogVisible READ debugLogVisible NOTIFY debugLogVisibleChanged)
     Q_PROPERTY(QString followDirection READ followDirection NOTIFY followChanged)
     Q_PROPERTY(bool followPressed READ followPressed NOTIFY followChanged)
     Q_PROPERTY(bool followUnavailable READ followUnavailable NOTIFY followChanged)
@@ -92,6 +96,11 @@ public:
     Q_INVOKABLE void toggleRecogConnector();
     QRectF toolChipRect() const { return m_toolChipRect; }
     QRectF followToggleRect() const { return m_followToggleRect; }
+    QRectF usbLinkRect() const { return m_usbLinkRect; }
+    QRectF debugToggleRect() const { return m_debugToggleRect; }
+    QRectF debugLogRect() const { return m_debugLogRect; }
+    bool debugLogVisible() const { return m_debugLogVisible; }
+    Q_INVOKABLE void toggleDebugLog();
     bool followPressed() const { return m_follow.ariaPressed(); }
     bool followUnavailable() const { return m_follow.ariaDisabled(); }
     bool canUndo() const { return m_document.undoDepth() > 0; }
@@ -154,6 +163,8 @@ public:
     bool beginTwoFingerTouch(const QPointF &a, const QPointF &b);
     void updateTwoFingerTouch(const QPointF &a, const QPointF &b);
     void endTwoFingerTouch();
+    void cancelHandTouch();
+    bool isChromeHit(const QPointF &canvasPos) const;
     QString followDirection() const { return m_followDirection; }
     void setFollowDirection(const QString &dir);
     Q_INVOKABLE void tapFollowToggle();
@@ -168,7 +179,8 @@ signals:
     void recogChanged();
     void lastStrokeLatchChanged();
     void toolChipRectChanged();
-    void followToggleRectChanged();
+    void trailingChromeChanged();
+    void debugLogVisibleChanged();
     void followChanged();
     void historyChanged();
     void pickablesChanged();
@@ -327,6 +339,10 @@ private:
     QString m_followDirection = QStringLiteral("none");
     epaper::follow::FollowSession m_follow;
     QRectF m_followToggleRect;
+    QRectF m_usbLinkRect;
+    QRectF m_debugToggleRect;
+    QRectF m_debugLogRect;
+    bool m_debugLogVisible = false;
     int m_viewportUpCount = 0;
     enum class FingerGesture { None, Chip, Move, Resize, EmptyPending, EmptyPan, TwoFinger } m_fingerGesture =
         FingerGesture::None;

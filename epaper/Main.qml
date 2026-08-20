@@ -56,7 +56,7 @@ TabletWindow {
         visible: false
     }
 
-    // FollowToggle — sibling of ToolChip, trailing 10 mm icon toggle (UI-EP-07 / SRS-EP-50).
+    // Trailing orientation-top row: Debug | Follow Infini | USB link (UI-EP-07).
     // @implements [SRS-EP-50] FollowToggle sibling of ToolChip
     Rectangle {
         id: followToggle
@@ -465,10 +465,10 @@ TabletWindow {
     Rectangle {
         id: infiniReconnect
         z: 30
-        x: root.width - width - 8
-        y: 80
-        width: 64
-        height: 64
+        x: drawCanvas.usbLinkRect.x
+        y: drawCanvas.usbLinkRect.y
+        width: drawCanvas.usbLinkRect.width
+        height: drawCanvas.usbLinkRect.height
         color: "white"
         border.color: "black"
         border.width: 1
@@ -484,55 +484,79 @@ TabletWindow {
                       ? "qrc:/icons/icons/icon-epaper-usb-unplugged.png"
                       : "qrc:/icons/icons/icon-epaper-usb-plugged.png"
         }
-    }
-    // @implements [STORY-EP-036]
-    Rectangle {
-        id: usbHud
-        z: 30
-        x: 8
-        y: root.height - height - 8
-        width: root.width - 16
-        height: 36
-        color: "white"
-        border.color: "black"
-        border.width: 2
-        Text {
-            x: 8
-            y: 0
-            width: parent.width - 16
-            height: parent.height
-            font.pixelSize: 14
-            color: "black"
-            verticalAlignment: Text.AlignVCenter
-            wrapMode: Text.NoWrap
-            elide: Text.ElideRight
-            text: "USB  " + UsbHud.status + "  " + UsbHud.debugLine
+        MouseArea {
+            anchors.fill: parent
+            onClicked: UsbHud.recoverInfini()
         }
     }
 
-    Text {
-        z: 10
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.margins: 8
-        anchors.topMargin: {
-            var chip = drawCanvas.toolChipRect.y < height / 2
-                       ? drawCanvas.toolChipRect.y + drawCanvas.toolChipRect.height + 6
-                       : 8
-            return Math.max(chip, xochitlSwitch.y + xochitlSwitch.height + 6)
+    Rectangle {
+        id: debugToggle
+        z: 30
+        x: drawCanvas.debugToggleRect.x
+        y: drawCanvas.debugToggleRect.y
+        width: drawCanvas.debugToggleRect.width
+        height: drawCanvas.debugToggleRect.height
+        color: drawCanvas.debugLogVisible ? "black" : "white"
+        border.color: "black"
+        border.width: 1
+        Text {
+            anchors.fill: parent
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.pixelSize: 14
+            color: drawCanvas.debugLogVisible ? "white" : "black"
+            text: "DBG"
         }
-        font.pixelSize: 14
-        color: "black"
-        text: EpaperBridge.status
-              + (EpaperBridge.penModeAttached ? " | pen" : "")
-              + (EpaperBridge.monoModeAttached ? " | mono" : "")
-              + (EpaperBridge.overlayStrokePen ? " | ovlPen" : "")
-              + (drawCanvas.paintsInk ? " | painted" : " | pool " + root.inkNext)
-              + " | " + drawCanvas.toolMode
-              + (drawCanvas.recogInkBoxArmed ? " ib" : "")
-              + (drawCanvas.recogConnectorArmed ? " cn" : "")
-              + " | strokes " + drawCanvas.strokeCount
-              + "  " + drawCanvas.debugInfo
+        MouseArea {
+            anchors.fill: parent
+            onClicked: drawCanvas.toggleDebugLog()
+        }
+    }
+
+    Rectangle {
+        id: debugLogBackdrop
+        z: 24
+        visible: drawCanvas.debugLogVisible
+        x: drawCanvas.debugLogRect.x
+        y: drawCanvas.debugLogRect.y
+        width: drawCanvas.debugLogRect.width
+        height: drawCanvas.debugLogRect.height
+        color: "white"
+        border.color: "black"
+        border.width: 1
+    }
+
+    Flickable {
+        id: debugLogPanel
+        z: 25
+        visible: drawCanvas.debugLogVisible
+        x: drawCanvas.debugLogRect.x
+        y: drawCanvas.debugLogRect.y
+        width: drawCanvas.debugLogRect.width
+        height: drawCanvas.debugLogRect.height
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        contentWidth: width
+        contentHeight: Math.max(height, debugLogText.implicitHeight + 16)
+        Text {
+            id: debugLogText
+            width: debugLogPanel.width - 16
+            x: 8
+            y: 8
+            wrapMode: Text.Wrap
+            font.pixelSize: 12
+            color: "black"
+            text: DebugLog.text
+        }
+        Connections {
+            target: DebugLog
+            function onLinesChanged() {
+                Qt.callLater(function() {
+                    debugLogPanel.contentY = Math.max(0, debugLogPanel.contentHeight - debugLogPanel.height)
+                })
+            }
+        }
     }
 
     Component.onCompleted: {

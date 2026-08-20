@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QEvent>
+#include <QTimer>
 
 class TabletCanvasItem;
 
@@ -28,6 +29,11 @@ protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    void notePenNear(bool contact);
+    void notePenLeave();
+    void suppressCanvasTouch();
+    bool canvasHandTouchOn() const;
+
     TabletCanvasItem *m_canvas = nullptr;
     int m_touchEventCount = 0;
     bool m_touchReachableLogged = false;
@@ -35,4 +41,8 @@ private:
     int m_fingerId2 = -1;
     bool m_twoFinger = false;
     bool m_ignoreUntilUp = false;
+    bool m_qmlOwnsTouch = false;
+    bool m_penNear = false;
+    bool m_penDown = false;
+    QTimer *m_penIdle = nullptr;
 };

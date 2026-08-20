@@ -2,7 +2,7 @@
 
 namespace epaper {
 
-/** App TCP retry interval. At most kTcpRetryLimit attempts per outage, then wait for the Infini button. */
+/** App TCP retry interval. While USB path is live, keep retrying until Infini accepts. */
 inline constexpr int kAppTcpRetryMs = 5000;
 inline constexpr int kTcpRetryLimit = 3;
 

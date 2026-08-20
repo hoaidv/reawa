@@ -76,11 +76,21 @@ static void test_enable_from_both_off_applies_infini_viewport()
     const double panelW = 1872;
     const double panelH = 1404;
     const PanelRect chip{(panelW - chipWidth()) * 0.5, kFollowInsetDu, chipWidth(), kHeight};
+    const PanelRect usb = usbLinkRect(panelW, panelH, false);
     const PanelRect follow = followToggleRect(panelW, panelH, false);
+    const PanelRect debug = debugToggleRect(panelW, panelH, false);
     CHECK(!followIsInsideToolChip(follow, chip));
     CHECK(!follow.intersects(chip));
-    CHECK(follow.contains(panelW - kFollowInsetDu - 1, kFollowInsetDu + 1));
+    CHECK(!follow.intersects(usb));
+    CHECK(usb.contains(panelW - kFollowInsetDu - 1, kFollowInsetDu + 1));
+    CHECK(follow.x + follow.w <= usb.x + 1e-6);
+    CHECK(debug.x + debug.w <= follow.x + 1e-6);
+    CHECK(near(follow.y, usb.y));
+    CHECK(near(debug.y, usb.y));
     CHECK(!chip.contains(follow.x + 1, follow.y + 1));
+    const PanelRect log = debugLogRect(panelW, panelH, false);
+    CHECK(near(log.h, panelH * 0.25));
+    CHECK(near(log.y, panelH - log.h));
 
     const auto t0 = std::chrono::steady_clock::now();
     const FollowTapResult r = s.tapToggle();

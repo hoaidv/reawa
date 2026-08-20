@@ -114,9 +114,26 @@ public slots:
 
     void refresh()
     {
+        using usbgadget::assignUsb0Address;
+        using usbgadget::classify;
         using usbgadget::probe;
 
-        const auto snap = probe();
+        auto snap = probe();
+        const std::string udc = firstUdcState();
+        const bool udcConfigured = (udc == "configured");
+        const bool udcSuspended = (udc == "suspended");
+        bool unplugged = udc.empty()
+            ? !(snap.ifacePresent && snap.hasTabletAddr)
+            : (udc == "not attached");
+        bool pluggedNow = !unplugged && !udcSuspended;
+        if (pluggedNow && classify(snap) == usbgadget::LinkClass::GadgetDown) {
+            assignUsb0Address();
+            snap = probe();
+            unplugged = udc.empty()
+                ? !(snap.ifacePresent && snap.hasTabletAddr)
+                : (udc == "not attached");
+            pluggedNow = !unplugged && !udcSuspended;
+        }
 
         bool ssh = false;
         bool stroke = false;
@@ -124,9 +141,6 @@ public slots:
         parseEstablishedPorts("/proc/net/tcp", &ssh, &stroke, &log);
         parseEstablishedPorts("/proc/net/tcp6", &ssh, &stroke, &log);
 
-        const std::string udc = firstUdcState();
-        const bool udcConfigured = (udc == "configured");
-        const bool udcSuspended = (udc == "suspended");
         const bool pathLive = udcConfigured && snap.hasTabletAddr && snap.flagsUp;
         epaper::setUsbEthernetLive(pathLive);
 
@@ -137,10 +151,6 @@ public slots:
         stroke = allowTcpHud && tcpStroke;
         log = allowTcpHud && tcpLog;
         ssh = allowTcpHud && tcpSsh;
-
-        const bool unplugged = udc.empty()
-            ? !(snap.ifacePresent && snap.hasTabletAddr)
-            : (udc == "not attached");
 
         QString status;
         if (udcSuspended) {
@@ -175,9 +185,12 @@ public slots:
             debug += m_recoverNote;
         }
 
-        const bool pluggedNow = !unplugged && !udcSuspended;
-        if (pluggedNow && !m_wasPlugged && !stroke) {
-            m_recoverNote = QStringLiteral("plugged: Infini 3 tries");
+        if (!pluggedNow && m_wasPlugged)
+            emit recoverApps();
+        if (pluggedNow && !m_wasPlugged) {
+            m_recoverNote = QStringLiteral("plugged: usb0 addr + Infini retry");
+            emit recoverApps();
+        } else if (pathLive && !stroke && pluggedNow) {
             emit recoverApps();
         }
         m_wasPlugged = pluggedNow;

@@ -55,6 +55,13 @@ QByteArray recordJson(const epaper::debuglog::DebugLogRecord &rec, int dropped)
 
 } // namespace
 
+DebugLogShip *DebugLogShip::s_instance = nullptr;
+
+DebugLogShip *DebugLogShip::instance()
+{
+    return s_instance;
+}
+
 class DebugLogWorker : public QObject
 {
     Q_OBJECT
@@ -140,7 +147,7 @@ private slots:
         if (m_socket->state() == QAbstractSocket::ConnectedState)
             return;
         if (m_retriesLeft <= 0)
-            return;
+            m_retriesLeft = epaper::kTcpRetryLimit;
         --m_retriesLeft;
         // Abort stuck Connecting so the retry timer always gets a fresh attempt.
         if (m_socket->state() != QAbstractSocket::UnconnectedState)
@@ -300,6 +307,7 @@ private:
 DebugLogShip::DebugLogShip(QObject *parent)
     : QObject(parent)
 {
+    s_instance = this;
 }
 
 DebugLogShip::~DebugLogShip()
@@ -308,6 +316,8 @@ DebugLogShip::~DebugLogShip()
         qInstallMessageHandler(nullptr);
         g_ship = nullptr;
     }
+    if (s_instance == this)
+        s_instance = nullptr;
     m_thread.quit();
     m_thread.wait(2000);
 #ifdef Q_OS_UNIX
@@ -326,7 +336,16 @@ DebugLogShip::~DebugLogShip()
 
 void DebugLogShip::startIfEnabled()
 {
-    m_enabled = epaper::debuglog::debugLogEnvOn(qgetenv("EPAPER_DEBUG_LOG").constData());
+    m_enabled = epaper::debuglog::debugLogEnvOn(qgetenv("EPAPER_DEBUG_LOG").constData())
+        || qEnvironmentVariableIsSet("RM_SYNC_HOST");
+
+    g_ship = this;
+    qInstallMessageHandler(&DebugLogShip::messageHandler);
+    m_queue.setTap([this](const epaper::debuglog::DebugLogRecord &rec) {
+        const QString line = QString::fromStdString(rec.msg);
+        QMetaObject::invokeMethod(this, "appendUiLine", Qt::QueuedConnection, Q_ARG(QString, line));
+    });
+
     if (!m_enabled)
         return;
 
@@ -406,6 +425,16 @@ void DebugLogShip::messageHandler(QtMsgType type, const QMessageLogContext &, co
 
     if (type == QtFatalMsg)
         abort();
+}
+
+void DebugLogShip::appendUiLine(const QString &line)
+{
+    if (line.isEmpty())
+        return;
+    m_lines.append(line);
+    while (m_lines.size() > kUiCap)
+        m_lines.removeFirst();
+    emit linesChanged();
 }
 
 #include "debug_log_ship.moc"

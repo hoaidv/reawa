@@ -33,6 +33,10 @@ constexpr const char *kDeviceScreenRegion = "DeviceScreen";
 constexpr int kToolChipExclusiveCount = 3;
 constexpr double kFollowTileDu = 64.0;
 constexpr double kFollowInsetDu = 8.0;
+/** Trailing row, index 0 = USB (rightmost), 1 = Follow, 2 = Debug. */
+constexpr int kTrailingUsb = 0;
+constexpr int kTrailingFollow = 1;
+constexpr int kTrailingDebug = 2;
 constexpr double kMapApplyBudgetMs = 100.0;
 constexpr double kExclusivityBudgetMs = 300.0;
 
@@ -79,16 +83,43 @@ struct PanelRect {
 };
 
 /**
- * FollowToggle: orientation-top trailing, 10 mm / 64 du tile, sibling of ToolChip.
+ * Trailing orientation-top row: Debug | FollowToggle | UsbLink (index 0 = rightmost USB).
  * @implements [SRS-EP-50] FollowToggle placement
  */
-inline PanelRect followToggleRect(double panelW, double panelH, bool gutOnTop)
+inline PanelRect trailingChromeTile(double panelW, double panelH, bool gutOnTop, int fromTrailing)
 {
     PanelRect r;
     r.w = kFollowTileDu;
     r.h = kFollowTileDu;
-    r.x = panelW - kFollowInsetDu - kFollowTileDu;
     r.y = gutOnTop ? (panelH - kFollowInsetDu - kFollowTileDu) : kFollowInsetDu;
+    r.x = panelW - kFollowInsetDu - kFollowTileDu
+        - double(fromTrailing) * (kFollowTileDu + kFollowInsetDu);
+    return r;
+}
+
+inline PanelRect usbLinkRect(double panelW, double panelH, bool gutOnTop)
+{
+    return trailingChromeTile(panelW, panelH, gutOnTop, kTrailingUsb);
+}
+
+inline PanelRect followToggleRect(double panelW, double panelH, bool gutOnTop)
+{
+    return trailingChromeTile(panelW, panelH, gutOnTop, kTrailingFollow);
+}
+
+inline PanelRect debugToggleRect(double panelW, double panelH, bool gutOnTop)
+{
+    return trailingChromeTile(panelW, panelH, gutOnTop, kTrailingDebug);
+}
+
+/** Orientation-bottom log panel — 1/4 of panel height. */
+inline PanelRect debugLogRect(double panelW, double panelH, bool gutOnTop)
+{
+    PanelRect r;
+    r.x = 0;
+    r.w = panelW;
+    r.h = panelH * 0.25;
+    r.y = gutOnTop ? 0.0 : (panelH - r.h);
     return r;
 }
 

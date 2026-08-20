@@ -94,6 +94,23 @@ static void test_empty_palm_rest()
     CHECK(!s.panApplied);
 }
 
+/** Scenario: One-finger empty tap deselects */
+static void test_empty_tap_clears_selection()
+{
+    CHECK(emptyTapClearsSelection(0));
+    CHECK(emptyTapClearsSelection(kPalmTravelDu));
+    CHECK(!emptyTapClearsSelection(kPalmTravelDu + 1));
+}
+
+/** Scenario: Pen proximity or contact disables canvas hand-touch */
+static void test_pen_proximity_disables_hand_touch()
+{
+    CHECK(handTouchEnabled(false, false));
+    CHECK(!handTouchEnabled(true, false));
+    CHECK(!handTouchEnabled(false, true));
+    CHECK(!handTouchEnabled(true, true));
+}
+
 /** Scenario: One-finger empty travel past 10 mm pans locally with Infini unchanged */
 static void test_empty_pan_local_infini_unchanged()
 {
@@ -344,6 +361,8 @@ int main()
     test_finger_drag_box_zero_pan();
     test_finger_knob_resize_zero_pan();
     test_empty_palm_rest();
+    test_empty_tap_clears_selection();
+    test_pen_proximity_disables_hand_touch();
     test_empty_pan_local_infini_unchanged();
     test_chip_wins_over_empty_pan();
     test_follower_local_nav_turns_follow_off_then_pans();

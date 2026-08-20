@@ -33,7 +33,7 @@ One job: let the creator **opt in** to matching Infini’s drawing region, or se
 | FollowToggle | DeviceScreen | Icon toggle — **not** inside ToolChip exclusive-tool cluster |
 | ToolChip | DeviceScreen | Unchanged three exclusive tools ([SRS-EP-05](../tool-modes/srs-ui.md)) |
 
-**Placement vs ToolChip is a design story.** Binding: finger-eligible hit ≥ primary ToolChip tile (**64×64 du**). Chip hits still win when the finger is on the chip ([REQ-10](../../prd.md#hand-touch)). Follow is **not** a fourth exclusive `toolMode`.
+**Placement vs ToolChip is a design story.** Binding: finger-eligible hit ≥ primary ToolChip tile (**64×64 du**). Chip hits still win when the finger is on the chip ([REQ-10](../../prd.md#hand-touch)). Follow is **not** a fourth exclusive `toolMode`. Orientation-top **trailing row** with USB link (Follow is left of USB, same baseline — not stacked).
 
 ### Closed control inventory
 

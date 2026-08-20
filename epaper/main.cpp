@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
     qmlRegisterType<TabletWindow>("epaper", 1, 0, "TabletWindow");
     qmlRegisterSingletonInstance("epaper", 1, 0, "EpaperBridge", bridge);
     qmlRegisterSingletonInstance("epaper", 1, 0, "UsbHud", usbLink);
+    qmlRegisterSingletonInstance("epaper", 1, 0, "DebugLog", debugShip);
 
     QQmlApplicationEngine engine;
     QObject::connect(

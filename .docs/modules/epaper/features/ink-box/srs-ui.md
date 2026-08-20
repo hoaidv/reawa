@@ -239,7 +239,7 @@ No pan-mode tool, no “hand tool” tile. Resize knobs are the existing overlay
 | `hand.finger_hit_box` | Finger-down on box; tool → `sel_freeform` |
 | `hand.finger_moving` | Finger drag inside selected box (not on a knob) |
 | `hand.finger_resizing` | Finger drag on a resize knob |
-| `hand.one_finger_empty_palm` | One finger empty canvas; travel ≤ **10 mm** — palm-rest / tap no-op |
+| `hand.one_finger_empty_palm` | One finger empty canvas; travel ≤ **10 mm** — tap deselects; 0 pan |
 | `hand.one_finger_empty_pan` | One finger empty canvas; travel > **10 mm** — local pan |
 | `hand.two_finger_pan` | Two-finger pan in progress (local; Infini matches only if Infini following) |
 | `hand.pinch` | Pinch in progress |
@@ -256,7 +256,8 @@ No pan-mode tool, no “hand tool” tile. Resize knobs are the existing overlay
 ### Anti-patterns
 
 - Sub-floor knob hit (finger would miss or violate the size rule)
-- One-finger empty pan **without** the 10 mm threshold (palm would pan)
+- One-finger empty pan **without** the 10 mm threshold (a rest would pan)
+- Canvas hand-touch while the pen is near or in contact (palm would pan the page while inking)
 - Follow-toggle buttons in this package ([SRS-EP-50](../region-sync/srs-ui.md#srs-ep-50-follow-toggle))
 - Hover/focus/cursor
 - Phone chrome; this is RM2 1872×1404 landscape preview

@@ -47,10 +47,9 @@ bool envFlag(const char *name, bool fallback)
 /** Debug Switch chip — must match Main.qml xochitlSwitch geometry. */
 constexpr QRectF kXochitlSwitchRect(8, 8, 64, 64);
 
-QRectF infiniReconnectRect(qreal panelW)
+static QRectF panelToQ(const epaper::follow::PanelRect &r)
 {
-    // Below FollowToggle (trailing-top 64 du + 8 inset) so USB debug does not cover the toggle.
-    return QRectF(panelW - 8.0 - 64.0, 8.0 + 64.0 + 8.0, 64.0, 64.0);
+    return QRectF(r.x, r.y, r.w, r.h);
 }
 
 /** Context toolbar under the box — south of the bottom handle (28 du visual). */
@@ -368,8 +367,12 @@ void TabletCanvasItem::applyContactPress(const QPointF &canvasPos, const IngestC
         tryArmToolAtCanvasPos(canvasPos);
         return;
     }
-    if (infiniReconnectRect(width()).contains(canvasPos)) {
+    if (m_usbLinkRect.contains(canvasPos)) {
         tryArmToolAtCanvasPos(canvasPos);
+        return;
+    }
+    if (m_debugToggleRect.contains(canvasPos)) {
+        toggleDebugLog();
         return;
     }
     if (pointInToolChip(canvasPos)) {
@@ -910,6 +913,7 @@ void TabletCanvasItem::applyViewport(const QJsonObject &obj)
     qInfo() << "[sync] viewport seq" << m_viewportSeq << "orientation" << m_orientation
             << "settle" << settle << "ink" << m_document.inkCount();
     scheduleVectorRasterize(settle);
+    refreshSelectionChrome();
 }
 
 void TabletCanvasItem::applyDocSnapshot(const QJsonObject &obj)
@@ -971,20 +975,19 @@ QString TabletCanvasItem::toolChipHitAt(const QPointF &canvasPos) const
 
 bool TabletCanvasItem::tryDebugChromeAtWindowPos(const QPointF &windowPos)
 {
-    qreal w = width();
-    if (w < 2.0 && window())
-        w = window()->width();
-    if (window() && window()->width() > w)
-        w = window()->width();
     constexpr qreal pad = 80.0;
     if (QRectF(0, 0, pad, pad).contains(windowPos)) {
         if (EpaperBridge *b = EpaperBridge::instance())
             b->restoreXochitl();
         return true;
     }
-    if (w > pad && QRectF(w - pad, 80.0, pad, pad).contains(windowPos)) {
+    if (m_usbLinkRect.contains(windowPos)) {
         if (auto *u = epaper::UsbLink::instance())
             u->recoverInfini();
+        return true;
+    }
+    if (m_debugToggleRect.contains(windowPos)) {
+        toggleDebugLog();
         return true;
     }
     return false;
@@ -1100,7 +1103,8 @@ bool TabletCanvasItem::fingerHitsChip(const QPointF &canvasPos) const
     return pointInToolChip(canvasPos) || pointInFollowToggle(canvasPos)
         || pointInEncloseCta(canvasPos)
         || kXochitlSwitchRect.contains(canvasPos)
-        || infiniReconnectRect(width()).contains(canvasPos);
+        || m_usbLinkRect.contains(canvasPos)
+        || m_debugToggleRect.contains(canvasPos);
 }
 
 bool TabletCanvasItem::fingerHitsKnob(const QPointF &canvasPos) const
@@ -1282,6 +1286,7 @@ void TabletCanvasItem::updateFingerTouch(const QPointF &canvasPos, int fingerCou
         m_fingerPanClock.restart();
         maybePublishLocalViewport(false);
         scheduleVectorRasterize(false);
+        refreshSelectionChrome();
     }
 }
 
@@ -1301,12 +1306,29 @@ void TabletCanvasItem::endFingerTouch(const QPointF &canvasPos)
         applyLocalFingerPan(canvasPos);
         maybePublishLocalViewport(true);
         scheduleVectorRasterize(true);
+        refreshSelectionChrome();
         return;
     }
     if (g == FingerGesture::TwoFinger) {
         applyLocalTwoFinger(m_twoA, m_twoB);
         maybePublishLocalViewport(true);
         scheduleVectorRasterize(true);
+        refreshSelectionChrome();
+        return;
+    }
+    if (g == FingerGesture::EmptyPending) {
+        // @implements [SRS-EP-21] empty tap deselects
+        using namespace epaper::handtouch;
+        const double dx = canvasPos.x() - m_fingerDownPanel.x();
+        const double dy = canvasPos.y() - m_fingerDownPanel.y();
+        if (emptyTapClearsSelection(travelDu(dx, dy))) {
+            m_selectedIds.clear();
+            m_selectedPickableId.clear();
+            m_gesturePickableId.clear();
+            m_selGesture = SelGesture::None;
+            m_selectionGesture = false;
+            refreshSelectionChrome();
+        }
         return;
     }
 }
@@ -1363,6 +1385,7 @@ bool TabletCanvasItem::beginTwoFingerTouch(const QPointF &a, const QPointF &b)
     applyLocalTwoFinger(a, b);
     maybePublishLocalViewport(false);
     scheduleVectorRasterize(false);
+    refreshSelectionChrome();
     return true;
 }
 
@@ -1375,6 +1398,7 @@ void TabletCanvasItem::updateTwoFingerTouch(const QPointF &a, const QPointF &b)
         m_fingerPanClock.restart();
         maybePublishLocalViewport(false);
         scheduleVectorRasterize(false);
+        refreshSelectionChrome();
     }
 }
 
@@ -1386,6 +1410,26 @@ void TabletCanvasItem::endTwoFingerTouch()
     applyLocalTwoFinger(m_twoA, m_twoB);
     maybePublishLocalViewport(true);
     scheduleVectorRasterize(true);
+    refreshSelectionChrome();
+}
+
+void TabletCanvasItem::toggleDebugLog()
+{
+    m_debugLogVisible = !m_debugLogVisible;
+    emit debugLogVisibleChanged();
+}
+
+bool TabletCanvasItem::isChromeHit(const QPointF &canvasPos) const
+{
+    return fingerHitsChip(canvasPos);
+}
+
+void TabletCanvasItem::cancelHandTouch()
+{
+    const FingerGesture g = m_fingerGesture;
+    m_fingerGesture = FingerGesture::None;
+    if (g == FingerGesture::Move || g == FingerGesture::Resize)
+        endSelectionGesture();
 }
 
 void TabletCanvasItem::requestUndo()
@@ -1449,10 +1493,20 @@ void TabletCanvasItem::updateToolChipRect()
     }
     const bool gutOnTop = m_orientation == QLatin1String("gutOnTop");
     const auto fr = epaper::follow::followToggleRect(width(), height(), gutOnTop);
-    const QRectF followNext(fr.x, fr.y, fr.w, fr.h);
-    if (followNext != m_followToggleRect) {
+    const auto ur = epaper::follow::usbLinkRect(width(), height(), gutOnTop);
+    const auto dr = epaper::follow::debugToggleRect(width(), height(), gutOnTop);
+    const auto lr = epaper::follow::debugLogRect(width(), height(), gutOnTop);
+    const QRectF followNext = panelToQ(fr);
+    const QRectF usbNext = panelToQ(ur);
+    const QRectF debugNext = panelToQ(dr);
+    const QRectF logNext = panelToQ(lr);
+    if (followNext != m_followToggleRect || usbNext != m_usbLinkRect
+        || debugNext != m_debugToggleRect || logNext != m_debugLogRect) {
         m_followToggleRect = followNext;
-        emit followToggleRectChanged();
+        m_usbLinkRect = usbNext;
+        m_debugToggleRect = debugNext;
+        m_debugLogRect = logNext;
+        emit trailingChromeChanged();
     }
 }
 

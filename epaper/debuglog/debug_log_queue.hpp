@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <deque>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -27,6 +28,8 @@ class DebugLogQueue {
 public:
     static constexpr std::size_t kCap = 512;
 
+    void setTap(std::function<void(const DebugLogRecord &)> tap) { m_tap = std::move(tap); }
+
     /** Wait-free-ish: try_lock; on failure increment dropped and return false. */
     bool tryPush(DebugLogRecord rec)
     {
@@ -41,7 +44,11 @@ public:
             m_q.pop_front();
             m_dropped.fetch_add(1, std::memory_order_relaxed);
         }
+        DebugLogRecord copy = rec;
         m_q.push_back(std::move(rec));
+        lock.unlock();
+        if (m_tap)
+            m_tap(copy);
         return true;
     }
 
@@ -70,6 +77,7 @@ private:
     mutable std::mutex m_mu;
     std::deque<DebugLogRecord> m_q;
     std::atomic<int> m_dropped{0};
+    std::function<void(const DebugLogRecord &)> m_tap;
 };
 
 } // namespace debuglog

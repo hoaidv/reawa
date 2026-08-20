@@ -58,6 +58,27 @@ Feature: One-finger hand-touch pick move palm and empty pan
     And the world layer is unshifted
 
   @SRS-EP-21 @SRS-EP-25
+  Scenario: One-finger empty tap deselects the selected box
+    Given exclusive tool sel_freeform is armed
+    And SmartGroup "sg_1" is selected
+    And the creator finger-downs on empty canvas with hit.kind empty
+    When Euclidean panel travel stays at or below 10 mm / 89 du and the touch ends
+    Then "sg_1" is not selected
+    And 0 nodes are selected
+    And exclusive tool remains sel_freeform
+    And 0 pan occurs
+
+  @SRS-EP-21 @SRS-EP-25
+  Scenario: Pen proximity or contact disables canvas hand-touch
+    Given exclusive tool pen is armed
+    And the pen is in digitizer proximity or in contact
+    When the creator finger-downs on empty canvas or on a SmartGroup
+    Then 0 pan occurs
+    And 0 pick or move starts
+    And 0 pinch starts
+    And ToolChip taps still arm tools
+
+  @SRS-EP-21 @SRS-EP-25
   Scenario: One-finger empty travel past 10 mm pans locally with Infini unchanged
     Given exclusive tool pen is armed
     And follow.direction is none
