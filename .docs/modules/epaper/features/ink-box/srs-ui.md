@@ -224,6 +224,7 @@ One job: make **finger** pick / move / **resize knobs** vs **one-finger empty pa
 | id | Kind | Notes |
 |---|---|---|
 | *(existing SRS-EP-12 overlay)* | — | Reused; knobs are finger-eligible ([CHL-0024](../../../../../.plan/iter-005/challenges/CHL-0024-finger-resize-knobs.md)) |
+| `btn.hand_touch` | 64 du 1-bit toggle | Trailing row left of Debug; inverted when on (default on). Kill-switch for canvas fingers — **not** a pan-mode / hand-tool tile |
 | `ind.two_finger_pan` | in-progress | Two-finger pan/pinch active — **no** extra chrome required; Designer may use existing region marker **only if** it does not imply Infini always matches ([ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md)) |
 
 <!-- lifecycle: retired -->
@@ -239,24 +240,26 @@ No pan-mode tool, no “hand tool” tile. Resize knobs are the existing overlay
 | `hand.finger_hit_box` | Finger-down on box; tool → `sel_freeform` |
 | `hand.finger_moving` | Finger drag inside selected box (not on a knob) |
 | `hand.finger_resizing` | Finger drag on a resize knob |
-| `hand.one_finger_empty_palm` | One finger empty canvas; travel ≤ **10 mm** — tap deselects; 0 pan |
-| `hand.one_finger_empty_pan` | One finger empty canvas; travel > **10 mm** — local pan |
+| `hand.one_finger_empty_palm` | One finger empty canvas; travel ≤ **20 mm** — tap deselects; 0 pan |
+| `hand.one_finger_empty_pan` | One finger empty canvas; travel > **20 mm** — local pan |
 | `hand.two_finger_pan` | Two-finger pan in progress (local; Infini matches only if Infini following) |
 | `hand.pinch` | Pinch in progress |
 | `hand.pan_vs_move` | Two-finger ignored because box-move in flight |
 | `hand.link_down_local_view` | Two-finger still pans locally |
+| `hand.toggle_off` | `btn.hand_touch` off — canvas fingers ignored; chrome taps still work |
+| `hand.palm_contacts` | ≥3 capacitive contacts — 0 pan, 0 pinch |
 
 <!-- lifecycle: retired -->
 `hand.finger_anchor_noop` and `hand.pen_resize_after_finger_select` — **retired 2026-08-20** ([CHL-0024](../../../../../.plan/iter-005/challenges/CHL-0024-finger-resize-knobs.md)). Do not demonstrate.
 
 ### UI-driving fields
 
-`touch.fingerCount`, `hit.kind`, `touch.travelMm`, `toolMode`, `follow.direction` — Designer must not invent extra modes or a follow button in this package.
+`touch.fingerCount`, `hit.kind`, `touch.travelMm`, `toolMode`, `follow.direction`, `handTouch.toggle` — Designer must not invent extra modes or a follow button in this package.
 
 ### Anti-patterns
 
 - Sub-floor knob hit (finger would miss or violate the size rule)
-- One-finger empty pan **without** the 10 mm threshold (a rest would pan)
+- One-finger empty pan **without** the 20 mm threshold (a rest would pan)
 - Canvas hand-touch while the pen is near or in contact (palm would pan the page while inking)
 - Follow-toggle buttons in this package ([SRS-EP-50](../region-sync/srs-ui.md#srs-ep-50-follow-toggle))
 - Hover/focus/cursor

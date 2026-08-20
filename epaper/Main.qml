@@ -56,7 +56,7 @@ TabletWindow {
         visible: false
     }
 
-    // Trailing orientation-top row: Debug | Follow Infini | USB link (UI-EP-07).
+    // Trailing orientation-top row: HT | DBG | Follow Infini | USB (UI-EP-07).
     // @implements [SRS-EP-50] FollowToggle sibling of ToolChip
     Rectangle {
         id: followToggle
@@ -487,6 +487,31 @@ TabletWindow {
         MouseArea {
             anchors.fill: parent
             onClicked: UsbHud.recoverInfini()
+        }
+    }
+
+    Rectangle {
+        id: handTouchToggle
+        z: 30
+        // @implements [SRS-EP-22] btn.hand_touch trailing chrome
+        x: drawCanvas.handTouchToggleRect.x
+        y: drawCanvas.handTouchToggleRect.y
+        width: drawCanvas.handTouchToggleRect.width
+        height: drawCanvas.handTouchToggleRect.height
+        color: drawCanvas.handTouchArmed ? "black" : "white"
+        border.color: "black"
+        border.width: 1
+        Text {
+            anchors.fill: parent
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.pixelSize: 14
+            color: drawCanvas.handTouchArmed ? "white" : "black"
+            text: "HT"
+        }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: drawCanvas.toggleHandTouch()
         }
     }
 

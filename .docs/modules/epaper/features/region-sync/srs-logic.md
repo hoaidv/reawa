@@ -217,7 +217,7 @@ Follow is a **choice**. Default `none`. Not a ToolChip exclusive tool, recognize
 | Creator enables Epaper follow (session live, was `none`) | Set `infini_to_epaper`; emit `viewport_follow`; apply Infini’s current viewport (p95 map ≤100 ms); Infini follow stays off |
 | Creator enables Epaper follow while Infini follow is on | Set `infini_to_epaper`; Infini follow **off** (0 dual-on; peer toggle p95 ≤300 ms); start applying Infini viewport |
 | Creator disables Epaper follow | Set `none`; stop applying inbound `viewport` |
-| Follower local-nav (one-finger empty pan **past** 10 mm, or two-finger pan/pinch) while `infini_to_epaper` | Set `none` **then** local camera; 0 continued Infini apply after that gesture starts |
+| Follower local-nav (one-finger empty pan **past** 20 mm, or two-finger pan/pinch) while `infini_to_epaper` | Set `none` **then** local camera; 0 continued Infini apply after that gesture starts |
 | Box pick / move / resize | **Does not** change follow |
 | Connection lost / no session | Force `none` before the next gesture. Reconnect does **not** restore |
 | Inbound `viewport` while not `infini_to_epaper` | Ignore + log; 0 apply; 0 implicit on |

@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QEvent>
+#include <QElapsedTimer>
 #include <QTimer>
 
 class TabletCanvasItem;
@@ -10,6 +11,7 @@ class TabletCanvasItem;
  * App-wide event filter: pen → canvas; touch → ToolChip + one/two-finger canvas.
  * @implements [SRS-EP-04] tool input routing
  * @implements [SRS-EP-21] one-finger canvas hit routing
+ * @implements [SRS-EP-22] hand-touch toggle and palm contacts
  * @implements [SRS-EP-24] two-finger pan pinch routing
  */
 class TabletAppFilter : public QObject
@@ -44,5 +46,7 @@ private:
     bool m_qmlOwnsTouch = false;
     bool m_penNear = false;
     bool m_penDown = false;
+    int m_lastHandLogCount = -1;
+    QElapsedTimer m_handLogClock;
     QTimer *m_penIdle = nullptr;
 };

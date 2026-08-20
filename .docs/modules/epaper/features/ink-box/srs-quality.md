@@ -106,7 +106,7 @@ its whole premise.
 | Field | Value |
 |---|---|
 | Source | Creator finger |
-| Stimulus | Down on box / drag / down on knob / empty canvas (≤10 mm vs >10 mm) |
+| Stimulus | Down on box / drag / down on knob / empty canvas (≤20 mm vs >20 mm; ≥3 contacts) |
 | Artifact | Exclusive tool, selection, box transform, viewport |
 | Environment | Normal; link up or down |
 | Response | Tool switch, live move, live resize, palm no-op, or local pan |
@@ -117,8 +117,10 @@ its whole premise.
 | Finger-down on box → `sel_freeform` + chip + selected | p95 ≤**300 ms** |
 | Finger move inside selected box | 0 px jump on lift; ≥**5 Hz** partial refresh; **0** viewport pan |
 | Finger on resize knob | same live-direct bar as pen resize; **0** viewport pan |
-| One-finger empty, travel ≤ **10 mm** (89 du @ 226 dpi) | Exclusive tool unchanged; **0** nodes selected; **0** lassos; **0** pans |
-| One-finger empty, travel > **10 mm** | **Local** pan; tool unchanged; **0** selection; **0** lasso; Infini matches **only if** Infini follow on |
+| One-finger empty, travel ≤ **20 mm** (178 du @ 226 dpi) | Exclusive tool unchanged; **0** nodes selected; **0** lassos; **0** pans |
+| One-finger empty, travel > **20 mm** | **Local** pan; tool unchanged; **0** selection; **0** lasso; Infini matches **only if** Infini follow on |
+| ≥3 capacitive contacts | **0** pan; **0** pinch |
+| Hand-touch toggle off | **0** canvas pick / pan / pinch; chrome taps still work |
 | Box / knob / chip hit vs would-be empty pan | Hit wins; **0** empty-canvas pan |
 | ToolChip 64 du tile tap | REQ-03 still holds (this REQ does not steal) |
 

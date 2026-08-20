@@ -467,7 +467,7 @@ viewed at scale, and saved.
   refuse/no-op (stroke stays ink, no banner); marquee vs path-hit vs AABB-miss.
 
 ## [REQ-10] Hand-touch on canvas {#hand-touch}
-<!-- added: 2026-08-15; revised: 2026-08-16 — merged [REQ-16] two-finger pan/zoom into this REQ; revised: 2026-08-20 — CHL-0024 finger resize knobs; revised: 2026-08-20 — two-finger local Must (BRD-07 ship gate lifted); one-finger empty = local pan; publish only if Infini is following; revised: 2026-08-20 — pan threshold is 10 mm (human lock for STORY-EP-054); revised: 2026-08-20 — empty tap deselects; pen proximity or contact disables hand-touch (palm rejection) -->
+<!-- added: 2026-08-15; revised: 2026-08-16 — merged [REQ-16] two-finger pan/zoom into this REQ; revised: 2026-08-20 — CHL-0024 finger resize knobs; revised: 2026-08-20 — two-finger local Must (BRD-07 ship gate lifted); one-finger empty = local pan; publish only if Infini is following; revised: 2026-08-20 — pan threshold is 10 mm (human lock for STORY-EP-054); revised: 2026-08-20 — empty tap deselects; pen proximity or contact disables hand-touch (palm rejection); revised: 2026-08-20 — palm-rest 20 mm; ≥3 contacts = palm; hand-touch toggle -->
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
 - **Campaign:** **one grammar, two slices.** One-finger pick/move/resize **and** two-finger **local**
@@ -486,16 +486,17 @@ viewed at scale, and saved.
   selected (by this hit, or already selected), a finger drag **inside the bounds** moves it with the
   [REQ-06](#device-manipulation) live-direct contract. The same down that hits the box may start the
   move.   **Empty canvas (no box, knob, or chip hit):** the touch does not switch tools and does not
-  start a lasso. The pan threshold is **10 mm** Euclidean panel travel from finger-down. If movement
-  stays **at or below 10 mm**, it is a tap: **deselect** (0 nodes selected, 0 residual chrome), **no
-  pan**, **no tool switch**. If movement goes **past 10 mm**, it is **local one-finger pan**. Box /
-  knob / chip hit always wins over empty-canvas pan. Do not invent extra hand-touch chrome for this
-  rule.
-- **Palm rejection — pen proximity or contact.** While the pen is **near the panel** (digitizer
-  proximity, including hover before contact) **or** the pen is **touching** the panel, capacitive
-  **hand-touch is disabled** (0 pick, 0 move, 0 empty pan, 0 pinch). ToolChip / FollowToggle / other
-  ≥64 du chrome taps still work. When the pen leaves proximity, hand-touch is enabled again. The
-  10 mm empty-canvas threshold still applies **only while** hand-touch is enabled.
+  start a lasso. The pan threshold is **20 mm** Euclidean panel travel from finger-down. If movement
+  stays **at or below 20 mm**, it is a tap: **deselect** (0 nodes selected, 0 residual chrome), **no
+  pan**, **no tool switch**. If movement goes **past 20 mm**, it is **local one-finger pan**. Box /
+  knob / chip hit always wins over empty-canvas pan. **Three or more** simultaneous capacitive
+  contacts are palm — 0 pan, 0 pinch — even if travel would otherwise exceed the threshold.
+- **Palm rejection — pen proximity, contact, count, or toggle.** While the pen is **near the panel**
+  (digitizer proximity, including hover before contact) **or** the pen is **touching** the panel,
+  capacitive **hand-touch is disabled** (0 pick, 0 move, 0 empty pan, 0 pinch). Same disable while
+  a **hand-touch toggle** is off (default on). ToolChip / FollowToggle / other ≥64 du chrome taps
+  still work. When the pen leaves proximity and the toggle is on, hand-touch is enabled again. The
+  20 mm empty-canvas threshold still applies **only while** hand-touch is enabled.
 - **Two fingers — local pan and zoom.** Two-finger pan/pinch changes the **tablet’s local viewport**.
   The device **publishes** that viewport **only if Infini follow is on**. Does not run while a
   one-finger box-move **or resize** is in flight. Link down: local viewport still works; follow
@@ -518,13 +519,17 @@ viewed at scale, and saved.
   on lift; ≥5 Hz partial refresh) and **0** viewport pan starts.
 - Given a selected Smart Group, When the creator **finger-downs on a resize knob** (hit ≥ primary ToolChip tile), Then resize starts with the [REQ-06](#device-manipulation) live-direct bar (0 px jump on lift; ≥5 Hz partial refresh) and **0** viewport pan. Pen on the same knob still resizes.
 - Given a control whose hit target is **< 64 du** (not a resize knob), When the creator finger-downs on it, Then **no** scale-mode/end-kind/rotation gesture starts (0 accidental transforms).
-- Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **≤ 10 mm**,
+- Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **≤ 20 mm**,
   When the touch ends, Then the exclusive tool is unchanged, **0** nodes are selected (a selected
   box is deselected), and **0** pan occurs (tap / rest — 0 accidental lassos).
 - Given the pen is in digitizer proximity (near, not necessarily touching) **or** the pen is in
   contact, When a finger lands on empty canvas or on a box, Then **0** pan, **0** pick, and **0**
   pinch start until the pen leaves proximity.
-- Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **> 10 mm**,
+- Given **three or more** capacitive contacts, When any of them move, Then **0** pan and **0** pinch
+  (palm).
+- Given the hand-touch toggle is **off**, When a finger lands on empty canvas or on a box, Then **0**
+  pan, **0** pick, and **0** pinch; chrome taps still work.
+- Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **> 20 mm**,
   When the finger moves, Then the **local** viewport pans, the exclusive tool is unchanged, 0 nodes
   are selected, and 0 lasso starts. Infini’s view matches after settle **only if Infini follow is
   on**; otherwise Infini is unchanged.

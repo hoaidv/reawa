@@ -257,14 +257,14 @@ Does **not** overload SRS-EP-11. Pen pick/move stays there. This section is **fi
 | Finger | Resize knobs (hit ≥ primary ToolChip tile) | **Yes** — resize with [SRS-EP-11](#srs-ep-11-device-manipulation) live-direct; knob wins over box-move |
 | Finger | Any other control whose **hit target &lt; 64 du** | **No** — 0 transform, 0 scale-mode, 0 end-kind. Pen still may |
 | Finger | ToolChip primary tile (64 du) | Chip wins — this REQ does not steal ([SRS-EP-05](../tool-modes/srs-ui.md)) |
-| Finger | Empty canvas (no box, knob, or chip hit), one finger | Palm vs pan by travel — not this table’s job. See Gesture: ≤ **10 mm** tap deselects; > **10 mm** local pan |
+| Finger | Empty canvas (no box, knob, or chip hit), one finger | Palm vs pan by travel — not this table’s job. See Gesture: ≤ **20 mm** tap deselects; > **20 mm** local pan |
 | Two fingers | — | Not this section — [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport) |
 
 1 du = 1 panel pixel @ 226 dpi. Finger-eligible floor = primary ToolChip tile **64×64 du** ([CHL-0019](../../../../../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md)).
 
-**Pan threshold (architect bind, [REQ-10](../../prd.md#hand-touch)):** **10 mm** Euclidean panel travel from finger-down (**89 du** @ 226 dpi). At/below = tap: **deselect**, **0** pan, **0** tool switch. Past = **local** one-finger pan. Box / knob / chip hit on the same down **wins** (0 empty-canvas pan). Not a PRD millimetre; QA measures this number.
+**Pan threshold (architect bind, [REQ-10](../../prd.md#hand-touch)):** **20 mm** Euclidean panel travel from finger-down (**178 du** @ 226 dpi). At/below = tap: **deselect**, **0** pan, **0** tool switch. Past = **local** one-finger pan. Box / knob / chip hit on the same down **wins** (0 empty-canvas pan). **≥3** simultaneous contacts = palm (0 pan, 0 pinch).
 
-**Palm rejection (architect bind, [REQ-10](../../prd.md#hand-touch)):** `handTouch.enabled = not (pen.near or pen.contact)`. Near = digitizer proximity (hover before contact). Contact = pen down on the panel. While disabled: 0 canvas pick / move / empty pan / pinch. Chrome taps (≥64 du) still route. Enable again when the pen leaves proximity (or after a short idle if the stack omits leave-proximity).
+**Palm rejection (architect bind, [REQ-10](../../prd.md#hand-touch)):** `handTouch.enabled = toggle.on and not (pen.near or pen.contact) and contactCount < 3`. Near = digitizer proximity (hover before contact). Contact = pen down on the panel. Toggle default **on**. While disabled: 0 canvas pick / move / empty pan / pinch. Chrome taps (≥64 du) still route. Enable again when the pen leaves proximity (or after a short idle if the stack omits leave-proximity) **and** the toggle is on.
 
 ### Gesture
 
@@ -276,19 +276,18 @@ Does **not** overload SRS-EP-11. Pen pick/move stays there. This section is **fi
 | During this move or resize | **0** viewport pan; two-finger does not start; follow unchanged (box-move is **not** local-nav) |
 | Finger-down on a &lt;64 du control that is **not** a resize knob | No-op (table above) |
 | Already selected box, finger-down inside bounds (not on a knob) | May start the move on that same down |
-| Empty canvas, travel ≤ 10 mm, lift | Tap: **deselect** (0 nodes, 0 residual chrome); **0** pan; **0** tool switch |
-| Pen near or in contact | Hand-touch **off** — ignore canvas fingers until the pen leaves proximity |
-| Empty canvas, first sample with travel > 10 mm | **Local pan** (exclusive tool unchanged; 0 nodes selected; 0 lasso). If Epaper follow was on: set `direction = none` **then** pan ([SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow)). Publish `viewport` up **only if** Infini follow is on |
+| Empty canvas, travel ≤ 20 mm, lift | Tap: **deselect** (0 nodes, 0 residual chrome); **0** pan; **0** tool switch |
+| Pen near or in contact, or hand-touch toggle off | Hand-touch **off** — ignore canvas fingers until the pen leaves proximity and the toggle is on |
+| ≥3 capacitive contacts | Palm: **0** pan, **0** pinch |
+| Empty canvas, first sample with travel > 20 mm | **Local pan** (exclusive tool unchanged; 0 nodes selected; 0 lasso). If Epaper follow was on: set `direction = none` **then** pan ([SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow)). Publish `viewport` up **only if** Infini follow is on |
 | Empty canvas, box/knob/chip hit on the same down | Hit wins — **0** empty-canvas pan |
 
 ### UI-driving fields
 
 | Field | Drives |
 |---|---|
-| `touch.fingerCount` | 1 vs 2 (2 → not this section) |
-| `hit.kind` | `box` \| `anchor` \| `chip` \| `empty` |
-| `touch.travelMm` | Euclidean panel travel from down; pan iff `hit.kind=empty` and > **10** and hand-touch enabled |
-| `pen.near` / `pen.contact` | Either true → hand-touch disabled |
+| `touch.fingerCount` | 1 vs 2 vs ≥3 (2 → not this section; ≥3 → palm) |
+| `pen.near` / `pen.contact` / `handTouch.toggle` | Any disable → hand-touch off |
 | `toolMode` | Must become `sel_freeform` on box hit; **unchanged** on empty pan |
 | `follow.direction` | Local-nav while following Infini → `none` |
 | `sel.moving` | Live-direct chrome ([SRS-EP-22](./srs-ui.md#srs-ep-22-hand-touch-ui)) |

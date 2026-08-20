@@ -76,14 +76,20 @@ static void test_finger_knob_resize_zero_pan()
     CHECK(s.follow == FollowDirection::InfiniToEpaper);
 }
 
-/** Scenario: One-finger empty travel at or below 10 mm is palm-rest */
+/** Scenario: One-finger empty travel at or below 20 mm is palm-rest */
 static void test_empty_palm_rest()
 {
     const double eightMmDu = 8.0 / 25.4 * kPanelDpi;
+    const double fifteenMmDu = 15.0 / 25.4 * kPanelDpi;
     CHECK(eightMmDu <= kPalmTravelDu);
+    CHECK(fifteenMmDu <= kPalmTravelDu);
+    CHECK(kPalmTravelMm == 20.0);
+    CHECK(kPalmTravelDu == 178.0);
     CHECK(actionOnEmptyMove(eightMmDu) == FingerAction::PalmRest);
+    CHECK(actionOnEmptyMove(fifteenMmDu) == FingerAction::PalmRest);
     CHECK(actionOnEmptyMove(kPalmTravelDu) == FingerAction::PalmRest);
     CHECK(!travelPastPalm(eightMmDu, 0));
+    CHECK(!travelPastPalm(fifteenMmDu, 0));
     CHECK(classifyHit(false, false, false) == HitKind::Empty);
     CHECK(actionOnDown(HitKind::Empty) == FingerAction::PalmRest);
     OneFingerSession s;
@@ -109,6 +115,24 @@ static void test_pen_proximity_disables_hand_touch()
     CHECK(!handTouchEnabled(true, false));
     CHECK(!handTouchEnabled(false, true));
     CHECK(!handTouchEnabled(true, true));
+}
+
+/** Scenario: Hand-touch toggle off disables canvas hand-touch */
+static void test_hand_touch_toggle_off()
+{
+    CHECK(handTouchEnabled(false, false, true));
+    CHECK(!handTouchEnabled(false, false, false));
+    CHECK(!handTouchEnabled(true, false, true));
+}
+
+/** Scenario: Three or more contacts are palm */
+static void test_palm_by_contact_count()
+{
+    CHECK(!palmByContactCount(1));
+    CHECK(!palmByContactCount(2));
+    CHECK(palmByContactCount(3));
+    CHECK(palmByContactCount(4));
+    CHECK(kPalmMinContacts == 3);
 }
 
 /** Scenario: One-finger empty travel past 10 mm pans locally with Infini unchanged */
@@ -363,6 +387,8 @@ int main()
     test_empty_palm_rest();
     test_empty_tap_clears_selection();
     test_pen_proximity_disables_hand_touch();
+    test_hand_touch_toggle_off();
+    test_palm_by_contact_count();
     test_empty_pan_local_infini_unchanged();
     test_chip_wins_over_empty_pan();
     test_follower_local_nav_turns_follow_off_then_pans();

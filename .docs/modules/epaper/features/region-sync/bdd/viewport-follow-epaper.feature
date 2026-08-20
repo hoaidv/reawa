@@ -65,7 +65,7 @@ Feature: Epaper follow Infini toggle exclusion and disconnect
     Given follow.direction is infini_to_epaper
     And exclusive tool pen is armed
     And the creator finger-downs on empty canvas with hit.kind empty
-    When Euclidean panel travel goes to 36 mm (past 10 mm / 89 du at 226 dpi)
+    When Euclidean panel travel goes to 36 mm (past 20 mm / 178 du at 226 dpi)
     Then follow.direction becomes none before the local pan applies
     And the gesture drives the local camera
     And 0 continued Infini viewport apply occurs after that gesture starts

@@ -85,7 +85,7 @@ Parent REQ: [REQ-02](../../prd.md#region-sync). Follow quality: [SRS-EP-51](#srs
 | Disconnect while following | Follow **off** before next gesture; reconnect stays **off** until opt-in |
 | No session | Toggle off or unavailable; **0** follow-on persist |
 | `viewport_follow` / follow toggle | **0** `doc_load` / `doc_change` / `doc_snapshot` |
-| Follower local-nav (empty pan > **10 mm** or two-finger) while following Infini | Follow **off** before local pan applies; **0** continued Infini apply after that gesture starts |
+| Follower local-nav (empty pan > **20 mm** or two-finger) while following Infini | Follow **off** before local pan applies; **0** continued Infini apply after that gesture starts |
 
 ---
 

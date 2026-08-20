@@ -15,10 +15,12 @@
 namespace epaper {
 namespace handtouch {
 
-/** 10 mm Euclidean panel travel @ 226 dpi (architect bind). */
+/** 20 mm Euclidean panel travel @ 226 dpi (architect bind; field 2026-08-20). */
 constexpr double kPanelDpi = 226.0;
-constexpr double kPalmTravelMm = 10.0;
-constexpr double kPalmTravelDu = 89.0;
+constexpr double kPalmTravelMm = 20.0;
+constexpr double kPalmTravelDu = 178.0;
+/** Three or more capacitive contacts = palm, not two-finger pan. */
+constexpr int kPalmMinContacts = 3;
 /** Finger-eligible floor = primary ToolChip tile. */
 constexpr double kFingerHandleHitDu = 64.0;
 
@@ -48,10 +50,15 @@ inline bool travelPastPalm(double panelDx, double panelDy)
     return travelDu(panelDx, panelDy) > kPalmTravelDu;
 }
 
-/** Canvas hand-touch runs only when the pen is neither near nor in contact. */
-inline bool handTouchEnabled(bool penNear, bool penContact)
+/** Canvas hand-touch runs when the toggle is on and the pen is neither near nor in contact. */
+inline bool handTouchEnabled(bool penNear, bool penContact, bool toggleOn = true)
 {
-    return !penNear && !penContact;
+    return toggleOn && !penNear && !penContact;
+}
+
+inline bool palmByContactCount(int n)
+{
+    return n >= kPalmMinContacts;
 }
 
 /** Empty-canvas lift with travel at/below palm threshold: deselect, 0 pan, 0 tool switch. */

@@ -60,8 +60,10 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(QRectF followToggleRect READ followToggleRect NOTIFY trailingChromeChanged)
     Q_PROPERTY(QRectF usbLinkRect READ usbLinkRect NOTIFY trailingChromeChanged)
     Q_PROPERTY(QRectF debugToggleRect READ debugToggleRect NOTIFY trailingChromeChanged)
+    Q_PROPERTY(QRectF handTouchToggleRect READ handTouchToggleRect NOTIFY trailingChromeChanged)
     Q_PROPERTY(QRectF debugLogRect READ debugLogRect NOTIFY trailingChromeChanged)
     Q_PROPERTY(bool debugLogVisible READ debugLogVisible NOTIFY debugLogVisibleChanged)
+    Q_PROPERTY(bool handTouchArmed READ handTouchArmed NOTIFY handTouchArmedChanged)
     Q_PROPERTY(QString followDirection READ followDirection NOTIFY followChanged)
     Q_PROPERTY(bool followPressed READ followPressed NOTIFY followChanged)
     Q_PROPERTY(bool followUnavailable READ followUnavailable NOTIFY followChanged)
@@ -98,9 +100,12 @@ public:
     QRectF followToggleRect() const { return m_followToggleRect; }
     QRectF usbLinkRect() const { return m_usbLinkRect; }
     QRectF debugToggleRect() const { return m_debugToggleRect; }
+    QRectF handTouchToggleRect() const { return m_handTouchToggleRect; }
     QRectF debugLogRect() const { return m_debugLogRect; }
     bool debugLogVisible() const { return m_debugLogVisible; }
+    bool handTouchArmed() const { return m_handTouchArmed; }
     Q_INVOKABLE void toggleDebugLog();
+    Q_INVOKABLE void toggleHandTouch();
     bool followPressed() const { return m_follow.ariaPressed(); }
     bool followUnavailable() const { return m_follow.ariaDisabled(); }
     bool canUndo() const { return m_document.undoDepth() > 0; }
@@ -181,6 +186,7 @@ signals:
     void toolChipRectChanged();
     void trailingChromeChanged();
     void debugLogVisibleChanged();
+    void handTouchArmedChanged();
     void followChanged();
     void historyChanged();
     void pickablesChanged();
@@ -341,8 +347,10 @@ private:
     QRectF m_followToggleRect;
     QRectF m_usbLinkRect;
     QRectF m_debugToggleRect;
+    QRectF m_handTouchToggleRect;
     QRectF m_debugLogRect;
     bool m_debugLogVisible = false;
+    bool m_handTouchArmed = true;
     int m_viewportUpCount = 0;
     enum class FingerGesture { None, Chip, Move, Resize, EmptyPending, EmptyPan, TwoFinger } m_fingerGesture =
         FingerGesture::None;

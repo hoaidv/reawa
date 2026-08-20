@@ -28,6 +28,7 @@
 #include <QTransform>
 #include <QTimer>
 #include <QLineF>
+#include <QDebug>
 #include <algorithm>
 #include <cstdio>
 #include <string>
@@ -373,6 +374,10 @@ void TabletCanvasItem::applyContactPress(const QPointF &canvasPos, const IngestC
     }
     if (m_debugToggleRect.contains(canvasPos)) {
         toggleDebugLog();
+        return;
+    }
+    if (m_handTouchToggleRect.contains(canvasPos)) {
+        toggleHandTouch();
         return;
     }
     if (pointInToolChip(canvasPos)) {
@@ -990,6 +995,10 @@ bool TabletCanvasItem::tryDebugChromeAtWindowPos(const QPointF &windowPos)
         toggleDebugLog();
         return true;
     }
+    if (m_handTouchToggleRect.contains(windowPos)) {
+        toggleHandTouch();
+        return true;
+    }
     return false;
 }
 
@@ -1104,7 +1113,8 @@ bool TabletCanvasItem::fingerHitsChip(const QPointF &canvasPos) const
         || pointInEncloseCta(canvasPos)
         || kXochitlSwitchRect.contains(canvasPos)
         || m_usbLinkRect.contains(canvasPos)
-        || m_debugToggleRect.contains(canvasPos);
+        || m_debugToggleRect.contains(canvasPos)
+        || m_handTouchToggleRect.contains(canvasPos);
 }
 
 bool TabletCanvasItem::fingerHitsKnob(const QPointF &canvasPos) const
@@ -1256,6 +1266,10 @@ bool TabletCanvasItem::beginFingerTouch(const QPointF &canvasPos)
 void TabletCanvasItem::updateFingerTouch(const QPointF &canvasPos, int fingerCount)
 {
     using namespace epaper::handtouch;
+    if (palmByContactCount(fingerCount)) {
+        cancelHandTouch();
+        return;
+    }
     if (m_fingerGesture == FingerGesture::None || m_fingerGesture == FingerGesture::Chip
         || m_fingerGesture == FingerGesture::TwoFinger)
         return;
@@ -1419,6 +1433,17 @@ void TabletCanvasItem::toggleDebugLog()
     emit debugLogVisibleChanged();
 }
 
+void TabletCanvasItem::toggleHandTouch()
+{
+    // @implements [SRS-EP-22] btn.hand_touch kill-switch
+    m_handTouchArmed = !m_handTouchArmed;
+    if (!m_handTouchArmed)
+        cancelHandTouch();
+    emit handTouchArmedChanged();
+    qInfo().noquote() << (m_handTouchArmed ? QStringLiteral("[hand] toggle on")
+                                           : QStringLiteral("[hand] toggle off"));
+}
+
 bool TabletCanvasItem::isChromeHit(const QPointF &canvasPos) const
 {
     return fingerHitsChip(canvasPos);
@@ -1495,16 +1520,20 @@ void TabletCanvasItem::updateToolChipRect()
     const auto fr = epaper::follow::followToggleRect(width(), height(), gutOnTop);
     const auto ur = epaper::follow::usbLinkRect(width(), height(), gutOnTop);
     const auto dr = epaper::follow::debugToggleRect(width(), height(), gutOnTop);
+    const auto hr = epaper::follow::handTouchToggleRect(width(), height(), gutOnTop);
     const auto lr = epaper::follow::debugLogRect(width(), height(), gutOnTop);
     const QRectF followNext = panelToQ(fr);
     const QRectF usbNext = panelToQ(ur);
     const QRectF debugNext = panelToQ(dr);
+    const QRectF handNext = panelToQ(hr);
     const QRectF logNext = panelToQ(lr);
     if (followNext != m_followToggleRect || usbNext != m_usbLinkRect
-        || debugNext != m_debugToggleRect || logNext != m_debugLogRect) {
+        || debugNext != m_debugToggleRect || handNext != m_handTouchToggleRect
+        || logNext != m_debugLogRect) {
         m_followToggleRect = followNext;
         m_usbLinkRect = usbNext;
         m_debugToggleRect = debugNext;
+        m_handTouchToggleRect = handNext;
         m_debugLogRect = logNext;
         emit trailingChromeChanged();
     }

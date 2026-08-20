@@ -10,6 +10,7 @@
 #include <QList>
 #include <QVector>
 #include <QTimer>
+#include <QElapsedTimer>
 
 TabletAppFilter::TabletAppFilter(QObject *parent)
     : QObject(parent)
@@ -53,7 +54,24 @@ void TabletAppFilter::suppressCanvasTouch()
 
 bool TabletAppFilter::canvasHandTouchOn() const
 {
-    return epaper::handtouch::handTouchEnabled(m_penNear, m_penDown);
+    const bool toggleOn = m_canvas && m_canvas->handTouchArmed();
+    return epaper::handtouch::handTouchEnabled(m_penNear, m_penDown, toggleOn);
+}
+
+static QString handTouchLogLine(const char *phase, const QVector<const QEventPoint *> &pts,
+                                TabletCanvasItem *canvas)
+{
+    QString s = QStringLiteral("[hand] %1 n=%2").arg(QLatin1String(phase)).arg(pts.size());
+    for (const QEventPoint *p : pts) {
+        QPointF c = p->position();
+        if (canvas)
+            c = canvas->mapFromGlobal(p->globalPosition());
+        s += QStringLiteral(" #%1(%2,%3)")
+                 .arg(p->id())
+                 .arg(qRound(c.x()))
+                 .arg(qRound(c.y()));
+    }
+    return s;
 }
 
 static const QEventPoint *findPointId(const QList<QEventPoint> &pts, int id)
@@ -89,6 +107,7 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
         }
         // @implements [SRS-EP-04] finger tap on ToolChip → armTool (STORY-EP-006)
         // @implements [SRS-EP-21] one-finger box / empty palm / local pan
+        // @implements [SRS-EP-22] hand-touch toggle and contact-count palm
         // @implements [SRS-EP-24] two-finger pan pinch; block during box-move
         if (m_canvas) {
             auto *touch = static_cast<QTouchEvent *>(event);
@@ -109,9 +128,23 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                 m_twoFinger = false;
                 m_ignoreUntilUp = false;
                 m_qmlOwnsTouch = false;
+                m_lastHandLogCount = -1;
+            };
+            auto logPhase = [&](const char *phase, const QVector<const QEventPoint *> &set,
+                                bool force) {
+                const int n = set.size();
+                const bool countChanged = n != m_lastHandLogCount;
+                const bool palmBurst = epaper::handtouch::palmByContactCount(n)
+                    && (!m_handLogClock.isValid() || m_handLogClock.elapsed() >= 80);
+                if (!force && !countChanged && !palmBurst)
+                    return;
+                qInfo().noquote() << handTouchLogLine(phase, set, m_canvas);
+                m_lastHandLogCount = n;
+                m_handLogClock.restart();
             };
 
             if (event->type() == QEvent::TouchBegin) {
+                logPhase("begin", pressed, true);
                 if (m_ignoreUntilUp)
                     return true;
                 if (!pressed.isEmpty()) {
@@ -121,10 +154,22 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                         m_qmlOwnsTouch = true;
                         return false;
                     }
-                    if (!canvasHandTouchOn() && !m_canvas->isChromeHit(pos0))
+                    const bool chrome = m_canvas->isChromeHit(pos0);
+                    if (!canvasHandTouchOn() && !chrome)
                         return true;
+                    if (epaper::handtouch::palmByContactCount(pressed.size()) && !chrome) {
+                        suppressCanvasTouch();
+                        return true;
+                    }
+                    if (chrome) {
+                        m_fingerId = pressed[0]->id();
+                        m_fingerId2 = -1;
+                        m_twoFinger = false;
+                        m_canvas->beginFingerTouch(pos0);
+                        return true;
+                    }
                 }
-                if (pressed.size() >= 2) {
+                if (pressed.size() == 2) {
                     m_fingerId = pressed[0]->id();
                     m_fingerId2 = pressed[1]->id();
                     m_twoFinger = m_canvas->beginTwoFingerTouch(canvasOf(*pressed[0]),
@@ -144,10 +189,15 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                 return true;
             }
             if (event->type() == QEvent::TouchUpdate) {
+                logPhase("update", pressed, false);
                 if (m_qmlOwnsTouch)
                     return false;
                 if (m_ignoreUntilUp)
                     return true;
+                if (epaper::handtouch::palmByContactCount(pressed.size())) {
+                    suppressCanvasTouch();
+                    return true;
+                }
                 if (m_twoFinger) {
                     if (pressed.size() < 2) {
                         m_canvas->endTwoFingerTouch();
@@ -166,7 +216,7 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                         m_canvas->updateTwoFingerTouch(canvasOf(*a), canvasOf(*b));
                     return true;
                 }
-                if (pressed.size() >= 2 && canvasHandTouchOn()
+                if (pressed.size() == 2 && canvasHandTouchOn()
                     && m_canvas->canPromoteToTwoFinger()) {
                     m_fingerId = pressed[0]->id();
                     m_fingerId2 = pressed[1]->id();
@@ -183,6 +233,11 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                 return true;
             }
             if (event->type() == QEvent::TouchEnd || event->type() == QEvent::TouchCancel) {
+                QVector<const QEventPoint *> ending;
+                ending.reserve(pts.size());
+                for (const QEventPoint &tp : pts)
+                    ending.append(&tp);
+                logPhase("end", ending, true);
                 if (m_qmlOwnsTouch) {
                     resetFingers();
                     return false;

@@ -46,11 +46,11 @@ Feature: One-finger hand-touch pick move palm and empty pan
     And exclusive tool remains sel_freeform
 
   @SRS-EP-21 @SRS-EP-25
-  Scenario: One-finger empty travel at or below 10 mm is palm-rest
+  Scenario: One-finger empty travel at or below 20 mm is palm-rest
     Given exclusive tool pen is armed
     And 0 nodes are selected
     And the creator finger-downs on empty canvas with hit.kind empty
-    When Euclidean panel travel stays at 8 mm (at or below 10 mm / 89 du at 226 dpi) and the touch ends
+    When Euclidean panel travel stays at 8 mm (at or below 20 mm / 178 du at 226 dpi) and the touch ends
     Then exclusive tool remains pen
     And 0 nodes are selected
     And 0 lasso starts
@@ -62,7 +62,7 @@ Feature: One-finger hand-touch pick move palm and empty pan
     Given exclusive tool sel_freeform is armed
     And SmartGroup "sg_1" is selected
     And the creator finger-downs on empty canvas with hit.kind empty
-    When Euclidean panel travel stays at or below 10 mm / 89 du and the touch ends
+    When Euclidean panel travel stays at or below 20 mm / 178 du and the touch ends
     Then "sg_1" is not selected
     And 0 nodes are selected
     And exclusive tool remains sel_freeform
@@ -79,11 +79,28 @@ Feature: One-finger hand-touch pick move palm and empty pan
     And ToolChip taps still arm tools
 
   @SRS-EP-21 @SRS-EP-25
-  Scenario: One-finger empty travel past 10 mm pans locally with Infini unchanged
+  Scenario: Three or more contacts are palm
+    Given exclusive tool pen is armed
+    And the creator has three capacitive contacts on empty canvas
+    When any contact moves
+    Then 0 pan occurs
+    And 0 pinch starts
+
+  @SRS-EP-21 @SRS-EP-25
+  Scenario: Hand-touch toggle off disables canvas hand-touch
+    Given exclusive tool pen is armed
+    And the hand-touch toggle is off
+    When the creator finger-downs on empty canvas or on a SmartGroup
+    Then 0 pan occurs
+    And 0 pick or move starts
+    And ToolChip taps still arm tools
+
+  @SRS-EP-21 @SRS-EP-25
+  Scenario: One-finger empty travel past 20 mm pans locally with Infini unchanged
     Given exclusive tool pen is armed
     And follow.direction is none
     And the creator finger-downs on empty canvas with hit.kind empty
-    When Euclidean panel travel goes to 36 mm (past 10 mm / 89 du at 226 dpi)
+    When Euclidean panel travel goes to 36 mm (past 20 mm / 178 du at 226 dpi)
     Then the local Epaper drawingRegion translates
     And exclusive tool remains pen
     And 0 nodes are selected
@@ -106,7 +123,7 @@ Feature: One-finger hand-touch pick move palm and empty pan
     Given follow.direction is infini_to_epaper
     And exclusive tool pen is armed
     And the creator finger-downs on empty canvas with hit.kind empty
-    When Euclidean panel travel goes to 36 mm (past 10 mm / 89 du at 226 dpi)
+    When Euclidean panel travel goes to 36 mm (past 20 mm / 178 du at 226 dpi)
     Then follow.direction becomes none before the local pan applies
     And the gesture drives the local camera
     And 0 continued Infini viewport apply occurs after that gesture starts
