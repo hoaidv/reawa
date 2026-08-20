@@ -30,9 +30,19 @@ function liveSession() {
   return { tree, world, transport, session, logs };
 }
 
+/** ADR-0029: Infini emits viewport down only while Epaper follow is on. */
+function enableLeader(session: TabletSession) {
+  session.receiveViewportFollow({
+    type: "viewport_follow",
+    direction: "infini_to_epaper",
+    seq: 1,
+  });
+}
+
 describe("SRS-IN-07 pan zoom emits viewport", () => {
   it("emits viewport with translate scale drawingRegion seq", () => {
     const { session, transport } = liveSession();
+    enableLeader(session);
     const vp = { translate: { x: -120, y: 40 }, scale: 1.5 };
     const msg = session.publishViewport(vp);
     expect(msg).not.toBeNull();
@@ -53,6 +63,7 @@ describe("SRS-IN-07 pan zoom emits viewport", () => {
 describe("SRS-IN-07 tablet frame drawingRegion and coalesce", () => {
   it("drawingRegion is tablet frame AABB inside full window", () => {
     const { session } = liveSession();
+    enableLeader(session);
     const vp = identityViewport();
     const msg = session.publishViewport(vp, { force: true })!;
     const full = session.fullWindowWorldAabb(vp);
@@ -77,6 +88,7 @@ describe("SRS-IN-07 tablet frame drawingRegion and coalesce", () => {
       nowMs: () => t,
     });
     session.connect();
+    enableLeader(session);
 
     for (let i = 0; i < 60; i++) {
       t = i * (1000 / 60); // ~60 updates in 1s
@@ -199,6 +211,7 @@ describe("SRS-IN-07 duplicate and unknown op", () => {
 describe("SRS-IN-08 viewport map apply latency", () => {
   it("map apply completes within 100 ms of emit (stub peer)", () => {
     const { session, transport } = liveSession();
+    enableLeader(session);
     let latency = Infinity;
     transport.onViewportApply = (_msg, appliedAt) => {
       latency = appliedAt - session.lastViewportEmitAtMs;

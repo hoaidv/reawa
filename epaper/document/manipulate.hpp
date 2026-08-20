@@ -169,7 +169,9 @@ inline GestureKind resolvePress(const CapabilityDescriptor &cap, bool lodOk, boo
 }
 
 inline ResizeHandle hitResizeHandlePanel(const SmartBounds &worldAabb, double panelX, double panelY,
-                                         double panelScale, const std::function<void(double, double, double *, double *)> &worldToPanel)
+                                         double panelScale,
+                                         const std::function<void(double, double, double *, double *)> &worldToPanel,
+                                         double hitDu = kHandleHitDu)
 {
     const double xs[8] = {worldAabb.x,
                           worldAabb.x + worldAabb.width * 0.5,
@@ -189,7 +191,7 @@ inline ResizeHandle hitResizeHandlePanel(const SmartBounds &worldAabb, double pa
                           worldAabb.y + worldAabb.height * 0.5};
     const ResizeHandle hs[8] = {ResizeHandle::Nw, ResizeHandle::N, ResizeHandle::Ne, ResizeHandle::E,
                                 ResizeHandle::Se, ResizeHandle::S, ResizeHandle::Sw, ResizeHandle::W};
-    const double half = kHandleHitDu * 0.5;
+    const double half = hitDu * 0.5;
     (void)panelScale;
     for (int i = 0; i < 8; ++i) {
         double px = 0, py = 0;

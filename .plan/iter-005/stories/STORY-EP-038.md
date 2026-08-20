@@ -4,7 +4,7 @@ title: One-finger hit box: select freeform and move
 kind: implement
 parent_srs: [SRS-EP-21, SRS-EP-23, SRS-EP-25]
 parent_req: [REQ-10]
-status: draft
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -23,7 +23,8 @@ scenes:
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-hit-box.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-moving.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-resizing.html"
-  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty-palm.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty-pan.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-two-finger-pan.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-pinch.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-pan-vs-move.html"
@@ -34,7 +35,7 @@ wireframe: ""
 
 # STORY-EP-038 — One-finger hit box: select freeform and move
 
-TRACK-005. Parent [REQ-10](../../../.docs/modules/epaper/prd.md#hand-touch). Depends on [STORY-EP-037](./STORY-EP-037.md) and [STORY-EP-054](./STORY-EP-054.md) (palm vs empty pan). [ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md).
+TRACK-005. Parent [REQ-10](../../../.docs/modules/epaper/prd.md#hand-touch). Depends on [STORY-EP-037](./STORY-EP-037.md) and [STORY-EP-054](./STORY-EP-054.md) (palm vs empty pan). [ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md). Behavior-driven scenarios: [hand-touch-one-finger.feature](../../../.docs/modules/epaper/features/ink-box/bdd/hand-touch-one-finger.feature). **Done** 2026-08-20 (Quality Assurance Engineer verified host tests).
 
 
 
@@ -44,6 +45,6 @@ TRACK-005. Parent [REQ-10](../../../.docs/modules/epaper/prd.md#hand-touch). Dep
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Depends on | STORY-EP-037 |
+| Depends on | STORY-EP-037, STORY-EP-054 |
 
-Stories stay **draft** until `/architect` binds dedicated SRS (current parent_srs is the nearest existing section).
+Behavior-driven scenarios authored 2026-08-20. Verified **done** 2026-08-20.

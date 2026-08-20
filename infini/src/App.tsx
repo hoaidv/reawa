@@ -2,6 +2,7 @@
  * @implements [SRS-IN-01] Infini app shell — Electron/React host
  * @implements [SRS-IN-02] WindowFrame composition from UI Spec
  * @implements [SRS-IN-18] Device Log overlay is a WindowFrame child, not WorldLayer
+ * @implements [SRS-IN-27] FollowToggle is a WindowFrame child (via CanvasStage fragment)
  */
 
 import { CanvasStage } from "./canvas/CanvasStage";

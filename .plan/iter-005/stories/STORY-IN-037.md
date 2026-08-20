@@ -4,7 +4,7 @@ title: Infini follow Epaper — toggle, exclusion, disconnect
 kind: implement
 parent_srs: [SRS-IN-26, SRS-IN-28]
 parent_req: [REQ-06]
-status: draft
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -30,7 +30,7 @@ wireframe: ""
 
 # STORY-IN-037 — Infini follow Epaper — toggle, exclusion, disconnect
 
-TRACK-005. Parent Infini [REQ-06](../../../.docs/modules/infini/prd.md#viewport-follow). [ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md). Depends on [STORY-IN-036](./STORY-IN-036.md).
+TRACK-005. Parent Infini [REQ-06](../../../.docs/modules/infini/prd.md#viewport-follow). [ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md). Depends on [STORY-IN-036](./STORY-IN-036.md). Behavior-driven scenarios: [viewport-follow-infini.feature](../../../.docs/modules/infini/features/tablet-sync/bdd/viewport-follow-infini.feature). **Done** 2026-08-20 (Quality Assurance Engineer verified). [STORY-IN-033](./STORY-IN-033.md) remains a later apply-depth story.
 
 ## Kind
 
@@ -39,3 +39,5 @@ TRACK-005. Parent Infini [REQ-06](../../../.docs/modules/infini/prd.md#viewport-
 | Kind | `implement` |
 | Owner | `dev` |
 | Depends on | STORY-IN-036 |
+
+Verified **done** 2026-08-20. Did not require [STORY-IN-033](./STORY-IN-033.md) continuous apply.

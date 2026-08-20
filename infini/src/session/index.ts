@@ -4,6 +4,7 @@
 
 export type {
   ViewportMessage,
+  ViewportFollowMessage,
   DocOpMessage,
   DocChangeMessage,
   DocChangeOp,
@@ -15,6 +16,29 @@ export type {
   SessionOutbound,
   SessionTransport,
 } from "./types";
+export {
+  FOLLOW_COPY,
+  FOLLOW_P95_MS,
+  aabbToXywh,
+  cloneViewport,
+  dualFollowOn,
+  followToggleView,
+  identityWorldLayer,
+  parseFollowDirection,
+  shouldApplyInboundTabletViewport,
+  shouldPublishViewportDown,
+  worldLayerFromLocalViewport,
+  worldLayerFromTabletViewport,
+  xywhToAabb,
+} from "./viewportFollow";
+export type {
+  DrawingRegionXywh,
+  FollowDirection,
+  FollowOffKind,
+  FollowToggleView,
+  FollowUiId,
+  WorldLayerPose,
+} from "./viewportFollow";
 export {
   docOpToMessage,
   docChangeToOp,

@@ -6,8 +6,10 @@
 class TabletCanvasItem;
 
 /**
- * App-wide event filter: pen → canvas; touch → ToolChip (STORY-EP-006).
+ * App-wide event filter: pen → canvas; touch → ToolChip + one/two-finger canvas.
  * @implements [SRS-EP-04] tool input routing
+ * @implements [SRS-EP-21] one-finger canvas hit routing
+ * @implements [SRS-EP-24] two-finger pan pinch routing
  */
 class TabletAppFilter : public QObject
 {
@@ -29,4 +31,8 @@ private:
     TabletCanvasItem *m_canvas = nullptr;
     int m_touchEventCount = 0;
     bool m_touchReachableLogged = false;
+    int m_fingerId = -1;
+    int m_fingerId2 = -1;
+    bool m_twoFinger = false;
+    bool m_ignoreUntilUp = false;
 };

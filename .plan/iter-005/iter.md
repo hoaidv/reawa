@@ -18,7 +18,7 @@ Lock: **vertical · verified · wip 2**.
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 
-W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings)). **NOW** W-empty: [STORY-EP-054](./stories/STORY-EP-054.md) **∥** Architect Device Settings rebind.
+W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Track **paused** for human Infini + Epaper field test.
 
 ## Committed
 
@@ -29,7 +29,7 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-EP-053](./stories/STORY-EP-053.md) — design — 3 — viewport-follow Epaper — **done** (W-follow) [UI-EP-07](./design/viewport-follow-epaper/)
 - [STORY-IN-036](./stories/STORY-IN-036.md) — design — 3 — viewport-follow Infini — **done** (W-follow) [UI-IN-04](./design/viewport-follow-infini/)
 - [STORY-EP-056](./stories/STORY-EP-056.md) — design — 5 — revise pen-button map as Epaper — **done** (W-pen-map) [UI-EP-08](./design/pen-button-map/)
-- [STORY-EP-054](./stories/STORY-EP-054.md) — design — 3 — hand-touch empty pan delta — **ready** (**NOW**)
+- [STORY-EP-054](./stories/STORY-EP-054.md) — design — 3 — hand-touch empty pan delta — **done**
 - [STORY-EP-057](./stories/STORY-EP-057.md) — implement — 3 — persist Device Settings — **draft**
 - [STORY-EP-058](./stories/STORY-EP-058.md) — implement — 5 — Settings page Pen buttons — **draft**
 - [STORY-EP-040](./stories/STORY-EP-040.md) — design — 3 — erase
@@ -40,11 +40,11 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 
 ### Implement (gated by design + BDD)
 
-- [STORY-EP-038](./stories/STORY-EP-038.md) — 5 — 1-finger · depends EP-037 + EP-054
-- [STORY-EP-039](./stories/STORY-EP-039.md) — 5 — 2-finger **local** pan (BRD-07 lifted)
-- [STORY-IN-033](./stories/STORY-IN-033.md) — 3 — Infini apply while following · depends EP-039 + IN-037
-- [STORY-EP-055](./stories/STORY-EP-055.md) — 5 — Epaper follow toggle · depends EP-053
-- [STORY-IN-037](./stories/STORY-IN-037.md) — 5 — Infini follow toggle · depends IN-036
+- [STORY-EP-038](./stories/STORY-EP-038.md) — 5 — 1-finger · depends EP-037 + EP-054 — **done**
+- [STORY-EP-039](./stories/STORY-EP-039.md) — 5 — 2-finger **local** pan — **done**
+- [STORY-IN-033](./stories/STORY-IN-033.md) — 3 — Infini apply while following · depends EP-039 + IN-037 — **done**
+- [STORY-EP-055](./stories/STORY-EP-055.md) — 5 — Epaper follow toggle · depends EP-053 — **done**
+- [STORY-IN-037](./stories/STORY-IN-037.md) — 5 — Infini follow toggle · depends IN-036 — **done**
 - [STORY-EP-041](./stories/STORY-EP-041.md) — 5 — eraser nib · depends EP-040
 - [STORY-EP-042](./stories/STORY-EP-042.md) — 3 — selection-erase · depends EP-040
 - [STORY-EP-044](./stories/STORY-EP-044.md) — 5 — clipboard ops · depends EP-043
@@ -68,8 +68,8 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - CHL-0022 shipped “no pan” prose — Product Manager adopt
 - EP-037 package still empty=no-op until EP-054
 - PM `srs-product` BR-D08 still always-on viewport (architect flagged)
-- Vertical work-in-progress 2: EP-054 ∥ architect Device Settings
-- Developer blocked: `paths.src` empty until `/init`; stop line requires behavior-driven scenarios
+- Vertical work-in-progress 2: **0 agent lanes** while paused for Infini + Epaper field test
+- Agent host has no RM2 panel / no live TCP `:9877`; field test is the real two-app verify
 
 ## Links
 

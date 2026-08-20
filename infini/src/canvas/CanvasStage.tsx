@@ -5,6 +5,9 @@
  * @implements [SRS-IN-07] tablet drawing-region marker + viewport + doc_change applier
  * @implements [SRS-IN-04] WorldLayer from VectorDocument mirror
  * @implements [SRS-IN-14] no desktop ToolStrip / SelectionOverlay (deprecated)
+ * @implements [SRS-IN-26] follower local-nav turns follow off
+ * @implements [SRS-IN-20] apply inbound tablet viewport to WorldLayer
+ * @implements [SRS-IN-27] FollowToggle is WindowFrame chrome, not WorldLayer
  *
  * Perf: coalesce paints to one rAF; no React setState on the gesture hot path.
  * STORY-IN-031: Infini is a review/mirror window — pan/zoom only; no ink-box chrome.
@@ -12,6 +15,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CanvasRenderer } from "./CanvasRenderer";
+import { FollowToggle } from "./FollowToggle";
 import { InfiniDocument } from "./Document";
 import { demoPrimitives } from "./primitives";
 import {
@@ -33,7 +37,8 @@ import type { RmInboundMsg } from "../native";
 import { IpcRmTransport, MemoryTransport, TabletSession } from "../session";
 import { rmClientSyncHint, type RmClientEvent } from "../session/rmClientSync";
 import { VectorDocument } from "../document";
-import type { DocChangeMessage, HelloMessage } from "../session";
+import type { DocChangeMessage, HelloMessage, ViewportFollowMessage, ViewportMessage } from "../session";
+import { followToggleView, type FollowToggleView } from "../session/viewportFollow";
 
 export interface CanvasStageProps {
   populated?: boolean;
@@ -82,6 +87,9 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
   const [emptyHint, setEmptyHint] = useState(!populated);
   const [syncHint, setSyncHint] = useState("");
   const [orientation, setOrientation] = useState<TabletOrientation>("gutToLeft");
+  const [followView, setFollowView] = useState<FollowToggleView>(() =>
+    followToggleView({ connected: false, direction: "none", offKind: "default" }),
+  );
 
   if (!sessionRef.current) {
     // Prefer IPC when preload already exposed sendToRm (Electron).
@@ -96,11 +104,24 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
       cssHeight: 600,
       orientation: "gutToLeft",
     });
-    sessionRef.current.connect();
   }
 
   const currentOrientation = (): TabletOrientation =>
     sessionRef.current?.getOrientation() ?? orientationRef.current;
+
+  const syncFollowUi = () => {
+    const view = sessionRef.current?.followView();
+    if (view) setFollowView(view);
+  };
+
+  /**
+   * Follower apply — WorldLayer camera from inbound tablet pose.
+   * @implements [SRS-IN-20] apply translate + uniform scale
+   */
+  const applyFollowViewport = (vp: Viewport) => {
+    vpRef.current = { translate: { x: vp.translate.x, y: vp.translate.y }, scale: vp.scale };
+    schedulePaint();
+  };
 
   const syncMarkerDom = () => {
     const marker = markerRef.current;
@@ -262,7 +283,20 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
     }
 
     const handleRmClient = (ev: RmClientEvent) => {
-      if ((ev.type === "connected" || ev.type === "sync") && ev.n > 0) {
+      const session = sessionRef.current;
+      if (session) {
+        if (ev.n > 0) {
+          if (!session.connected) session.connect();
+        } else if (session.connected) {
+          session.disconnect();
+        }
+        syncFollowUi();
+      }
+      if (
+        (ev.type === "connected" || ev.type === "sync") &&
+        ev.n > 0 &&
+        session?.followDirection === "infini_to_epaper"
+      ) {
         publishViewportCoalesced(true);
       }
       setSyncHint(rmClientSyncHint(ev));
@@ -282,7 +316,7 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
         cssHeight: sizeRef.current.h || 600,
         orientation: orientationRef.current,
       });
-      sessionRef.current.connect();
+      syncFollowUi();
     }
     void api.strokeIngestPort?.().then((p) => {
       setSyncHint((prev) => (prev.startsWith("RM connected") ? prev : `RM sync :${p}`));
@@ -294,6 +328,16 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
     const unsub = api.onRmStroke((msg: RmInboundMsg) => {
       if (msg.type === "hello") {
         sessionRef.current?.receiveHello(msg as HelloMessage);
+        return;
+      }
+      if (msg.type === "viewport_follow") {
+        sessionRef.current?.receiveViewportFollow(msg as ViewportFollowMessage);
+        syncFollowUi();
+        return;
+      }
+      if (msg.type === "viewport") {
+        const applied = sessionRef.current?.receiveTabletViewport(msg as ViewportMessage);
+        if (applied?.applied && applied.viewport) applyFollowViewport(applied.viewport);
         return;
       }
       if (msg.type === "queue_empty") {
@@ -388,6 +432,8 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
       const rect = host.getBoundingClientRect();
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
+      // Local pan/pinch: none **before** the gesture applies ([SRS-IN-20] / [SRS-IN-26]).
+      if (sessionRef.current?.noteFollowerLocalNav()) syncFollowUi();
       bumpGestureEnd();
 
       if (e.ctrlKey || e.metaKey) {
@@ -452,6 +498,8 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    // Local pan: none **before** the drag applies ([SRS-IN-20] / [SRS-IN-26]).
+    if (sessionRef.current?.noteFollowerLocalNav()) syncFollowUi();
     dragRef.current = { x: e.clientX, y: e.clientY };
     markGesturing(true);
     schedulePaint();
@@ -475,7 +523,15 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
     schedulePaint();
   };
 
+  const onFollowToggle = () => {
+    const result = sessionRef.current?.clickFollowToggle();
+    if (!result) return;
+    if (result.applied) applyFollowViewport(result.applied);
+    syncFollowUi();
+  };
+
   return (
+    <>
     <div
       ref={hostRef}
       data-region="CanvasStage"
@@ -496,14 +552,6 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
         data-region="TabletDrawingRegionMarker"
         aria-hidden="true"
       />
-      <div
-        ref={zoomElRef}
-        className="c-zoom-readout"
-        data-region="StatusZoom"
-        aria-live="polite"
-      >
-        100%
-      </div>
       <div className="app-mark" aria-hidden="true">
         Infini
       </div>
@@ -536,5 +584,17 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
         ) : null}
       </p>
     </div>
+    <div className="c-chrome-trailing">
+      <FollowToggle view={followView} onToggle={onFollowToggle} />
+      <div
+        ref={zoomElRef}
+        className="c-zoom-readout"
+        data-region="StatusZoom"
+        aria-live="polite"
+      >
+        100%
+      </div>
+    </div>
+    </>
   );
 }

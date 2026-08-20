@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-20T10:42:53+00:00",
+  "generated_at": "2026-08-20T14:26:42+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 21,
+    "draft": 16,
     "ready": 1,
     "in-progress": 0,
     "in-review": 0,
-    "done": 124,
+    "done": 129,
     "blocked": 13,
     "cancelled": 2
   },
@@ -19,18 +19,18 @@
     },
     "epaper": {
       "total": 58,
-      "done": 32,
+      "done": 35,
       "in_review": 0
     },
     "infini": {
       "total": 37,
-      "done": 26,
+      "done": 28,
       "in_review": 0
     }
   },
   "open_challenges": 2,
   "resolved_challenges_this_iter": 2,
-  "sync_orphans": 137,
+  "sync_orphans": 55,
   "master_plan": true,
   "tracks": [
     {
@@ -64,8 +64,8 @@
     {
       "id": "TRACK-005",
       "kind": "planned",
-      "status": "active",
-      "cursor": "NOW EP-054 \u2225 architect Device Settings (REQ-20); Dev blocked until /init",
+      "status": "paused",
+      "cursor": "WAIT human field test Infini + Epaper; IN-033 done",
       "iter": "iter-005"
     }
   ]

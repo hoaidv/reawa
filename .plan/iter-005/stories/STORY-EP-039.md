@@ -4,7 +4,7 @@ title: Two-finger pan and pinch; publish viewport
 kind: implement
 parent_srs: [SRS-EP-24, SRS-EP-26]
 parent_req: [REQ-10]
-status: draft
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -23,7 +23,8 @@ scenes:
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-hit-box.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-moving.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-resizing.html"
-  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty-palm.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty-pan.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-two-finger-pan.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-pinch.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-pan-vs-move.html"
@@ -34,7 +35,7 @@ wireframe: ""
 
 # STORY-EP-039 — Two-finger pan and pinch; publish viewport
 
-TRACK-005. Parent [REQ-10](../../../.docs/modules/epaper/prd.md#hand-touch) two-finger **local** Must. Publish **only if** Infini follow is on ([ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md)). BRD-07 ship gate **lifted** 2026-08-20.
+TRACK-005. Parent [REQ-10](../../../.docs/modules/epaper/prd.md#hand-touch) two-finger **local** Must. Publish **only if** Infini follow is on ([ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md)). BRD-07 ship gate **lifted** 2026-08-20. Behavior-driven scenarios: [hand-touch-two-finger.feature](../../../.docs/modules/epaper/features/region-sync/bdd/hand-touch-two-finger.feature). **Done** 2026-08-20 (Quality Assurance Engineer verified host tests). Infini apply is [STORY-IN-033](./STORY-IN-033.md) (own later feature; not this file).
 
 
 
@@ -46,4 +47,4 @@ TRACK-005. Parent [REQ-10](../../../.docs/modules/epaper/prd.md#hand-touch) two-
 | Owner | `dev` |
 | Depends on | STORY-EP-037 |
 
-Stories stay **draft** until `/architect` binds dedicated SRS (current parent_srs is the nearest existing section).
+Behavior-driven scenarios authored 2026-08-20. Verified **done** 2026-08-20 (Quality Assurance Engineer; host tests). Infini apply remains [STORY-IN-033](./STORY-IN-033.md).

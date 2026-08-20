@@ -5,12 +5,24 @@
 #include <QTouchEvent>
 #include <QEventPoint>
 #include <QPointingDevice>
-#include <QQuickWindow>
 #include <QDebug>
+#include <QList>
+#include <QVector>
 
 TabletAppFilter::TabletAppFilter(QObject *parent)
     : QObject(parent)
 {
+}
+
+static const QEventPoint *findPointId(const QList<QEventPoint> &pts, int id)
+{
+    if (id < 0)
+        return nullptr;
+    for (const QEventPoint &tp : pts) {
+        if (tp.id() == id)
+            return &tp;
+    }
+    return nullptr;
 }
 
 bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
@@ -34,19 +46,104 @@ bool TabletAppFilter::eventFilter(QObject *watched, QEvent *event)
                 << " (filter path: TabletAppFilter::eventFilter)";
         }
         // @implements [SRS-EP-04] finger tap on ToolChip → armTool (STORY-EP-006)
-        if (m_canvas && event->type() == QEvent::TouchEnd) {
+        // @implements [SRS-EP-21] one-finger box / empty palm / local pan
+        // @implements [SRS-EP-24] two-finger pan pinch; block during box-move
+        if (m_canvas) {
             auto *touch = static_cast<QTouchEvent *>(event);
-            for (const QEventPoint &tp : touch->points()) {
-                if (tp.state() != QEventPoint::State::Released)
+            const auto pts = touch->points();
+            QVector<const QEventPoint *> pressed;
+            pressed.reserve(pts.size());
+            for (const QEventPoint &tp : pts) {
+                if (tp.state() == QEventPoint::State::Released)
                     continue;
-                const QPointF canvasPos = m_canvas->mapFromGlobal(tp.globalPosition());
-                QPointF winPos = canvasPos;
-                if (QQuickWindow *win = m_canvas->window())
-                    winPos = win->mapFromGlobal(tp.globalPosition().toPoint());
-                if (m_canvas->tryDebugChromeAtWindowPos(winPos)
-                    || m_canvas->tryDebugChromeAtWindowPos(canvasPos)
-                    || m_canvas->tryArmToolAtCanvasPos(canvasPos))
+                pressed.append(&tp);
+            }
+            auto canvasOf = [this](const QEventPoint &tp) {
+                return m_canvas->mapFromGlobal(tp.globalPosition());
+            };
+            auto resetFingers = [this]() {
+                m_fingerId = -1;
+                m_fingerId2 = -1;
+                m_twoFinger = false;
+                m_ignoreUntilUp = false;
+            };
+
+            if (event->type() == QEvent::TouchBegin) {
+                if (m_ignoreUntilUp)
                     return true;
+                if (pressed.size() >= 2) {
+                    m_fingerId = pressed[0]->id();
+                    m_fingerId2 = pressed[1]->id();
+                    m_twoFinger = m_canvas->beginTwoFingerTouch(canvasOf(*pressed[0]),
+                                                               canvasOf(*pressed[1]));
+                    if (!m_twoFinger) {
+                        m_fingerId2 = -1;
+                        m_canvas->beginFingerTouch(canvasOf(*pressed[0]));
+                    }
+                    return true;
+                }
+                if (pressed.size() != 1)
+                    return true;
+                m_fingerId = pressed[0]->id();
+                m_fingerId2 = -1;
+                m_twoFinger = false;
+                m_canvas->beginFingerTouch(canvasOf(*pressed[0]));
+                return true;
+            }
+            if (event->type() == QEvent::TouchUpdate) {
+                if (m_ignoreUntilUp)
+                    return true;
+                if (m_twoFinger) {
+                    if (pressed.size() < 2) {
+                        m_canvas->endTwoFingerTouch();
+                        m_twoFinger = false;
+                        m_ignoreUntilUp = true;
+                        m_fingerId2 = -1;
+                        return true;
+                    }
+                    const QEventPoint *a = findPointId(pts, m_fingerId);
+                    const QEventPoint *b = findPointId(pts, m_fingerId2);
+                    if (!a)
+                        a = pressed[0];
+                    if (!b)
+                        b = pressed[1];
+                    if (a && b)
+                        m_canvas->updateTwoFingerTouch(canvasOf(*a), canvasOf(*b));
+                    return true;
+                }
+                if (pressed.size() >= 2 && m_canvas->canPromoteToTwoFinger()) {
+                    m_fingerId = pressed[0]->id();
+                    m_fingerId2 = pressed[1]->id();
+                    m_twoFinger = m_canvas->beginTwoFingerTouch(canvasOf(*pressed[0]),
+                                                               canvasOf(*pressed[1]));
+                    return true;
+                }
+                const QEventPoint *primary = findPointId(pts, m_fingerId);
+                if (!primary && !pressed.isEmpty())
+                    primary = pressed[0];
+                if (m_fingerId < 0 || !primary)
+                    return true;
+                m_canvas->updateFingerTouch(canvasOf(*primary), pressed.size());
+                return true;
+            }
+            if (event->type() == QEvent::TouchEnd || event->type() == QEvent::TouchCancel) {
+                if (m_twoFinger) {
+                    m_canvas->endTwoFingerTouch();
+                } else if (!m_ignoreUntilUp && m_fingerId >= 0) {
+                    const QEventPoint *released = findPointId(pts, m_fingerId);
+                    if (!released) {
+                        for (const QEventPoint &tp : pts) {
+                            if (tp.state() == QEventPoint::State::Released) {
+                                released = &tp;
+                                break;
+                            }
+                        }
+                    }
+                    if (released)
+                        m_canvas->endFingerTouch(canvasOf(*released));
+                }
+                resetFingers();
+                return true;
             }
         }
         return false;

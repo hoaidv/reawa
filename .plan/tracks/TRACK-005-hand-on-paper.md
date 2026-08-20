@@ -2,7 +2,7 @@
 id: TRACK-005
 slug: hand-on-paper
 kind: planned
-status: active
+status: paused
 iter: iter-005
 goal: "Hand-on-paper wave: finger grammar (REQ-10), erase, clipboard, connector decorate, barrel buttons, manual create — not tables"
 scope:
@@ -43,8 +43,8 @@ stories:
   - STORY-EP-056
   - STORY-EP-057
   - STORY-EP-058
-cursor: "NOW EP-054 ∥ architect Device Settings (REQ-20); Dev blocked until /init"
-paused_reason: ""
+cursor: "WAIT human field test Infini + Epaper; IN-033 done"
+paused_reason: "Human 2026-08-20: pause after IN-033 and deploy Infini + Epaper to test on real hardware"
 interrupts: []
 ---
 
@@ -93,11 +93,17 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 | [EP-057](../iter-005/stories/STORY-EP-057.md) | implement | P0 | persist Device Settings on device |
 | [EP-058](../iter-005/stories/STORY-EP-058.md) | implement | P0 | Settings page (Pen buttons) |
 
-W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). EP-037 and IN-034 are **ready**. Other committed stories stay **draft** until their wave.
+W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). EP-037 and IN-034 are **ready**. Other committed stories stay **draft** until their wave. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) **done** 2026-08-20.
 
 ## Cursor
 
-**Next:** Product Designer **EP-054** **∥** Solution Architect Device Settings rebind. Then Quality Assurance Engineer EP-038. Developer EP-038 / EP-039 / IN-033 waits on design + behavior-driven scenarios **and** `/init`.
+**Paused.** Wait on human Infini + Epaper field test. Do **not** start W3 erase design or Device Settings until the human says go. Resume checklist is in the freeze note.
+
+## Freeze note
+
+- In flight: none. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) (Infini applies tablet viewport only while following) **done** (host `cd infini && npm test`).
+- Open files / risks: no RM2 panel / no live TCP `:9877` in the agent host; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open; device/Qt `epaper_bin` not built here.
+- Resume checklist: re-read this note → take human field-test notes → re-run gates on Infini + Epaper surfaces if they found defects → set track `active` → spawn W3 erase design **or** Device Settings scenarios only after the human picks.
 
 ## Execution board
 
@@ -114,4 +120,5 @@ W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SR
 | 2026-08-20 | Follow design EP-053 ∥ IN-036 **done**. |
 | 2026-08-20 | Human interrupt: pen-button-map is Epaper not Infini; Click/Hold-move catalogues shrunk (no temp freeform). Cursor → architect then EP-056. |
 | 2026-08-20 | Architect ADR-0030; SRS-EP-52/53; SRS-IN-24 retired. Designer EP-056 **done** (UI-EP-08). |
-| 2026-08-20 | Human: Device Settings saved on Epaper, not Infini, not document. PM REQ-20; Infini REQ-05 retired. CHL-0025 + GAP-01 adopted. Cursor → EP-054 ∥ architect rebind. IN-035 cancelled. |
+| 2026-08-20 | Developer + Quality Assurance Engineer EP-055 ∥ IN-037 **done**. Cursor → IN-033 apply-depth. |
+| 2026-08-20 | IN-033 **done** (host tests). Human: pause and deploy Infini + Epaper. Track **paused**. |

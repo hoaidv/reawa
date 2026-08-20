@@ -2,6 +2,9 @@
  * Infini side of ADR-0015 tablet session — viewer + inbound applier.
  * @implements [SRS-IN-07] session roles and channel binding
  * @implements [SRS-IN-08] viewport emit timing + mirror apply budget
+ * @implements [SRS-IN-26] viewport-follow Epaper
+ * @implements [SRS-IN-21] viewport emit/apply gates
+ * @implements [SRS-IN-20] apply tablet viewport while following
  */
 
 import { makePath } from "../canvas/primitives";
@@ -9,6 +12,7 @@ import type { InfiniDocument } from "../canvas/Document";
 import {
   frameWorldAabb,
   tabletDrawingFrameCss,
+  type Aabb,
   type CssRect,
   type TabletOrientation,
   type Viewport,
@@ -27,8 +31,25 @@ import {
   type LoadAckMessage,
   type QueueEmptyMessage,
   type SessionTransport,
+  type ViewportFollowMessage,
   type ViewportMessage,
 } from "./types";
+import {
+  aabbToXywh,
+  cloneAabb,
+  cloneViewport,
+  dualFollowOn,
+  followToggleView,
+  identityWorldLayer,
+  parseFollowDirection,
+  shouldApplyInboundTabletViewport,
+  shouldPublishViewportDown,
+  worldLayerFromTabletViewport,
+  type FollowDirection,
+  type FollowOffKind,
+  type FollowToggleView,
+  type WorldLayerPose,
+} from "./viewportFollow";
 
 /** Handshake phase — Infini must not load while the device still has queued changes. */
 export type HandshakePhase =
@@ -78,6 +99,29 @@ export class TabletSession {
   /** Last inbound apply timestamp (ms) for SRS-IN-08. */
   lastApplyAtMs = 0;
 
+  /**
+   * Follow enum — session state, not a document field.
+   * @implements [SRS-IN-26] follow.direction
+   */
+  private follow: FollowDirection = "none";
+  private followSeq = 0;
+  private offKind: FollowOffKind = "default";
+  private sawDisconnect = false;
+  private lastTabletViewport: Viewport | null = null;
+  private lastTabletDrawingRegion: Aabb | null = null;
+  /** Dual-on samples (must stay 0 — enum cannot hold both). */
+  dualOnCount = 0;
+  lastFollowApplyAtMs = 0;
+  lastAppliedTabletViewport: Viewport | null = null;
+  /**
+   * WorldLayer camera Infini actually shows. Inbound apply writes here only while following.
+   * @implements [SRS-IN-20] Infini WorldLayer pose
+   */
+  worldLayer: WorldLayerPose = identityWorldLayer();
+  /** Successful inbound tablet-viewport applies (not toggle-on cache apply). */
+  inboundApplyCount = 0;
+  lastAppliedDrawingRegion: { x: number; y: number; w: number; h: number } | null = null;
+
   private viewportSeq = 0;
   private epaperStrokeInFlight = false;
   private readonly tree: VectorDocument;
@@ -116,10 +160,14 @@ export class TabletSession {
     this.connected = true;
     this.phase = "awaiting_hello";
     this.drainQueued = 0;
+    if (this.sawDisconnect) this.offKind = "reconnect";
+    // Reconnect / hello must not restore follow — direction stays none after drop.
   }
 
   disconnect(): void {
+    this.forceFollowNone({ emit: true, offKind: "reconnect" });
     this.connected = false;
+    this.sawDisconnect = true;
     this.phase = "awaiting_hello";
     this.drainQueued = 0;
     this.dropAllPreviews();
@@ -136,6 +184,11 @@ export class TabletSession {
    */
   receiveHello(msg: HelloMessage): void {
     if (!this.connected) return;
+    // Hello must not carry last follow.direction — ignore extras if a peer sends them.
+    const rogue = (msg as HelloMessage & { direction?: unknown }).direction;
+    if (rogue !== undefined) {
+      this.log("hello does not restore follow.direction", rogue);
+    }
     const queued = Math.max(0, Math.floor(msg.queued));
     const lastSeq = Number.isFinite(msg.lastSeq) ? msg.lastSeq : 0;
     this.drainQueued = queued;
@@ -241,15 +294,17 @@ export class TabletSession {
   }
 
   /**
-   * Publish viewport after Infini pan/zoom.
+   * Publish viewport after Infini pan/zoom — only while Epaper is following Infini.
    * Coalesces to ≤30 Hz unless `force` (gesture settle flush).
    * @implements [SRS-IN-07] viewport message emit + coalesce
+   * @implements [SRS-IN-21] 0 viewport down unless infini_to_epaper
    */
   publishViewport(
     vp: Viewport,
     opts?: { force?: boolean; settle?: boolean },
   ): ViewportMessage | null {
     if (!this.connected) return null;
+    if (!shouldPublishViewportDown(this.follow)) return null;
     const force = opts?.force === true;
     const now = this.nowMs();
     if (!force && now - this.lastPublishAtMs < MIN_PUBLISH_INTERVAL_MS) {
@@ -274,6 +329,7 @@ export class TabletSession {
     }
     this.pendingVp = null;
     if (!next || !this.connected) return null;
+    if (!shouldPublishViewportDown(this.follow)) return null;
     return this.emitViewport(next, this.nowMs(), true);
   }
 
@@ -290,6 +346,7 @@ export class TabletSession {
       seq: this.viewportSeq,
       orientation: this.orientation,
       settle: settle || undefined,
+      source: "infini",
     };
     this.lastViewportEmitAtMs = now;
     this.lastViewportMessage = msg;
@@ -313,6 +370,160 @@ export class TabletSession {
 
   get queuedStructureCount(): number {
     return 0;
+  }
+
+  /** @implements [SRS-IN-26] follow.direction */
+  get followDirection(): FollowDirection {
+    return this.follow;
+  }
+
+  /** @implements [SRS-IN-27] FollowToggle view from direction + session */
+  followView(): FollowToggleView {
+    return followToggleView({
+      connected: this.connected,
+      direction: this.follow,
+      offKind: this.offKind,
+    });
+  }
+
+  /**
+   * Creator click on btn.viewport_follow.
+   * Off or peer → epaper_to_infini (takeover). Following → none.
+   * @implements [SRS-IN-26] Infini follow toggle
+   * @implements [SRS-IN-28] 0 dual-on; apply after settle
+   */
+  clickFollowToggle(): {
+    direction: FollowDirection;
+    follow?: ViewportFollowMessage;
+    applied?: Viewport;
+    elapsedMs: number;
+  } | null {
+    if (!this.connected) return null;
+    const t0 = this.nowMs();
+    if (this.follow === "epaper_to_infini") {
+      const follow = this.emitFollow("none");
+      this.offKind = "default";
+      return { direction: this.follow, follow, elapsedMs: this.nowMs() - t0 };
+    }
+    const follow = this.emitFollow("epaper_to_infini");
+    const applied = this.applyCachedTabletViewport(t0);
+    return {
+      direction: this.follow,
+      follow,
+      applied: applied.viewport,
+      elapsedMs: applied.elapsedMs,
+    };
+  }
+
+  /**
+   * Inbound control plane. Latest seq wins. Does not echo.
+   * @implements [SRS-IN-26] inbound viewport_follow
+   */
+  receiveViewportFollow(msg: ViewportFollowMessage): FollowDirection {
+    const seq = Number(msg.seq);
+    if (!Number.isFinite(seq) || seq < this.followSeq) return this.follow;
+    this.followSeq = seq;
+    this.adoptDirection(parseFollowDirection(msg.direction), { emit: false });
+    return this.follow;
+  }
+
+  /**
+   * Cache tablet pose always; apply immediately only while Infini is following.
+   * Settle is match quality (0 divergent after settle), not an apply gate.
+   * @implements [SRS-IN-26] inbound viewport gated by follow
+   * @implements [SRS-IN-20] apply tablet viewport while epaper_to_infini
+   * @implements [SRS-IN-21] 0 apply while none or infini_to_epaper
+   */
+  receiveTabletViewport(msg: ViewportMessage): {
+    applied: boolean;
+    reason?: string;
+    viewport?: Viewport;
+    elapsedMs?: number;
+  } {
+    const t0 = this.nowMs();
+    this.lastTabletViewport = cloneViewport({
+      translate: { x: msg.translate.x, y: msg.translate.y },
+      scale: msg.scale,
+    });
+    if (msg.drawingRegion) {
+      this.lastTabletDrawingRegion = cloneAabb(msg.drawingRegion);
+    }
+    if (!shouldApplyInboundTabletViewport(this.follow)) {
+      this.log("ignore inbound viewport follow=", this.follow);
+      return { applied: false, reason: "not_follower", elapsedMs: this.nowMs() - t0 };
+    }
+    const result = this.applyCachedTabletViewport(t0);
+    if (result.applied) this.inboundApplyCount += 1;
+    return result;
+  }
+
+  /**
+   * Follower local-nav: set none **then** the caller pans. Returns true if follow turned off.
+   * @implements [SRS-IN-26] Infini local-nav turns follow off
+   */
+  noteFollowerLocalNav(): boolean {
+    if (this.follow !== "epaper_to_infini") return false;
+    this.emitFollow("none");
+    this.offKind = "local_nav";
+    return true;
+  }
+
+  /** Seed last known tablet viewport (tests / apply-on-toggle). */
+  noteTabletViewport(vp: Viewport, drawingRegion?: Aabb): void {
+    this.lastTabletViewport = cloneViewport(vp);
+    if (drawingRegion) this.lastTabletDrawingRegion = cloneAabb(drawingRegion);
+  }
+
+  private emitFollow(direction: FollowDirection): ViewportFollowMessage {
+    this.followSeq += 1;
+    this.adoptDirection(direction, { emit: false });
+    const msg: ViewportFollowMessage = {
+      type: "viewport_follow",
+      direction: this.follow,
+      seq: this.followSeq,
+    };
+    this.transport.sendViewportFollow(msg);
+    return msg;
+  }
+
+  private adoptDirection(direction: FollowDirection, _opts: { emit: boolean }): void {
+    this.follow = direction;
+    if (direction !== "none" && this.offKind !== "default") this.offKind = "default";
+    if (dualFollowOn(this.follow)) this.dualOnCount += 1;
+  }
+
+  private forceFollowNone(opts: { emit: boolean; offKind: FollowOffKind }): void {
+    this.offKind = opts.offKind;
+    if (this.follow === "none") return;
+    if (opts.emit && this.connected) this.emitFollow("none");
+    else this.adoptDirection("none", { emit: false });
+  }
+
+  private applyCachedTabletViewport(t0: number): {
+    applied: boolean;
+    viewport?: Viewport;
+    elapsedMs: number;
+  } {
+    if (!this.lastTabletViewport) {
+      return { applied: false, elapsedMs: this.nowMs() - t0 };
+    }
+    const viewport = cloneViewport(this.lastTabletViewport);
+    const drawingRegion =
+      this.lastTabletDrawingRegion ?? {
+        minX: this.worldLayer.drawingRegion.x,
+        minY: this.worldLayer.drawingRegion.y,
+        maxX: this.worldLayer.drawingRegion.x + this.worldLayer.drawingRegion.w,
+        maxY: this.worldLayer.drawingRegion.y + this.worldLayer.drawingRegion.h,
+      };
+    this.worldLayer = worldLayerFromTabletViewport({
+      translate: viewport.translate,
+      scale: viewport.scale,
+      drawingRegion,
+    });
+    this.lastAppliedTabletViewport = viewport;
+    this.lastAppliedDrawingRegion = aabbToXywh(drawingRegion);
+    this.lastFollowApplyAtMs = this.nowMs();
+    return { applied: true, viewport, elapsedMs: this.lastFollowApplyAtMs - t0 };
   }
 
   /**

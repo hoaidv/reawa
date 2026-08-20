@@ -2,10 +2,12 @@
  * Tablet session message shapes (JSON-lines framing).
  * @implements [SRS-IN-07] viewport + handshake + doc_change envelopes
  * @implements [SRS-IN-09] transmit names hello drain_ack doc_load
+ * @implements [SRS-IN-26] viewport_follow control plane
  */
 
 import type { Aabb, TabletOrientation } from "../canvas/Viewport";
 import type { DocOp } from "../document/types";
+import type { FollowDirection } from "./viewportFollow";
 
 export interface ViewportMessage {
   type: "viewport";
@@ -17,6 +19,18 @@ export interface ViewportMessage {
   orientation?: TabletOrientation;
   /** True on gesture settle — Epaper should sharp-rasterize vectors. */
   settle?: boolean;
+  /** Leader that authored this pose. Flows only along follow.direction. */
+  source?: "infini" | "epaper";
+}
+
+/**
+ * Session control — not a document message.
+ * @implements [SRS-IN-26] viewport_follow { direction, seq }
+ */
+export interface ViewportFollowMessage {
+  type: "viewport_follow";
+  direction: FollowDirection;
+  seq: number;
 }
 
 /**
@@ -111,6 +125,7 @@ export interface DocChangeMessage {
 
 export type SessionOutbound =
   | ViewportMessage
+  | ViewportFollowMessage
   | DocLoadMessage
   | DrainAckMessage
   | DocOpMessage;
@@ -118,6 +133,7 @@ export type SessionOutbound =
 /** Peer transport — tests use in-memory; production wires TCP/JSON-lines. */
 export interface SessionTransport {
   sendViewport(msg: ViewportMessage): void;
+  sendViewportFollow(msg: ViewportFollowMessage): void;
   sendDrainAck(msg: DrainAckMessage): void;
   sendDocLoad(msg: DocLoadMessage): void;
   /** Retired — Infini is a viewer; implementations must no-op. */

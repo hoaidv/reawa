@@ -273,6 +273,11 @@ describe("SRS-IN-07 Infini authors no document ops", () => {
     expect(emit.emitted).toBe(false);
     expect(emit.reason).toBe("viewer_only");
     expect(transport.docOps).toHaveLength(0);
+    session.receiveViewportFollow({
+      type: "viewport_follow",
+      direction: "infini_to_epaper",
+      seq: 1,
+    });
     session.publishViewport({ translate: { x: 0, y: 0 }, scale: 1 });
     expect(transport.viewports.length).toBeGreaterThan(0);
     expect(transport.docOps).toHaveLength(0);

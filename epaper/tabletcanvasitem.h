@@ -18,8 +18,10 @@
 #include <vector>
 
 #include "document/device_document.hpp"
+#include "document/hand_touch.hpp"
 #include "document/manipulate.hpp"
 #include "document/one_way_sync.hpp"
+#include "document/viewport_follow.hpp"
 #include "toolchip_layout.hpp"
 
 class StrokeSync;
@@ -32,6 +34,14 @@ class ToolCanvasItem;
  * @implements [SRS-EP-07] local tree paint + stroke ingest
  * @implements [SRS-EP-08] one-way sync handshake and publish
  * @implements [SRS-EP-11] live SmartGroup manipulation
+ * @implements [SRS-EP-21] one-finger pick move palm pan
+ * @implements [SRS-EP-23] finger exclusive-tool switch
+ * @implements [SRS-EP-24] two-finger pan pinch viewport
+ * @implements [SRS-EP-25] one-finger hand-touch quality
+ * @implements [SRS-EP-26] two-finger map-apply quality
+ * @implements [SRS-EP-49] viewport-follow Infini session enum
+ * @implements [SRS-EP-50] FollowToggle sibling of ToolChip
+ * @implements [SRS-EP-51] follow exclusivity and map-apply quality
  */
 class TabletCanvasItem : public QQuickPaintedItem
 {
@@ -47,6 +57,10 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(bool recogTogglesDimmed READ recogTogglesDimmed NOTIFY toolModeChanged)
     Q_PROPERTY(QString lastStrokeLatch READ lastStrokeLatch NOTIFY lastStrokeLatchChanged)
     Q_PROPERTY(QRectF toolChipRect READ toolChipRect NOTIFY toolChipRectChanged)
+    Q_PROPERTY(QRectF followToggleRect READ followToggleRect NOTIFY followToggleRectChanged)
+    Q_PROPERTY(QString followDirection READ followDirection NOTIFY followChanged)
+    Q_PROPERTY(bool followPressed READ followPressed NOTIFY followChanged)
+    Q_PROPERTY(bool followUnavailable READ followUnavailable NOTIFY followChanged)
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
     Q_PROPERTY(QRectF encloseCtaRect READ encloseCtaRect NOTIFY selectionChromeChanged)
@@ -77,6 +91,9 @@ public:
     Q_INVOKABLE void toggleRecogInkBox();
     Q_INVOKABLE void toggleRecogConnector();
     QRectF toolChipRect() const { return m_toolChipRect; }
+    QRectF followToggleRect() const { return m_followToggleRect; }
+    bool followPressed() const { return m_follow.ariaPressed(); }
+    bool followUnavailable() const { return m_follow.ariaDisabled(); }
     bool canUndo() const { return m_document.undoDepth() > 0; }
     bool canRedo() const { return m_document.redoDepth() > 0; }
     Q_INVOKABLE void requestUndo();
@@ -122,6 +139,25 @@ public:
     bool tryArmToolAtCanvasPos(const QPointF &canvasPos);
     /** Window-space debug chips (Switch / Infini). Touch uses this; canvas mapping misses top-right. */
     bool tryDebugChromeAtWindowPos(const QPointF &windowPos);
+    /**
+     * Capacitive one-finger path (STORY-EP-038). Chip / box / knob / empty palm vs pan.
+     * @implements [SRS-EP-21] one-finger canvas hit
+     */
+    bool beginFingerTouch(const QPointF &canvasPos);
+    void updateFingerTouch(const QPointF &canvasPos, int fingerCount);
+    void endFingerTouch(const QPointF &canvasPos);
+    /**
+     * Two-finger local pan/pinch (STORY-EP-039). Blocked while box-move/resize in flight.
+     * @implements [SRS-EP-24] two-finger canvas pan pinch
+     */
+    bool canPromoteToTwoFinger() const;
+    bool beginTwoFingerTouch(const QPointF &a, const QPointF &b);
+    void updateTwoFingerTouch(const QPointF &a, const QPointF &b);
+    void endTwoFingerTouch();
+    QString followDirection() const { return m_followDirection; }
+    void setFollowDirection(const QString &dir);
+    Q_INVOKABLE void tapFollowToggle();
+    int viewportUpCount() const { return m_viewportUpCount; }
 
     void paint(QPainter *painter) override;
 
@@ -132,6 +168,8 @@ signals:
     void recogChanged();
     void lastStrokeLatchChanged();
     void toolChipRectChanged();
+    void followToggleRectChanged();
+    void followChanged();
     void historyChanged();
     void pickablesChanged();
     void selectionChromeChanged();
@@ -193,6 +231,11 @@ private:
     void applyDocSnapshot(const QJsonObject &obj);
     void updateToolChipRect();
     bool pointInToolChip(const QPointF &canvasPos) const;
+    bool pointInFollowToggle(const QPointF &canvasPos) const;
+    void emitViewportFollow();
+    void flushFollowOutbound();
+    void applyFollowCamera();
+    void cacheInfiniViewport(const QJsonObject &obj);
     bool pointInEncloseCta(const QPointF &canvasPos) const;
     QString toolChipHitAt(const QPointF &canvasPos) const;
     bool isSelectionTool() const;
@@ -201,7 +244,17 @@ private:
     void refreshSelectionChrome();
     QString hitLocalSmartGroup(const QPointF &world) const;
     QString hitPickable(const QPointF &world) const;
-    void beginSelectionGesture(const QPointF &canvasPos);
+    void beginSelectionGesture(const QPointF &canvasPos,
+                               double handleHitDu = epaper::document::kHandleHitDu);
+    bool fingerHitsChip(const QPointF &canvasPos) const;
+    bool fingerHitsKnob(const QPointF &canvasPos) const;
+    bool fingerHitsBox(const QPointF &canvasPos) const;
+    void ensureLocalDrawingRegion();
+    void applyLocalFingerPan(const QPointF &canvasPos);
+    void applyLocalTwoFinger(const QPointF &a, const QPointF &b);
+    epaper::handtouch::TwoFingerContacts uvPair(const QPointF &a, const QPointF &b) const;
+    void maybePublishLocalViewport(bool settle);
+    epaper::handtouch::FollowDirection followEnum() const;
     void updateSelectionGesture(const QPointF &canvasPos);
     void endSelectionGesture();
     void redrawLiveManipRegion();
@@ -271,6 +324,19 @@ private:
     qreal m_activeWorldStrokeWidth = 2.5;
     int m_viewportSeq = 0;
     WorldAabb m_drawingRegion;
+    QString m_followDirection = QStringLiteral("none");
+    epaper::follow::FollowSession m_follow;
+    QRectF m_followToggleRect;
+    int m_viewportUpCount = 0;
+    enum class FingerGesture { None, Chip, Move, Resize, EmptyPending, EmptyPan, TwoFinger } m_fingerGesture =
+        FingerGesture::None;
+    QPointF m_fingerDownPanel;
+    QPointF m_fingerDownWorld;
+    WorldAabb m_fingerPanOrigin;
+    QElapsedTimer m_fingerPanClock;
+    epaper::handtouch::TwoFingerContacts m_twoOriginContacts{};
+    QPointF m_twoA;
+    QPointF m_twoB;
     epaper::document::DeviceDocument m_document;
     epaper::document::OneWaySyncSession m_oneWay;
     std::vector<std::int64_t> m_ingestNs;

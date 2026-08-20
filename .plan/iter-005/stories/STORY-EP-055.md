@@ -4,7 +4,7 @@ title: Epaper follow Infini — toggle, exclusion, disconnect
 kind: implement
 parent_srs: [SRS-EP-49, SRS-EP-51]
 parent_req: [REQ-19]
-status: draft
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -29,7 +29,7 @@ wireframe: ""
 
 # STORY-EP-055 — Epaper follow Infini — toggle, exclusion, disconnect
 
-TRACK-005. Parent [REQ-19](../../../.docs/modules/epaper/prd.md#viewport-follow). [ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md). Depends on [STORY-EP-053](./STORY-EP-053.md).
+TRACK-005. Parent [REQ-19](../../../.docs/modules/epaper/prd.md#viewport-follow). [ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md). Depends on [STORY-EP-053](./STORY-EP-053.md). Behavior-driven scenarios: [viewport-follow-epaper.feature](../../../.docs/modules/epaper/features/region-sync/bdd/viewport-follow-epaper.feature). **Ready** for Developer.
 
 ## Kind
 

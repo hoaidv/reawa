@@ -4,7 +4,7 @@ title: Infini applies tablet viewport only while following
 kind: implement
 parent_srs: [SRS-IN-20, SRS-IN-21, SRS-IN-22, SRS-IN-26]
 parent_req: [REQ-03, REQ-06]
-status: draft
+status: done
 priority: P0
 iter: iter-005
 estimate: 3
@@ -23,7 +23,7 @@ wireframe: ""
 
 # STORY-IN-033 — Infini applies tablet viewport only while following
 
-TRACK-005. Peer of [STORY-EP-039](./STORY-EP-039.md). Infini [REQ-06](../../../.docs/modules/infini/prd.md#viewport-follow) + [REQ-03](../../../.docs/modules/infini/prd.md#tablet-sync). Last-writer [ADR-0023](../../../.docs/adr/ADR-0023-viewport-last-writer.md) is **superseded** by [ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md).
+TRACK-005. Peer of [STORY-EP-039](./STORY-EP-039.md). Infini [REQ-06](../../../.docs/modules/infini/prd.md#viewport-follow) + [REQ-03](../../../.docs/modules/infini/prd.md#tablet-sync). Last-writer [ADR-0023](../../../.docs/adr/ADR-0023-viewport-last-writer.md) is **superseded** by [ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md). Depends on [STORY-IN-037](./STORY-IN-037.md) (**done**). Apply-depth feature: [viewport-follow-apply.feature](../../../.docs/modules/infini/features/infinity-canvas/bdd/viewport-follow-apply.feature). **Done** 2026-08-20 (Quality Assurance Engineer verified unit scenarios). Campaign **pauses** for human Infini + Epaper deploy — do not start W3.
 
 
 

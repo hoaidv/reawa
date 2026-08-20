@@ -20,7 +20,8 @@ scenes:
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-hit-box.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-moving.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-resizing.html"
-  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty-palm.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty-pan.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-two-finger-pan.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-pinch.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-pan-vs-move.html"
@@ -33,7 +34,7 @@ wireframe: ""
 
 TRACK-005. Parent [REQ-10]. [REQ-10](../../../.docs/modules/epaper/prd.md#hand-touch)
 
-Scenes must cover PRD UI states: finger-hit box; move in progress; **finger resize**; one-finger empty no-op; two-finger pan; pinch; pan vs box-move; chip still hittable. Do **not** ship `hand.pen_resize_after_finger_select` or `hand.finger_anchor_noop` ([CHL-0024](../challenges/CHL-0024-finger-resize-knobs.md)).
+Scenes must cover PRD UI states: finger-hit box; move in progress; **finger resize**; one-finger empty **palm-rest** and **local pan** ([STORY-EP-054](./STORY-EP-054.md)); two-finger pan; pinch; pan vs box-move; chip still hittable. Do **not** ship `hand.pen_resize_after_finger_select` or `hand.finger_anchor_noop` ([CHL-0024](../challenges/CHL-0024-finger-resize-knobs.md)).
 
 ## Kind
 

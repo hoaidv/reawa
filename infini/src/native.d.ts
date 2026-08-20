@@ -52,6 +52,24 @@ export type RmManipPreviewMsg = {
   bounds?: { x: number; y: number; width: number; height: number };
 };
 
+export type RmViewportMsg = {
+  type: "viewport";
+  translate: { x: number; y: number };
+  scale: number;
+  drawingRegion?: { minX: number; minY: number; maxX: number; maxY: number };
+  seq: number;
+  orientation?: string;
+  settle?: boolean;
+  source?: "infini" | "epaper";
+};
+
+/** @implements [SRS-IN-26] inbound viewport_follow */
+export type RmViewportFollowMsg = {
+  type: "viewport_follow";
+  direction: "none" | "infini_to_epaper" | "epaper_to_infini";
+  seq: number;
+};
+
 export type RmInboundMsg =
   | RmStrokeMsg
   | RmToolIntentMsg
@@ -59,7 +77,9 @@ export type RmInboundMsg =
   | RmHelloMsg
   | RmQueueEmptyMsg
   | RmLoadAckMsg
-  | RmManipPreviewMsg;
+  | RmManipPreviewMsg
+  | RmViewportMsg
+  | RmViewportFollowMsg;
 
 /** @implements [SRS-IN-17] inbound debug_log from Epaper on :9878 */
 export type DebugLogRecord = {

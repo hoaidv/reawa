@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-20T10:42:53+00:00
+generated_at: 2026-08-20T14:26:42+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -44,8 +44,8 @@ generated_at: 2026-08-20T10:42:53+00:00
 | [STORY-EP-035](./iter-004/stories/STORY-EP-035.md) | Measure enclose area/length to separate handwriting from boundary ink | implement | dev | epaper | [SRS-EP-10] | ready | iter-005 | 3 |
 | [STORY-EP-036](./iter-004/stories/STORY-EP-036.md) | Detect USB gadget down and restore without unplug | implement | dev | epaper | [SRS-EP-08], [SRS-EP-13] | cancelled | iter-004 | 5 |
 | [STORY-EP-037](./iter-005/stories/STORY-EP-037.md) | Design hand-touch: one-finger pick/move and two-finger pan/zoom | design | designer | epaper | [SRS-EP-21], [SRS-EP-22], [SRS-EP-23], [SRS-EP-24] | done | iter-005 | 5 |
-| [STORY-EP-038](./iter-005/stories/STORY-EP-038.md) | One-finger hit box: select freeform and move | implement | dev | epaper | [SRS-EP-21], [SRS-EP-23], [SRS-EP-25] | draft | iter-005 | 5 |
-| [STORY-EP-039](./iter-005/stories/STORY-EP-039.md) | Two-finger pan and pinch; publish viewport | implement | dev | epaper | [SRS-EP-24], [SRS-EP-26] | draft | iter-005 | 5 |
+| [STORY-EP-038](./iter-005/stories/STORY-EP-038.md) | One-finger hit box: select freeform and move | implement | dev | epaper | [SRS-EP-21], [SRS-EP-23], [SRS-EP-25] | done | iter-005 | 5 |
+| [STORY-EP-039](./iter-005/stories/STORY-EP-039.md) | Two-finger pan and pinch; publish viewport | implement | dev | epaper | [SRS-EP-24], [SRS-EP-26] | done | iter-005 | 5 |
 | [STORY-EP-040](./iter-005/stories/STORY-EP-040.md) | Design erase: nib feedback and selection-erase CTA | design | designer | epaper | [SRS-EP-29], [SRS-EP-27], [SRS-EP-28] | draft | iter-005 | 3 |
 | [STORY-EP-041](./iter-005/stories/STORY-EP-041.md) | Hardware eraser nib stroke-erase | implement | dev | epaper | [SRS-EP-27], [SRS-EP-30] | draft | iter-005 | 5 |
 | [STORY-EP-042](./iter-005/stories/STORY-EP-042.md) | Selection-erase deletes selected nodes | implement | dev | epaper | [SRS-EP-28], [SRS-EP-30] | draft | iter-005 | 3 |
@@ -61,7 +61,7 @@ generated_at: 2026-08-20T10:42:53+00:00
 | [STORY-EP-052](./iter-005/stories/STORY-EP-052.md) | Barrel click vs hold-move dispatch from catalogue | implement | dev | epaper | [SRS-EP-41], [SRS-EP-43] | draft | iter-005 | 5 |
 | [STORY-EP-053](./iter-005/stories/STORY-EP-053.md) | Design Epaper viewport-follow Infini toggle | design | designer | epaper | [SRS-EP-50], [SRS-EP-49], [SRS-EP-51] | done | iter-005 | 3 |
 | [STORY-EP-054](./iter-005/stories/STORY-EP-054.md) | Revise hand-touch: palm-rest vs empty local pan | design | designer | epaper | [SRS-EP-21], [SRS-EP-22], [SRS-EP-23], [SRS-EP-24] | done | iter-005 | 3 |
-| [STORY-EP-055](./iter-005/stories/STORY-EP-055.md) | Epaper follow Infini — toggle, exclusion, disconnect | implement | dev | epaper | [SRS-EP-49], [SRS-EP-51] | draft | iter-005 | 5 |
+| [STORY-EP-055](./iter-005/stories/STORY-EP-055.md) | Epaper follow Infini — toggle, exclusion, disconnect | implement | dev | epaper | [SRS-EP-49], [SRS-EP-51] | done | iter-005 | 5 |
 | [STORY-EP-056](./iter-005/stories/STORY-EP-056.md) | Revise pen-button map as Epaper on-device editor | design | designer | epaper | [SRS-EP-52], [SRS-EP-53], [SRS-EP-42] | done | iter-005 | 5 |
 | [STORY-EP-057](./iter-005/stories/STORY-EP-057.md) | Persist Device Settings on the Epaper device | implement | dev | epaper | [SRS-EP-53] | draft | iter-005 | 3 |
 | [STORY-EP-058](./iter-005/stories/STORY-EP-058.md) | Implement Device Settings page (Pen buttons) | implement | dev | epaper | [SRS-EP-52] | draft | iter-005 | 5 |
@@ -97,11 +97,11 @@ generated_at: 2026-08-20T10:42:53+00:00
 | [STORY-IN-030](./iter-004/stories/STORY-IN-030.md) | Mirror create_connector envelope and derived warp | implement | dev | infini | [SRS-IN-09] | done | iter-004 | 5 |
 | [STORY-IN-031](./iter-004/stories/STORY-IN-031.md) | Remove Infini desktop editing ToolStrip | implement | dev | infini | [SRS-IN-14] | done | iter-004 | 2 |
 | [STORY-IN-032](./iter-004/stories/STORY-IN-032.md) | WorldLayer is device mirror only — no demo mix | implement | dev | infini | [SRS-IN-07], [SRS-IN-09] | done | iter-004 | 3 |
-| [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) | Infini applies tablet viewport only while following | implement | dev | infini | [SRS-IN-20], [SRS-IN-21], [SRS-IN-22], [SRS-IN-26] | draft | iter-005 | 3 |
+| [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) | Infini applies tablet viewport only while following | implement | dev | infini | [SRS-IN-20], [SRS-IN-21], [SRS-IN-22], [SRS-IN-26] | done | iter-005 | 3 |
 | [STORY-IN-034](./iter-005/stories/STORY-IN-034.md) | Design Infini pen-button map settings | design | designer | infini | [SRS-IN-24], [SRS-IN-23] | done | iter-005 | 3 |
 | [STORY-IN-035](./iter-005/stories/STORY-IN-035.md) | Persist and restore pen-button map (not the editor) | implement | dev | infini | [SRS-IN-23], [SRS-IN-25] | cancelled | iter-005 | 3 |
 | [STORY-IN-036](./iter-005/stories/STORY-IN-036.md) | Design Infini viewport-follow Epaper toggle | design | designer | infini | [SRS-IN-27], [SRS-IN-26], [SRS-IN-28] | done | iter-005 | 3 |
-| [STORY-IN-037](./iter-005/stories/STORY-IN-037.md) | Infini follow Epaper — toggle, exclusion, disconnect | implement | dev | infini | [SRS-IN-26], [SRS-IN-28] | draft | iter-005 | 5 |
+| [STORY-IN-037](./iter-005/stories/STORY-IN-037.md) | Infini follow Epaper — toggle, exclusion, disconnect | implement | dev | infini | [SRS-IN-26], [SRS-IN-28] | done | iter-005 | 5 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |
 | [STORY-RW-003](./iter-000/stories/STORY-RW-003.md) | Accessibility permission gate | implement | dev | reawa | [SRS-RW-03] | done | iter-000 | 1 |

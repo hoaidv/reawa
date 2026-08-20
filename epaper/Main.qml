@@ -56,6 +56,59 @@ TabletWindow {
         visible: false
     }
 
+    // FollowToggle — sibling of ToolChip, trailing 10 mm icon toggle (UI-EP-07 / SRS-EP-50).
+    // @implements [SRS-EP-50] FollowToggle sibling of ToolChip
+    Rectangle {
+        id: followToggle
+        z: 20
+        x: drawCanvas.followToggleRect.x
+        y: drawCanvas.followToggleRect.y
+        width: drawCanvas.followToggleRect.width
+        height: drawCanvas.followToggleRect.height
+        color: drawCanvas.followPressed ? "black" : "white"
+        border.color: "black"
+        border.width: 1
+
+        Image {
+            anchors.centerIn: parent
+            width: parent.width * 0.62
+            height: parent.height * 0.62
+            fillMode: Image.PreserveAspectFit
+            smooth: false
+            source: drawCanvas.followPressed
+                    ? "qrc:/icons/icons/icon-epaper-viewport-follow-inv.png"
+                    : "qrc:/icons/icons/icon-epaper-viewport-follow.png"
+        }
+
+        Canvas {
+            id: followHatch
+            visible: drawCanvas.followUnavailable
+            anchors.fill: parent
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
+                ctx.strokeStyle = "#000000"
+                ctx.lineWidth = 1
+                for (var i = -height; i < width + height; i += 4) {
+                    ctx.beginPath()
+                    ctx.moveTo(i, 0)
+                    ctx.lineTo(i + height, height)
+                    ctx.stroke()
+                }
+            }
+            Connections {
+                target: drawCanvas
+                function onFollowChanged() { followHatch.requestPaint() }
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: !drawCanvas.followUnavailable
+            onClicked: drawCanvas.tapFollowToggle()
+        }
+    }
+
     // Floating tool chip — 3 exclusive tools + 2 recognizer toggles + Undo/Redo (ADR-0021 / UI-EP-04).
     Item {
         id: toolChip
@@ -413,7 +466,7 @@ TabletWindow {
         id: infiniReconnect
         z: 30
         x: root.width - width - 8
-        y: 8
+        y: 80
         width: 64
         height: 64
         color: "white"

@@ -9,11 +9,13 @@ import type {
   DrainAckMessage,
   SessionOutbound,
   SessionTransport,
+  ViewportFollowMessage,
   ViewportMessage,
 } from "./types";
 
 export class MemoryTransport implements SessionTransport {
   readonly viewports: ViewportMessage[] = [];
+  readonly viewportFollows: ViewportFollowMessage[] = [];
   readonly drainAcks: DrainAckMessage[] = [];
   readonly docLoads: DocLoadMessage[] = [];
   readonly docOps: DocOpMessage[] = [];
@@ -27,6 +29,11 @@ export class MemoryTransport implements SessionTransport {
     this.outbound.push(msg);
     const appliedAt = performance.now();
     this.onViewportApply?.(msg, appliedAt);
+  }
+
+  sendViewportFollow(msg: ViewportFollowMessage): void {
+    this.viewportFollows.push(msg);
+    this.outbound.push(msg);
   }
 
   sendDrainAck(msg: DrainAckMessage): void {

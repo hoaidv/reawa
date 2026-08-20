@@ -205,6 +205,10 @@ public:
             m_lastViewport = msg;
             return;
         }
+        if (type == "viewport_follow") {
+            // @implements [SRS-EP-49] viewport_follow session enum, not document
+            return;
+        }
         if (type == "drain_ack") {
             onDrainAck();
             return;

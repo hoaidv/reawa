@@ -49,7 +49,8 @@ constexpr QRectF kXochitlSwitchRect(8, 8, 64, 64);
 
 QRectF infiniReconnectRect(qreal panelW)
 {
-    return QRectF(panelW - 8.0 - 64.0, 8.0, 64.0, 64.0);
+    // Below FollowToggle (trailing-top 64 du + 8 inset) so USB debug does not cover the toggle.
+    return QRectF(panelW - 8.0 - 64.0, 8.0 + 64.0 + 8.0, 64.0, 64.0);
 }
 
 /** Context toolbar under the box — south of the bottom handle (28 du visual). */
@@ -133,10 +134,16 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     connect(m_sync, &StrokeSync::socketConnected, this, [this]() {
         epaper::UiStallSection stall("onLinkUp-hello");
         m_oneWay.onLinkUp();
+        m_follow.onReconnect();
+        emit followChanged();
         flushOneWayWire();
     });
     connect(m_sync, &StrokeSync::socketDisconnected, this, [this]() {
         m_oneWay.onLinkDown();
+        // @implements [SRS-EP-49] disconnect forces follow none
+        m_follow.onDisconnect();
+        m_followDirection = QStringLiteral("none");
+        emit followChanged();
     });
     auto *helloRetry = new QTimer(this);
     helloRetry->setInterval(5000);
@@ -290,6 +297,11 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
     m_lastPoint = canvasPos;
     m_lastRaw = pos;
 
+    if (pointInFollowToggle(canvasPos)) {
+        if (type == QEvent::TabletPress || type == QEvent::MouseButtonPress)
+            tapFollowToggle();
+        return;
+    }
     if (tryDebugChromeAtWindowPos(pos) || tryDebugChromeAtWindowPos(canvasPos))
         return;
 
@@ -348,6 +360,10 @@ void TabletCanvasItem::applyContactPress(const QPointF &canvasPos, const IngestC
 {
     // Pen on ToolChip — not ink; arm via tile hit-test (pen-on-chip fallback).
     // First plausible sample, including Move-after-stale-Press (STORY-EP-033).
+    if (pointInFollowToggle(canvasPos)) {
+        tapFollowToggle();
+        return;
+    }
     if (kXochitlSwitchRect.contains(canvasPos)) {
         tryArmToolAtCanvasPos(canvasPos);
         return;
@@ -834,14 +850,32 @@ void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
 {
     epaper::UiStallSection stall("onHostMessage");
     const QString inboundType = obj.value(QStringLiteral("type")).toString();
+    if (inboundType == QLatin1String("viewport_follow")) {
+        const QByteArray raw = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+        const auto msg = epaper::follow::parseViewportFollowLine(
+            std::string(raw.constData(), static_cast<size_t>(raw.size())));
+        if (m_follow.adoptInbound(msg)) {
+            m_followDirection = QString::fromLatin1(epaper::handtouch::followId(m_follow.direction));
+            emit followChanged();
+            if (m_follow.epaperFollowOn())
+                applyFollowCamera();
+        }
+        m_oneWay.handleInboundLine(std::string(raw.constData(), static_cast<size_t>(raw.size())));
+        flushOneWayWire();
+        return;
+    }
     if (inboundType != QLatin1String("viewport"))
         qInfo() << "[sync] inbound" << inboundType << "live" << m_oneWay.epochLive()
                 << "handshake" << m_oneWay.handshakeInFlight();
     const QByteArray raw = QJsonDocument(obj).toJson(QJsonDocument::Compact);
     m_oneWay.handleInboundLine(std::string(raw.constData(), static_cast<size_t>(raw.size())));
-    if (m_oneWay.viewportApplied() > 0 && obj.value(QStringLiteral("type")).toString()
-            == QLatin1String("viewport")) {
-        applyViewport(obj);
+    if (m_oneWay.viewportApplied() > 0 && inboundType == QLatin1String("viewport")) {
+        cacheInfiniViewport(obj);
+        // @implements [SRS-EP-21] apply Infini viewport only while following
+        if (epaper::handtouch::shouldApplyInboundViewport(followEnum()))
+            applyViewport(obj);
+        else
+            qInfo() << "[sync] ignore inbound viewport follow=" << m_followDirection;
     }
     if (m_document.selectionId() == std::nullopt) {
         m_selectedIds.clear();
@@ -948,7 +982,7 @@ bool TabletCanvasItem::tryDebugChromeAtWindowPos(const QPointF &windowPos)
             b->restoreXochitl();
         return true;
     }
-    if (w > pad && QRectF(w - pad, 0, pad, pad).contains(windowPos)) {
+    if (w > pad && QRectF(w - pad, 80.0, pad, pad).contains(windowPos)) {
         if (auto *u = epaper::UsbLink::instance())
             u->recoverInfini();
         return true;
@@ -958,6 +992,10 @@ bool TabletCanvasItem::tryDebugChromeAtWindowPos(const QPointF &windowPos)
 
 bool TabletCanvasItem::tryArmToolAtCanvasPos(const QPointF &canvasPos)
 {
+    if (pointInFollowToggle(canvasPos)) {
+        tapFollowToggle();
+        return true;
+    }
     if (tryDebugChromeAtWindowPos(canvasPos))
         return true;
     const QString hit = toolChipHitAt(canvasPos);
@@ -983,6 +1021,371 @@ bool TabletCanvasItem::tryArmToolAtCanvasPos(const QPointF &canvasPos)
     }
     armTool(hit);
     return true;
+}
+
+void TabletCanvasItem::setFollowDirection(const QString &dir)
+{
+    const auto parsed = epaper::handtouch::parseFollow(dir.toStdString());
+    m_follow.direction = parsed;
+    m_followDirection = QString::fromLatin1(epaper::handtouch::followId(parsed));
+    emit followChanged();
+}
+
+void TabletCanvasItem::tapFollowToggle()
+{
+    m_follow.connected = m_sync && m_sync->isConnected();
+    m_follow.exclusiveTool = m_toolMode.toStdString();
+    const auto r = m_follow.tapToggle();
+    m_followDirection = QString::fromLatin1(epaper::handtouch::followId(m_follow.direction));
+    emit followChanged();
+    flushFollowOutbound();
+    if (r.appliedInfiniViewport)
+        applyFollowCamera();
+}
+
+void TabletCanvasItem::emitViewportFollow()
+{
+    m_follow.connected = m_sync && m_sync->isConnected();
+    m_follow.emitFollow();
+    flushFollowOutbound();
+}
+
+void TabletCanvasItem::flushFollowOutbound()
+{
+    if (!m_sync || !m_sync->isConnected()) {
+        m_follow.outbound.clear();
+        return;
+    }
+    for (const std::string &line : m_follow.outbound)
+        m_sync->sendLine(QByteArray::fromStdString(line));
+    m_follow.outbound.clear();
+}
+
+void TabletCanvasItem::applyFollowCamera()
+{
+    if (!m_follow.mapApplied && !m_follow.hasInfiniViewport)
+        return;
+    m_follow.applyInfiniViewportIfFollowing();
+    if (m_follow.direction != epaper::handtouch::FollowDirection::InfiniToEpaper)
+        return;
+    m_drawingRegion.minX = m_follow.localCamera.minX;
+    m_drawingRegion.minY = m_follow.localCamera.minY;
+    m_drawingRegion.maxX = m_follow.localCamera.maxX;
+    m_drawingRegion.maxY = m_follow.localCamera.maxY;
+    m_drawingRegion.valid = m_drawingRegion.maxX > m_drawingRegion.minX
+        && m_drawingRegion.maxY > m_drawingRegion.minY;
+    scheduleVectorRasterize(true);
+}
+
+void TabletCanvasItem::cacheInfiniViewport(const QJsonObject &obj)
+{
+    const QJsonObject dr = obj.value(QStringLiteral("drawingRegion")).toObject();
+    if (dr.isEmpty())
+        return;
+    epaper::handtouch::WorldAabb a;
+    a.minX = dr.value(QStringLiteral("minX")).toDouble();
+    a.minY = dr.value(QStringLiteral("minY")).toDouble();
+    a.maxX = dr.value(QStringLiteral("maxX")).toDouble();
+    a.maxY = dr.value(QStringLiteral("maxY")).toDouble();
+    m_follow.cacheInfiniViewport(a);
+}
+
+epaper::handtouch::FollowDirection TabletCanvasItem::followEnum() const
+{
+    return epaper::handtouch::parseFollow(m_followDirection.toStdString());
+}
+
+bool TabletCanvasItem::fingerHitsChip(const QPointF &canvasPos) const
+{
+    return pointInToolChip(canvasPos) || pointInFollowToggle(canvasPos)
+        || pointInEncloseCta(canvasPos)
+        || kXochitlSwitchRect.contains(canvasPos)
+        || infiniReconnectRect(width()).contains(canvasPos);
+}
+
+bool TabletCanvasItem::fingerHitsKnob(const QPointF &canvasPos) const
+{
+    using namespace epaper::document;
+    if (m_selectedPickableId.isEmpty())
+        return false;
+    const DocNode *selected = m_document.find(m_selectedPickableId.toStdString());
+    if (!selected)
+        return false;
+    SmartBounds wb;
+    if (!boundsOf(*selected, wb))
+        return false;
+    auto worldToPanelCb = [this](double wx, double wy, double *px, double *py) {
+        const QPointF p = worldToPanel(wx, wy);
+        *px = p.x();
+        *py = p.y();
+    };
+    const ResizeHandle h = hitResizeHandlePanel(wb, canvasPos.x(), canvasPos.y(), panelScale(),
+                                                worldToPanelCb, epaper::handtouch::kFingerHandleHitDu);
+    return h != ResizeHandle::None;
+}
+
+bool TabletCanvasItem::fingerHitsBox(const QPointF &canvasPos) const
+{
+    using namespace epaper::document;
+    const QPointF world = panelToWorld(canvasPos);
+    const QString id = hitLocalSmartGroup(world);
+    if (id.isEmpty())
+        return false;
+    const DocNode *n = m_document.find(id.toStdString());
+    SmartBounds wb;
+    if (!n || !boundsOf(*n, wb))
+        return false;
+    return lodOkPanel(wb);
+}
+
+void TabletCanvasItem::ensureLocalDrawingRegion()
+{
+    if (m_drawingRegion.valid)
+        return;
+    const double w = qMax(1.0, double(width()));
+    const double h = qMax(1.0, double(height()));
+    m_drawingRegion.minX = 0;
+    m_drawingRegion.minY = 0;
+    m_drawingRegion.maxX = w;
+    m_drawingRegion.maxY = h;
+    m_drawingRegion.valid = true;
+}
+
+void TabletCanvasItem::applyLocalFingerPan(const QPointF &canvasPos)
+{
+    using epaper::handtouch::panKeepWorldUnderFinger;
+    using epaper::handtouch::WorldAabb;
+    ensureLocalDrawingRegion();
+    const QPointF worldNow = [&]() {
+        WorldAabb origin{m_fingerPanOrigin.minX, m_fingerPanOrigin.minY, m_fingerPanOrigin.maxX,
+                         m_fingerPanOrigin.maxY};
+        const double rw = origin.maxX - origin.minX;
+        const double rh = origin.maxY - origin.minY;
+        double u = 0, v = 0;
+        panelToFrameUv(canvasPos.x(), canvasPos.y(), &u, &v);
+        return QPointF(origin.minX + u * rw, origin.minY + v * rh);
+    }();
+    const auto next = panKeepWorldUnderFinger(
+        {m_fingerPanOrigin.minX, m_fingerPanOrigin.minY, m_fingerPanOrigin.maxX, m_fingerPanOrigin.maxY},
+        m_fingerDownWorld.x(), m_fingerDownWorld.y(), worldNow.x(), worldNow.y());
+    m_drawingRegion.minX = next.minX;
+    m_drawingRegion.minY = next.minY;
+    m_drawingRegion.maxX = next.maxX;
+    m_drawingRegion.maxY = next.maxY;
+    m_drawingRegion.valid = true;
+}
+
+void TabletCanvasItem::maybePublishLocalViewport(bool settle)
+{
+    using epaper::handtouch::shouldPublishViewport;
+    using epaper::handtouch::uniformScaleOf;
+    if (!shouldPublishViewport(followEnum()))
+        return;
+    ++m_viewportUpCount;
+    if (!m_sync || !m_sync->isConnected())
+        return;
+    QJsonObject dr;
+    dr.insert(QStringLiteral("minX"), m_drawingRegion.minX);
+    dr.insert(QStringLiteral("minY"), m_drawingRegion.minY);
+    dr.insert(QStringLiteral("maxX"), m_drawingRegion.maxX);
+    dr.insert(QStringLiteral("maxY"), m_drawingRegion.maxY);
+    double sx = 1.0;
+    double sy = 1.0;
+    const double iw = qMax(1.0, double(width()));
+    const double ih = qMax(1.0, double(height()));
+    uniformScaleOf({0, 0, iw, ih},
+                   {m_drawingRegion.minX, m_drawingRegion.minY, m_drawingRegion.maxX,
+                    m_drawingRegion.maxY},
+                   &sx, &sy);
+    QJsonObject o;
+    o.insert(QStringLiteral("type"), QStringLiteral("viewport"));
+    o.insert(QStringLiteral("source"), QStringLiteral("epaper"));
+    o.insert(QStringLiteral("seq"), ++m_viewportSeq);
+    o.insert(QStringLiteral("orientation"), m_orientation);
+    o.insert(QStringLiteral("settle"), settle);
+    o.insert(QStringLiteral("scale"), sx);
+    Q_UNUSED(sy);
+    QJsonObject tr;
+    tr.insert(QStringLiteral("x"), 0);
+    tr.insert(QStringLiteral("y"), 0);
+    o.insert(QStringLiteral("translate"), tr);
+    o.insert(QStringLiteral("drawingRegion"), dr);
+    m_sync->sendLine(QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
+bool TabletCanvasItem::beginFingerTouch(const QPointF &canvasPos)
+{
+    using namespace epaper::handtouch;
+    m_fingerGesture = FingerGesture::None;
+    m_fingerDownPanel = canvasPos;
+    if (pointInEncloseCta(canvasPos)) {
+        encloseSelection();
+        m_fingerGesture = FingerGesture::Chip;
+        return true;
+    }
+    const HitKind hit = classifyHit(fingerHitsChip(canvasPos), fingerHitsKnob(canvasPos),
+                                    fingerHitsBox(canvasPos));
+    const FingerAction act = actionOnDown(hit);
+    if (act == FingerAction::ChipTap) {
+        m_fingerGesture = FingerGesture::Chip;
+        return true;
+    }
+    if (act == FingerAction::Resize) {
+        m_fingerGesture = FingerGesture::Resize;
+        beginSelectionGesture(canvasPos, kFingerHandleHitDu);
+        return true;
+    }
+    if (act == FingerAction::SelectMove) {
+        // @implements [SRS-EP-23] finger-down on box → sel_freeform
+        armTool(QStringLiteral("sel_freeform"));
+        m_fingerGesture = FingerGesture::Move;
+        beginSelectionGesture(canvasPos, kFingerHandleHitDu);
+        return true;
+    }
+    m_fingerGesture = FingerGesture::EmptyPending;
+    ensureLocalDrawingRegion();
+    m_fingerPanOrigin = m_drawingRegion;
+    m_fingerDownWorld = panelToWorld(canvasPos);
+    return true;
+}
+
+void TabletCanvasItem::updateFingerTouch(const QPointF &canvasPos, int fingerCount)
+{
+    using namespace epaper::handtouch;
+    if (m_fingerGesture == FingerGesture::None || m_fingerGesture == FingerGesture::Chip
+        || m_fingerGesture == FingerGesture::TwoFinger)
+        return;
+    if (m_fingerGesture == FingerGesture::Move || m_fingerGesture == FingerGesture::Resize) {
+        updateSelectionGesture(canvasPos);
+        return;
+    }
+    if (fingerCount >= 2)
+        return;
+    const double dx = canvasPos.x() - m_fingerDownPanel.x();
+    const double dy = canvasPos.y() - m_fingerDownPanel.y();
+    if (m_fingerGesture == FingerGesture::EmptyPending) {
+        if (actionOnEmptyMove(travelDu(dx, dy)) != FingerAction::LocalPan)
+            return;
+        // @implements [SRS-EP-21] follower local-nav turns follow off then pans
+        const LocalNav nav = onLocalNav(followEnum());
+        if (nav.turnedFollowOff) {
+            setFollowDirection(QString::fromLatin1(followId(nav.direction)));
+            emitViewportFollow();
+        }
+        m_fingerGesture = FingerGesture::EmptyPan;
+        m_fingerPanClock.invalidate();
+    }
+    if (m_fingerGesture != FingerGesture::EmptyPan)
+        return;
+    applyLocalFingerPan(canvasPos);
+    if (!m_fingerPanClock.isValid() || m_fingerPanClock.elapsed() >= kSelectionGhostMinIntervalMs) {
+        m_fingerPanClock.restart();
+        maybePublishLocalViewport(false);
+        scheduleVectorRasterize(false);
+    }
+}
+
+void TabletCanvasItem::endFingerTouch(const QPointF &canvasPos)
+{
+    const FingerGesture g = m_fingerGesture;
+    m_fingerGesture = FingerGesture::None;
+    if (g == FingerGesture::Chip) {
+        tryArmToolAtCanvasPos(canvasPos);
+        return;
+    }
+    if (g == FingerGesture::Move || g == FingerGesture::Resize) {
+        endSelectionGesture();
+        return;
+    }
+    if (g == FingerGesture::EmptyPan) {
+        applyLocalFingerPan(canvasPos);
+        maybePublishLocalViewport(true);
+        scheduleVectorRasterize(true);
+        return;
+    }
+    if (g == FingerGesture::TwoFinger) {
+        applyLocalTwoFinger(m_twoA, m_twoB);
+        maybePublishLocalViewport(true);
+        scheduleVectorRasterize(true);
+        return;
+    }
+}
+
+bool TabletCanvasItem::canPromoteToTwoFinger() const
+{
+    return m_fingerGesture == FingerGesture::None
+        || m_fingerGesture == FingerGesture::EmptyPending
+        || m_fingerGesture == FingerGesture::EmptyPan;
+}
+
+epaper::handtouch::TwoFingerContacts TabletCanvasItem::uvPair(const QPointF &a, const QPointF &b) const
+{
+    epaper::handtouch::TwoFingerContacts c;
+    panelToFrameUv(a.x(), a.y(), &c.u0, &c.v0);
+    panelToFrameUv(b.x(), b.y(), &c.u1, &c.v1);
+    return c;
+}
+
+void TabletCanvasItem::applyLocalTwoFinger(const QPointF &a, const QPointF &b)
+{
+    using epaper::handtouch::applyTwoFingerPanPinch;
+    using epaper::handtouch::WorldAabb;
+    ensureLocalDrawingRegion();
+    m_twoA = a;
+    m_twoB = b;
+    const WorldAabb origin{m_fingerPanOrigin.minX, m_fingerPanOrigin.minY, m_fingerPanOrigin.maxX,
+                           m_fingerPanOrigin.maxY};
+    const auto next = applyTwoFingerPanPinch(origin, m_twoOriginContacts, uvPair(a, b));
+    m_drawingRegion.minX = next.minX;
+    m_drawingRegion.minY = next.minY;
+    m_drawingRegion.maxX = next.maxX;
+    m_drawingRegion.maxY = next.maxY;
+    m_drawingRegion.valid = true;
+}
+
+bool TabletCanvasItem::beginTwoFingerTouch(const QPointF &a, const QPointF &b)
+{
+    using namespace epaper::handtouch;
+    if (m_fingerGesture == FingerGesture::Move || m_fingerGesture == FingerGesture::Resize
+        || m_fingerGesture == FingerGesture::Chip)
+        return false;
+    ensureLocalDrawingRegion();
+    // @implements [SRS-EP-24] follower local-nav turns follow off then pans
+    const LocalNav nav = onLocalNav(followEnum());
+    if (nav.turnedFollowOff) {
+        setFollowDirection(QString::fromLatin1(followId(nav.direction)));
+        emitViewportFollow();
+    }
+    m_fingerPanOrigin = m_drawingRegion;
+    m_twoOriginContacts = uvPair(a, b);
+    m_fingerGesture = FingerGesture::TwoFinger;
+    m_fingerPanClock.invalidate();
+    applyLocalTwoFinger(a, b);
+    maybePublishLocalViewport(false);
+    scheduleVectorRasterize(false);
+    return true;
+}
+
+void TabletCanvasItem::updateTwoFingerTouch(const QPointF &a, const QPointF &b)
+{
+    if (m_fingerGesture != FingerGesture::TwoFinger)
+        return;
+    applyLocalTwoFinger(a, b);
+    if (!m_fingerPanClock.isValid() || m_fingerPanClock.elapsed() >= kSelectionGhostMinIntervalMs) {
+        m_fingerPanClock.restart();
+        maybePublishLocalViewport(false);
+        scheduleVectorRasterize(false);
+    }
+}
+
+void TabletCanvasItem::endTwoFingerTouch()
+{
+    if (m_fingerGesture != FingerGesture::TwoFinger)
+        return;
+    m_fingerGesture = FingerGesture::None;
+    applyLocalTwoFinger(m_twoA, m_twoB);
+    maybePublishLocalViewport(true);
+    scheduleVectorRasterize(true);
 }
 
 void TabletCanvasItem::requestUndo()
@@ -1040,15 +1443,27 @@ void TabletCanvasItem::updateToolChipRect()
         top = height() - inset - chipH;
     const qreal left = (width() - chipW) * 0.5;
     const QRectF next(left, top, chipW, chipH);
-    if (next == m_toolChipRect)
-        return;
-    m_toolChipRect = next;
-    emit toolChipRectChanged();
+    if (next != m_toolChipRect) {
+        m_toolChipRect = next;
+        emit toolChipRectChanged();
+    }
+    const bool gutOnTop = m_orientation == QLatin1String("gutOnTop");
+    const auto fr = epaper::follow::followToggleRect(width(), height(), gutOnTop);
+    const QRectF followNext(fr.x, fr.y, fr.w, fr.h);
+    if (followNext != m_followToggleRect) {
+        m_followToggleRect = followNext;
+        emit followToggleRectChanged();
+    }
 }
 
 bool TabletCanvasItem::pointInToolChip(const QPointF &canvasPos) const
 {
     return m_toolChipRect.contains(canvasPos);
+}
+
+bool TabletCanvasItem::pointInFollowToggle(const QPointF &canvasPos) const
+{
+    return m_followToggleRect.contains(canvasPos);
 }
 
 bool TabletCanvasItem::isSelectionTool() const
@@ -1272,7 +1687,7 @@ QString TabletCanvasItem::hitPickable(const QPointF &world) const
     return {};
 }
 
-void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
+void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos, double handleHitDu)
 {
     // @implements [SRS-EP-11] capability-descriptor gesture route
     using namespace epaper::document;
@@ -1299,7 +1714,8 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
         SmartBounds wb;
         if (boundsOf(*selected, wb)) {
             if (cap0.has(Verb::Resize)) {
-                handle = hitResizeHandlePanel(wb, canvasPos.x(), canvasPos.y(), panelScale(), worldToPanelCb);
+                handle = hitResizeHandlePanel(wb, canvasPos.x(), canvasPos.y(), panelScale(),
+                                              worldToPanelCb, handleHitDu);
                 handleHit = handle != ResizeHandle::None;
             }
             if (cap0.has(Verb::SetInkScaleMode)) {
