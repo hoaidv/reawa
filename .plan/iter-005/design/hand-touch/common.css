@@ -428,6 +428,61 @@ html[data-platform="epaper"] body {
 }
 .c-tool-btn.is-dimmed[aria-pressed="true"] img { filter: invert(1); }
 
+/* HandTouchToggle — trailing orientation-top, left of Debug. Kill-switch, not a hand-tool. */
+[data-region="HandTouchToggle"] {
+  position: absolute;
+  z-index: var(--z-hand-touch);
+  top: var(--chip-inset);
+  /* Trailing row LTR: HT | DBG | Follow | USB. This package paints HT only.
+     USB + Follow + DBG occupy 3 tiles + gaps from the trailing edge. */
+  right: calc(var(--chip-inset) + 3 * (var(--chip-btn) + var(--chip-inset)));
+}
+[data-orientation="gutOnTop"] [data-region="HandTouchToggle"] {
+  bottom: var(--chip-inset);
+  top: auto;
+}
+.c-hand-touch-cluster {
+  display: inline-flex;
+  background: var(--color-paper);
+  border: 1px solid var(--color-ink);
+  border-radius: var(--chip-radius);
+  overflow: hidden;
+}
+.c-hand-touch-btn {
+  box-sizing: border-box;
+  width: var(--chip-btn);
+  height: var(--chip-btn);
+  min-width: var(--chip-btn);
+  min-height: var(--chip-btn);
+  aspect-ratio: 1;
+  flex: 0 0 var(--chip-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--font-tile);
+  font-weight: 400;
+  line-height: 1;
+  cursor: none;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.c-hand-touch-btn[aria-pressed="true"] {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.c-hand-touch-btn:active,
+.c-hand-touch-btn.is-pressed {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
 [data-region="StatusLine"] {
   position: absolute;
   z-index: 4;

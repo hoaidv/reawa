@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>HandTouchToggle — kill-switch (SRS-EP-22 btn.hand_touch)</title>
+  <style>
+    :root {
+      --chip-btn: 10mm;
+      --font-tile: 14px;
+      --color-ink: #000;
+      --color-paper: #fff;
+    }
+    body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; }
+    h1 { font-size: 14px; }
+    .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+    .cell { display: flex; flex-direction: column; gap: 6px; }
+    .cell span { font-size: 11px; }
+    .c-hand-touch-cluster {
+      display: inline-flex;
+      background: var(--color-paper);
+      border: 1px solid var(--color-ink);
+      overflow: hidden;
+    }
+    .c-hand-touch-btn {
+      width: var(--chip-btn); height: var(--chip-btn); padding: 0; margin: 0;
+      border: 0; background: var(--color-paper); color: var(--color-ink);
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--font-tile); line-height: 1; font-weight: 400;
+      font-family: system-ui, sans-serif;
+      -webkit-tap-highlight-color: transparent; cursor: none;
+      text-decoration: none;
+    }
+    .c-hand-touch-btn[aria-pressed="true"] { background: var(--color-ink); color: var(--color-paper); }
+    .c-hand-touch-btn:active, .c-hand-touch-btn.is-pressed { background: var(--color-ink); color: var(--color-paper); }
+    .note { font-size: 12px; max-width: 40rem; }
+    .na { font-size: 11px; border: 1px dashed #000; padding: 8px; background: #fff; }
+  </style>
+</head>
+<body>
+  <h1>HandTouchToggle — 64 du 1-bit tile, label HT</h1>
+  <p class="note">Kill-switch for canvas fingers — <strong>not</strong> a pan-mode / hand-tool tile. Same family as Debug / Follow / USB (64×64 du, 14 px label). Default <strong>on</strong> (black fill, white HT). Off = paper fill, black HT. Placement: trailing orientation-top row, left of Debug. Debug log panel is field debug — not this package’s inventory. Follow stays in UI-EP-07. Epaper: no hover, no focus, no cursor, no motion. Press inverts.</p>
+  <div class="row">
+    <div class="cell">
+      <span>on (default)</span>
+      <div class="c-hand-touch-cluster" data-region="HandTouchToggle">
+        <button type="button" class="c-hand-touch-btn" data-interactive data-control="btn.hand_touch" aria-pressed="true" aria-label="Hand-touch on">HT</button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>off (kill-switch)</span>
+      <div class="c-hand-touch-cluster">
+        <button type="button" class="c-hand-touch-btn" data-interactive data-control="btn.hand_touch" aria-pressed="false" aria-label="Hand-touch off">HT</button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>pressed</span>
+      <div class="c-hand-touch-cluster">
+        <button type="button" class="c-hand-touch-btn is-pressed" data-interactive aria-pressed="true" aria-label="Hand-touch on">HT</button>
+      </div>
+    </div>
+    <div class="cell"><span>hover</span><div class="na">N/A — no hover on epaper</div></div>
+    <div class="cell"><span>focus</span><div class="na">N/A — no keyboard on panel</div></div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

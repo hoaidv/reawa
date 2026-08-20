@@ -1,6 +1,6 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-20T14:26:42+00:00",
+  "generated_at": "2026-08-20T16:16:43+00:00",
   "current_iter": "iter-005",
   "by_status": {
     "draft": 16,
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "paused",
-      "cursor": "WAIT human field test Infini + Epaper; IN-033 done",
+      "cursor": "WAIT remaining Infini + Epaper follow field test; hand-touch human-approved; IN-033 done",
       "iter": "iter-005"
     }
   ]

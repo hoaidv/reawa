@@ -18,7 +18,7 @@ Lock: **vertical · verified · wip 2**.
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 
-W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Track **paused** for human Infini + Epaper field test.
+W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). Track **paused** for remaining Infini + Epaper follow field test.
 
 ## Committed
 
@@ -29,7 +29,7 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-EP-053](./stories/STORY-EP-053.md) — design — 3 — viewport-follow Epaper — **done** (W-follow) [UI-EP-07](./design/viewport-follow-epaper/)
 - [STORY-IN-036](./stories/STORY-IN-036.md) — design — 3 — viewport-follow Infini — **done** (W-follow) [UI-IN-04](./design/viewport-follow-infini/)
 - [STORY-EP-056](./stories/STORY-EP-056.md) — design — 5 — revise pen-button map as Epaper — **done** (W-pen-map) [UI-EP-08](./design/pen-button-map/)
-- [STORY-EP-054](./stories/STORY-EP-054.md) — design — 3 — hand-touch empty pan delta — **done**
+- [STORY-EP-054](./stories/STORY-EP-054.md) — design — 3 — hand-touch empty pan delta — **done** (20 mm / HT package amend 2026-08-20)
 - [STORY-EP-057](./stories/STORY-EP-057.md) — implement — 3 — persist Device Settings — **draft**
 - [STORY-EP-058](./stories/STORY-EP-058.md) — implement — 5 — Settings page Pen buttons — **draft**
 - [STORY-EP-040](./stories/STORY-EP-040.md) — design — 3 — erase
@@ -68,7 +68,7 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - CHL-0022 shipped “no pan” prose — Product Manager adopt
 - EP-037 package still empty=no-op until EP-054
 - PM `srs-product` BR-D08 still always-on viewport (architect flagged)
-- Vertical work-in-progress 2: **0 agent lanes** while paused for Infini + Epaper field test
+- Vertical work-in-progress 2: **0 agent lanes** while paused for remaining Infini follow field test (hand-touch human-approved)
 - Agent host has no RM2 panel / no live TCP `:9877`; field test is the real two-app verify
 
 ## Links

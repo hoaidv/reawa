@@ -39,7 +39,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Stop line | **verified** | design → BDD → implement → human confirm |
 | Autonomy | **bounded** | Run inside lock; sink REQ-15 / REQ-08 |
 | WIP | **2** | 0 agent lanes while paused for field test |
-| Validated | — | Follow toggles EP-055 + IN-037 **done**; EP-038 + EP-039 **done**; IN-033 **done** (host); Device Settings on-device (REQ-20 / ADR-0031) |
+| Validated | — | Follow toggles EP-055 + IN-037 **done**; EP-038 + EP-039 **done**; **hand-touch human-approved** 2026-08-20 (20 mm / HT); IN-033 **done** (host); Device Settings on-device (REQ-20 / ADR-0031) |
 
 **Out-of-scope log**
 
@@ -65,7 +65,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 ### Goal & capacity
 
 - Goal: **Hand-on-paper** plus **viewport follow** (human 2026-08-20). Cameras independent by default.
-- Capacity: committed stories include EP-053…058 / IN-036…037. [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) **done**. [TRACK-005](./tracks/TRACK-005-hand-on-paper.md) **paused** for a human Infini + Epaper field test.
+- Capacity: committed stories include EP-053…058 / IN-036…037. [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) **done**. [TRACK-005](./tracks/TRACK-005-hand-on-paper.md) **paused**: hand-touch **human-approved** 2026-08-20; remaining Infini + Epaper follow score.
 - Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); device/Qt `epaper_bin` not built in this environment.
 
 ### Tracks
@@ -73,7 +73,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
 | TRACK-001…004 | planned | **done** | — | [tracks](./tracks/) |
-| TRACK-005 | planned | **paused** | WAIT human field test Infini + Epaper; IN-033 done | [track](./tracks/TRACK-005-hand-on-paper.md) |
+| TRACK-005 | planned | **paused** | WAIT remaining Infini follow field test; hand-touch approved | [track](./tracks/TRACK-005-hand-on-paper.md) |
 
 ### Open challenges / blocked
 
@@ -83,7 +83,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Design packages in flight
 
-- [hand-touch](./iter-005/design/hand-touch/) — EP-037 + EP-054 **done**
+- [hand-touch](./iter-005/design/hand-touch/) — EP-037 + EP-054 **done**; UI-EP-06 amended 2026-08-20 (20 mm + HT)
 - [pen-button-map](./iter-005/design/pen-button-map/) — EP-056 **done** ([UI-EP-08](./iter-005/design/pen-button-map/ui-spec.md)); UI-IN-03 superseded
 - [viewport-follow-epaper](./iter-005/design/viewport-follow-epaper/) — EP-053 **done** (UI-EP-07)
 - [viewport-follow-infini](./iter-005/design/viewport-follow-infini/) — IN-036 **done** (UI-IN-04)
@@ -91,15 +91,15 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [iter-005 execution-board](./iter-005/execution-board.md) — **Paused** after IN-033; human field test
+- [iter-005 execution-board](./iter-005/execution-board.md) — Hand-touch human-approved; **Paused** for remaining Infini follow score
 
 ### Freeze notes
 
 - TRACK-004 **done**. Gate: [pm-retro-gate-pass](./iter-004/handoffs/2026-08-16-pm-retro-gate-pass.md).
-- TRACK-005 **paused** 2026-08-20: [sm-to-human-field-test](./iter-005/handoffs/2026-08-20-sm-to-human-field-test.md).
+- TRACK-005 **paused** 2026-08-20: [sm-to-human-field-test](./iter-005/handoffs/2026-08-20-sm-to-human-field-test.md). Hand-touch join: [sm-to-human-hand-touch-verified](./iter-005/handoffs/2026-08-20-sm-to-human-hand-touch-verified.md).
 
 ## Forward
 
-- After field test: say go in `/sm`. Then W3 erase design **or** Device Settings scenarios — human picks.
+- After remaining follow field test: say go in `/sm`. Then W3 erase design **or** Device Settings scenarios — human picks.
 - Parked: REQ-15, REQ-08, CHL-0011, CHL-0012, EP-035 measure.
 - Backlog: [backlog.md](./backlog.md)

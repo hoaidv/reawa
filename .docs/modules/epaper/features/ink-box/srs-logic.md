@@ -170,8 +170,8 @@ against known RM2 panel DPI. They are implement locks for EP-019. Do not fall ba
 a desktop constant.
 
 Below the cutoff the press **falls through to nothing** — not to pan **from this section**.
-One-finger empty canvas pan remains forbidden; **two-finger** pan is [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport) ([REQ-10](../../prd.md#hand-touch)), not this parent.
-<!-- CHL-0022: do not treat this paragraph as “no on-device pan forever”; REQ-10 two-finger is a new id. -->
+Finger empty-canvas pan is [SRS-EP-21](#srs-ep-21-one-finger) (**20 mm** / **178 du** @ 226 dpi), not this parent; **two-finger** pan is [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport) ([REQ-10](../../prd.md#hand-touch)).
+<!-- CHL-0022: do not treat this paragraph as “no on-device pan forever”; REQ-10 one-finger empty pan + two-finger are a later id. -->
 
 ### Gestures
 

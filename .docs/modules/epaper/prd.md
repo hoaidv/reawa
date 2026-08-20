@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.11.0-draft
+version: 0.12.0-draft
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -75,7 +75,8 @@ viewed at scale, and saved.
 | Connector selectable (marquee or pen hit) | 100% of recognized connectors on a 10-connector fixture; 0 missed hits on the stroke, 0 AABB-only false hits | Manual QA |
 | Finger hit on ink-box → freeform + move | p95 ≤300 ms to `sel_freeform` + selection; move follows finger; 0 accidental resizes | Manual QA |
 | Two-finger pan/zoom on tablet | Next pen sample uses **local** new region p95 ≤100 ms. Infini view matches after settle **only if Infini follow is on**. Default: independent. BRD-07 ship gate **lifted** | Manual QA — REQ-10 |
-| One-finger empty-canvas pan | Travel **> 10 mm** pans **locally**; palm-rest (**≤ 10 mm**) 0 pan / 0 selection; box hit wins over pan | Manual QA — REQ-10 |
+| One-finger empty-canvas pan | Travel **> 20 mm** pans **locally**; palm-rest (**≤ 20 mm**) 0 pan / 0 selection; box hit wins; **≥3** contacts = palm (0 pan, 0 pinch) | Manual QA — REQ-10 |
+| Hand-touch toggle | Default **on**; off disables canvas pick/move/pan/pinch; chrome taps still work; pen near or in contact still disables canvas hand-touch | Manual QA — REQ-10 |
 | Device Settings persist | After Epaper restart on the same device, next barrel gesture uses the last map; 0 Infini copies; 0 SVG copies | Manual QA — REQ-20 |
 | Viewport-follow toggle | Enabling one peer’s follow disables the other with p95 ≤300 ms; 0 dual-follow; disconnect forces off | Manual QA — REQ-19 |
 | Erase stroke / selection-erase | p95 ≤50 ms after gesture end; 1 undo restores; 0 accidental ink | Manual QA — **iter-005 draft** |
@@ -467,7 +468,7 @@ viewed at scale, and saved.
   refuse/no-op (stroke stays ink, no banner); marquee vs path-hit vs AABB-miss.
 
 ## [REQ-10] Hand-touch on canvas {#hand-touch}
-<!-- added: 2026-08-15; revised: 2026-08-16 — merged [REQ-16] two-finger pan/zoom into this REQ; revised: 2026-08-20 — CHL-0024 finger resize knobs; revised: 2026-08-20 — two-finger local Must (BRD-07 ship gate lifted); one-finger empty = local pan; publish only if Infini is following; revised: 2026-08-20 — pan threshold is 10 mm (human lock for STORY-EP-054); revised: 2026-08-20 — empty tap deselects; pen proximity or contact disables hand-touch (palm rejection); revised: 2026-08-20 — palm-rest 20 mm; ≥3 contacts = palm; hand-touch toggle -->
+<!-- added: 2026-08-15; revised: 2026-08-16 — merged [REQ-16] two-finger pan/zoom into this REQ; revised: 2026-08-20 — CHL-0024 finger resize knobs; revised: 2026-08-20 — two-finger local Must (BRD-07 ship gate lifted); one-finger empty = local pan; publish only if Infini is following; revised: 2026-08-20 — pan threshold is 10 mm (human lock for STORY-EP-054); revised: 2026-08-20 — empty tap deselects; pen proximity or contact disables hand-touch (palm rejection); revised: 2026-08-20 — palm-rest 20 mm; ≥3 contacts = palm; hand-touch toggle; revised: 2026-08-20 — human field-test lock 20 mm / 178 du (supersedes STORY-EP-054 10 mm / 89 du) -->
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
 - **Campaign:** **one grammar, two slices.** One-finger pick/move/resize **and** two-finger **local**
@@ -494,9 +495,10 @@ viewed at scale, and saved.
 - **Palm rejection — pen proximity, contact, count, or toggle.** While the pen is **near the panel**
   (digitizer proximity, including hover before contact) **or** the pen is **touching** the panel,
   capacitive **hand-touch is disabled** (0 pick, 0 move, 0 empty pan, 0 pinch). Same disable while
-  a **hand-touch toggle** is off (default on). ToolChip / FollowToggle / other ≥64 du chrome taps
-  still work. When the pen leaves proximity and the toggle is on, hand-touch is enabled again. The
-  20 mm empty-canvas threshold still applies **only while** hand-touch is enabled.
+  a **hand-touch toggle** is off (default **on**). Affordance: 64 du 1-bit **HT** tile, trailing
+  orientation-top row, left of Debug. ToolChip / FollowToggle / other ≥64 du chrome taps still work.
+  When the pen leaves proximity and the toggle is on, hand-touch is enabled again. The 20 mm
+  empty-canvas threshold still applies **only while** hand-touch is enabled.
 - **Two fingers — local pan and zoom.** Two-finger pan/pinch changes the **tablet’s local viewport**.
   The device **publishes** that viewport **only if Infini follow is on**. Does not run while a
   one-finger box-move **or resize** is in flight. Link down: local viewport still works; follow
@@ -527,6 +529,8 @@ viewed at scale, and saved.
   pinch start until the pen leaves proximity.
 - Given **three or more** capacitive contacts, When any of them move, Then **0** pan and **0** pinch
   (palm).
+- Given a fresh session, Then the hand-touch toggle is **on** (canvas pick/move/pan/pinch enabled
+  unless the pen is near or in contact).
 - Given the hand-touch toggle is **off**, When a finger lands on empty canvas or on a box, Then **0**
   pan, **0** pick, and **0** pinch; chrome taps still work.
 - Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **> 20 mm**,
@@ -552,6 +556,7 @@ viewed at scale, and saved.
   [REQ-03](#tool-modes) still holds — this REQ does not steal chip hits.
 - **UI states / journeys to design:** finger hit box while `Pen`; finger move in progress;
   finger resize in progress; one-finger empty **tap deselect**; one-finger empty **local pan**;
+  **≥3-contact palm** (0 pan, 0 pinch); **hand-touch toggle** on/off (`btn.hand_touch` / HT tile);
   two-finger pan in progress (local; publish only if Infini following); pinch; pan vs box-move
   conflict; link down (local viewport). Follow-toggle chrome is **[REQ-19](#viewport-follow)**, not
   this package’s ToolChip.
@@ -877,7 +882,7 @@ viewed at scale, and saved.
 - Pen-button map editor on Infini desktop — **owner:** pm — **closed 2026-08-20 (human):** editor is Device Settings · Pen buttons on-device ([REQ-20](#device-settings) / [REQ-18](#pen-buttons)). Infini persist/restore **retired**. D9 catalogues replaced: Click = current↔Freeform Select / current↔Eraser / Off (no Undo); Hold-move = Temporary eraser / Drag node under tip / Off (no temp freeform/rect). 1-button Hold-move default = Temporary eraser.
 - Device Settings persist home — **owner:** pm — **closed 2026-08-20 (human):** saved **on the Epaper device**, not Infini, not the document. No document settings. [CHL-0025](../../../.plan/iter-005/challenges/CHL-0025-pen-map-settings-page.md) Settings page adopted; GAP-01 leading 10 mm tile adopted.
 - [REQ-10](#hand-touch) two-finger pan/zoom vs [BRD-07](../../brd.md) on-device pan/zoom deferral — **owner:** pm — **closed 2026-08-20 (human):** two-finger **local** pan is Must; always-on viewport sync is obsolete; optional mutually exclusive follow ([REQ-19](#viewport-follow)). Analyst amends BRD-07 in parallel; this PRD is the product source until BRD catches up. One-finger empty canvas is **local pan** (threshold vs palm-rest), not a no-op.
-- Exact empty-canvas pan threshold (distance / time) — **owner:** pm — **closed 2026-08-20 (human lock for STORY-EP-054):** **10 mm** Euclidean panel travel. ≤10 mm = palm-rest / tap (0 pan); >10 mm = local one-finger pan; box/knob/chip hit wins. No new hand-touch UI inventory. Architect millimetre↔du bind stays in SRS (89 du @ 226 dpi).
+- Exact empty-canvas pan threshold (distance / time) — **owner:** pm — **closed 2026-08-20 (human field test; supersedes STORY-EP-054 10 mm / 89 du lock):** **20 mm** Euclidean panel travel (**178 du** @ 226 dpi). ≤20 mm = palm-rest / tap (0 pan); >20 mm = local one-finger pan; box/knob/chip hit wins. **≥3** simultaneous capacitive contacts = palm (0 pan, 0 pinch). Hand-touch **toggle** (64 du 1-bit **HT** tile, trailing orientation-top row left of Debug): default **on**; off disables canvas pick/move/pan/pinch; chrome taps still work. Pen near or in contact still disables canvas hand-touch. Empty tap still deselects. Architect millimetre↔du bind stays in SRS (178 du @ 226 dpi). Debug log of touch counts is field debug, not a new REQ.
 
 - Undo depth and affordance on the device — **closed 2026-08-14** ([CHL-0016](../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
   / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)): depth 20; on-panel Undo and Redo after

@@ -32,14 +32,14 @@
         <div data-region="SelectionOverlay" class="is-hidden"></div>
         <div data-region="GestureAnnotate">
           <span class="c-finger is-down" style="left:72%;top:58%" title="finger-down"></span>
-          <span class="c-travel is-pan" style="left:72%;top:58%" aria-label="travel 36 mm, past 10 mm (89 du); tick at 10 mm"></span>
+          <span class="c-travel is-pan" style="left:72%;top:58%" aria-label="travel 36 mm, past 20 mm (178 du); tick at 20 mm"></span>
           <span class="c-finger" style="left:calc(72% + 36mm);top:58%">
             <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
           </span>
         </div>
       </div>
       <p class="scene-caption">
-        hand.one_finger_empty_pan — travel 36 mm (&gt; 10 mm / 89 du): local one-finger pan; Infini unchanged (follow=none).
+        hand.one_finger_empty_pan — travel 36 mm (&gt; 20 mm / 178 du): local one-finger pan; Infini unchanged (follow=none). HT on (kill-switch).
         <a href="./hand-touch-one-finger-empty-palm.html">Palm-rest</a> ·
         <a href="./hand-touch-finger-hit-box.html">Hit box wins</a> ·
         <a href="./hand-touch-two-finger-pan.html">Two fingers</a>
@@ -62,7 +62,10 @@
         <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
       </div>
     </div>
-    <p data-region="StatusLine">pen · hit.kind=empty · fingers=1 · travel=36 mm (&gt;10 mm / 89 du) · local pan · follow=none · Infini unchanged</p>
+    <div class="c-hand-touch-cluster" data-region="HandTouchToggle">
+      <button type="button" class="c-hand-touch-btn" data-interactive data-control="btn.hand_touch" aria-pressed="true" aria-label="Hand-touch on">HT</button>
+    </div>
+    <p data-region="StatusLine">pen · hit.kind=empty · fingers=1 · travel=36 mm (&gt;20 mm / 178 du) · local pan · follow=none · Infini unchanged · HT on</p>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {

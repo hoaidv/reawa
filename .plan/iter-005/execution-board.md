@@ -5,8 +5,8 @@ track: TRACK-005
 owner: sm
 date: 2026-08-20
 lock: vertical · verified · wip 2
-verdict: "IN-033 done (verified, host). TRACK-005 paused for human Infini + Epaper field test. Do not start W3."
-wave: W-follow-apply
+verdict: "Hand-touch (REQ-10) human-approved 2026-08-20. TRACK-005 still paused for Infini + Epaper follow score. Do not start W3."
+wave: W-field
 ---
 
 # Execution board — hand-on-paper
@@ -19,9 +19,9 @@ wave: W-follow-apply
 
 | Band | Count | Meaning |
 |---|---|---|
-| Design **done** | 5 current | [UI-EP-06](../../.docs/design/index.md) hand-touch (EP-054 palm/pan) · [UI-EP-07](../../.docs/design/index.md) follow Epaper · [UI-IN-04](../../.docs/design/index.md) follow Infini · [UI-EP-08](../../.docs/design/index.md) Device Settings · Pen buttons |
-| Wave **NOW** | W-follow-apply **done** | Follow toggles + Infini apply-while-following **done** (host). **Paused** for human Infini + Epaper deploy. |
-| Queued | — | After human confirm: W3 erase design **or** Device Settings BDD. |
+| Design **done** | 5 current | [UI-EP-06](../../.docs/design/index.md) hand-touch (EP-054; field-test delta 20 mm + HT) · [UI-EP-07](../../.docs/design/index.md) follow Epaper · [UI-IN-04](../../.docs/design/index.md) follow Infini · [UI-EP-08](../../.docs/design/index.md) Device Settings · Pen buttons |
+| Wave **NOW** | W-field (human) | Hand-touch **human-approved**. Remaining: Infini + Epaper **follow** score on hardware. |
+| Queued | — | After human confirm on follow (or explicit skip): W3 erase design **or** Device Settings BDD. |
 
 Cameras independent by default. [ADR-0029](../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md) accepted. [ADR-0023](../../.docs/adr/ADR-0023-viewport-last-writer.md) superseded.
 
@@ -39,10 +39,10 @@ wip: 2
 out_of_scope: backlog
 modules: epaper, infini
 features: epaper/ink-box; epaper/tool-modes; epaper/connector-ink; epaper/region-sync; epaper/local-pen-ink; epaper/device-document; infini/infinity-canvas; infini/tablet-sync; infini/vector-document
-personas: none (paused)
+personas: none (paused — docs-only join complete)
 forbidden: REQ-15 tables; REQ-08; CHL-0011; CHL-0012; EP-032; AI; last-writer ADR-0023
-NOW: PAUSE — human deploy Infini + Epaper; IN-033 done
-cursor: WAIT human field test; do not start W3
+NOW: PAUSE — hand-touch human-approved; remaining Infini + Epaper follow score
+cursor: WAIT human follow field test; do not start W3
 ```
 
 ---
@@ -61,7 +61,7 @@ cursor: WAIT human field test; do not start W3
 | **W2** | **done** 2026-08-20 | serial | Developer + Quality Assurance Engineer EP-038 then EP-039 |
 | **W-follow-impl** | **done** 2026-08-20 | **∥** | Developer + Quality Assurance Engineer EP-055 ∥ IN-037 |
 | **W-follow-apply** | **done** 2026-08-20 | serial | Quality Assurance Engineer then Developer IN-033 (apply while following) |
-| **W-field** | **NOW (human)** | — | Deploy Infini + Epaper; score follow on hardware |
+| **W-field** | **NOW (human)** | — | Hand-touch **approved**. Remaining: Infini + Epaper follow score |
 | **W3** | queued | | erase / clipboard design — **do not start until human says go** |
 | **W4** | queued | | connector ends / attachments |
 | **W5** | queued | | barrel BDD then EP-052 / EP-058 / EP-057. IN-035 cancelled. |
@@ -72,15 +72,15 @@ cursor: WAIT human field test; do not start W3
 
 | Lane | Story | Writes | Conflicts |
 |---|---|---|---|
-| **human** | Field test Infini + Epaper | device + desktop | no agent writes |
+| **human** | Remaining field test: Infini follow | device + desktop | no agent writes |
 
-Work-in-progress 2 = **0 agent lanes**. Do not spawn Designer / Developer / Quality Assurance Engineer until the human resumes.
+Work-in-progress 2 = **0 agent lanes**. Do not spawn Designer / Developer / Quality Assurance Engineer until the human resumes (follow notes, or pick W3 / Device Settings).
 
 ### Full task table
 
 | Id | Feature / chore | Pri | Docs | Design story | Status | Wave | Next owner | Parallel group | Progress Detail |
 |---|---|---|---|---|---|---|---|---|---|
-| F-10 | REQ-10 hand-touch | Must | PRD 10 mm named | EP-037 + EP-054 **done** | EP-038 + EP-039 **done** | W2 | — | — | Host tests verified. Residual: no device/Qt `epaper_bin` in this environment. |
+| F-10 | REQ-10 hand-touch | Must | PRD 0.12.0-draft: 20 mm / 178 du; ≥3 contacts; HT toggle default on | EP-037 + EP-054 **done** (UI-EP-06 amended 2026-08-20) | EP-038 + EP-039 **done**; **human-approved** 2026-08-20 | W2 / W-field | — | — | Host tests verified. Field-test lock: palm **20 mm**, ≥3 contacts = palm, **HT** kill-switch. Residual: no device/Qt `epaper_bin` in this environment. |
 | F-19 | REQ-19 viewport-follow Infini | Must | SRS bound | [STORY-EP-053](./stories/STORY-EP-053.md) **done** | EP-055 **done** | W-follow-impl | human field test | — | Toggle verified on host. Residual: no device/Qt build. |
 | F-IN-06 | Infini REQ-06 viewport-follow Epaper | Must | SRS bound | [STORY-IN-036](./stories/STORY-IN-036.md) **done** | IN-037 + IN-033 **done** | W-follow-apply | human field test | — | Toggle + apply-while-following host-verified (`cd infini && npm test` 128 passed). Residual: no live TCP `:9877` / no RM2. |
 | F-18 | REQ-18 barrel accelerators | Must | PRD 0.11.0-draft | IN-034 historical; [STORY-EP-056](./stories/STORY-EP-056.md) **done** [UI-EP-08](./design/pen-button-map/) | design done | W-pen-map | Quality Assurance Engineer then [STORY-EP-052](./stories/STORY-EP-052.md) | — | Catalogues/dispatch. Settings shell is REQ-20. **Queued until after field test.** |
@@ -101,9 +101,9 @@ Work-in-progress 2 = **0 agent lanes**. Do not spawn Designer / Developer / Qual
 
 | Lane | Agent role | Story | Writes | Done when |
 |---|---|---|---|---|
-| human | Field test | Deploy Infini + Epaper | device + desktop | Score IN-033 + follow toggles on hardware; report back in `/sm` |
+| human | Remaining field test | Infini follow on hardware | device + desktop | Score IN-033 + follow toggles; report back in `/sm` |
 
-Wait: **0 agent spawns** until the human resumes. Handoff: [2026-08-20-sm-to-human-field-test.md](./handoffs/2026-08-20-sm-to-human-field-test.md).
+Wait: **0 agent spawns** until the human resumes. Hand-touch join: [2026-08-20-sm-to-human-hand-touch-verified.md](./handoffs/2026-08-20-sm-to-human-hand-touch-verified.md). Original pause: [2026-08-20-sm-to-human-field-test.md](./handoffs/2026-08-20-sm-to-human-field-test.md).
 
 ### Backlog sink
 
@@ -121,4 +121,4 @@ Wait: **0 agent spawns** until the human resumes. Handoff: [2026-08-20-sm-to-hum
 
 ## Verdict
 
-**Paused.** [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Human deploys Infini + Epaper and tests follow on real hardware. Do **not** start W3.
+**Paused.** [REQ-10](../../.docs/modules/epaper/prd.md#hand-touch) (Hand-touch on canvas) **human-approved** 2026-08-20. Remaining hardware score is Infini + Epaper **viewport follow**. Do **not** start W3.

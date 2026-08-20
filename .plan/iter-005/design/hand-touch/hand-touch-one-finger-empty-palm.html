@@ -17,7 +17,7 @@
     <div data-region="InkSurface">
       <div class="c-world">
         <div class="c-rule-grid" aria-hidden="true"></div>
-        <a class="hop-empty" href="./hand-touch-one-finger-empty-pan.html" aria-label="Travel past 10 mm — local pan"></a>
+        <a class="hop-empty" href="./hand-touch-one-finger-empty-pan.html" aria-label="Travel past 20 mm — local pan"></a>
         <div class="ink-cluster">
           <a class="hop-box" href="./hand-touch-finger-hit-box.html" aria-label="Finger-down on box">
             <svg viewBox="0 0 420 240" aria-hidden="true">
@@ -32,15 +32,15 @@
         <div data-region="SelectionOverlay" class="is-hidden"></div>
         <div data-region="GestureAnnotate">
           <span class="c-finger is-down" style="left:72%;top:58%" title="finger-down"></span>
-          <span class="c-travel is-palm" style="left:72%;top:58%" aria-label="travel 8 mm, at or below 10 mm (89 du)"></span>
+          <span class="c-travel is-palm" style="left:72%;top:58%" aria-label="travel 8 mm, at or below 20 mm (178 du)"></span>
           <span class="c-finger" style="left:calc(72% + 8mm);top:58%">
             <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
           </span>
         </div>
       </div>
       <p class="scene-caption">
-        hand.one_finger_empty_palm — travel 8 mm (≤ 10 mm / 89 du): palm-rest / tap; 0 pan, 0 selection, 0 tool switch.
-        <a href="./hand-touch-one-finger-empty-pan.html">Past 10 mm</a> ·
+        hand.one_finger_empty_palm — travel 8 mm (≤ 20 mm / 178 du): palm-rest / tap; 0 pan, 0 selection, 0 tool switch. HT on (kill-switch). ≥3 contacts reuse this empty-canvas paint (`hand.palm_contacts`).
+        <a href="./hand-touch-one-finger-empty-pan.html">Past 20 mm</a> ·
         <a href="./hand-touch-finger-hit-box.html">Hit box</a> ·
         <a href="./hand-touch-two-finger-pan.html">Two fingers</a>
       </p>
@@ -62,7 +62,10 @@
         <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
       </div>
     </div>
-    <p data-region="StatusLine">pen · hit.kind=empty · fingers=1 · travel=8 mm (≤10 mm / 89 du) · 0 pan · 0 selected</p>
+    <div class="c-hand-touch-cluster" data-region="HandTouchToggle">
+      <button type="button" class="c-hand-touch-btn" data-interactive data-control="btn.hand_touch" aria-pressed="true" aria-label="Hand-touch on">HT</button>
+    </div>
+    <p data-region="StatusLine">pen · hit.kind=empty · fingers=1 · travel=8 mm (≤20 mm / 178 du) · 0 pan · 0 selected · HT on</p>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {

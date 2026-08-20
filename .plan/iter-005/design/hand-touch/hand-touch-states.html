@@ -39,6 +39,7 @@
     }
     .c-mode-toggle { position: static; transform: none; }
     .c-indicator { position: static; }
+    .c-hand-touch-cluster { position: static; display: inline-flex; }
     .c-finger { position: relative; left: auto; top: auto; margin: 0; }
     .na { font-size: 11px; border: 1px dashed #000; padding: 8px; background: #fff; }
     .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
@@ -50,7 +51,8 @@
   <p class="note">
     Platform <code>epaper</code> (epaper-device): no hover, no focus, no cursor, no motion.
     Press = invert. Finger-eligible floor = 10 mm. Resize knobs: 4 mm visual / 10 mm hit (finger and pen).
-    Empty-canvas threshold: ≤ 10 mm / 89 du palm-rest; &gt; 10 mm local pan.
+    Empty-canvas threshold: ≤ 20 mm / 178 du palm-rest; &gt; 20 mm local pan.
+    <code>btn.hand_touch</code> is a kill-switch (HT), not a pan-mode tile. Default on = invert. Off = paper.
   </p>
 
   <h2>ToolButton (64 du · UI-EP-04)</h2>
@@ -85,6 +87,31 @@
         <div class="c-tool-cluster">
           <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
         </div>
+      </div>
+    </div>
+    <div class="cell"><span>hover</span><div class="na">N/A — no hover on epaper</div></div>
+    <div class="cell"><span>focus</span><div class="na">N/A — no keyboard on panel</div></div>
+  </div>
+
+  <h2>HandTouchToggle (<code>btn.hand_touch</code> · 64 du · HT)</h2>
+  <p class="note">Kill-switch. Trailing orientation-top, left of Debug (placement context — Debug log is not this package’s inventory). Follow stays in UI-EP-07.</p>
+  <div class="grid">
+    <div class="cell">
+      <span>on (default)</span>
+      <div class="c-hand-touch-cluster" data-region="HandTouchToggle">
+        <button type="button" class="c-hand-touch-btn" data-interactive data-control="btn.hand_touch" aria-pressed="true" aria-label="Hand-touch on">HT</button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>off (hand.toggle_off)</span>
+      <div class="c-hand-touch-cluster">
+        <button type="button" class="c-hand-touch-btn" data-interactive data-control="btn.hand_touch" aria-pressed="false" aria-label="Hand-touch off">HT</button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>pressed</span>
+      <div class="c-hand-touch-cluster">
+        <button type="button" class="c-hand-touch-btn is-pressed" data-interactive aria-pressed="true" aria-label="Hand-touch on">HT</button>
       </div>
     </div>
     <div class="cell"><span>hover</span><div class="na">N/A — no hover on epaper</div></div>
@@ -161,7 +188,7 @@
   <h2>Empty canvas (one finger) — palm vs pan</h2>
   <div class="grid">
     <div class="cell">
-      <span>palm-rest (travel 8 mm ≤ 10 mm / 89 du)</span>
+      <span>palm-rest (travel 8 mm ≤ 20 mm / 178 du)</span>
       <div class="stage">
         <span class="c-finger is-down" style="left:20%;top:50%"></span>
         <span class="c-travel is-palm" style="left:20%;top:50%"></span>
@@ -169,7 +196,7 @@
       </div>
     </div>
     <div class="cell">
-      <span>local pan (travel 36 mm &gt; 10 mm)</span>
+      <span>local pan (travel 36 mm &gt; 20 mm)</span>
       <div class="stage">
         <div class="c-rule-grid" style="inset:0;opacity:0.18;transform:translate(12px,8px)"></div>
         <span class="c-finger is-down" style="left:16%;top:50%"></span>
@@ -178,6 +205,10 @@
       </div>
     </div>
     <div class="cell"><span>hover / focus</span><div class="na">N/A — epaper</div></div>
+    <div class="cell">
+      <span>palm_contacts (≥3) — reuse palm paint</span>
+      <div class="na">No extra scene. Same empty-canvas rest as palm: 0 pan, 0 pinch. Caption on palm Keep scene.</div>
+    </div>
   </div>
 
   <script>

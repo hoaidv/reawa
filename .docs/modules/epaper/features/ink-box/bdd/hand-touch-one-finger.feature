@@ -1,7 +1,7 @@
 @SRS-EP-21
 Feature: One-finger hand-touch pick move palm and empty pan
   As an RM2 creator with Pen armed
-  I need a finger on a Smart Group to select and move it, a short empty touch to rest, and travel past 10 mm to pan locally
+  I need a finger on a Smart Group to select and move it, a short empty touch to rest, and travel past 20 mm to pan locally
   So that the hand shoves objects and the local camera without stealing ToolChip taps
 
   # STORY-EP-038 — SRS-EP-21 / SRS-EP-23 / SRS-EP-25. UI-EP-06 states

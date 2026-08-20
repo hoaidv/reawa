@@ -43,8 +43,8 @@ stories:
   - STORY-EP-056
   - STORY-EP-057
   - STORY-EP-058
-cursor: "WAIT human field test Infini + Epaper; IN-033 done"
-paused_reason: "Human 2026-08-20: pause after IN-033 and deploy Infini + Epaper to test on real hardware"
+cursor: "WAIT remaining Infini + Epaper follow field test; hand-touch human-approved; IN-033 done"
+paused_reason: "Human 2026-08-20: pause after IN-033 for hardware. Hand-touch approved 2026-08-20; follow score still outstanding."
 interrupts: []
 ---
 
@@ -97,13 +97,13 @@ W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SR
 
 ## Cursor
 
-**Paused.** Wait on human Infini + Epaper field test. Do **not** start W3 erase design or Device Settings until the human says go. Resume checklist is in the freeze note.
+**Paused.** Hand-touch **human-approved** 2026-08-20. Wait on remaining Infini + Epaper **follow** field test. Do **not** start W3 erase design or Device Settings until the human says go.
 
 ## Freeze note
 
 - In flight: none. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) (Infini applies tablet viewport only while following) **done** (host `cd infini && npm test`).
 - Open files / risks: no RM2 panel / no live TCP `:9877` in the agent host; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open; device/Qt `epaper_bin` not built here.
-- Resume checklist: re-read this note → take human field-test notes → re-run gates on Infini + Epaper surfaces if they found defects → set track `active` → spawn W3 erase design **or** Device Settings scenarios only after the human picks.
+- Resume checklist: re-read this note → take remaining follow field-test notes → re-run gates on Infini surfaces if they found defects → set track `active` → spawn W3 erase design **or** Device Settings scenarios only after the human picks.
 
 ## Execution board
 
@@ -122,3 +122,4 @@ W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SR
 | 2026-08-20 | Architect ADR-0030; SRS-EP-52/53; SRS-IN-24 retired. Designer EP-056 **done** (UI-EP-08). |
 | 2026-08-20 | Developer + Quality Assurance Engineer EP-055 ∥ IN-037 **done**. Cursor → IN-033 apply-depth. |
 | 2026-08-20 | IN-033 **done** (host tests). Human: pause and deploy Infini + Epaper. Track **paused**. |
+| 2026-08-20 | Human **approved hand-touch**. PRD 0.12.0-draft; architecture 20 mm / 178 du; UI-EP-06 HT + 20 mm. Track still **paused** for Infini follow score. |
