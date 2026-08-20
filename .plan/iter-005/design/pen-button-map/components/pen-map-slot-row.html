@@ -10,45 +10,72 @@
       --font-label: 12px; --space-xs: 4px;
     }
     body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; cursor: none; }
-    .c-pen-map-row { border: 1px solid #000; padding: 4px; background: #fff; width: 180mm; }
+    .c-pen-map-row { border: 1px solid #000; padding: 4px; background: #fff; width: 170mm; }
     .c-pen-map-row h2 {
       margin: 0 0 4px; font-size: var(--font-label); display: flex; align-items: center; gap: 4px;
     }
     .c-pen-map-row h2 img { width: var(--pen-map-icon); height: var(--pen-map-icon); }
-    .c-pen-map-slot {
+    .c-pen-map-list { display: flex; flex-direction: column; margin: 0 0 4px; }
+    .c-pen-map-list h3 { margin: 0 0 4px; font-size: var(--font-label); }
+    .c-pen-map-option {
       display: flex; align-items: center; gap: 4px; min-height: var(--target-epaper);
       width: 100%; margin: 0 0 4px; padding: 0 4px; border: 1px solid #000;
       background: #fff; color: #000; font-size: var(--font-label); font-family: inherit;
-      text-align: left; cursor: none; text-decoration: none;
+      text-align: left; cursor: none;
     }
-    .c-pen-map-slot:last-child { margin-bottom: 0; }
-    .c-pen-map-slot img { width: var(--pen-map-icon); height: var(--pen-map-icon); pointer-events: none; }
-    .c-pen-map-slot-k { flex: 0 0 22mm; font-weight: 600; }
-    .c-pen-map-slot-v { flex: 1; }
-    .c-pen-map-slot:active, .c-pen-map-slot.is-pressed { background: #000; color: #fff; }
-    .c-pen-map-slot:active img, .c-pen-map-slot.is-pressed img { filter: invert(1); }
+    .c-pen-map-option img { width: var(--pen-map-icon); height: var(--pen-map-icon); pointer-events: none; }
+    .c-pen-map-option[aria-selected="true"] { background: #000; color: #fff; }
+    .c-pen-map-option[aria-selected="true"] img { filter: invert(1); }
+    .c-pen-map-option:active, .c-pen-map-option.is-pressed { background: #000; color: #fff; }
+    .c-pen-map-option:active img, .c-pen-map-option.is-pressed img { filter: invert(1); }
     .note { font-size: 12px; }
   </style>
 </head>
 <body>
-  <p class="note">1-button defaults: Click = current ↔ Freeform Select; Hold-move = Temporary eraser. Min-height 10 mm.</p>
+  <p class="note">One page: Click (3) and Hold-move (3) inline. No sheet. Defaults: Freeform Select + Temporary eraser.</p>
   <div class="c-pen-map-row" data-region="SlotRow">
     <h2><img src="../../system/assets/icon-epaper-pen-map-button-1.svg" alt="" /> Button 1</h2>
-    <a class="c-pen-map-slot" data-region="SlotClick" data-interactive href="#" aria-label="Click">
-      <img src="../../system/assets/icon-epaper-pen-map-click.svg" alt="" />
-      <span class="c-pen-map-slot-k">Click</span>
-      <span class="c-pen-map-slot-v">Current primary ↔ Freeform Select</span>
-    </a>
-    <a class="c-pen-map-slot" data-region="SlotHoldMove" data-interactive href="#" aria-label="Hold-move">
-      <img src="../../system/assets/icon-epaper-pen-map-hold.svg" alt="" />
-      <span class="c-pen-map-slot-k">Hold-move</span>
-      <span class="c-pen-map-slot-v">Temporary eraser</span>
-    </a>
+    <div class="c-pen-map-list" data-region="ClickList">
+      <h3>Click</h3>
+      <button type="button" class="c-pen-map-option" data-interactive data-group="b1-click" aria-selected="true">
+        <img src="../../system/assets/icon-epaper-pen-map-freeform.svg" alt="" />
+        Current primary ↔ Freeform Select
+      </button>
+      <button type="button" class="c-pen-map-option" data-interactive data-group="b1-click" aria-selected="false">
+        <img src="../../system/assets/icon-epaper-pen-map-eraser.svg" alt="" />
+        Current primary ↔ Eraser
+      </button>
+      <button type="button" class="c-pen-map-option" data-interactive data-group="b1-click" aria-selected="false">
+        <img src="../../system/assets/icon-epaper-pen-map-off.svg" alt="" />
+        Off
+      </button>
+    </div>
+    <div class="c-pen-map-list" data-region="HoldList">
+      <h3>Hold-move</h3>
+      <button type="button" class="c-pen-map-option" data-interactive data-group="b1-hold" aria-selected="true">
+        <img src="../../system/assets/icon-epaper-pen-map-eraser.svg" alt="" />
+        Temporary eraser
+      </button>
+      <button type="button" class="c-pen-map-option" data-interactive data-group="b1-hold" aria-selected="false">
+        <img src="../../system/assets/icon-epaper-pen-map-drag.svg" alt="" />
+        Drag node under tip
+      </button>
+      <button type="button" class="c-pen-map-option" data-interactive data-group="b1-hold" aria-selected="false">
+        <img src="../../system/assets/icon-epaper-pen-map-off.svg" alt="" />
+        Off
+      </button>
+    </div>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {
       el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
       ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+    document.querySelectorAll(".c-pen-map-option[data-group]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const g = el.getAttribute("data-group");
+        document.querySelectorAll('.c-pen-map-option[data-group="' + g + '"]').forEach((n) => n.setAttribute("aria-selected", n === el ? "true" : "false"));
+      });
     });
   </script>
 </body>

@@ -26,8 +26,6 @@ scenes:
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-2.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-offline.html"
-  - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-click.html"
-  - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-hold.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-chip-temp-erase.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-chip-drag.html"
 hifi: ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
@@ -38,7 +36,7 @@ wireframe: ""
 
 TRACK-005. Parent [REQ-18](../../../.docs/modules/epaper/prd.md#pen-buttons). Catalogues and defaults as of 2026-08-20: Click current ↔ Freeform Select / current ↔ Eraser / Off; Hold-move Temporary eraser / Drag-under-tip / Off. Default 1-button Hold-move is **Temporary eraser** (not temporary freeform).
 
-Depends on [STORY-EP-056](./STORY-EP-056.md) (epaper-device package). Do not implement against the historical Infini desktop paint of [STORY-IN-034](./STORY-IN-034.md).
+Depends on [STORY-EP-056](./STORY-EP-056.md) (epaper-device package). Dispatch uses the **live on-device map**. Does **not** depend on Infini persist ([STORY-IN-035](./STORY-IN-035.md) parked) or [STORY-EP-057](./STORY-EP-057.md) (device persist is a sibling). Do not implement against the historical Infini desktop paint of [STORY-IN-034](./STORY-IN-034.md). Settings **page** implement is [STORY-EP-058](./STORY-EP-058.md).
 
 ## Kind
 

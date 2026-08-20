@@ -108,7 +108,7 @@ QA can write: *Given `pen` active and a box at/above LOD, When finger-down insid
 
 <!-- lifecycle: active -->
 
-**Parent:** [REQ-18](../../prd.md#pen-buttons). **Decisions:** [ADR-0025](../../../../adr/ADR-0025-barrel-vs-eraser-nib.md), [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md) (supersedes [ADR-0028](../../../../adr/ADR-0028-pen-button-map-settings-channel.md)). **Map anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). **Authoring is not this section** — [SRS-EP-53](#srs-ep-53-pen-map-author). **Nib erase is not this section** — [SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib).
+**Parent:** [REQ-18](../../prd.md#pen-buttons). **Decisions:** [ADR-0025](../../../../adr/ADR-0025-barrel-vs-eraser-nib.md), [ADR-0031](../../../../adr/ADR-0031-device-settings-persist-on-epaper.md) (supersedes [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md)). **Map anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). **Authoring is not this section** — [SRS-EP-53](#srs-ep-53-pen-map-author). **Nib erase is not this section** — [SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib).
 
 ### Classifier
 
@@ -117,7 +117,7 @@ QA can write: *Given `pen` active and a box at/above LOD, When finger-down insid
 | Button down+up | Below threshold | **Click** | Hold-move **must not** run |
 | Button down + move past threshold until release | At/above threshold | **Hold-move** | Click **must not** run on release |
 
-Threshold is device-local (start: **12 du** of tip travel while button is down). QA fixture: 20 mixed clicks and holds → **0** events fire both. Latch map at **button-down**; on-device rebind or Infini restore applies to the **next** gesture.
+Threshold is device-local (start: **12 du** of tip travel while button is down). QA fixture: 20 mixed clicks and holds → **0** events fire both. Latch map at **button-down**; on-device rebind or **device-store restore** applies to the **next** gesture.
 
 ### Click catalogue (closed — do not invent)
 
@@ -152,31 +152,35 @@ When Hold-move is **`temp_erase`**, the chip **mirrors** that temporary tool unt
 
 ---
 
-## [SRS-EP-53] On-device pen-button map authoring {#srs-ep-53-pen-map-author}
+## [SRS-EP-53] On-device pen-button map authoring and persist {#srs-ep-53-pen-map-author}
 
 <!-- lifecycle: active -->
+<!-- revised: 2026-08-20 — persist on Epaper device; drop Infini persist-up / restore-down. Same id. -->
 
-**Parent:** [REQ-18](../../prd.md#pen-buttons). **Decision:** [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md). **Anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). **UI:** [SRS-EP-52](./srs-ui.md#srs-ep-52-pen-map-editor). **Scene graph:** [srs-ui-multi-scene.md](./srs-ui-multi-scene.md). **Dispatch:** [SRS-EP-41](#srs-ep-41-barrel-dispatch). **Persist peer:** [SRS-IN-23](../../../infini/features/tablet-sync/srs-logic.md#srs-in-23-pen-map-publish). **Not the chip** — [SRS-EP-42](./srs-ui.md#srs-ep-42-chip-temp-tool).
+**Parent:** [REQ-20](../../prd.md#device-settings) (persist home) · [REQ-18](../../prd.md#pen-buttons) (catalogue writes). **Decision:** [ADR-0031](../../../../adr/ADR-0031-device-settings-persist-on-epaper.md) (supersedes [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md)). **Anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). **UI:** [SRS-EP-52](./srs-ui.md#srs-ep-52-pen-map-editor). **Scene graph:** [srs-ui-multi-scene.md](./srs-ui-multi-scene.md). **Dispatch:** [SRS-EP-41](#srs-ep-41-barrel-dispatch). **Infini peer:** [SRS-IN-23](../../../infini/features/tablet-sync/srs-logic.md#srs-in-23-pen-map-publish) **retired**. **Not the chip** — [SRS-EP-42](./srs-ui.md#srs-ep-42-chip-temp-tool).
 
-The tablet **writes** the live map. Infini stores and may restore; it does not author.
+The tablet **writes** the live map and **persists it on this device**. Infini does not author, store, or restore.
 
 | Rule | Value |
 |---|---|
-| Bind | Editor writes `buttons[].click` / `holdMove` from the closed catalogues only. New `mapId` per committed bind |
+| Bind | Settings page writes `buttons[].click` / `holdMove` from the closed catalogues only. New `mapId` per committed bind |
 | Apply | Live map replaces immediately for the **next** gesture; in-flight latch unchanged |
-| Persist-up | While session linked: emit `pen_button_map` tablet→desktop. **0** `doc_*` |
-| Offline | Editor remains usable. State `map.pending_persist`. Next barrel gesture uses the live map. Persist waits |
-| Reconnect | If `pending_persist` or authored this session: emit persist-up **before** accepting restore. Live map wins |
-| Restore-down | Apply inbound `pen_button_map` only when this session has not authored (`map.absent` / factory default). Next gesture; in-flight unchanged |
-| 0-button | Store **0** slots; ignore inbound maps that invent indexes |
+| Persist | Flush to **device-local durable store** on committed bind. **0** `pen_button_map` messages. **0** `doc_*`. **0** Infini app-settings copies. **0** SVG / VectorDocument fields |
+| Offline | Page remains usable. Next barrel gesture uses the live map. Persist does **not** wait on Infini |
+| Restart | On Epaper start, load the device store. Next barrel gesture uses that map p95 ≤300 ms after first HID report |
+| Restore-down | **0.** Ignore inbound `pen_button_map` if an old peer still emits it |
+| Persist-up | **0.** Do not emit `pen_button_map` tablet→desktop |
+| Capability telemetry | Optional `pen_capability` T→D on hello (HID only). Not persist |
+| 0-button | Store **0** slots; ignore maps that invent indexes |
 | Unknown id | Apply that slot as `off` |
-| Defaults | If never bound and no restore: domain defaults |
+| Defaults | If never bound and no device store: domain defaults |
+| Other device | A different Epaper with factory defaults does **not** inherit this map from an Infini document |
 
-### Closed ids (editor + lists)
+### Closed ids (Settings + inline catalogues)
 
-`cta.pen_map_open` · `cta.pen_map_close` · `slot.click` · `slot.hold_move` · `list.click.toggle_pen_freeform` · `list.click.toggle_pen_eraser` · `list.click.off` · `list.hold.temp_erase` · `list.hold.drag_node_under_tip` · `list.hold.off`
+`cta.pen_map_open` · `cta.pen_map_close` · `nav.settings.pen_buttons` · `slot.click` · `slot.hold_move` · `list.click.toggle_pen_freeform` · `list.click.toggle_pen_eraser` · `list.click.off` · `list.hold.temp_erase` · `list.hold.drag_node_under_tip` · `list.hold.off`
 
-`cta.pen_map_open` **placement is unnamed** — Designer proposes; PM adopts. Must be on-device chrome. Must **not** be Infini File menu, a 5-way radio on exclusive-tool tiles, or a fourth `toolMode`.
+`cta.pen_map_open` **placement is named** (GAP-01 adopted): leading 10 mm sibling of ToolChip. Must **not** be Infini File menu, a 5-way radio on exclusive-tool tiles, or a fourth `toolMode`.
 
 ### Routes / presentations (UI-driving)
 
@@ -184,23 +188,22 @@ The tablet **writes** the live map. Infini stores and may restore; it does not a
 |---|---|---|
 | `cta.pen_map_open` | `present-modal` | `scene.pen_map_editor` |
 | `cta.pen_map_close` / overlay dismiss | `dismiss` | drawing surface (underlay) |
-| `slot.click` | `present-sheet` | `scene.pen_map_click` |
-| `slot.hold_move` | `present-sheet` | `scene.pen_map_hold` |
-| `list.click.*` (pick) | `dismiss` | `scene.pen_map_editor` (write live map) |
-| `list.hold.*` (pick) | `dismiss` | `scene.pen_map_editor` (write live map) |
+| `list.click.*` (pick) | *(intra-scene write)* | `scene.pen_map_editor` (write live map; persist on device) |
+| `list.hold.*` (pick) | *(intra-scene write)* | `scene.pen_map_editor` (write live map; persist on device) |
 
-Picker cancel = `dismiss` with **0** writes.
+`slot.click` / `slot.hold_move` **do not** `present-sheet`. `scene.pen_map_click` / `scene.pen_map_hold` are **retired**. There is no list-cancel hop.
 
 ### UI-driving fields
 
 | Field | Drives |
 |---|---|
-| `pen.buttonCount` | Hub layout 0 / 1 / 2; 0-button → **0** slot rows |
+| `pen.buttonCount` | Detail layout 0 / 1 / 2; 0-button → **0** slot rows |
 | `pen.map.buttons[].click` / `holdMove` | Slot values |
-| `map.state` | `absent` \| `applied` \| `pending_persist` |
-| `session.connected` | Persist now vs wait — **does not** disable the editor |
+| `map.state` | `absent` \| `applied` |
+| `session.connected` | Offline copy only — **does not** disable the page or delay persist |
 
-QA can write: *Given the editor and no session, When the creator rebinds Hold-move to drag-under-tip, Then the next hold-move uses that id and 0 binds are lost.*
+QA can write: *Given Settings · Pen buttons and no session, When the creator rebinds Hold-move to drag-under-tip, Then the next hold-move uses that id, the device store holds that map, and Infini holds 0 copy.*
+*Given a rebound map, When Epaper restarts on the same device, Then the next barrel gesture uses that map p95 ≤300 ms after first HID report.*
 
 ---
 

@@ -9,7 +9,7 @@ needs_design: true
 # SRS — Tablet sync Infini (UI)
 
 Debug chrome for [REQ-03](../../prd.md#tablet-sync) is [SRS-IN-18](#srs-in-18-device-log-panel) (`needs_design: false`).
-Pen-button map **editor** is **not** Infini — [SRS-IN-24](#srs-in-24-pen-map-ui) is **retired**. Persist/restore is [SRS-IN-23](./srs-logic.md#srs-in-23-pen-map-publish) (`needs_design: no`).
+Pen-button map **editor** is **not** Infini — [SRS-IN-24](#srs-in-24-pen-map-ui) is **retired**. Infini persist/restore ([SRS-IN-23](./srs-logic.md#srs-in-23-pen-map-publish)) is **retired**. Device persist: [SRS-EP-53](../../../epaper/features/tool-modes/srs-logic.md#srs-ep-53-pen-map-author).
 Viewport-follow toggle is [SRS-IN-27](#srs-in-27-follow-toggle) (`needs_design: yes`) — **not** canvas chrome, **not** IN-034.
 
 Logic: [SRS-IN-17](./srs-logic.md#srs-in-17-debug-log-channel). Quality: [SRS-IN-19](./srs-quality.md#srs-in-19-debug-log-isolation).
@@ -119,13 +119,13 @@ not a multi-scene graph.
 
 <!-- lifecycle: retired -->
 <!-- superseded-by: [SRS-EP-52] -->
-<!-- retired: 2026-08-20 — desktop map-editor UI outcome of Infini REQ-05 retired in place; persist/restore remains [SRS-IN-23]. Id kept. -->
+<!-- retired: 2026-08-20 — desktop map-editor UI outcome of Infini REQ-05 retired in place; persist/restore [SRS-IN-23] also retired 2026-08-20. Id kept. -->
 
-**Parent:** Infini [REQ-05](../../prd.md#pen-button-map). **Do not implement this surface.** Infini presents **0** map-editor screens. The on-device editor is [SRS-EP-52](../../../epaper/features/tool-modes/srs-ui.md#srs-ep-52-pen-map-editor) (Epaper [REQ-18](../../../epaper/prd.md#pen-buttons)). Persist/restore: [SRS-IN-23](./srs-logic.md#srs-in-23-pen-map-publish). **Platform of this retired section:** desktop Electron — **not** the shipping UI.
+**Parent:** Infini [REQ-05](../../prd.md#pen-button-map) (**retired**). **Do not implement this surface.** Infini presents **0** map-editor screens. The on-device Settings page is [SRS-EP-52](../../../epaper/features/tool-modes/srs-ui.md#srs-ep-52-pen-map-editor) (Epaper [REQ-20](../../../epaper/prd.md#device-settings) / [REQ-18](../../../epaper/prd.md#pen-buttons)). Persist is on the device ([SRS-EP-53](../../../epaper/features/tool-modes/srs-logic.md#srs-ep-53-pen-map-author)); [SRS-IN-23](./srs-logic.md#srs-in-23-pen-map-publish) is **retired**. **Platform of this retired section:** desktop Electron — **not** the shipping UI.
 
 ### Purpose (historical — do not paint)
 
-Assign barrel slots on the **desktop**. Superseded: tablet authors; Infini only stores.
+Assign barrel slots on the **desktop**. Superseded twice: tablet authors ([ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md)); persist moved to the device ([ADR-0031](../../../../adr/ADR-0031-device-settings-persist-on-epaper.md)).
 
 ### Closed catalogues (historical — do not use)
 

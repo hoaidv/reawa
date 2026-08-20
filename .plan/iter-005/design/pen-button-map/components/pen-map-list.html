@@ -5,53 +5,56 @@
   <title>PenMapList — UI-EP-08</title>
   <style>
     :root {
-      --target-epaper: 10mm; --pen-map-icon: 4mm; --chip-inset: 2mm;
-      --color-ink: #000; --color-paper: #fff; --font-title: 16px; --font-label: 12px;
+      --target-epaper: 10mm; --pen-map-icon: 4mm;
+      --color-ink: #000; --color-paper: #fff; --font-label: 12px;
     }
     body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; cursor: none; }
     .c-pen-map-list {
-      width: 180mm; background: #fff; border: 1px solid #000; padding: 2mm;
+      width: 170mm; background: #fff; padding: 2mm;
       display: flex; flex-direction: column;
     }
-    .c-pen-map-list h2 { margin: 0 0 4px; font-size: var(--font-title); min-height: var(--target-epaper); display: flex; align-items: center; }
-    .c-pen-map-option, .c-pen-map-cancel {
+    .c-pen-map-list h3 { margin: 0 0 4px; font-size: var(--font-label); }
+    .c-pen-map-option {
       display: flex; align-items: center; gap: 4px; min-height: var(--target-epaper);
       width: 100%; margin: 0 0 4px; padding: 0 4px; border: 1px solid #000;
       background: #fff; color: #000; font-size: var(--font-label); font-family: inherit;
-      text-align: left; cursor: none; text-decoration: none;
+      text-align: left; cursor: none;
     }
-    .c-pen-map-option img, .c-pen-map-cancel img { width: var(--pen-map-icon); height: var(--pen-map-icon); pointer-events: none; }
+    .c-pen-map-option img { width: var(--pen-map-icon); height: var(--pen-map-icon); pointer-events: none; }
     .c-pen-map-option[aria-selected="true"] { background: #000; color: #fff; }
     .c-pen-map-option[aria-selected="true"] img { filter: invert(1); }
-    .c-pen-map-option:active, .c-pen-map-option.is-pressed,
-    .c-pen-map-cancel:active, .c-pen-map-cancel.is-pressed { background: #000; color: #fff; }
-    .c-pen-map-option:active img, .c-pen-map-option.is-pressed img,
-    .c-pen-map-cancel:active img, .c-pen-map-cancel.is-pressed img { filter: invert(1); }
+    .c-pen-map-option:active, .c-pen-map-option.is-pressed { background: #000; color: #fff; }
+    .c-pen-map-option:active img, .c-pen-map-option.is-pressed img { filter: invert(1); }
     .note { font-size: 12px; max-width: 40rem; }
   </style>
 </head>
 <body>
-  <p class="note">Click list: exactly three items. No Undo. Selected = invert. Cancel = 0 write.</p>
+  <p class="note">Inline Click list: exactly three items. No Undo. No Cancel — pick writes in place.</p>
   <div class="c-pen-map-list" data-region="ClickList">
-    <h2>Click</h2>
-    <a class="c-pen-map-option" data-interactive href="#" aria-selected="true">
+    <h3>Click</h3>
+    <button type="button" class="c-pen-map-option" data-interactive data-group="demo-click" aria-selected="true">
       <img src="../../system/assets/icon-epaper-pen-map-freeform.svg" alt="" />
       Current primary ↔ Freeform Select
-    </a>
-    <a class="c-pen-map-option" data-interactive href="#" aria-selected="false">
+    </button>
+    <button type="button" class="c-pen-map-option" data-interactive data-group="demo-click" aria-selected="false">
       <img src="../../system/assets/icon-epaper-pen-map-eraser.svg" alt="" />
       Current primary ↔ Eraser
-    </a>
-    <a class="c-pen-map-option" data-interactive href="#" aria-selected="false">
+    </button>
+    <button type="button" class="c-pen-map-option" data-interactive data-group="demo-click" aria-selected="false">
       <img src="../../system/assets/icon-epaper-pen-map-off.svg" alt="" />
       Off
-    </a>
-    <a class="c-pen-map-cancel" data-interactive href="#">Cancel</a>
+    </button>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {
       el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
       ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+    document.querySelectorAll(".c-pen-map-option[data-group]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const g = el.getAttribute("data-group");
+        document.querySelectorAll('.c-pen-map-option[data-group="' + g + '"]').forEach((n) => n.setAttribute("aria-selected", n === el ? "true" : "false"));
+      });
     });
   </script>
 </body>

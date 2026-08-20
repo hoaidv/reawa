@@ -81,7 +81,7 @@ Both described behaviour this rework deletes.
 
 <!-- lifecycle: active -->
 
-**Parent:** [REQ-18](../../prd.md#pen-buttons). **Constrains:** [SRS-EP-41](./srs-logic.md#srs-ep-41-barrel-dispatch), [SRS-EP-52](./srs-ui.md#srs-ep-52-pen-map-editor), [SRS-EP-53](./srs-logic.md#srs-ep-53-pen-map-author). Does **not** steal [SRS-EP-06](#srs-ep-06) parent (REQ-03).
+**Parent:** [REQ-18](../../prd.md#pen-buttons) (dispatch + catalogues) · [REQ-20](../../prd.md#device-settings) (device persist). **Constrains:** [SRS-EP-41](./srs-logic.md#srs-ep-41-barrel-dispatch), [SRS-EP-52](./srs-ui.md#srs-ep-52-pen-map-editor), [SRS-EP-53](./srs-logic.md#srs-ep-53-pen-map-author). Does **not** steal [SRS-EP-06](#srs-ep-06) parent (REQ-03).
 
 | Scenario | Target |
 |---|---|
@@ -91,11 +91,16 @@ Both described behaviour this rework deletes.
 | Rebind Hold-move `drag_node_under_tip` on node | Live-direct bar (0 px / ≥5 Hz); empty canvas: **0** move, **0** lasso |
 | 0-button pen | **0** button gestures; REQ-03 still works |
 | 20-gesture mixed click/hold fixture | **0** events fire **both** click and hold-move |
-| On-device rebind (session up or down) | Next gesture uses map p95 ≤**300 ms**; in-flight unchanged; **0** lost local binds when Infini is down |
-| Infini restore on later session | Next gesture uses persisted map p95 ≤**300 ms**; in-flight unchanged |
-| Editor 0-button | **0** slot rows; **0** fake bindings |
-| Click list | Only `toggle_pen_freeform` · `toggle_pen_eraser` · `off` (**0** Undo) |
-| Hold-move list | Only `temp_erase` · `drag_node_under_tip` · `off` (**0** temp freeform/rect) |
+| On-device rebind (session up or down) | Next gesture uses map p95 ≤**300 ms**; in-flight unchanged; **0** lost local binds; persist does **not** wait on Infini |
+| Device restart (same Epaper) | Next gesture uses device-stored map p95 ≤**300 ms** after first HID report; Infini holds **0** copy |
+| Infini connected rebind | **0** `doc_*`; **0** `pen_button_map`; **0** Infini app-settings maps |
+| Other Epaper, factory defaults, same Infini document | **0** inherited barrel map |
+| Settings 0-button | **0** slot rows; **0** fake bindings |
+| Click catalogue (inline) | Only `toggle_pen_freeform` · `toggle_pen_eraser` · `off` (**0** Undo, **0** sheets) |
+| Hold-move catalogue (inline) | Only `temp_erase` · `drag_node_under_tip` · `off` (**0** temp freeform/rect, **0** sheets) |
+| Leading entry tile | Tap `cta.pen_map_open` → Settings · Pen buttons p95 ≤**300 ms**; exclusive tool unchanged |
+
+Retired scenario: *Infini restore on later session* — Infini persist/restore is withdrawn ([ADR-0031](../../../../adr/ADR-0031-device-settings-persist-on-epaper.md)).
 
 ---
 

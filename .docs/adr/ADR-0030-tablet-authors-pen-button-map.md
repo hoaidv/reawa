@@ -1,15 +1,20 @@
 ---
 id: ADR-0030
 title: Tablet authors pen-button map; Infini persist/restore
-status: accepted
+status: superseded
 date: 2026-08-20
 deciders: [architect, pm]
 supersedes: [ADR-0028]
+superseded-by: [ADR-0031]
 amends: [ADR-0015, ADR-0025]
 source: TRACK-005 / Epaper [REQ-18] / Infini [REQ-05]
 ---
 
 # ADR-0030 — Tablet authors pen-button map; Infini persist/restore
+
+> **Superseded 2026-08-20** by [ADR-0031](./ADR-0031-device-settings-persist-on-epaper.md).
+> **Authoring-on-tablet** and **not document / not SVG** stand. **Infini persist/restore does not.**
+> Forward: Device Settings persist **on the Epaper device**; 0 Infini copies; 0 restore-on-hello.
 
 ## Context
 

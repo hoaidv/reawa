@@ -1,15 +1,15 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-20T09:51:38+00:00",
+  "generated_at": "2026-08-20T10:42:53+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 20,
-    "ready": 2,
+    "draft": 21,
+    "ready": 1,
     "in-progress": 0,
     "in-review": 0,
-    "done": 123,
+    "done": 124,
     "blocked": 13,
-    "cancelled": 1
+    "cancelled": 2
   },
   "by_module": {
     "reawa": {
@@ -18,8 +18,8 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 56,
-      "done": 31,
+      "total": 58,
+      "done": 32,
       "in_review": 0
     },
     "infini": {
@@ -29,8 +29,8 @@
     }
   },
   "open_challenges": 2,
-  "resolved_challenges_this_iter": 1,
-  "sync_orphans": 139,
+  "resolved_challenges_this_iter": 2,
+  "sync_orphans": 137,
   "master_plan": true,
   "tracks": [
     {
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "NOW EP-054 hand-touch empty-pan after human glance at UI-EP-08",
+      "cursor": "NOW EP-054 \u2225 architect Device Settings (REQ-20); Dev blocked until /init",
       "iter": "iter-005"
     }
   ]

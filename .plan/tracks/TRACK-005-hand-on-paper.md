@@ -41,7 +41,9 @@ stories:
   - STORY-EP-055
   - STORY-IN-037
   - STORY-EP-056
-cursor: "NOW EP-054 hand-touch empty-pan after human glance at UI-EP-08"
+  - STORY-EP-057
+  - STORY-EP-058
+cursor: "NOW EP-054 ∥ architect Device Settings (REQ-20); Dev blocked until /init"
 paused_reason: ""
 interrupts: []
 ---
@@ -60,7 +62,7 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 - REQ-11 erase · REQ-12 clipboard
 - REQ-13 endpoint styles · REQ-14 mid-attachments
 - REQ-17 manual create
-- REQ-18 barrel-button catalogues (on-device editor) + infini REQ-05 persist/restore (not the editor)
+- REQ-18 barrel-button catalogues + REQ-20 Device Settings (on-device persist). Infini REQ-05 persist/restore **retired**.
 
 **Out:** REQ-15 tables · REQ-08 any-node · CHL-0011 / CHL-0012 · AI
 
@@ -87,13 +89,15 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 | [IN-034](../iter-005/stories/STORY-IN-034.md) | design | P0 | historical Infini paint — superseded |
 | [EP-056](../iter-005/stories/STORY-EP-056.md) | design | P0 | revise pen-button-map as epaper-device |
 | [EP-052](../iter-005/stories/STORY-EP-052.md) | implement | P0 | barrel dispatch · depends EP-056 |
-| [IN-035](../iter-005/stories/STORY-IN-035.md) | implement | P0 | persist/restore map (not desktop editor) |
+| [IN-035](../iter-005/stories/STORY-IN-035.md) | implement | — | **cancelled** — Infini persist retired |
+| [EP-057](../iter-005/stories/STORY-EP-057.md) | implement | P0 | persist Device Settings on device |
+| [EP-058](../iter-005/stories/STORY-EP-058.md) | implement | P0 | Settings page (Pen buttons) |
 
 W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). EP-037 and IN-034 are **ready**. Other committed stories stay **draft** until their wave.
 
 ## Cursor
 
-**Next:** Product Designer **EP-054** (hand-touch empty-pan) after human glance at [UI-EP-08](../iter-005/design/pen-button-map/). Then Quality Assurance Engineer EP-038. Barrel BDD for REQ-18 can start after glance. Two-finger **local** EP-039 unblocked (BRD-07 lifted); Infini apply IN-033 waits on follow implement.
+**Next:** Product Designer **EP-054** **∥** Solution Architect Device Settings rebind. Then Quality Assurance Engineer EP-038. Developer EP-038 / EP-039 / IN-033 waits on design + behavior-driven scenarios **and** `/init`.
 
 ## Execution board
 
@@ -109,4 +113,5 @@ W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SR
 | 2026-08-20 | Human: independent cameras + optional one-way follow. BRD-07 lifted. ADR-0023 superseded by ADR-0029. Cursor → designer EP-053 ∥ IN-036. |
 | 2026-08-20 | Follow design EP-053 ∥ IN-036 **done**. |
 | 2026-08-20 | Human interrupt: pen-button-map is Epaper not Infini; Click/Hold-move catalogues shrunk (no temp freeform). Cursor → architect then EP-056. |
-| 2026-08-20 | Architect ADR-0030; SRS-EP-52/53; SRS-IN-24 retired. Designer EP-056 **done** (UI-EP-08). Cursor → EP-054 after glance. |
+| 2026-08-20 | Architect ADR-0030; SRS-EP-52/53; SRS-IN-24 retired. Designer EP-056 **done** (UI-EP-08). |
+| 2026-08-20 | Human: Device Settings saved on Epaper, not Infini, not document. PM REQ-20; Infini REQ-05 retired. CHL-0025 + GAP-01 adopted. Cursor → EP-054 ∥ architect rebind. IN-035 cancelled. |

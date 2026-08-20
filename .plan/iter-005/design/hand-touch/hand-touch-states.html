@@ -50,6 +50,7 @@
   <p class="note">
     Platform <code>epaper</code> (epaper-device): no hover, no focus, no cursor, no motion.
     Press = invert. Finger-eligible floor = 10 mm. Resize knobs: 4 mm visual / 10 mm hit (finger and pen).
+    Empty-canvas threshold: ≤ 10 mm / 89 du palm-rest; &gt; 10 mm local pan.
   </p>
 
   <h2>ToolButton (64 du · UI-EP-04)</h2>
@@ -151,6 +152,32 @@
       <span>pen tip</span>
       <span class="c-pen-tip" style="position:relative"><img src="../system/assets/icon-hand-touch-pen-tip.svg" alt="" /></span>
     </div>
+    <div class="cell">
+      <span>down mark</span>
+      <span class="c-finger is-down"></span>
+    </div>
+  </div>
+
+  <h2>Empty canvas (one finger) — palm vs pan</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>palm-rest (travel 8 mm ≤ 10 mm / 89 du)</span>
+      <div class="stage">
+        <span class="c-finger is-down" style="left:20%;top:50%"></span>
+        <span class="c-travel is-palm" style="left:20%;top:50%"></span>
+        <span class="c-finger" style="left:calc(20% + 8mm);top:50%"></span>
+      </div>
+    </div>
+    <div class="cell">
+      <span>local pan (travel 36 mm &gt; 10 mm)</span>
+      <div class="stage">
+        <div class="c-rule-grid" style="inset:0;opacity:0.18;transform:translate(12px,8px)"></div>
+        <span class="c-finger is-down" style="left:16%;top:50%"></span>
+        <span class="c-travel is-pan" style="left:16%;top:50%"></span>
+        <span class="c-finger" style="left:calc(16% + 36mm);top:50%"></span>
+      </div>
+    </div>
+    <div class="cell"><span>hover / focus</span><div class="na">N/A — epaper</div></div>
   </div>
 
   <script>

@@ -11,11 +11,12 @@
     .c-tool-btn:active, .c-tool-btn.is-pressed,
     .c-pen-map-open-btn:active, .c-pen-map-open-btn.is-pressed,
     .c-pen-map-close:active, .c-pen-map-close.is-pressed,
-    .c-pen-map-slot:active, .c-pen-map-slot.is-pressed,
-    .c-pen-map-option:active, .c-pen-map-option.is-pressed,
-    .c-pen-map-cancel:active, .c-pen-map-cancel.is-pressed { background: #000; color: #fff; }
+    .c-settings-item:active, .c-settings-item.is-pressed,
+    .c-pen-map-option:active, .c-pen-map-option.is-pressed { background: #000; color: #fff; }
     .c-tool-btn:active img, .c-tool-btn.is-pressed img,
-    .c-pen-map-open-btn:active img, .c-pen-map-open-btn.is-pressed img { filter: invert(1); }
+    .c-pen-map-open-btn:active img, .c-pen-map-open-btn.is-pressed img,
+    .c-settings-item:active img, .c-settings-item.is-pressed img,
+    .c-pen-map-option:active img, .c-pen-map-option.is-pressed img { filter: invert(1); }
 
     html[data-platform="epaper"],
     html[data-platform="epaper"] body {
@@ -29,11 +30,10 @@
     .cell { display: flex; flex-direction: column; gap: 6px; min-width: 10rem; }
     .cell span { font-size: 11px; }
     .na { font-size: 11px; border: 1px dashed var(--color-ink); padding: 8px; background: var(--color-paper); }
-    .cell .c-pen-map-slot,
     .cell .c-pen-map-option,
-    .cell .c-pen-map-cancel { width: 72mm; }
+    .cell .c-settings-item { width: 72mm; }
 
-    /* Canonical sibling: ToolChip / PenMapOpen / lists must not float. */
+    /* Canonical sibling: ToolChip / PenMapOpen must not float. */
     [data-region="PenMapOpen"] { position: static; }
     [data-region="ClickList"],
     [data-region="HoldList"],
@@ -45,6 +45,7 @@
       bottom: auto;
       width: auto;
     }
+    .c-settings-master { position: static; width: 72mm; flex: none; }
     .c-tool-chip {
       position: static;
       display: inline-flex;
@@ -139,22 +140,27 @@
     <div class="cell"><span>focus N/A</span><div class="na">focus N/A</div></div>
   </div>
 
-  <h2>Slot (<code>slot.click</code> / <code>slot.hold_move</code> · 10 mm)</h2>
+  <h2>Master item (<code>.c-settings-item</code> · Pen buttons)</h2>
   <div class="grid">
     <div class="cell">
       <span>rest</span>
-      <button type="button" class="c-pen-map-slot" data-interactive aria-label="Click">
-        <img src="../system/assets/icon-epaper-pen-map-click.svg" alt="" />
-        <span class="c-pen-map-slot-k">Click</span>
-        <span class="c-pen-map-slot-v">Current primary ↔ Freeform Select</span>
+      <button type="button" class="c-settings-item" data-interactive>
+        <img src="../system/assets/icon-epaper-pen-map.svg" alt="" />
+        Pen buttons
+      </button>
+    </div>
+    <div class="cell">
+      <span>current</span>
+      <button type="button" class="c-settings-item" data-interactive aria-current="page">
+        <img src="../system/assets/icon-epaper-pen-map.svg" alt="" />
+        Pen buttons
       </button>
     </div>
     <div class="cell">
       <span>pressed</span>
-      <button type="button" class="c-pen-map-slot is-pressed" data-interactive aria-label="Hold-move">
-        <img src="../system/assets/icon-epaper-pen-map-hold.svg" alt="" />
-        <span class="c-pen-map-slot-k">Hold-move</span>
-        <span class="c-pen-map-slot-v">Temporary eraser</span>
+      <button type="button" class="c-settings-item is-pressed" data-interactive>
+        <img src="../system/assets/icon-epaper-pen-map.svg" alt="" />
+        Pen buttons
       </button>
     </div>
     <div class="cell"><span>hover N/A</span><div class="na">hover N/A</div></div>
@@ -183,20 +189,6 @@
         <img src="../system/assets/icon-epaper-pen-map-drag.svg" alt="" />
         Drag node under tip
       </button>
-    </div>
-    <div class="cell"><span>hover N/A</span><div class="na">hover N/A</div></div>
-    <div class="cell"><span>focus N/A</span><div class="na">focus N/A</div></div>
-  </div>
-
-  <h2>Cancel (<code>list.cancel</code>)</h2>
-  <div class="grid">
-    <div class="cell">
-      <span>rest</span>
-      <button type="button" class="c-pen-map-cancel" data-interactive>Cancel</button>
-    </div>
-    <div class="cell">
-      <span>pressed</span>
-      <button type="button" class="c-pen-map-cancel is-pressed" data-interactive>Cancel</button>
     </div>
     <div class="cell"><span>hover N/A</span><div class="na">hover N/A</div></div>
     <div class="cell"><span>focus N/A</span><div class="na">focus N/A</div></div>

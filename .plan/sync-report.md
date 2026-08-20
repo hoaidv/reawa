@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-20T09:25:35+00:00
+generated_at: 2026-08-20T10:42:00+00:00
 ---
 
 # Sync Report
@@ -81,8 +81,6 @@ _None._
 | [SRS-IN-20] | infini |
 | [SRS-IN-21] | infini |
 | [SRS-IN-22] | infini |
-| [SRS-IN-23] | infini |
-| [SRS-IN-25] | infini |
 | [SRS-IN-26] | infini |
 | [SRS-IN-27] | infini |
 | [SRS-IN-28] | infini |

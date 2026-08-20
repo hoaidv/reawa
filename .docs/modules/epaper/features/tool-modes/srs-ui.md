@@ -182,7 +182,7 @@ disarmed.
 
 - Pan / zoom **chrome** (two-finger has no dedicated tool tile — [SRS-EP-22](../ink-box/srs-ui.md#srs-ep-22-hand-touch-ui)).
 - Viewport-follow icon toggle ([SRS-EP-50](../region-sync/srs-ui.md#srs-ep-50-follow-toggle)) — not this chip.
-- On-device pen-button map editor ([SRS-EP-52](#srs-ep-52-pen-map-editor)) — not a 5-way radio on exclusive-tool tiles.
+- Device Settings / leading 10 mm stylus-with-barrels tile (`cta.pen_map_open`) — **sibling** of ToolChip ([SRS-EP-52](#srs-ep-52-pen-map-editor), GAP-01), **not** this chip’s inventory, **not** a fourth exclusive tool.
 - Page navigation, document browser.
 - Rotation, multi-select, marquee, align/distribute affordances — [REQ-08](../../prd.md#node-manipulation).
 - A `doc_load` confirmation dialog — the handshake makes a load safe by construction; the creator
@@ -256,51 +256,56 @@ Chip tiles remain 64 du. Barrel itself has no on-panel hit target.
 
 ---
 
-## [SRS-EP-52] On-device pen-button map editor {#srs-ep-52-pen-map-editor}
+## [SRS-EP-52] Device Settings page (Pen buttons) {#srs-ep-52-pen-map-editor}
 
 <!-- lifecycle: active -->
 <!-- needs_design: yes -->
+<!-- revised: 2026-08-20 — CHL-0025 Settings shell + inline catalogues; GAP-01 entry tile; persist is REQ-20. Same id. -->
 
-**Parent:** [REQ-18](../../prd.md#pen-buttons). **Logic:** [SRS-EP-53](./srs-logic.md#srs-ep-53-pen-map-author). **Quality:** [SRS-EP-43](./srs-quality.md#srs-ep-43-barrel-quality). **Scene graph:** [srs-ui-multi-scene.md](./srs-ui-multi-scene.md). **Platform:** **epaper-device** (`data-platform: epaper`). **Do not parent on [SRS-EP-05](#srs-ep-05-tool-chip)** (ToolChip) or [SRS-EP-42](#srs-ep-42-chip-temp-tool) (chip mirror). Infini [SRS-IN-24](../../../infini/features/tablet-sync/srs-ui.md#srs-in-24-pen-map-ui) is **retired** — do not paint desktop map chrome. Catalogues: [domain/pen-button-map](../../../../domain/pen-button-map.md).
+**Parent:** [REQ-20](../../prd.md#device-settings) (shell, entry, persist home). Catalogues: [REQ-18](../../prd.md#pen-buttons). **Logic:** [SRS-EP-53](./srs-logic.md#srs-ep-53-pen-map-author). **Quality:** [SRS-EP-43](./srs-quality.md#srs-ep-43-barrel-quality). **Scene graph:** [srs-ui-multi-scene.md](./srs-ui-multi-scene.md). **Decision:** [ADR-0031](../../../../adr/ADR-0031-device-settings-persist-on-epaper.md). **Platform:** **epaper-device** (`data-platform: epaper`). **Do not parent on [SRS-EP-05](#srs-ep-05-tool-chip)** (ToolChip) or [SRS-EP-42](#srs-ep-42-chip-temp-tool) (chip mirror). Infini [SRS-IN-24](../../../infini/features/tablet-sync/srs-ui.md#srs-in-24-pen-map-ui) is **retired** — do not paint desktop map chrome. Catalogues: [domain/pen-button-map](../../../../domain/pen-button-map.md). Do **not** invent other Settings master items.
 
 ### Design authority
 
 1. This section + [srs-ui-multi-scene.md](./srs-ui-multi-scene.md)
-2. [REQ-18](../../prd.md#pen-buttons) acceptance
+2. [REQ-20](../../prd.md#device-settings) + [REQ-18](../../prd.md#pen-buttons) acceptance
 3. Physical constraints (1-bit, no hover, partial refresh) — they outrank aesthetics
-4. Design package `.plan/iter-005/design/pen-button-map/` — scenes + Spec
+4. Design package `.plan/iter-005/design/pen-button-map/` — scenes + Spec ([UI-EP-08](../../../../../.plan/iter-005/design/pen-button-map/ui-spec.md))
 5. `.docs/DESIGN.md` tokens — **advisory only**; desktop system does not transfer
 
 ### Purpose
 
-**One job:** let the creator bind each **present** barrel slot (Click and Hold-move) to **exactly one** closed-catalogue item **on the tablet**. Not document chrome. Not a ToolChip exclusive tool.
+**One job:** let the creator open **one Settings page**, pick **Pen buttons** in the master list, and bind each **present** barrel slot (Click and Hold-move) **inline** in the detail pane. Not document chrome. Not a ToolChip exclusive tool. Not a sheet.
 
 ### Physical constraints (binding)
 
-Same panel profile as [SRS-EP-05](#srs-ep-05-tool-chip): 1404 × 1872, **1-bit**, no hover, no focus, no cursor, no motion. Finger-eligible hits ≥ **64 du**. Overlay/sheet must be an isolatable rect (chip-style partial refresh preferred; full-panel overlay allowed if Designer cannot fit closed lists otherwise).
+Same panel profile as [SRS-EP-05](#srs-ep-05-tool-chip): 1404 × 1872, **1-bit**, no hover, no focus, no cursor, no motion. Finger-eligible hits on the Settings page ≥ **64 du** (CHL-0019 floor). **Exception (GAP-01 adopted):** `cta.pen_map_open` is a lone **10 mm** tile. Full-panel Settings is an isolatable rect (partial refresh of the page preferred).
 
 ### Composition / containment (contract, not craft)
 
 | Region | Parent | Role |
 |---|---|---|
 | DeviceScreen | panel | Full panel / drawing underlay |
-| PenMapOverlay | DeviceScreen | Editor hub — **not** inside exclusive-tool cluster, **not** follow toggle |
-| SlotRow | PenMapOverlay | One row per present button (index 1 or 2) |
-| SlotClick | SlotRow | Closed Click value; opens Click list |
-| SlotHoldMove | SlotRow | Closed Hold-move value; opens Hold-move list |
-| ClickList | sheet over overlay | Three Click items only |
-| HoldList | sheet over overlay | Three Hold-move items only |
+| PenMapOpen | DeviceScreen | Leading 10 mm entry tile — **sibling of ToolChip**, not inside exclusive-tool cluster, not follow toggle |
+| SettingsShell | DeviceScreen | Full-panel **master-detail** Settings page |
+| MasterList | SettingsShell | First (only this package) item **Pen buttons** |
+| DetailPane | SettingsShell | Pen buttons detail — slot rows + **inline** catalogues |
+| SlotRow | DetailPane | One row per present button (index 1 or 2) |
+| SlotClick | SlotRow | Closed Click radios **in this pane** (not a sheet) |
+| SlotHoldMove | SlotRow | Closed Hold-move radios **in this pane** (not a sheet) |
 
-**Entry control placement is a design story.** Binding: `cta.pen_map_open` exists; Designer proposes where. Must not be Infini File menu or a 5-way radio on `tool.*` tiles.
+`ClickList` / `HoldList` as `present-sheet` scenes are **retired** ([CHL-0025](../../../../../.plan/iter-005/challenges/CHL-0025-pen-map-settings-page.md)). Catalogues live in the detail pane.
+
+**Entry (GAP-01 adopted).** `cta.pen_map_open`: lone **10 mm** 1-bit tile, stylus-with-barrels glyph, floating orientation-top **leading**, sibling of ToolChip (same chrome family as viewport-follow trailing and Undo). **Not** Infini File menu, **not** a 5-way radio on `tool.*` tiles, **not** a fourth exclusive tool.
 
 ### Closed control inventory
 
 | id | Kind | Notes |
 |---|---|---|
-| `cta.pen_map_open` | entry | Unnamed placement; on-device only |
-| `cta.pen_map_close` | dismiss | Return to drawing |
-| `slot.click` | value + open list | Per present button |
-| `slot.hold_move` | value + open list | Per present button |
+| `cta.pen_map_open` | entry | Leading 10 mm tile (GAP-01) |
+| `cta.pen_map_close` | dismiss | Return to drawing; live map kept |
+| `nav.settings.pen_buttons` | master item | Only master row this package |
+| `slot.click` | value + inline pick | Per present button — **not** a sheet hop |
+| `slot.hold_move` | value + inline pick | Per present button — **not** a sheet hop |
 | `list.click.toggle_pen_freeform` | pick | Current primary ↔ Freeform Select |
 | `list.click.toggle_pen_eraser` | pick | Current primary ↔ Eraser |
 | `list.click.off` | pick | No-op |
@@ -308,50 +313,51 @@ Same panel profile as [SRS-EP-05](#srs-ep-05-tool-chip): 1404 × 1872, **1-bit**
 | `list.hold.drag_node_under_tip` | pick | Drag node under tip |
 | `list.hold.off` | pick | No-op |
 
-Designer **must not** add `undo`, `temp_sel_freeform`, `temp_sel_rect`, or an eraser-nib slot.
+Designer **must not** add `undo`, `temp_sel_freeform`, `temp_sel_rect`, an eraser-nib slot, or a second master item.
 
 ### States matrix (journeys from PRD — do not add)
 
 | State id | Scene | When |
 |---|---|---|
+| `map.entry` | drawing | Leading tile rest / pressed / open |
 | `map.layout_0` | `scene.pen_map_editor` | 0-button: **0** slot rows (0 fake bindings) |
 | `map.layout_1` | `scene.pen_map_editor` | 1-button: one row |
 | `map.layout_2` | `scene.pen_map_editor` | 2-button: two rows |
-| `map.slot_click` | `scene.pen_map_click` | Click closed list open |
-| `map.slot_hold` | `scene.pen_map_hold` | Hold-move closed list open |
-| `map.offline` | `scene.pen_map_editor` | Session down; editor still usable; persist waits |
+| `map.offline` | `scene.pen_map_editor` | Session down; page still usable; persist is on-device (does not wait) |
 | `map.rebound_next_gesture` | underlay | Bind committed; in-flight barrel gesture unchanged |
 
-Chip hold-move states stay on [SRS-EP-42](#srs-ep-42-chip-temp-tool) — **out of this overlay**.
+`map.slot_click` / `map.slot_hold` as **scene** states are **retired** — catalogues are intra-scene. Chip hold-move states stay on [SRS-EP-42](#srs-ep-42-chip-temp-tool) — **out of this page**.
 
 ### Interaction map
 
 | Control | Action | Result |
 |---|---|---|
-| `cta.pen_map_open` | tap | `present-modal` → `scene.pen_map_editor` |
+| `cta.pen_map_open` | tap | `present-modal` → `scene.pen_map_editor` (Pen buttons selected); exclusive tool unchanged |
 | `cta.pen_map_close` | tap | `dismiss`; live map kept |
-| `slot.click` | tap | `present-sheet` → `scene.pen_map_click` |
-| `slot.hold_move` | tap | `present-sheet` → `scene.pen_map_hold` |
-| `list.click.*` / `list.hold.*` | tap | Write that id; `dismiss` to hub; persist-up if linked |
-| List cancel / empty-overlay tap | tap | `dismiss`; **0** writes |
+| `list.click.*` / `list.hold.*` | tap | Write that id **in place**; **0** sheet hops; persist on device ([SRS-EP-53](./srs-logic.md#srs-ep-53-pen-map-author)) |
+
+There is **no** list-cancel hop (write is in-place). Dismiss Settings does not revert an in-place pick.
 
 ### UI-driving fields
 
-`pen.buttonCount`, `pen.map.buttons[].click`, `pen.map.buttons[].holdMove`, `session.connected` — Designer must not invent a third slot type or disable the editor when the session is down.
+`pen.buttonCount`, `pen.map.buttons[].click`, `pen.map.buttons[].holdMove`, `session.connected` — Designer must not invent a third slot type, a second master item, or disable the page when the session is down. `session.connected` may label offline copy; it **does not** gate editing or persist.
 
 ### Anti-patterns
 
 - Infini / Electron / slate desktop settings chrome
 - Hover, focus, cursor, color, motion
-- Undo on the Click list
-- Temporary freeform / rect on the Hold-move list
+- `present-sheet` Click / Hold-move lists
+- Undo on the Click catalogue
+- Temporary freeform / rect on the Hold-move catalogue
 - 5-way radio on exclusive-tool tiles
-- Saving the map into the SVG
-- Gating the editor on `session.connected`
+- Treating `cta.pen_map_open` as a fourth exclusive tool
+- Saving the map into the SVG or Infini app settings
+- Gating the page on `session.connected`
+- Inventing other Settings master items
 
 ### Dual-ask
 
-`/designer` Spec + one scene HTML per editor state id above (chip mirror scenes belong to [SRS-EP-42](#srs-ep-42-chip-temp-tool)). `/qa` BDD from [REQ-18](../../prd.md#pen-buttons) AC + [SRS-EP-43](./srs-quality.md#srs-ep-43-barrel-quality).
+`/designer` Spec + scenes already in [UI-EP-08](../../../../../.plan/iter-005/design/pen-button-map/ui-spec.md) (`map.entry` · `map.layout_0` · `map.layout_1` · `map.layout_2` · `map.offline`). Chip mirror scenes belong to [SRS-EP-42](#srs-ep-42-chip-temp-tool). `/qa` BDD from [REQ-20](../../prd.md#device-settings) AC + [REQ-18](../../prd.md#pen-buttons) catalogue AC + [SRS-EP-43](./srs-quality.md#srs-ep-43-barrel-quality).
 
 ---
 

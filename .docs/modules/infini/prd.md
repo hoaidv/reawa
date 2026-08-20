@@ -1,7 +1,7 @@
 ---
 title: PRD — Infini
 module: infini
-version: 0.7.0-draft
+version: 0.8.0-draft
 lifecycle: active
 parent_brd: [BRD-07]
 owner: pm
@@ -17,19 +17,22 @@ drawing tablet. Code home: repo-root `infini/` ([ADR-0008](../../adr/ADR-0008-el
 tree-op sync / Smart Group UI stay in Non-Goals or Could until implemented.
 
 **Ownership rework (2026-08-13, [CHL-0008](../../../.plan/iter-003/challenges/CHL-0008-architecture-rework.md)).**
-Infini is now **viewer, navigator, and persistence home**. The tablet owns the working document
-in-session ([epaper REQ-04](../epaper/prd.md#device-document)); Infini opens/saves it, holds a
-mirror it rebuilds from published tablet changes, and **navigates its own canvas**. Desktop-side
+Infini is now **viewer, navigator, and document persistence home**. The tablet owns the working
+document in-session ([epaper REQ-04](../epaper/prd.md#device-document)); Infini opens/saves it, holds
+a mirror it rebuilds from published tablet changes, and **navigates its own canvas**. Desktop-side
 ink-box authoring is **deprecated** ([REQ-04](#smart-group)) until multi-directional sync lands.
+**Device Settings** (barrel-button map and the Settings page) persist **on the Epaper device**
+([epaper REQ-20](../epaper/prd.md#device-settings)) — not here.
 
 **Viewport follow (2026-08-20, human).** Infini and Epaper cameras are **independent by default**.
 Always-on Infini→tablet viewport drive is **obsolete**. Optional one-way **follow**
 ([REQ-06](#viewport-follow) / [epaper REQ-19](../epaper/prd.md#viewport-follow)) is mutually
 exclusive and off on disconnect. Document channel stays one-way (change later is a Non-Goal).
 
-**Pen-button map (2026-08-20, human).** Infini does **not** host the barrel-button map editor.
-The creator configures Click / Hold-move **on the tablet** ([epaper REQ-18](../epaper/prd.md#pen-buttons)).
-This module’s [REQ-05](#pen-button-map) is persist/restore only — **not** a desktop settings surface.
+**Device Settings (2026-08-20, human).** Infini does **not** host Device Settings and does **not**
+persist or restore the barrel-button map. The creator configures Click / Hold-move **on the tablet**
+([epaper REQ-20](../epaper/prd.md#device-settings) / [epaper REQ-18](../epaper/prd.md#pen-buttons)).
+This module’s [REQ-05](#pen-button-map) persist/restore outcome is **retired**.
 
 ## Problem & Job-to-be-Done
 
@@ -96,10 +99,11 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
   Connector, SmartGroup) with SVG profile serialize/parse and idempotent ops
   ([ADR-0010](../../adr/ADR-0010-tree-of-vectors.md)). Node semantics are **shared** with Epaper so
   a document means the same thing on both ends.
-- **Infini is the persistence home.** It opens and saves the file, sends the initial full-document
-  load to the tablet, and **applies inbound document changes** from the tablet
+- **Infini is the document persistence home.** It opens and saves the file, sends the initial
+  full-document load to the tablet, and **applies inbound document changes** from the tablet
   ([epaper REQ-07](../epaper/prd.md#one-way-sync)) to its mirror. It does not author document
-  changes of its own this iter ([REQ-04](#smart-group) deprecated).
+  changes of its own this iter ([REQ-04](#smart-group) deprecated). Device Settings are **not**
+  this file — they persist on Epaper ([epaper REQ-20](../epaper/prd.md#device-settings)).
 - **Live paint today** uses the WorldLayer primitive list (`InfiniDocument`) projected on the canvas;
   the tree library is exercised by unit tests and is the target SoT for the mirror and persistence.
 
@@ -219,20 +223,24 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
   aspect and axis mapping match the chosen pose (vertical gut-to-left verified correct).
 
 ## [REQ-05] Pen-button map persist (not the editor) {#pen-button-map}
-<!-- campaign: iter-005-draft — peer of epaper REQ-18 -->
-<!-- ui-outcome retired: 2026-08-20 — desktop map editor is not this product. Id kept; persist/restore remains. -->
-- **Priority:** Must · **Traces:** [BRD-07]
-- Needs design: no *(no Infini settings screen; do not paint desktop map chrome)*
-- **Campaign:** iter-005 **draft**. Not TRACK-004.
-- **Lifecycle (this id):** still `active`. The **desktop map-editor UI** outcome is **retired in place** (human 2026-08-20). Do not delete this id.
-- **Outcome:** Infini is persistence home for the barrel-button map. After the creator binds Click / Hold-move **on the tablet** ([epaper REQ-18](../epaper/prd.md#pen-buttons)), Infini **persists** that map in app settings (not the SVG) and **restores** it on a later session so the next tablet gesture uses it. Persist/publish is a **settings channel**, not a document edit, and **not** a settings surface — Infini presents **0** map-editor screens. The design package `.plan/iter-005/design/pen-button-map/` is **Epaper**, not Infini.
+<!-- lifecycle: retired -->
+<!-- superseded-by: [epaper REQ-20] -->
+<!-- ui-outcome retired: 2026-08-20 — desktop map editor is not this product. -->
+<!-- persist/restore retired: 2026-08-20 — Device Settings persist on the Epaper device (human lock). -->
+- **Priority:** Won't (retired) · **Traces:** [BRD-07]
+- Needs design: no
+- **Retired.** Infini is **not** persistence home for the barrel-button map. Device Settings
+  (including Pen buttons) persist **on the Epaper device**
+  ([epaper REQ-20](../epaper/prd.md#device-settings)). Infini presents **0** map-editor screens
+  and stores **0** maps (not app settings, not SVG). Do not implement this id. Do not delete this id.
 
 **Acceptance**
-- Given the creator binds a map on the tablet, When Infini is connected, Then Infini persists that map (not in the document file) and sends **0** document messages for that persist.
-- Given a later session with a persisted map and matching 1- or 2-button capability, When hello completes, Then the tablet’s next gesture uses that map (p95 ≤300 ms after restore) and in-flight gestures are unchanged.
-- Given a 0-button pen, When Infini restores, Then **0** fake button bindings are applied.
-- Given Infini has no session, When the tablet edits the map, Then the live device map still applies (persist waits; 0 lost local binds).
-- Given Infini chrome, When the creator looks for barrel-button settings, Then Infini presents **0** map-editor screens (the editor is on-device).
+- Given this id, When an auditor looks up barrel-map persist, Then they follow
+  [epaper REQ-20](../epaper/prd.md#device-settings) (0 new stories tagged only Infini REQ-05).
+- Given Infini chrome, When the creator looks for barrel-button or Device Settings, Then Infini
+  presents **0** map-editor screens and **0** Device Settings pages.
+- Given the creator binds a map on the tablet, When Infini is connected, Then Infini writes **0**
+  app-settings maps, **0** SVG map fields, and sends **0** restore-on-hello `pen_button_map` payloads.
 
 ## [REQ-06] Viewport-follow Epaper {#viewport-follow}
 <!-- added: 2026-08-20 — human decision: optional mutually exclusive follow; icon toggle. -->
@@ -295,10 +303,14 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
 - Reawa pen-relay / mouse emulation features inside Infini.
 - Multi-user collaborative editing; cloud sync.
 - Pressure-rich brushes, layers UI, or full illustration suite.
-- **Desktop pen-button map editor / settings screen** — the UI outcome of [REQ-05](#pen-button-map)
-  is retired in place (human 2026-08-20). The creator configures barrel buttons **on the tablet**
-  ([epaper REQ-18](../epaper/prd.md#pen-buttons)). Infini persist/restore is **not** that surface.
-  Do not paint Infini slate/desktop map chrome. Package `pen-button-map/` is Epaper.
+- **Desktop Device Settings / pen-button map editor** — Infini presents **0** Settings / map-editor
+  screens. The creator configures barrel buttons **on the tablet**
+  ([epaper REQ-20](../epaper/prd.md#device-settings) / [epaper REQ-18](../epaper/prd.md#pen-buttons)).
+  Package `pen-button-map/` is Epaper.
+- **Infini persist/restore of Device Settings or the barrel-button map** — retired with
+  [REQ-05](#pen-button-map). Do not store the map in Infini app settings, SVG, or restore-on-hello.
+  [ADR-0030](../../adr/ADR-0030-tablet-authors-pen-button-map.md) still says Infini persist — Architect
+  must supersede (PM does not write the ADR).
 - Drawing ink on Infini with a mouse — `Pen` is an Epaper-only tool.
 - Bitmap / PNG `region_refresh` as the region picture (ignored on device).
 - Doc open/save chrome and tree-driven live paint (deferred beyond Must sync wave).
@@ -307,9 +319,9 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
 
 - Epaper [REQ-01] local ink remains correct (Round 19 digitizer map).
 - Epaper [REQ-04](../epaper/prd.md#device-document)–[REQ-07](../epaper/prd.md#one-way-sync) define
-  the device side: it owns the working document and publishes changes. Barrel-button **map editor**
-  is [epaper REQ-18](../epaper/prd.md#pen-buttons) (on-device). [REQ-05](#pen-button-map) is
-  persist/restore only.
+  the device side: it owns the working document and publishes changes. Device Settings (including
+  the barrel-button map) persist on Epaper ([epaper REQ-20](../epaper/prd.md#device-settings)).
+  [REQ-05](#pen-button-map) is **retired**.
 - USB network path RM2 ↔ desktop remains available (`RM_SYNC_HOST`, TCP `:9877`).
 - Architect owns the session contract — [ADR-0009](../../adr/ADR-0009-shared-document-viewport.md)
   is amended by the ownership inversion (rework ADRs pending under
@@ -321,7 +333,10 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
 ## Open Questions
 
 - Always-on Infini→tablet viewport as the session — **owner:** pm — **closed 2026-08-20 (human):** independent cameras by default; optional mutually exclusive follow ([REQ-06](#viewport-follow)); [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md) is not the product model (Architect supersedes).
-- Pen-button map as Infini desktop settings — **owner:** pm — **closed 2026-08-20 (human):** UI outcome of [REQ-05](#pen-button-map) retired in place (id kept). Persist/restore remains; it is **not** the settings surface. Editor is [epaper REQ-18](../epaper/prd.md#pen-buttons).
+- Pen-button map as Infini desktop settings — **owner:** pm — **closed 2026-08-20 (human):** UI
+  outcome of [REQ-05](#pen-button-map) retired in place (id kept). Persist/restore **also retired**
+  2026-08-20: Device Settings persist on Epaper ([epaper REQ-20](../epaper/prd.md#device-settings)).
+  Editor is Device Settings · Pen buttons, not Infini.
 - Document-change granularity on the wire (op log vs coalesced change set) — **owner:** architect —
   **needed by:** the rework sync ADR. Drives the ≤300 ms mirror target and the reconnect queue.
 - Manual "reload document to tablet" control — **owner:** pm — **needed by:** first
@@ -334,8 +349,10 @@ the creator's own hand. Infini gives up that authority so the tablet can feel im
 
 - [epaper](../epaper/prd.md) — owns the working document; publishes document changes; viewports
   independent by default; optional follow [REQ-06](#viewport-follow) /
-  [epaper REQ-19](../epaper/prd.md#viewport-follow); barrel-button map editor
-  [epaper REQ-18](../epaper/prd.md#pen-buttons); this module [REQ-05](#pen-button-map) persist only;
-  iter-005 draft [REQ-11](../epaper/prd.md#erase)–[REQ-18](../epaper/prd.md#pen-buttons)
+  [epaper REQ-19](../epaper/prd.md#viewport-follow); Device Settings persist on the tablet
+  [epaper REQ-20](../epaper/prd.md#device-settings); barrel catalogues
+  [epaper REQ-18](../epaper/prd.md#pen-buttons); this module [REQ-05](#pen-button-map) **retired**;
+  iter-005 draft [REQ-11](../epaper/prd.md#erase)–[REQ-18](../epaper/prd.md#pen-buttons) /
+  [REQ-20](../epaper/prd.md#device-settings)
 - [reawa](../reawa/prd.md) — sibling pen-driver product; not in this campaign scope
 - Exploration: [EXP-0001](../../../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md)

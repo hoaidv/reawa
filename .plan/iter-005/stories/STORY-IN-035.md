@@ -4,7 +4,7 @@ title: Persist and restore pen-button map (not the editor)
 kind: implement
 parent_srs: [SRS-IN-23, SRS-IN-25]
 parent_req: [REQ-05]
-status: draft
+status: cancelled
 priority: P0
 iter: iter-005
 estimate: 3
@@ -23,8 +23,6 @@ scenes:
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-2.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-offline.html"
-  - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-click.html"
-  - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-hold.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-chip-temp-erase.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-chip-drag.html"
 hifi: ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
@@ -33,9 +31,9 @@ wireframe: ""
 
 # STORY-IN-035 — Persist and restore pen-button map (not the editor)
 
-TRACK-005. Parent Infini [REQ-05](../../../.docs/modules/infini/prd.md#pen-button-map) (re-scoped 2026-08-20). Persist/restore only — no desktop editor. Bound: [SRS-IN-23](../../../.docs/modules/infini/features/tablet-sync/srs-logic.md), [SRS-IN-25](../../../.docs/modules/infini/features/tablet-sync/srs-quality.md). [ADR-0030](../../../.docs/adr/ADR-0030-tablet-authors-pen-button-map.md) supersedes [ADR-0028](../../../.docs/adr/ADR-0028-pen-button-map-settings-channel.md) authoring direction.
+**Parked 2026-08-20 — do not implement.** Infini [REQ-05](../../../.docs/modules/infini/prd.md#pen-button-map) persist/restore is **retired**. Device Settings persist on Epaper ([REQ-20](../../../.docs/modules/epaper/prd.md#device-settings)) via [STORY-EP-057](./STORY-EP-057.md). Keep this id.
 
-Depends on [STORY-EP-056](./STORY-EP-056.md) (epaper-device package), not the historical Infini paint of [STORY-IN-034](./STORY-IN-034.md). Status stays **draft** until the design package is `done` and behavior-driven scenarios exist.
+Was: Infini persist/restore only — no desktop editor. Bound: [SRS-IN-23](../../../.docs/modules/infini/features/tablet-sync/srs-logic.md), [SRS-IN-25](../../../.docs/modules/infini/features/tablet-sync/srs-quality.md). [ADR-0030](../../../.docs/adr/ADR-0030-tablet-authors-pen-button-map.md) persist split is pending supersede.
 
 ## Kind
 

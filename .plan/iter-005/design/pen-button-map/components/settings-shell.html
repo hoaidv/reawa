@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>SettingsShell — UI-EP-08</title>
+  <style>
+    :root {
+      --target-epaper: 10mm; --pen-map-icon: 4mm; --chip-inset: 2mm;
+      --settings-master-w: 56mm;
+      --color-ink: #000; --color-paper: #fff;
+      --font-title: 16px; --font-label: 12px; --font-caption: 11px;
+    }
+    body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; cursor: none; }
+    .stage { width: 246mm; height: 187mm; background: #fff; border: 1px solid #000; position: relative; }
+    .c-settings { position: absolute; inset: 0; display: flex; flex-direction: column; background: #fff; }
+    .c-settings-head {
+      display: flex; align-items: center; gap: 8px; min-height: var(--target-epaper);
+      padding: var(--chip-inset); border-bottom: 1px solid #000;
+    }
+    .c-settings-head h1 { margin: 0; flex: 1; font-size: var(--font-title); }
+    .c-pen-map-close {
+      width: var(--target-epaper); height: var(--target-epaper);
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid #000; background: #fff; cursor: none; text-decoration: none;
+    }
+    .c-pen-map-close img { width: var(--pen-map-icon); height: var(--pen-map-icon); pointer-events: none; }
+    .c-pen-map-close:active, .c-pen-map-close.is-pressed { background: #000; }
+    .c-pen-map-close:active img, .c-pen-map-close.is-pressed img { filter: invert(1); }
+    .c-settings-body { flex: 1; display: flex; min-height: 0; }
+    .c-settings-master {
+      flex: 0 0 var(--settings-master-w); width: var(--settings-master-w);
+      border-right: 1px solid #000;
+    }
+    .c-settings-item {
+      display: flex; align-items: center; gap: 4px; min-height: var(--target-epaper);
+      width: 100%; padding: 0 4px; border: 0; border-bottom: 1px solid #000;
+      background: #fff; color: #000; font-size: var(--font-label); font-weight: 600;
+      font-family: inherit; text-align: left; cursor: none;
+    }
+    .c-settings-item img { width: var(--pen-map-icon); height: var(--pen-map-icon); pointer-events: none; }
+    .c-settings-item[aria-current="page"] { background: #000; color: #fff; }
+    .c-settings-item[aria-current="page"] img { filter: invert(1); }
+    .c-settings-item:active, .c-settings-item.is-pressed { background: #000; color: #fff; }
+    .c-settings-detail { flex: 1; padding: var(--chip-inset); overflow: auto; }
+    .note { font-size: 12px; max-width: 40rem; }
+  </style>
+</head>
+<body>
+  <p class="note">Master-detail Settings. First (and only this package) master item: Pen buttons. Close returns to drawing.</p>
+  <div class="stage">
+    <div class="c-settings" data-region="SettingsPage">
+      <div class="c-settings-head">
+        <h1>Settings</h1>
+        <a class="c-pen-map-close" data-interactive href="#" aria-label="Close">
+          <img src="../../system/assets/icon-epaper-pen-map-close.svg" alt="" />
+        </a>
+      </div>
+      <div class="c-settings-body">
+        <nav class="c-settings-master" data-region="SettingsMaster" aria-label="Settings">
+          <button type="button" class="c-settings-item" data-interactive aria-current="page">
+            <img src="../../system/assets/icon-epaper-pen-map.svg" alt="" />
+            Pen buttons
+          </button>
+        </nav>
+        <section class="c-settings-detail" data-region="PenMapOverlay">
+          <p style="font-size:11px;margin:0">Detail pane — bind Click and Hold-move here.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

@@ -37,8 +37,9 @@ which is the largest single increase in device scope so far.
   hover, no keyboard, no cursor. Pen for content, finger for chrome.
 - Qt/QML fullscreen, C++; xochitl stopped while the app runs.
 - Link is USB-Ethernet TCP and is **occasionally down** — treated as a normal state, not an error.
-- **In-memory only this iter**: no on-device persistence, no file browser, no multi-document
-  ([Non-Goals](./prd.md)). An app restart loses unpublished work, accepted by PM.
+- **In-memory document this iter**: no on-device **document** persistence, no file browser, no multi-document
+  ([Non-Goals](./prd.md)). An app restart loses unpublished **document** work, accepted by PM.
+  **Exception:** Device Settings persist on this device ([REQ-20](./prd.md#device-settings), [ADR-0031](../../adr/ADR-0031-device-settings-persist-on-epaper.md)).
 - **Independent cameras by default.** Follow is optional and exclusive ([ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md), [SRS-EP-49](./features/region-sync/srs-logic.md#srs-ep-49-viewport-follow)). Inbound Infini `viewport` applies **only while Epaper follow is on** ([SRS-EP-02](./features/region-sync/srs-logic.md)). Two-finger **local** pan is Must; publish **only if Infini follow is on** ([SRS-EP-24](./features/region-sync/srs-logic.md#srs-ep-24-two-finger-viewport)). One-finger empty canvas pans past **10 mm**; at/below is palm-rest ([SRS-EP-21](./features/ink-box/srs-logic.md#srs-ep-21-one-finger)). Last-writer ([ADR-0023](../../adr/ADR-0023-viewport-last-writer.md)) is superseded. Follow is **not** a ToolChip exclusive.
 - Transform = translate + scale. Rotation is reserved, never set
   ([REQ-08](./prd.md#node-manipulation)).
@@ -71,7 +72,7 @@ right trade on a device whose scarce resource is *latency*, not storage.
 | Entity | Canonical doc | Notes |
 |---|---|---|
 | Vector document (Ink, Text, Primitive, Group, Frame, Connector, SmartGroup) | [domain/vector-document](../../domain/vector-document.md) | Link only — terminals + attachments included |
-| Pen-button map | [domain/pen-button-map](../../domain/pen-button-map.md) | Settings; tablet authors live map; Infini persist/restore |
+| Pen-button map | [domain/pen-button-map](../../domain/pen-button-map.md) | Device Settings; tablet authors and persists on this device; Infini holds 0 copies |
 | Viewport follow | [domain/viewport-follow](../../domain/viewport-follow.md) | Session enum; not document |
 
 Device-authored kinds this iter: `Ink`, `SmartGroup`, `Connector` ([REQ-09](./prd.md#device-connectors),
@@ -157,7 +158,7 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 - [ADR-0025](../../adr/ADR-0025-barrel-vs-eraser-nib.md) — barrel channel ≠ eraser nib
 - [ADR-0026](../../adr/ADR-0026-endpoint-ink-membership.md) — endpoint-ink vs spine vs empty
 - [ADR-0027](../../adr/ADR-0027-attachment-t-rest-spine.md) — attachment `t` on rest spine
-- [ADR-0028](../../adr/ADR-0028-pen-button-map-settings-channel.md) — **superseded** by [ADR-0030](../../adr/ADR-0030-tablet-authors-pen-button-map.md) (settings family stays; tablet authors; Infini persist/restore)
+- [ADR-0028](../../adr/ADR-0028-pen-button-map-settings-channel.md) — **superseded** by [ADR-0030](../../adr/ADR-0030-tablet-authors-pen-button-map.md); persist split **superseded** by [ADR-0031](../../adr/ADR-0031-device-settings-persist-on-epaper.md) (persist on Epaper; 0 Infini copies)
 - [ADR-0014](../../adr/ADR-0014-document-ownership-inversion.md) — the device owns the working document
 - [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md) — one-way sync contract v1
 - [ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) — §1 device-local tool state and §6 world-unit enclose guard survive; §2–§5 superseded

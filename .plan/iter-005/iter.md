@@ -18,7 +18,7 @@ Lock: **vertical · verified · wip 2**.
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 
-W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). **NOW** W-empty: [STORY-EP-054](./stories/STORY-EP-054.md) after human glance.
+W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings)). **NOW** W-empty: [STORY-EP-054](./stories/STORY-EP-054.md) **∥** Architect Device Settings rebind.
 
 ## Committed
 
@@ -30,6 +30,8 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-IN-036](./stories/STORY-IN-036.md) — design — 3 — viewport-follow Infini — **done** (W-follow) [UI-IN-04](./design/viewport-follow-infini/)
 - [STORY-EP-056](./stories/STORY-EP-056.md) — design — 5 — revise pen-button map as Epaper — **done** (W-pen-map) [UI-EP-08](./design/pen-button-map/)
 - [STORY-EP-054](./stories/STORY-EP-054.md) — design — 3 — hand-touch empty pan delta — **ready** (**NOW**)
+- [STORY-EP-057](./stories/STORY-EP-057.md) — implement — 3 — persist Device Settings — **draft**
+- [STORY-EP-058](./stories/STORY-EP-058.md) — implement — 5 — Settings page Pen buttons — **draft**
 - [STORY-EP-040](./stories/STORY-EP-040.md) — design — 3 — erase
 - [STORY-EP-043](./stories/STORY-EP-043.md) — design — 3 — clipboard
 - [STORY-EP-045](./stories/STORY-EP-045.md) — design — 3 — connector ends
@@ -51,7 +53,7 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-EP-049](./stories/STORY-EP-049.md) — 5 — attachments warp · depends EP-048
 - [STORY-EP-051](./stories/STORY-EP-051.md) — 8 — manual insert · depends EP-050
 - [STORY-EP-052](./stories/STORY-EP-052.md) — 5 — barrel dispatch · depends EP-056
-- [STORY-IN-035](./stories/STORY-IN-035.md) — 3 — persist/restore map · depends EP-056
+- [STORY-IN-035](./stories/STORY-IN-035.md) — 3 — Infini persist — **cancelled**
 
 ## Carry-over (not NOW)
 
@@ -66,11 +68,11 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - CHL-0022 shipped “no pan” prose — Product Manager adopt
 - EP-037 package still empty=no-op until EP-054
 - PM `srs-product` BR-D08 still always-on viewport (architect flagged)
-- Vertical work-in-progress 2 vs many features — W-empty NOW; barrel implement waits on BDD
-- GAP-01: Product Manager adopt pen-map entry tile (leading 10 mm)
+- Vertical work-in-progress 2: EP-054 ∥ architect Device Settings
+- Developer blocked: `paths.src` empty until `/init`; stop line requires behavior-driven scenarios
 
 ## Links
 
-- [REQ-10](../../.docs/modules/epaper/prd.md#hand-touch) … [REQ-18](../../.docs/modules/epaper/prd.md#pen-buttons)
-- infini [REQ-05](../../.docs/modules/infini/prd.md#pen-button-map)
+- [REQ-10](../../.docs/modules/epaper/prd.md#hand-touch) … [REQ-20](../../.docs/modules/epaper/prd.md#device-settings)
+- infini [REQ-05](../../.docs/modules/infini/prd.md#pen-button-map) **retired**
 - [BS-0002](../iter-004/brainstorms/BS-0002-iter-005-feature-wave.md)

@@ -13,8 +13,9 @@ source: TRACK-005 / Infini [REQ-05] / Epaper [REQ-18]
 # ADR-0028 — Pen-button map publish is a settings channel
 
 > **Superseded 2026-08-20** by [ADR-0030](./ADR-0030-tablet-authors-pen-button-map.md).
-> The **settings family** on `:9877` stands (`pen_capability` / `pen_button_map`, 0 document messages).
-> **Do not implement** Infini-as-author or Desktop→Tablet publish-on-save. Forward: tablet authors the live map; Infini persist/restore.
+> Persist split further superseded by [ADR-0031](./ADR-0031-device-settings-persist-on-epaper.md).
+> The **settings family** on `:9877` is optional: `pen_capability` may remain HID telemetry; **`pen_button_map` is withdrawn**.
+> **Do not implement** Infini-as-author, Infini persist/restore, or restore-on-hello.
 
 ## Context
 

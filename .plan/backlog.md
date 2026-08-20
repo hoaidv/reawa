@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-20T09:51:38+00:00
+generated_at: 2026-08-20T10:42:53+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -60,9 +60,11 @@ generated_at: 2026-08-20T09:51:38+00:00
 | [STORY-EP-051](./iter-005/stories/STORY-EP-051.md) | Manual insert frame connector primitive | implement | dev | epaper | [SRS-EP-45], [SRS-EP-46], [SRS-EP-48] | draft | iter-005 | 8 |
 | [STORY-EP-052](./iter-005/stories/STORY-EP-052.md) | Barrel click vs hold-move dispatch from catalogue | implement | dev | epaper | [SRS-EP-41], [SRS-EP-43] | draft | iter-005 | 5 |
 | [STORY-EP-053](./iter-005/stories/STORY-EP-053.md) | Design Epaper viewport-follow Infini toggle | design | designer | epaper | [SRS-EP-50], [SRS-EP-49], [SRS-EP-51] | done | iter-005 | 3 |
-| [STORY-EP-054](./iter-005/stories/STORY-EP-054.md) | Revise hand-touch: palm-rest vs empty local pan | design | designer | epaper | [SRS-EP-21], [SRS-EP-22], [SRS-EP-23], [SRS-EP-24] | ready | iter-005 | 3 |
+| [STORY-EP-054](./iter-005/stories/STORY-EP-054.md) | Revise hand-touch: palm-rest vs empty local pan | design | designer | epaper | [SRS-EP-21], [SRS-EP-22], [SRS-EP-23], [SRS-EP-24] | done | iter-005 | 3 |
 | [STORY-EP-055](./iter-005/stories/STORY-EP-055.md) | Epaper follow Infini — toggle, exclusion, disconnect | implement | dev | epaper | [SRS-EP-49], [SRS-EP-51] | draft | iter-005 | 5 |
 | [STORY-EP-056](./iter-005/stories/STORY-EP-056.md) | Revise pen-button map as Epaper on-device editor | design | designer | epaper | [SRS-EP-52], [SRS-EP-53], [SRS-EP-42] | done | iter-005 | 5 |
+| [STORY-EP-057](./iter-005/stories/STORY-EP-057.md) | Persist Device Settings on the Epaper device | implement | dev | epaper | [SRS-EP-53] | draft | iter-005 | 3 |
+| [STORY-EP-058](./iter-005/stories/STORY-EP-058.md) | Implement Device Settings page (Pen buttons) | implement | dev | epaper | [SRS-EP-52] | draft | iter-005 | 5 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |
@@ -97,7 +99,7 @@ generated_at: 2026-08-20T09:51:38+00:00
 | [STORY-IN-032](./iter-004/stories/STORY-IN-032.md) | WorldLayer is device mirror only — no demo mix | implement | dev | infini | [SRS-IN-07], [SRS-IN-09] | done | iter-004 | 3 |
 | [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) | Infini applies tablet viewport only while following | implement | dev | infini | [SRS-IN-20], [SRS-IN-21], [SRS-IN-22], [SRS-IN-26] | draft | iter-005 | 3 |
 | [STORY-IN-034](./iter-005/stories/STORY-IN-034.md) | Design Infini pen-button map settings | design | designer | infini | [SRS-IN-24], [SRS-IN-23] | done | iter-005 | 3 |
-| [STORY-IN-035](./iter-005/stories/STORY-IN-035.md) | Persist and restore pen-button map (not the editor) | implement | dev | infini | [SRS-IN-23], [SRS-IN-25] | draft | iter-005 | 3 |
+| [STORY-IN-035](./iter-005/stories/STORY-IN-035.md) | Persist and restore pen-button map (not the editor) | implement | dev | infini | [SRS-IN-23], [SRS-IN-25] | cancelled | iter-005 | 3 |
 | [STORY-IN-036](./iter-005/stories/STORY-IN-036.md) | Design Infini viewport-follow Epaper toggle | design | designer | infini | [SRS-IN-27], [SRS-IN-26], [SRS-IN-28] | done | iter-005 | 3 |
 | [STORY-IN-037](./iter-005/stories/STORY-IN-037.md) | Infini follow Epaper — toggle, exclusion, disconnect | implement | dev | infini | [SRS-IN-26], [SRS-IN-28] | draft | iter-005 | 5 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |

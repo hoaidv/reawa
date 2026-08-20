@@ -73,7 +73,8 @@
       <a href="./hand-touch-finger-hit-box.html" target="scene-preview" aria-current="page">hand.finger_hit_box</a>
       <a href="./hand-touch-finger-moving.html" target="scene-preview">hand.finger_moving</a>
       <a href="./hand-touch-finger-resizing.html" target="scene-preview">hand.finger_resizing</a>
-      <a href="./hand-touch-one-finger-empty.html" target="scene-preview">hand.one_finger_empty</a>
+      <a href="./hand-touch-one-finger-empty-palm.html" target="scene-preview">hand.one_finger_empty_palm</a>
+      <a href="./hand-touch-one-finger-empty-pan.html" target="scene-preview">hand.one_finger_empty_pan</a>
       <a href="./hand-touch-two-finger-pan.html" target="scene-preview">hand.two_finger_pan</a>
       <a href="./hand-touch-pinch.html" target="scene-preview">hand.pinch</a>
       <a href="./hand-touch-pan-vs-move.html" target="scene-preview">hand.pan_vs_move</a>
@@ -81,7 +82,7 @@
       <a href="./hand-touch-states.html" target="scene-preview">States showcase</a>
     </nav>
     <main class="nav-main">
-      <p class="hint">RM2 landscape <strong>246×187 mm</strong> (1872×1404) · 1 cm tiles · real size, no parent scale · UI-EP-06.</p>
+      <p class="hint">RM2 landscape <strong>246×187 mm</strong> (1872×1404) · 1 cm tiles · real size, no parent scale · UI-EP-06 · palm ≤10 mm vs empty pan &gt;10 mm.</p>
       <div class="preview-stage" data-preview-scale="mobile">
         <div class="preview-scale">
           <iframe name="scene-preview" title="Scene preview" src="about:blank"></iframe>
@@ -134,7 +135,7 @@
         hand.finger_hit_box — finger-down on box; tool → sel_freeform; chip still hittable (64 du).
         <a href="./hand-touch-finger-moving.html">Move</a> ·
         <a href="./hand-touch-finger-resizing.html">Finger resize</a> ·
-        <a href="./hand-touch-one-finger-empty.html">Empty</a>
+        <a href="./hand-touch-one-finger-empty-palm.html">Empty palm</a>
       </p>
       <span class="orient-tag">orient: gutToLeft</span>
     </div>
@@ -319,7 +320,7 @@
     });
   </script>
           </article>
-          <article class="scene-frame" data-scene-file="hand-touch-one-finger-empty.html" data-kind="scene" hidden data-state="hand.one_finger_empty">
+          <article class="scene-frame" data-scene-file="hand-touch-one-finger-empty-palm.html" data-kind="scene" hidden data-state="hand.one_finger_empty_palm">
     <style>
 
     .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
@@ -331,7 +332,7 @@
     <div data-region="InkSurface">
       <div class="c-world">
         <div class="c-rule-grid" aria-hidden="true"></div>
-        <a class="hop-empty" href="./hand-touch-two-finger-pan.html" aria-label="Two-finger pan (not this one-finger)"></a>
+        <a class="hop-empty" href="./hand-touch-one-finger-empty-pan.html" aria-label="Travel past 10 mm — local pan"></a>
         <div class="ink-cluster">
           <a class="hop-box" href="./hand-touch-finger-hit-box.html" aria-label="Finger-down on box">
             <svg viewBox="0 0 420 240" aria-hidden="true">
@@ -345,13 +346,16 @@
         </div>
         <div data-region="SelectionOverlay" class="is-hidden"></div>
         <div data-region="GestureAnnotate">
-          <span class="c-finger" style="left:72%;top:58%">
+          <span class="c-finger is-down" style="left:72%;top:58%" title="finger-down"></span>
+          <span class="c-travel is-palm" style="left:72%;top:58%" aria-label="travel 8 mm, at or below 10 mm (89 du)"></span>
+          <span class="c-finger" style="left:calc(72% + 8mm);top:58%">
             <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
           </span>
         </div>
       </div>
       <p class="scene-caption">
-        hand.one_finger_empty — one finger on empty paper: tool stays Pen; 0 lasso; 0 pan (palm rest is not a pan).
+        hand.one_finger_empty_palm — travel 8 mm (≤ 10 mm / 89 du): palm-rest / tap; 0 pan, 0 selection, 0 tool switch.
+        <a href="./hand-touch-one-finger-empty-pan.html">Past 10 mm</a> ·
         <a href="./hand-touch-finger-hit-box.html">Hit box</a> ·
         <a href="./hand-touch-two-finger-pan.html">Two fingers</a>
       </p>
@@ -373,7 +377,73 @@
         <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
       </div>
     </div>
-    <p data-region="StatusLine">pen · hit.kind=empty · fingers=1 · 0 selected · 0 pan</p>
+    <p data-region="StatusLine">pen · hit.kind=empty · fingers=1 · travel=8 mm (≤10 mm / 89 du) · 0 pan · 0 selected</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="hand-touch-one-finger-empty-pan.html" data-kind="scene" hidden data-state="hand.one_finger_empty_pan">
+    <style>
+
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    a.c-tool-btn { text-decoration: none; color: inherit; }
+  
+    </style>
+<div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world is-panned">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <a class="hop-empty" href="./hand-touch-two-finger-pan.html" aria-label="Two-finger pan (local; Infini unchanged unless follow on)"></a>
+        <div class="ink-cluster">
+          <a class="hop-box" href="./hand-touch-finger-hit-box.html" aria-label="Box hit wins over empty pan">
+            <svg viewBox="0 0 420 240" aria-hidden="true">
+              <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+              <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+              <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+              <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+              <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+            </svg>
+          </a>
+        </div>
+        <div data-region="SelectionOverlay" class="is-hidden"></div>
+        <div data-region="GestureAnnotate">
+          <span class="c-finger is-down" style="left:72%;top:58%" title="finger-down"></span>
+          <span class="c-travel is-pan" style="left:72%;top:58%" aria-label="travel 36 mm, past 10 mm (89 du); tick at 10 mm"></span>
+          <span class="c-finger" style="left:calc(72% + 36mm);top:58%">
+            <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
+          </span>
+        </div>
+      </div>
+      <p class="scene-caption">
+        hand.one_finger_empty_pan — travel 36 mm (&gt; 10 mm / 89 du): local one-finger pan; Infini unchanged (follow=none).
+        <a href="./hand-touch-one-finger-empty-palm.html">Palm-rest</a> ·
+        <a href="./hand-touch-finger-hit-box.html">Hit box wins</a> ·
+        <a href="./hand-touch-two-finger-pan.html">Two fingers</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">pen · hit.kind=empty · fingers=1 · travel=36 mm (&gt;10 mm / 89 du) · local pan · follow=none · Infini unchanged</p>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {
@@ -414,10 +484,10 @@
         </div>
       </div>
       <p class="scene-caption">
-        hand.two_finger_pan — world translated; no extra chrome; viewportOwner=epaper.
+        hand.two_finger_pan — local world translated; no extra chrome; Infini unchanged unless Infini follow is on.
         <a href="./hand-touch-pinch.html">Pinch</a> ·
         <a href="./hand-touch-link-down-local-view.html">Link down</a> ·
-        <a href="./hand-touch-one-finger-empty.html">One finger</a>
+        <a href="./hand-touch-one-finger-empty-palm.html">One finger</a>
       </p>
       <span class="orient-tag">orient: gutToLeft</span>
     </div>
@@ -437,7 +507,7 @@
         <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
       </div>
     </div>
-    <p data-region="StatusLine">viewportOwner=epaper · fingers=2 · pan · source epaper</p>
+    <p data-region="StatusLine">local pan · fingers=2 · follow=none · Infini unchanged</p>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {
@@ -478,7 +548,7 @@
         </div>
       </div>
       <p class="scene-caption">
-        hand.pinch — uniform scale only (no rotate). Contacts closer than pan.
+        hand.pinch — local uniform scale only (no rotate). Infini unchanged unless Infini follow is on.
         <a href="./hand-touch-two-finger-pan.html">Pan</a>
       </p>
       <span class="orient-tag">orient: gutToLeft</span>
@@ -499,7 +569,7 @@
         <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
       </div>
     </div>
-    <p data-region="StatusLine">viewportOwner=epaper · fingers=2 · pinch scale · 0 rotate</p>
+    <p data-region="StatusLine">local pinch · fingers=2 · follow=none · Infini unchanged · 0 rotate</p>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {
@@ -704,6 +774,7 @@
   <p class="note">
     Platform <code>epaper</code> (epaper-device): no hover, no focus, no cursor, no motion.
     Press = invert. Finger-eligible floor = 10 mm. Resize knobs: 4 mm visual / 10 mm hit (finger and pen).
+    Empty-canvas threshold: ≤ 10 mm / 89 du palm-rest; &gt; 10 mm local pan.
   </p>
 
   <h2>ToolButton (64 du · UI-EP-04)</h2>
@@ -805,6 +876,32 @@
       <span>pen tip</span>
       <span class="c-pen-tip" style="position:relative"><img src="../system/assets/icon-hand-touch-pen-tip.svg" alt="" /></span>
     </div>
+    <div class="cell">
+      <span>down mark</span>
+      <span class="c-finger is-down"></span>
+    </div>
+  </div>
+
+  <h2>Empty canvas (one finger) — palm vs pan</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>palm-rest (travel 8 mm ≤ 10 mm / 89 du)</span>
+      <div class="stage">
+        <span class="c-finger is-down" style="left:20%;top:50%"></span>
+        <span class="c-travel is-palm" style="left:20%;top:50%"></span>
+        <span class="c-finger" style="left:calc(20% + 8mm);top:50%"></span>
+      </div>
+    </div>
+    <div class="cell">
+      <span>local pan (travel 36 mm &gt; 10 mm)</span>
+      <div class="stage">
+        <div class="c-rule-grid" style="inset:0;opacity:0.18;transform:translate(12px,8px)"></div>
+        <span class="c-finger is-down" style="left:16%;top:50%"></span>
+        <span class="c-travel is-pan" style="left:16%;top:50%"></span>
+        <span class="c-finger" style="left:calc(16% + 36mm);top:50%"></span>
+      </div>
+    </div>
+    <div class="cell"><span>hover / focus</span><div class="na">N/A — epaper</div></div>
   </div>
 
   <script>

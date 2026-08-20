@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.10.0-draft
+version: 0.11.0-draft
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -20,8 +20,9 @@ The header-only `regionsync/` library is a tested target shape, not the device r
 **Ownership rework (2026-08-13, [CHL-0008](../../../.plan/iter-003/challenges/CHL-0008-architecture-rework.md)).**
 Epaper is no longer an intent courier. It **owns the working document in-session** — it holds the
 tree, ingests its own ink, recognizes and creates ink-boxes, and manipulates them locally. Infini
-becomes viewer, navigator, and persistence home. Sync is one-way per direction
-([REQ-07](#one-way-sync)).
+becomes viewer, navigator, and **document** persistence home. Sync is one-way per direction
+([REQ-07](#one-way-sync)). **Device Settings** persist on the Epaper device
+([REQ-20](#device-settings)) — not Infini, not the document.
 
 **Viewport follow (2026-08-20, human).** Epaper and Infini cameras are **independent by default**.
 Always-on Infini→tablet viewport drive is **obsolete**. Optional one-way **follow**
@@ -29,9 +30,12 @@ Always-on Infini→tablet viewport drive is **obsolete**. Optional one-way **fol
 exclusive and off on disconnect. The tablet **can** change its own viewport ([REQ-10](#hand-touch)).
 Document channel stays one-way (change later is a Non-Goal).
 
-**Pen-button map (2026-08-20, human).** Barrel-button bindings are configured **on the tablet**
-([REQ-18](#pen-buttons)) — epaper-device chrome, not an Infini desktop settings screen.
-Infini [REQ-05](../infini/prd.md#pen-button-map) persist/restore is **not** the map editor.
+**Device Settings (2026-08-20, human).** Device-level preferences (example this campaign: the
+pen-button map) are configured **on the tablet**, saved **on the Epaper device**, and are **not**
+Infini settings and **not** a document setting. There is no document-settings product this campaign.
+The Settings page is master-detail; first (only this package) master item is **Pen buttons**
+([REQ-20](#device-settings) / [REQ-18](#pen-buttons)). Infini [REQ-05](../infini/prd.md#pen-button-map)
+persist/restore is **retired**.
 
 ## Problem & Job-to-be-Done
 
@@ -71,7 +75,8 @@ viewed at scale, and saved.
 | Connector selectable (marquee or pen hit) | 100% of recognized connectors on a 10-connector fixture; 0 missed hits on the stroke, 0 AABB-only false hits | Manual QA |
 | Finger hit on ink-box → freeform + move | p95 ≤300 ms to `sel_freeform` + selection; move follows finger; 0 accidental resizes | Manual QA |
 | Two-finger pan/zoom on tablet | Next pen sample uses **local** new region p95 ≤100 ms. Infini view matches after settle **only if Infini follow is on**. Default: independent. BRD-07 ship gate **lifted** | Manual QA — REQ-10 |
-| One-finger empty-canvas pan | Movement past the pan threshold pans **locally**; palm-rest (at/below threshold) 0 pan / 0 selection; box hit wins over pan | Manual QA — REQ-10 |
+| One-finger empty-canvas pan | Travel **> 10 mm** pans **locally**; palm-rest (**≤ 10 mm**) 0 pan / 0 selection; box hit wins over pan | Manual QA — REQ-10 |
+| Device Settings persist | After Epaper restart on the same device, next barrel gesture uses the last map; 0 Infini copies; 0 SVG copies | Manual QA — REQ-20 |
 | Viewport-follow toggle | Enabling one peer’s follow disables the other with p95 ≤300 ms; 0 dual-follow; disconnect forces off | Manual QA — REQ-19 |
 | Erase stroke / selection-erase | p95 ≤50 ms after gesture end; 1 undo restores; 0 accidental ink | Manual QA — **iter-005 draft** |
 | Paste fidelity | Pasted subtree geometry ±1 px @ 100% zoom vs source | Manual QA — **iter-005 draft** |
@@ -185,8 +190,9 @@ viewed at scale, and saved.
   [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md).
 - **Undo** is on the device, because editing is on the device: a bounded history of structural ops
   with one entry per completed gesture.
-- The document is **in memory only** this iter. On-device persistence, offline work across restarts,
-  and sync-any-moment are deferred (Non-Goals).
+- The **document** is **in memory only** this iter. On-device **document** persistence, offline work
+  across restarts, and sync-any-moment are deferred (Non-Goals). **Device Settings** are not the
+  document — they persist on this device ([REQ-20](#device-settings)). No document settings.
 
 **Acceptance**
 - Given Epaper is running with no session, When the creator draws 20 strokes, Then all 20 exist as
@@ -461,7 +467,7 @@ viewed at scale, and saved.
   refuse/no-op (stroke stays ink, no banner); marquee vs path-hit vs AABB-miss.
 
 ## [REQ-10] Hand-touch on canvas {#hand-touch}
-<!-- added: 2026-08-15; revised: 2026-08-16 — merged [REQ-16] two-finger pan/zoom into this REQ; revised: 2026-08-20 — CHL-0024 finger resize knobs; revised: 2026-08-20 — two-finger local Must (BRD-07 ship gate lifted); one-finger empty = local pan; publish only if Infini is following -->
+<!-- added: 2026-08-15; revised: 2026-08-16 — merged [REQ-16] two-finger pan/zoom into this REQ; revised: 2026-08-20 — CHL-0024 finger resize knobs; revised: 2026-08-20 — two-finger local Must (BRD-07 ship gate lifted); one-finger empty = local pan; publish only if Infini is following; revised: 2026-08-20 — pan threshold is 10 mm (human lock for STORY-EP-054) -->
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
 - **Campaign:** **one grammar, two slices.** One-finger pick/move/resize **and** two-finger **local**
@@ -479,10 +485,11 @@ viewed at scale, and saved.
   over box-move. Ink-scale mode still applies ([REQ-06](#device-manipulation)). Once a box is
   selected (by this hit, or already selected), a finger drag **inside the bounds** moves it with the
   [REQ-06](#device-manipulation) live-direct contract. The same down that hits the box may start the
-  move. **Empty canvas (no box, knob, or chip hit):** the touch does not switch tools and does not
-  start a lasso. If movement stays **at or below** a documented pan threshold, it is palm-rest / tap
-  — **no pan, no selection, no tool switch**. If movement goes **past** that threshold, it is
-  **local one-finger pan**. Box / knob / chip hit always wins over empty-canvas pan.
+  move.   **Empty canvas (no box, knob, or chip hit):** the touch does not switch tools and does not
+  start a lasso. The pan threshold is **10 mm** Euclidean panel travel from finger-down. If movement
+  stays **at or below 10 mm**, it is palm-rest / tap — **no pan, no selection, no tool switch**. If
+  movement goes **past 10 mm**, it is **local one-finger pan**. Box / knob / chip hit always wins
+  over empty-canvas pan. Do not invent extra hand-touch chrome for this rule.
 - **Two fingers — local pan and zoom.** Two-finger pan/pinch changes the **tablet’s local viewport**.
   The device **publishes** that viewport **only if Infini follow is on**. Does not run while a
   one-finger box-move **or resize** is in flight. Link down: local viewport still works; follow
@@ -505,13 +512,13 @@ viewed at scale, and saved.
   on lift; ≥5 Hz partial refresh) and **0** viewport pan starts.
 - Given a selected Smart Group, When the creator **finger-downs on a resize knob** (hit ≥ primary ToolChip tile), Then resize starts with the [REQ-06](#device-manipulation) live-direct bar (0 px jump on lift; ≥5 Hz partial refresh) and **0** viewport pan. Pen on the same knob still resizes.
 - Given a control whose hit target is **< 64 du** (not a resize knob), When the creator finger-downs on it, Then **no** scale-mode/end-kind/rotation gesture starts (0 accidental transforms).
-- Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **at or below**
-  the documented pan threshold, When the touch ends, Then the exclusive tool is unchanged, 0 nodes
-  are selected, and **0** pan occurs (palm rest / tap — 0 accidental lassos).
-- Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **past** the
-  documented pan threshold, When the finger moves, Then the **local** viewport pans, the exclusive
-  tool is unchanged, 0 nodes are selected, and 0 lasso starts. Infini’s view matches after settle
-  **only if Infini follow is on**; otherwise Infini is unchanged.
+- Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **≤ 10 mm**,
+  When the touch ends, Then the exclusive tool is unchanged, 0 nodes are selected, and **0** pan
+  occurs (palm rest / tap — 0 accidental lassos).
+- Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **> 10 mm**,
+  When the finger moves, Then the **local** viewport pans, the exclusive tool is unchanged, 0 nodes
+  are selected, and 0 lasso starts. Infini’s view matches after settle **only if Infini follow is
+  on**; otherwise Infini is unchanged.
 - Given a box, knob, or chip hit, When the same one-finger drag would otherwise pan empty canvas,
   Then pick/move/resize/chip wins (0 empty-canvas pan).
 - Given **two** fingers on empty canvas (no box-move or resize in flight), When the creator pans or
@@ -711,11 +718,11 @@ viewed at scale, and saved.
 - **UI states / journeys to design:** entry into manual create (chip vs context); frame place; connector place; primitive place; cancel; conflict with Pen ink.
 
 ## [REQ-18] Configurable pen barrel-button accelerators {#pen-buttons}
-<!-- campaign: iter-005-draft — BS-0002 D9; editor home revised 2026-08-20 (human) -->
+<!-- campaign: iter-005-draft — BS-0002 D9; editor home revised 2026-08-20 (human); Settings page + device persist 2026-08-20 (CHL-0025 / human lock) -->
 - **Priority:** Must · **Traces:** [BRD-07]
-- Needs design: yes *(on-device map editor; chip still mirrors temporary tool during hold-move)*
+- Needs design: yes *(Pen buttons is the first Device Settings detail; chip still mirrors temporary tool during hold-move)*
 - **Campaign:** iter-005 **draft**. [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md) **D9** catalogues **replaced** 2026-08-20 (human). D9 lists are not current.
-- **Outcome:** optional Wacom barrel buttons (0, 1, or 2) speed up erase / select / drag **without** making those the only path. Each present button has two slots — **Click** and **Hold-move** — each bound to **exactly one** item from a **closed catalogue**. The creator configures the binding **on the tablet** (this REQ — epaper-device chrome). Infini [REQ-05](../infini/prd.md#pen-button-map) **persists and restores** the map; it is **not** the settings surface. **Never** three jobs on one hold-while-moving gesture.
+- **Outcome:** optional Wacom barrel buttons (0, 1, or 2) speed up erase / select / drag **without** making those the only path. Each present button has two slots — **Click** and **Hold-move** — each bound to **exactly one** item from a **closed catalogue**. The creator binds those slots **on the tablet** as the **Pen buttons** detail of Device Settings ([REQ-20](#device-settings)) — not Infini, not a document, not a sheet. **Never** three jobs on one hold-while-moving gesture. Persist of the map is [REQ-20](#device-settings) (on this device). Infini [REQ-05](../infini/prd.md#pen-button-map) persist/restore is **retired**.
 - **Click** (button down+up, movement below threshold) — discrete toggle; closed catalogue **only**:
   - Current primary tool ↔ Freeform Select (`sel_freeform`)
   - Current primary tool ↔ Eraser (erase arm — **not** the nib; [REQ-11](#erase))
@@ -737,10 +744,31 @@ viewed at scale, and saved.
 - Given the creator rebinds Hold-move to “drag node under tip”, When they hold-move starting on a hittable node, Then that node moves with the [REQ-06](#device-manipulation) live-direct bar; when they start on empty canvas, Then 0 nodes move and 0 lasso starts.
 - Given a 0-button pen, When the creator draws, Then 0 button gestures fire and [REQ-03](#tool-modes) still works.
 - Given a 20-gesture fixture mixing clicks and holds, When executed, Then 0 events fire **both** click and hold-move.
-- Given the on-device map editor and 0-button capability, When it is shown, Then **0** barrel slots appear (0 fake bindings).
-- Given the on-device map editor and 1- or 2-button capability, When a Click list is opened, Then it offers only the three Click items above (0 Undo, 0 extra ids).
-- Given the same editor, When a Hold-move list is opened, Then it offers only Temporary eraser, Drag node under tip, and Off (0 temporary freeform, 0 temporary rect).
-- **UI states / journeys to design (epaper-device, 1-bit, no hover):** on-device map editor — 0-button (slots absent), 1-button, 2-button; Click closed list; Hold-move closed list; entry into the editor from device chrome (not Infini, not a 5-way radio on exclusive-tool tiles); chip during hold-move Temporary eraser (mirror then restore); chip during hold-move Drag-under-tip (exclusive tool unchanged); rebound map mid-session (next gesture only); editor still usable when the desktop session is down (live map is on-device). Dual-ask: `/designer` Spec + scenes; `/qa` BDD from this AC.
+- Given Device Settings · Pen buttons and 0-button capability, When the page is shown, Then **0** barrel slots appear (0 fake bindings).
+- Given Device Settings · Pen buttons and 1- or 2-button capability, When the detail pane is shown, Then Click offers only the three Click items above **inline** (0 Undo, 0 extra ids, 0 sheets).
+- Given the same page, When the detail pane is shown, Then Hold-move offers only Temporary eraser, Drag node under tip, and Off **inline** (0 temporary freeform, 0 temporary rect, 0 sheets).
+- **UI states / journeys to design (epaper-device, 1-bit, no hover):** Device Settings · Pen buttons — 0-button (slots absent), 1-button, 2-button, offline (still usable); Click and Hold-move catalogues **inline** on the same page (not sheets); entry via [REQ-20](#device-settings) leading tile (not Infini, not a 5-way radio on exclusive-tool tiles, not a fourth exclusive tool); chip during hold-move Temporary eraser (mirror then restore); chip during hold-move Drag-under-tip (exclusive tool unchanged); rebound map mid-session (next gesture only). Dual-ask: `/designer` Spec + scenes (painted [UI-EP-08](../../../.plan/iter-005/design/pen-button-map/ui-spec.md)); `/qa` BDD from this AC. Do **not** invent other Settings master items in this package.
+
+## [REQ-20] Device Settings {#device-settings}
+<!-- added: 2026-08-20 — human lock: Device Settings saved on Epaper; CHL-0025 Settings page; GAP-01 entry tile -->
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes *(Settings shell already painted as [UI-EP-08](../../../.plan/iter-005/design/pen-button-map/ui-spec.md); do not invent further Settings inventory)*
+- **Campaign:** iter-005. First (only this package) settings item is **Pen buttons** ([REQ-18](#pen-buttons)).
+- **Outcome:** preferences that belong to **this tablet** — not to a file, not to the desktop app — stay on this tablet. The creator opens **one Settings page**, picks a topic in a master list, and edits it in the detail pane. They can close and keep drawing; the next gesture uses what they just set. After Epaper restarts on **the same device**, those preferences are still there.
+- **What this is not.** Device Settings are **not** document settings. There is **no** document-settings product this campaign. Infini is **not** the persistence home for Device Settings. The working **document** remains in-memory / Infini-persisted ([REQ-04](#device-document) / [REQ-07](#one-way-sync)).
+- **Shell (CHL-0025 adopted).** Full-panel **Settings** page, **master-detail**. Master: first item **Pen buttons** (only item this package — do not invent other master rows). Click and Hold-move catalogues live **inline** in the Pen buttons detail pane (in-place pick). **0 sheets.** Capability 0 / 1 / 2 / offline are **states of that same page**, not separate products.
+- **Entry (GAP-01 adopted).** A lone **10 mm** 1-bit tile (`cta.pen_map_open`) — stylus-with-barrels glyph — floating orientation-top **leading**, **sibling of ToolChip** (same chrome family as viewport-follow trailing and Undo). **Not** a fourth exclusive tool, **not** a 5-way radio on ToolChip tiles, **not** Infini File menu. Tap → `present-modal` Settings with Pen buttons selected. Close dismisses to drawing; live map kept.
+- **Persist.** Saved **on the Epaper device**. Survives Epaper app restart on that device. **0** Infini app-settings copies. **0** SVG / VectorDocument fields. **0** `doc_*` messages for a settings write. Live map still applies with the desktop session down — persist does **not** wait on Infini.
+
+**Acceptance**
+- Given the leading 10 mm stylus-with-barrels tile on drawing chrome, When the creator taps it, Then Settings opens as a full-panel master-detail page with **Pen buttons** selected (p95 ≤300 ms), the exclusive tool is unchanged, and ToolChip is not a fourth exclusive for this action.
+- Given Settings · Pen buttons, When shown, Then the master list contains **only** Pen buttons this package (0 invented sibling items) and Click / Hold-move catalogues are **inline** in the detail pane (0 sheets, 0 list-cancel hops).
+- Given Settings · Pen buttons at 0-button / 1-button / 2-button / session-down, When shown, Then those are states of **the same page** (0 extra products) and the live map still applies while session-down.
+- Given the creator rebinds a present Click or Hold-move slot, When they dismiss Settings, Then the **next** barrel gesture uses the new binding and any in-flight gesture is unchanged.
+- Given a rebound map on this device, When Epaper restarts on **the same device**, Then the next barrel gesture uses that map with p95 ≤300 ms after the first HID report and Infini holds **0** copy of it (0 app-settings map, 0 SVG map).
+- Given Infini is connected, When the creator rebinds on the tablet, Then Infini sends and receives **0** document messages for that write and does **not** persist or restore the map.
+- Given a different Epaper device with factory defaults, When it connects to the same Infini document, Then it does **not** inherit the first device’s barrel map (settings are per device, not per file).
+- **UI states / journeys to design:** drawing + `cta.pen_map_open` (rest / pressed / open); Settings · Pen buttons for layout 0 / 1 / 2 / offline; close back to drawing. Dual-ask: `/designer` Spec + scenes (already in [UI-EP-08](../../../.plan/iter-005/design/pen-button-map/ui-spec.md)); `/qa` BDD from this AC. Chip hold-move journeys stay [REQ-18](#pen-buttons) drawing scenes — not this page.
 
 ---
 
@@ -759,9 +787,11 @@ viewed at scale, and saved.
   [CHL-0024](../../../.plan/iter-005/challenges/CHL-0024-finger-resize-knobs.md)).
 - Acting as a Reawa-style mouse/stylus driver for other Mac apps.
 - Cloud sync or multi-peer sessions.
-- **On-device persistence, offline work across app restarts, and sync-at-any-moment** — the device
-  document is in memory for the session; the desktop is the persistence home
-  ([REQ-07](#one-way-sync)).
+- **On-device persistence of the working document, offline work across app restarts, and
+  sync-at-any-moment** — the **document** is in memory for the session; Infini is the **document**
+  persistence home ([REQ-07](#one-way-sync)). **Exception:** Device Settings persist on this
+  device ([REQ-20](#device-settings)). Do not mint document settings.
+- **Document settings** — none this campaign. Device Settings are device-level only.
 - **Multi-directional sync / modern document-synchronization algorithm / CRDT** — explicitly deferred
   to a later campaign; this iter is one-way per direction.
 - **Desktop-authored document changes reaching the tablet mid-session** — the only inbound document
@@ -789,9 +819,13 @@ viewed at scale, and saved.
     draw-into.
   - This campaign keeps `inkScaleMode` (`withBounds` | `fixedInk`) only; membership does **not**
     expand bounds; no content align/reflow.
-- **Infini as the pen-button map editor** — the creator does not configure barrel buttons on a
-  desktop settings screen. Map editor is on-device ([REQ-18](#pen-buttons)). Infini persist/restore
-  is not that surface ([infini REQ-05](../infini/prd.md#pen-button-map)).
+- **Infini as Device Settings or pen-button map editor / persist home** — the creator does not
+  configure barrel buttons on a desktop settings screen and Infini does **not** persist or restore
+  the map. Home is [REQ-20](#device-settings) / [REQ-18](#pen-buttons). Infini [REQ-05](../infini/prd.md#pen-button-map)
+  is **retired**.
+- **Other Settings master items this package** — only **Pen buttons**. Do not invent Wi-Fi, display,
+  accounts, or document prefs in this Settings page.
+- **Sheet / `present-sheet` catalogues for Click or Hold-move** — dropped ([CHL-0025](../../../.plan/iter-005/challenges/CHL-0025-pen-map-settings-page.md)). Catalogues are inline.
 - **Temporary freeform or temporary rect on Hold-move** — removed (human 2026-08-20). Hold-move
   snaps back on release; a temp select that does nothing afterward is meaningless.
 - **Undo as a barrel Click catalogue item** — not in the closed Click list. Undo stays on the
@@ -805,11 +839,13 @@ viewed at scale, and saved.
 ## Assumptions & Dependencies
 
 - Infini [REQ-01]–[REQ-03] and [REQ-06](../infini/prd.md#viewport-follow) define the desktop side of
-  the session; Infini is viewer + navigator + persistence home, and its own ink-box authoring is
-  deprecated ([infini REQ-04](../infini/prd.md#smart-group)). Viewport last-writer
+  the session; Infini is viewer + navigator + **document** persistence home, and its own ink-box
+  authoring is deprecated ([infini REQ-04](../infini/prd.md#smart-group)). Viewport last-writer
   ([ADR-0023](../../adr/ADR-0023-viewport-last-writer.md)) is **not** the product model — Architect
-  supersedes it with a follow / token-optional ADR. Infini [REQ-05](../infini/prd.md#pen-button-map)
-  persist/restore of the barrel map is settings, not a UI; the map editor is [REQ-18](#pen-buttons).
+  supersedes it with a follow / token-optional ADR. Device Settings persist on Epaper
+  ([REQ-20](#device-settings)); Infini [REQ-05](../infini/prd.md#pen-button-map) persist/restore is
+  **retired**. [ADR-0030](../../adr/ADR-0030-tablet-authors-pen-button-map.md) still says Infini
+  persist/restore — Architect must supersede (PM does not write the ADR).
 - Node semantics are shared with Infini: [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md) tree,
   [ADR-0011](../../adr/ADR-0011-smart-group.md) Smart Group. Where recognition and writes happen is
   re-decided by the architect under CHL-0008 (ADR-0014 / ADR-0015 pending).
@@ -823,12 +859,11 @@ viewed at scale, and saved.
 
 ## Open Questions
 
-- **Iter-005 draft REQs minted 2026-08-16** from [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md): [REQ-11](#erase)–[REQ-18](#pen-buttons) ([REQ-16](#device-pan-zoom) **retired** into [REQ-10](#hand-touch)). **Do not slice** until iter-004 retro-gate. **AI** still unspecified — no REQ. — **owner:** pm — **needed by:** iter-005 open.
-- Pen-button map editor on Infini desktop — **owner:** pm — **closed 2026-08-20 (human):** editor is on-device ([REQ-18](#pen-buttons)); Infini persist/restore is not a settings screen. D9 catalogues replaced: Click = current↔Freeform Select / current↔Eraser / Off (no Undo); Hold-move = Temporary eraser / Drag node under tip / Off (no temp freeform/rect). 1-button Hold-move default = Temporary eraser.
+- **Iter-005 draft REQs minted 2026-08-16** from [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md): [REQ-11](#erase)–[REQ-18](#pen-buttons) ([REQ-16](#device-pan-zoom) **retired** into [REQ-10](#hand-touch)); [REQ-20](#device-settings) minted 2026-08-20. **AI** still unspecified — no REQ. — **owner:** pm — **needed by:** iter-005 open.
+- Pen-button map editor on Infini desktop — **owner:** pm — **closed 2026-08-20 (human):** editor is Device Settings · Pen buttons on-device ([REQ-20](#device-settings) / [REQ-18](#pen-buttons)). Infini persist/restore **retired**. D9 catalogues replaced: Click = current↔Freeform Select / current↔Eraser / Off (no Undo); Hold-move = Temporary eraser / Drag node under tip / Off (no temp freeform/rect). 1-button Hold-move default = Temporary eraser.
+- Device Settings persist home — **owner:** pm — **closed 2026-08-20 (human):** saved **on the Epaper device**, not Infini, not the document. No document settings. [CHL-0025](../../../.plan/iter-005/challenges/CHL-0025-pen-map-settings-page.md) Settings page adopted; GAP-01 leading 10 mm tile adopted.
 - [REQ-10](#hand-touch) two-finger pan/zoom vs [BRD-07](../../brd.md) on-device pan/zoom deferral — **owner:** pm — **closed 2026-08-20 (human):** two-finger **local** pan is Must; always-on viewport sync is obsolete; optional mutually exclusive follow ([REQ-19](#viewport-follow)). Analyst amends BRD-07 in parallel; this PRD is the product source until BRD catches up. One-finger empty canvas is **local pan** (threshold vs palm-rest), not a no-op.
-- Exact empty-canvas pan threshold (distance / time) — **owner:** architect — **needed by:** SRS
-  bind for [REQ-10](#hand-touch) one-finger empty pan. Product rule is already: at/below threshold =
-  palm-rest no-op; past threshold = local pan; box/knob/chip hit wins.
+- Exact empty-canvas pan threshold (distance / time) — **owner:** pm — **closed 2026-08-20 (human lock for STORY-EP-054):** **10 mm** Euclidean panel travel. ≤10 mm = palm-rest / tap (0 pan); >10 mm = local one-finger pan; box/knob/chip hit wins. No new hand-touch UI inventory. Architect millimetre↔du bind stays in SRS (89 du @ 226 dpi).
 
 - Undo depth and affordance on the device — **closed 2026-08-14** ([CHL-0016](../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
   / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)): depth 20; on-panel Undo and Redo after

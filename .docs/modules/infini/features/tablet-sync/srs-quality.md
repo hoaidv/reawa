@@ -81,17 +81,17 @@ Prioritised for this slice: **(1)** document/paint isolation **(2)** bounded mem
 
 ## [SRS-IN-25] Pen-button map persist/restore quality {#srs-in-25-map-publish-quality}
 
-<!-- lifecycle: active -->
+<!-- lifecycle: retired -->
+<!-- superseded-by: [SRS-EP-43] -->
+<!-- retired: 2026-08-20 — Infini persist/restore quality withdrawn; 0 Infini copies is [SRS-EP-43]. Id kept. -->
 
-**Parent:** Infini [REQ-05](../../prd.md#pen-button-map). **Constrains:** [SRS-IN-23](./srs-logic.md#srs-in-23-pen-map-publish). Does **not** steal [SRS-IN-08](#srs-in-08) parent (REQ-03). Does **not** constrain a desktop editor ([SRS-IN-24](./srs-ui.md#srs-in-24-pen-map-ui) retired).
+**Parent:** Infini [REQ-05](../../prd.md#pen-button-map) (**retired**). **Do not implement Infini persist/restore bars.** Device persist quality: [SRS-EP-43](../../../epaper/features/tool-modes/srs-quality.md#srs-ep-43-barrel-quality). Constrains nothing on Infini except **0 copies**.
 
-| Scenario | Target |
+| Scenario (historical — do not implement as persist) | Target now |
 |---|---|
-| Tablet bind while linked → Infini persist | **0** `doc_load` / `doc_change` / `doc_snapshot`; map in app settings, not SVG |
-| Hello restore (matching 1- or 2-button, tablet not authored this session) | Next tablet gesture uses persisted map p95 ≤**300 ms**; in-flight unchanged |
-| Reconnect with tablet `pending_persist` | Infini stores the tablet map; **0** lost binds; do not clobber with older persist |
-| 0-button restore | **0** fake bindings applied |
-| Infini chrome | **0** map-editor screens |
+| Infini persist / hello restore / pending_persist | **Withdrawn** |
+| Infini chrome | **0** map-editor screens (still true; [SRS-IN-24](./srs-ui.md#srs-in-24-pen-map-ui) retired) |
+| 0 Infini copies | **0** app-settings maps; **0** SVG maps; **0** restore-on-hello — enforced from [SRS-EP-43](../../../epaper/features/tool-modes/srs-quality.md#srs-ep-43-barrel-quality) |
 
 ---
 
@@ -125,5 +125,5 @@ Prioritised for this slice: **(1)** document/paint isolation **(2)** bounded mem
 ## Superseded
 
 _None. SRS-IN-19 is additive._
-SRS-IN-25 is additive.
+SRS-IN-25 is **retired** (0 Infini copies lives on SRS-EP-43).
 SRS-IN-28 is additive.

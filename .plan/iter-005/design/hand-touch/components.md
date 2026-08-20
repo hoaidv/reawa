@@ -11,7 +11,7 @@ Closed inventory. Compose by copy-paste from each self-contained `.html`.
 |---|---|---|---|---|---|---|---|
 | ToolChip | screen | reuse UI-EP-04 | `.c-tool-chip` | `./components/tool-chip.html` | 3 clusters · 64 du | default, armed, pressed, dimmed, queued | `role=toolbar`; tile `aria-label`; ≥64×64 |
 | SelectionOverlay | screen | reuse UI-EP-02 | `.c-bounds` `.c-handle` | `./components/selection-overlay.html` | SmartGroup AABB | hidden, selected, moving, resizing, handle pressed | handle `aria-label`; hit 10 mm finger and pen |
-| FingerContact | screen | build | `.c-finger` | `./components/finger-contact.html` | one / two / ignored | preview-only filled circle | not product chrome |
+| FingerContact | screen | build | `.c-finger` | `./components/finger-contact.html` | one / two / ignored / down / travel | preview-only filled circle + travel tick | not product chrome |
 
 **Kind**
 
@@ -22,7 +22,8 @@ Closed inventory. Compose by copy-paste from each self-contained `.html`.
 
 - ToolChip is UI-EP-04 (3 exclusive + 2 toggles + Undo/Redo). **Do not** revert to four exclusive tools.
 - Overlay is UI-EP-02 dotted AABB + hollow knobs. Knobs are **finger-eligible** (10 mm hit). **Do not** add a hand-tool tile.
-- `ind.two_finger_pan` has **no extra product chrome** — world transform + status text only.
+- `ind.two_finger_pan` has **no extra product chrome** — world transform + status text only. Must **not** imply Infini always matches (follow off = Infini unchanged).
+- One-finger empty pan uses the same world-translate language; palm-rest keeps the world **unshifted**. Travel ticks in GestureAnnotate are preview-only (8 mm vs 36 mm; 10 mm tick on pan).
 
 ## Banned
 
@@ -31,4 +32,6 @@ Closed inventory. Compose by copy-paste from each self-contained `.html`.
 - Ghost / marquee as move stand-in
 - Phone chrome
 - Infini slate/teal on the panel
-- One-finger empty as pan
+- Follow-toggle buttons (STORY-EP-053 / SRS-EP-50)
+- One-finger empty pan **without** the 10 mm / 89 du threshold (palm would pan)
+- Two-finger pan copy that implies Infini match when follow is off

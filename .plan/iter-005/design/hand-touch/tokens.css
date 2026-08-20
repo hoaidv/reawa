@@ -20,6 +20,9 @@
   --handle-visual: 4mm;
   --handle-hit: 10mm;
   --finger-min: 10mm;
+  --travel-palm: 8mm;
+  --travel-threshold: 10mm;
+  --travel-pan: 36mm;
   --lod-min-axis: 12mm;
   --bounds-outer: 0;
   --bounds-gap: 0;

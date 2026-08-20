@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>hand.two_finger_pan — hand-touch</title>
+  <title>hand.one_finger_empty_palm — hand-touch</title>
   <link rel="stylesheet" href="tokens.css" />
   <link rel="stylesheet" href="common.css" />
   <style>
@@ -12,35 +12,37 @@
     a.c-tool-btn { text-decoration: none; color: inherit; }
   </style>
 </head>
-<body data-state="hand.two_finger_pan">
+<body data-state="hand.one_finger_empty_palm">
   <div data-region="DeviceScreen" data-orientation="gutToLeft">
     <div data-region="InkSurface">
-      <div class="c-world is-panned">
+      <div class="c-world">
         <div class="c-rule-grid" aria-hidden="true"></div>
+        <a class="hop-empty" href="./hand-touch-one-finger-empty-pan.html" aria-label="Travel past 10 mm — local pan"></a>
         <div class="ink-cluster">
-          <svg viewBox="0 0 420 240" aria-hidden="true">
-            <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
-            <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
-            <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
-            <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
-            <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
-          </svg>
+          <a class="hop-box" href="./hand-touch-finger-hit-box.html" aria-label="Finger-down on box">
+            <svg viewBox="0 0 420 240" aria-hidden="true">
+              <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+              <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+              <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+              <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+              <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+            </svg>
+          </a>
         </div>
         <div data-region="SelectionOverlay" class="is-hidden"></div>
         <div data-region="GestureAnnotate">
-          <a class="c-finger" href="./hand-touch-pinch.html" style="left:32%;top:50%;pointer-events:auto" aria-label="Pinch">
-            <img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" />
-          </a>
-          <span class="c-finger" style="left:50%;top:60%">
-            <img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" />
+          <span class="c-finger is-down" style="left:72%;top:58%" title="finger-down"></span>
+          <span class="c-travel is-palm" style="left:72%;top:58%" aria-label="travel 8 mm, at or below 10 mm (89 du)"></span>
+          <span class="c-finger" style="left:calc(72% + 8mm);top:58%">
+            <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
           </span>
         </div>
       </div>
       <p class="scene-caption">
-        hand.two_finger_pan — local world translated; no extra chrome; Infini unchanged unless Infini follow is on.
-        <a href="./hand-touch-pinch.html">Pinch</a> ·
-        <a href="./hand-touch-link-down-local-view.html">Link down</a> ·
-        <a href="./hand-touch-one-finger-empty-palm.html">One finger</a>
+        hand.one_finger_empty_palm — travel 8 mm (≤ 10 mm / 89 du): palm-rest / tap; 0 pan, 0 selection, 0 tool switch.
+        <a href="./hand-touch-one-finger-empty-pan.html">Past 10 mm</a> ·
+        <a href="./hand-touch-finger-hit-box.html">Hit box</a> ·
+        <a href="./hand-touch-two-finger-pan.html">Two fingers</a>
       </p>
       <span class="orient-tag">orient: gutToLeft</span>
     </div>
@@ -60,7 +62,7 @@
         <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
       </div>
     </div>
-    <p data-region="StatusLine">local pan · fingers=2 · follow=none · Infini unchanged</p>
+    <p data-region="StatusLine">pen · hit.kind=empty · fingers=1 · travel=8 mm (≤10 mm / 89 du) · 0 pan · 0 selected</p>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {

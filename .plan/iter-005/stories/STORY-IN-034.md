@@ -19,8 +19,6 @@ scenes:
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-0.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-2.html"
-  - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-click.html"
-  - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-hold.html"
 hifi: ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
 wireframe: ""
 ---

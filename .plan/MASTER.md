@@ -38,8 +38,8 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Scope | epaper ink-box, tool-modes, connector-ink, region-sync, local-pen-ink, device-document; infini canvas, tablet-sync, vector-document | REQ-10…14, 17, 18 + infini REQ-05 |
 | Stop line | **verified** | design → BDD → implement → human confirm |
 | Autonomy | **bounded** | Run inside lock; sink REQ-15 / REQ-08 |
-| WIP | **2** | W-empty: EP-054 after glance at UI-EP-08 |
-| Validated | — | BRD-07 lifted; follow design done; pen-button map on-device (EP-056) |
+| WIP | **2** | W-empty: EP-054 ∥ architect Device Settings |
+| Validated | — | Device Settings on-device (REQ-20); Infini persist retired; follow design done; EP-056 Settings page |
 
 **Out-of-scope log**
 
@@ -65,15 +65,15 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 ### Goal & capacity
 
 - Goal: **Hand-on-paper** plus **viewport follow** (human 2026-08-20). Cameras independent by default.
-- Capacity: committed stories include EP-053…056 / IN-036…037. **NOW** W-empty ([STORY-EP-054](./iter-005/stories/STORY-EP-054.md)) after human glance at [UI-EP-08](./iter-005/design/pen-button-map/).
-- Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); EP-037 package still empty=no-op until EP-054; PM `srs-product` BR-D08 lag; GAP-01 pen-map entry tile needs Product Manager adopt.
+- Capacity: committed stories include EP-053…058 / IN-036…037. **NOW** W-empty: [STORY-EP-054](./iter-005/stories/STORY-EP-054.md) **∥** Architect Device Settings rebind.
+- Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); EP-037 package empty=no-op until EP-054; PM `srs-product` BR-D08 lag; Developer blocked until `/init`.
 
 ### Tracks
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
 | TRACK-001…004 | planned | **done** | — | [tracks](./tracks/) |
-| TRACK-005 | planned | **active** | **EP-054** hand-touch empty-pan after glance at UI-EP-08 | [track](./tracks/TRACK-005-hand-on-paper.md) |
+| TRACK-005 | planned | **active** | **EP-054** ∥ Architect Device Settings (REQ-20) | [track](./tracks/TRACK-005-hand-on-paper.md) |
 
 ### Open challenges / blocked
 
@@ -91,7 +91,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [iter-005 execution-board](./iter-005/execution-board.md) — **NOW W-empty** EP-054 after glance at UI-EP-08
+- [iter-005 execution-board](./iter-005/execution-board.md) — **NOW W-empty** EP-054 ∥ architect Device Settings
 
 ### Freeze notes
 
@@ -99,6 +99,6 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ## Forward
 
-- After human glance at UI-EP-08: **EP-054** then Quality Assurance Engineer EP-038. Barrel BDD (REQ-18) can run after glance. Two-finger **local** EP-039 unblocked. Product Manager: BR-D08 viewport-follow in `srs-product`; adopt GAP-01 pen-map entry tile.
+- After EP-054: Quality Assurance Engineer then EP-038. Architect join → Quality Assurance Engineer for Device Settings / barrel. Two-finger **local** EP-039 unblocked after EP-038 design+BDD. Developer needs `/init` first. Product Manager: BR-D08.
 - Parked: REQ-15, REQ-08, CHL-0011, CHL-0012, EP-035 measure.
 - Backlog: [backlog.md](./backlog.md)

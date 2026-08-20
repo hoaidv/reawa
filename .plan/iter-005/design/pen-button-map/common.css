@@ -254,35 +254,99 @@ a.c-tool-btn { text-decoration: none; color: inherit; }
 .c-pen-map-open-btn:active img,
 .c-pen-map-open-btn.is-pressed img { filter: invert(1); }
 
-/* Overlay hub — isolatable bottom rect */
-[data-region="PenMapOverlay"],
-.c-pen-map-overlay {
+/* Settings page — full panel, master-detail (CHL-0025) */
+[data-region="SettingsPage"],
+.c-settings {
   position: absolute;
   z-index: var(--z-overlay);
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 58%;
+  inset: 0;
   background: var(--color-paper);
-  border-top: 1px solid var(--color-ink);
   display: flex;
   flex-direction: column;
-  padding: var(--chip-inset);
   overflow: hidden;
 }
+.c-settings-head,
 .c-pen-map-head {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   min-height: var(--target-epaper);
   flex: 0 0 auto;
+  padding: var(--chip-inset);
+  border-bottom: 1px solid var(--color-ink);
 }
+.c-settings-head h1,
 .c-pen-map-head h1 {
   margin: 0;
   flex: 1;
   font-size: var(--font-title);
   font-weight: 600;
   line-height: 1.2;
+}
+.c-settings-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+[data-region="SettingsMaster"],
+.c-settings-master {
+  flex: 0 0 var(--settings-master-w);
+  width: var(--settings-master-w);
+  border-right: 1px solid var(--color-ink);
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.c-settings-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: var(--target-epaper);
+  width: 100%;
+  margin: 0;
+  padding: 0 var(--space-xs);
+  border: 0;
+  border-bottom: 1px solid var(--color-ink);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: var(--font-label);
+  font-family: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: none;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.c-settings-item img {
+  width: var(--pen-map-icon);
+  height: var(--pen-map-icon);
+  flex: 0 0 var(--pen-map-icon);
+  pointer-events: none;
+}
+.c-settings-item[aria-current="page"] {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.c-settings-item[aria-current="page"] img { filter: invert(1); }
+.c-settings-item:active,
+.c-settings-item.is-pressed {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.c-settings-item:active img,
+.c-settings-item.is-pressed img { filter: invert(1); }
+
+[data-region="PenMapOverlay"],
+.c-settings-detail,
+.c-pen-map-overlay {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-paper);
+  display: flex;
+  flex-direction: column;
+  padding: var(--chip-inset);
+  overflow: auto;
 }
 .c-pen-map-close {
   box-sizing: border-box;
@@ -408,29 +472,28 @@ a.c-tool-btn { text-decoration: none; color: inherit; }
 .c-pen-map-slot:active img,
 .c-pen-map-slot.is-pressed img { filter: invert(1); }
 
-/* Catalogue sheet */
+/* Closed catalogues — inline in the detail pane (not sheets) */
 [data-region="ClickList"],
 [data-region="HoldList"],
 .c-pen-map-list {
-  position: absolute;
-  z-index: var(--z-sheet);
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 52%;
-  background: var(--color-paper);
-  border-top: 1px solid var(--color-ink);
+  position: static;
   display: flex;
   flex-direction: column;
-  padding: var(--chip-inset);
+  margin: 0 0 var(--space-xs);
+  padding: 0;
+  border: 0;
+  height: auto;
+  background: transparent;
 }
+.c-pen-map-list h3,
 .c-pen-map-list h2 {
   margin: 0 0 var(--space-xs);
-  font-size: var(--font-title);
+  font-size: var(--font-label);
   font-weight: 600;
-  min-height: var(--target-epaper);
+  min-height: 6mm;
   display: flex;
   align-items: center;
+  gap: var(--space-xs);
 }
 .c-pen-map-option,
 .c-pen-map-cancel {
@@ -512,6 +575,7 @@ a.c-tool-btn { text-decoration: none; color: inherit; }
   .c-pen-map-open-btn,
   .c-pen-map-slot,
   .c-pen-map-option,
+  .c-settings-item,
   .c-pen-map-close,
   .c-world { transition: none; }
 }

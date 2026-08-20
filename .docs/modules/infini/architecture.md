@@ -60,7 +60,7 @@ Shared semantics: [domain/vector-document](../../domain/vector-document.md).
 | Document load | `doc_load` — one per epoch, handshake-gated, the only outbound document message |
 | Viewport | translate, scale, gut orientation, tablet CSS frame → drawingRegion; **follow-gated** [ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md) |
 | Viewport follow | Session enum `none` \| `infini_to_epaper` \| `epaper_to_infini` — [domain/viewport-follow](../../domain/viewport-follow.md) |
-| Pen-button map | Settings `pen_button_map` — tablet authors live; Infini persist/restore ([domain/pen-button-map](../../domain/pen-button-map.md)), **not** SVG. **0** Infini editor screens |
+| Pen-button map | Device Settings on Epaper — [domain/pen-button-map](../../domain/pen-button-map.md), **not** SVG. Optional `pen_capability` HID telemetry. **0** `pen_button_map`. **0** Infini persist/restore. **0** Infini editor screens |
 | Session | TCP JSON-lines Epaper ↔ Infini |
 
 Retired with [SRS-IN-13](./features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport):
@@ -133,7 +133,7 @@ flowchart TB
 - [ADR-0014](../../adr/ADR-0014-document-ownership-inversion.md) — the device owns the working document
 - [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md) — one-way sync contract v1
 - [ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md) — independent cameras + exclusive one-way follow (supersedes [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md))
-- [ADR-0030](../../adr/ADR-0030-tablet-authors-pen-button-map.md) — tablet authors the map; Infini persist/restore (supersedes [ADR-0028](../../adr/ADR-0028-pen-button-map-settings-channel.md))
+- [ADR-0031](../../adr/ADR-0031-device-settings-persist-on-epaper.md) — Device Settings persist on Epaper (supersedes [ADR-0030](../../adr/ADR-0030-tablet-authors-pen-button-map.md); Infini is not persist home)
 - Sync bind: [tablet-sync SRS-IN-07](./features/tablet-sync/srs-logic.md) shipped wire + change applier
 - Debug sidecar: [tablet-sync SRS-IN-17](./features/tablet-sync/srs-logic.md#srs-in-17-debug-log-channel) TCP `:9878` (not ADR-0015)
 - Device bind: [epaper SRS-EP-08](../epaper/features/device-document/srs-logic.md) the other end of the contract

@@ -1,7 +1,7 @@
 ---
 feature: device-document
 parent_req: [REQ-04, REQ-07]
-version: 0.1.0
+version: 0.1.1
 lifecycle: active
 owner: pm
 ---
@@ -29,7 +29,7 @@ that distance.
 
 | In scope | Out of scope |
 |---|---|
-| Device holds the document tree in memory for the session | On-device persistence / file browser / documents surviving app restart |
+| Device holds the document tree in memory for the session | On-device **document** persistence / file browser / documents surviving app restart. **Device Settings** persist on-device is [REQ-20](../../prd.md#device-settings), not this feature |
 | Device ingests its own finished strokes as document nodes | Bézier fitting of handwriting (samples stay polylines) |
 | Panel paints from the device document | Painting from a peer-supplied picture |
 | Undo/redo history for structural ops, on the device (linear, depth 20) | Branching history, per-sample undo |
@@ -47,7 +47,7 @@ that distance.
 | BR-D04 | **Editing never depends on the link.** Create, group, move, resize, and undo behave identically with the session up or down. Only *publishing* waits. | Link down is a normal state |
 | BR-D05 | **Every structural op is undoable, one entry per completed gesture.** A wrong recognition or a slipped drag costs one undo, never a stuck document. Floor: the last 20 structural ops. | Inherits infini SRS-IN-12 semantics |
 | BR-D06 | **Ingestion costs no ink latency.** Turning a stroke into a node must not push pen-down → pixel past the [REQ-01](../../prd.md#local-pen-ink) budget. | The device is a notebook first |
-| BR-D07 | **The document is in memory only.** If the app restarts, in-session work not yet published is gone; the desktop file is the durable copy. | Deliberate scope limit — see Non-Goals |
+| BR-D07 | **The document is in memory only.** If the app restarts, in-session work not yet published is gone; the desktop file is the durable copy. | Deliberate scope limit — see Non-Goals. **Does not apply to Device Settings** ([REQ-20](../../prd.md#device-settings)): those persist on this device and are not document fields. |
 | BR-D08 | **Downward traffic is exactly two kinds:** an initial full-document load, and pan/zoom viewport. Anything else arriving is a defect, not a feature. | [REQ-07](../../prd.md#one-way-sync) |
 | BR-D09 | **Upward traffic is document changes**, in the order the creator made them. Live stroke samples may also flow up as a **preview**; the authoritative node arrives with the change at pen-up. | Preserves desktop liveness |
 | BR-D10 | **A full load replaces the local document**, so it is accepted only at session start or on explicit resync, and only after queued changes have drained. The desktop must not send one unsolicited. | Load safety |

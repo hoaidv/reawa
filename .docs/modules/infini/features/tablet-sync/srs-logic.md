@@ -13,8 +13,8 @@ Binds Infini to the session contract in
 [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md), as amended by
 [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md)
 (independent cameras; follow-gated viewport) and
-[ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md)
-(tablet authors the pen-button map; Infini persist/restore).
+[ADR-0031](../../../../adr/ADR-0031-device-settings-persist-on-epaper.md)
+(Device Settings persist on Epaper; Infini is not persist home).
 Shared node semantics: [domain/vector-document](../../../../domain/vector-document.md).
 Follow anatomy: [domain/viewport-follow](../../../../domain/viewport-follow.md).
 Device peer: [epaper/device-document](../../../epaper/features/device-document/srs-logic.md).
@@ -51,13 +51,13 @@ Auth: none in v0 (trusted local link). Default listen: `0.0.0.0:9877`.
 |---|---|---|---|
 | **Viewport** | **Leader** of the active follow | Follower | **Only along `follow.direction`.** Coalesce ≤30 Hz when on; **0** either way when `none` |
 | **Follow control** | Either peer | Peer | Session `viewport_follow` `{ direction, seq }` — not document |
-| **Pen-button map** | Tablet authors live map; Infini persist/restore | Peer | Settings `pen_capability` T→D; `pen_button_map` T→D persist, D→T restore-on-hello ([SRS-IN-23](#srs-in-23-pen-map-publish)) |
+| **Pen-button map** | Epaper device | **None** (retired persist) | Optional HID `pen_capability` T→D only. **0** `pen_button_map`. Persist is [SRS-EP-53](../../../epaper/features/tool-modes/srs-logic.md#srs-ep-53-pen-map-author). This section retired: [SRS-IN-23](#srs-in-23-pen-map-publish) |
 | **Load** | Infini | Epaper | **Once** per session start / reconnect / explicit resync, handshake-gated |
 | **Change** | Epaper | Infini | One `doc_change` per committed op |
 | **Preview stroke** | Epaper | Infini | Continuous during a stroke — advisory, never persisted |
 
 **Invariant (testable by message type):** after the load completes, Infini sends **0** document
-messages for the rest of the session. `viewport` may flow **only along the active follow**. Settings persist/restore: [SRS-IN-23](#srs-in-23-pen-map-publish) ([ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md)). Viewport gates: [SRS-IN-21](#srs-in-21-viewport-token). Follow enum: [SRS-IN-26](#srs-in-26-viewport-follow).
+messages for the rest of the session. `viewport` may flow **only along the active follow**. Device Settings persist is **not** this module ([ADR-0031](../../../../adr/ADR-0031-device-settings-persist-on-epaper.md); [SRS-IN-23](#srs-in-23-pen-map-publish) retired). Viewport gates: [SRS-IN-21](#srs-in-21-viewport-token). Follow enum: [SRS-IN-26](#srs-in-26-viewport-follow).
 
 ### Tablet drawing frame (CSS) and `drawingRegion` (world)
 
@@ -490,22 +490,21 @@ Follow is a **choice**. Default `none`. Not a ToolChip, recognizer, or hand-tool
 
 ## [SRS-IN-23] Pen-button map persist and restore {#srs-in-23-pen-map-publish}
 
-<!-- lifecycle: active -->
-<!-- revised: 2026-08-20 — tablet authors; Infini persist/restore only. Same id. -->
+<!-- lifecycle: retired -->
+<!-- superseded-by: [SRS-EP-53] -->
+<!-- retired: 2026-08-20 — Infini REQ-05 persist/restore retired; persist home is Epaper [REQ-20] / [SRS-EP-53]. Id kept. -->
 
-**Parent:** Infini [REQ-05](../../prd.md#pen-button-map). **Decision:** [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md) (supersedes [ADR-0028](../../../../adr/ADR-0028-pen-button-map-settings-channel.md)). **Not a parent of [SRS-IN-05](../vector-document/srs-ui.md)** (open/save chrome). **Anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). Device author: [SRS-EP-53](../../../epaper/features/tool-modes/srs-logic.md#srs-ep-53-pen-map-author). Device consume: [SRS-EP-41](../../../epaper/features/tool-modes/srs-logic.md#srs-ep-41-barrel-dispatch). **UI:** Infini presents **0** map-editor screens ([SRS-IN-24](./srs-ui.md#srs-in-24-pen-map-ui) retired).
+**Parent:** Infini [REQ-05](../../prd.md#pen-button-map) (**retired**). **Decision:** [ADR-0031](../../../../adr/ADR-0031-device-settings-persist-on-epaper.md) (supersedes [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md)). **Do not implement this section.** Infini holds **0** copies of the pen-button map (0 app-settings, 0 SVG). **0** persist-up consume. **0** restore-on-hello. Device persist: [SRS-EP-53](../../../epaper/features/tool-modes/srs-logic.md#srs-ep-53-pen-map-author). Device UI: [SRS-EP-52](../../../epaper/features/tool-modes/srs-ui.md#srs-ep-52-pen-map-editor). **UI:** Infini presents **0** map-editor screens ([SRS-IN-24](./srs-ui.md#srs-in-24-pen-map-ui) retired).
 
 | Rule | Value |
 |---|---|
-| Persist | Infini **app settings**, never SVG / VectorDocument |
-| Inbound persist | Consume `pen_button_map` from the tablet; store. **0** `doc_*` for that persist |
-| Restore | After hello + `pen_capability`, if a persisted map **matches** `buttonCount` **and** the tablet has not authored this session → send `pen_button_map` desktop→tablet |
-| Hello race | If tablet sends a map first (`pending_persist` / authored this session), **store it**. Do not clobber with an older persist |
-| Capability | Consume `pen_capability` `{ buttonCount: 0\|1\|2 }` |
-| In-flight | Device keeps latched map; next gesture uses restored map; p95 ≤300 ms after device apply |
-| No session | Persist waits on the tablet; Infini has nothing to store until reconnect |
-| 0-button | Do not restore or store fake slots |
+| Persist | **None on Infini.** Drop inbound `pen_button_map` if an old peer still emits it. Do not store |
+| Restore | **0** desktop→tablet `pen_button_map` after hello |
+| Capability | Optional consume `pen_capability` `{ buttonCount: 0\|1\|2 }` as HID telemetry only — not a persist key |
 | Screens | **0** Infini map-editor surfaces |
+| Document | **0** `doc_*` for any settings write |
+
+Historical (do not implement): Infini app-settings persist; restore-on-hello when tablet had not authored; `map.pending_persist` hello race.
 
 ---
 

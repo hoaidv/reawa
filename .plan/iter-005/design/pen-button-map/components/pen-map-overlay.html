@@ -7,63 +7,23 @@
     :root {
       --target-epaper: 10mm; --pen-map-icon: 4mm; --chip-inset: 2mm;
       --color-ink: #000; --color-paper: #fff;
-      --font-title: 16px; --font-caption: 11px; --font-label: 12px;
-      --space-xs: 4px; --space-sm: 8px;
+      --font-caption: 11px; --font-label: 12px;
     }
     body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; cursor: none; }
-    .stage { width: 246mm; height: 110mm; background: #fff; border: 1px solid #000; position: relative; }
-    .c-pen-map-overlay {
-      position: absolute; left: 0; right: 0; bottom: 0; height: 100%;
-      background: var(--color-paper); border-top: 1px solid var(--color-ink);
-      display: flex; flex-direction: column; padding: var(--chip-inset);
+    .c-settings-detail {
+      width: 170mm; min-height: 60mm; background: #fff; border: 1px solid #000; padding: 2mm;
     }
-    .c-pen-map-head { display: flex; align-items: center; gap: 8px; min-height: var(--target-epaper); }
-    .c-pen-map-head h1 { margin: 0; flex: 1; font-size: var(--font-title); }
-    .c-pen-map-close {
-      width: var(--target-epaper); height: var(--target-epaper);
-      display: flex; align-items: center; justify-content: center;
-      border: 1px solid var(--color-ink); background: var(--color-paper);
-      cursor: none; text-decoration: none;
-    }
-    .c-pen-map-close img { width: var(--pen-map-icon); height: var(--pen-map-icon); pointer-events: none; }
-    .c-pen-map-close:active, .c-pen-map-close.is-pressed { background: #000; }
-    .c-pen-map-close:active img, .c-pen-map-close.is-pressed img { filter: invert(1); }
-    .c-pen-map-cap, .c-pen-map-note { margin: 4px 0 0; font-size: var(--font-caption); }
-    .c-pen-map-empty { font-size: var(--font-label); margin-top: 8px; }
-    .c-pen-map-offline {
-      display: flex; align-items: center; gap: 4px; min-height: var(--target-epaper);
-      margin-top: 4px; padding: 4px; border: 1px solid #000;
-      background-image: repeating-linear-gradient(-45deg, transparent, transparent 3px, #000 3px, #000 4px);
-      font-size: var(--font-caption);
-    }
-    .c-pen-map-offline img { width: var(--pen-map-icon); height: var(--pen-map-icon); }
+    .c-pen-map-cap, .c-pen-map-note, .c-pen-map-empty { margin: 4px 0 0; font-size: var(--font-caption); }
+    .c-pen-map-empty { font-size: var(--font-label); }
     .note { font-size: 12px; max-width: 40rem; }
   </style>
 </head>
 <body>
-  <p class="note">0-button: 0 slot rows. Offline: hatch + persist-wait copy. No Save footer.</p>
-  <div class="stage">
-    <div class="c-pen-map-overlay" data-region="PenMapOverlay">
-      <div class="c-pen-map-head">
-        <h1>Pen-button map</h1>
-        <a class="c-pen-map-close" data-interactive href="#" aria-label="Close">
-          <img src="../../system/assets/icon-epaper-pen-map-close.svg" alt="" />
-        </a>
-      </div>
-      <p class="c-pen-map-cap">Tablet reports 0 barrel buttons. Slots are hidden.</p>
-      <p class="c-pen-map-empty">0 barrel slots. ToolChip remains complete.</p>
-      <p class="c-pen-map-note">Eraser nib is hardware, not a barrel slot.</p>
-      <p class="c-pen-map-offline">
-        <img src="../../system/assets/icon-epaper-pen-map-offline.svg" alt="" />
-        Desktop session down. Live map still applies. Persist waits.
-      </p>
-    </div>
+  <p class="note">Detail pane of Settings (CHL-0025). 0-button: 0 slot rows. No Save footer. Full shell: settings-shell.html.</p>
+  <div class="c-settings-detail" data-region="PenMapOverlay">
+    <p class="c-pen-map-cap">Tablet reports 0 barrel buttons. Slots are hidden.</p>
+    <p class="c-pen-map-empty">0 barrel slots. ToolChip remains complete.</p>
+    <p class="c-pen-map-note">Eraser nib is hardware, not a barrel slot.</p>
   </div>
-  <script>
-    document.querySelectorAll("[data-interactive]").forEach((el) => {
-      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
-      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
-    });
-  </script>
 </body>
 </html>

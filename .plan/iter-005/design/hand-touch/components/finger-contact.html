@@ -17,11 +17,21 @@
       background: #5a8fd4;
     }
     .c-finger.is-ignored { background: #c5c5c5; }
+    .c-finger.is-down {
+      width: 6mm; height: 6mm; margin: -3mm 0 0 -3mm;
+      background: transparent; border: 2px solid #5a8fd4;
+    }
     .c-finger img { display: none; }
+    .c-travel {
+      position: absolute; left: 20%; top: 50%; height: 0;
+      border-top: 2px dashed #5a8fd4;
+    }
+    .c-travel.is-palm { width: 8mm; }
+    .c-travel.is-pan { width: 36mm; }
   </style>
 </head>
 <body>
-  <p>Preview-only. Not product chrome — filled circle, no border, color fill (not 1-bit hatch).</p>
+  <p>Preview-only. Not product chrome — filled circle, no border, color fill (not 1-bit hatch). Travel ticks are GestureAnnotate, not product chrome.</p>
   <div class="row">
     <div class="cell">one finger
       <div class="stage"><span class="c-finger"></span></div>
@@ -34,6 +44,18 @@
     </div>
     <div class="cell">ignored (pan vs move)
       <div class="stage"><span class="c-finger is-ignored"></span></div>
+    </div>
+    <div class="cell">down + palm travel (≤10 mm)
+      <div class="stage">
+        <span class="c-finger is-down" style="left:20%;top:50%"></span>
+        <span class="c-travel is-palm"></span>
+      </div>
+    </div>
+    <div class="cell">down + pan travel (&gt;10 mm)
+      <div class="stage">
+        <span class="c-finger is-down" style="left:20%;top:50%"></span>
+        <span class="c-travel is-pan"></span>
+      </div>
     </div>
   </div>
 </body>

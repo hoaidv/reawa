@@ -37,7 +37,7 @@
         </div>
       </div>
       <p class="scene-caption">
-        hand.pinch — uniform scale only (no rotate). Contacts closer than pan.
+        hand.pinch — local uniform scale only (no rotate). Infini unchanged unless Infini follow is on.
         <a href="./hand-touch-two-finger-pan.html">Pan</a>
       </p>
       <span class="orient-tag">orient: gutToLeft</span>
@@ -58,7 +58,7 @@
         <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
       </div>
     </div>
-    <p data-region="StatusLine">viewportOwner=epaper · fingers=2 · pinch scale · 0 rotate</p>
+    <p data-region="StatusLine">local pinch · fingers=2 · follow=none · Infini unchanged · 0 rotate</p>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {

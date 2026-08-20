@@ -278,6 +278,29 @@ html[data-platform="epaper"] body {
 .c-finger.is-ignored {
   background: #c5c5c5;
 }
+.c-finger.is-down {
+  width: 6mm;
+  height: 6mm;
+  margin: -3mm 0 0 -3mm;
+  background: transparent;
+  border: 2px solid #5a8fd4;
+}
+.c-travel {
+  position: absolute;
+  height: 0;
+  border-top: 2px dashed #5a8fd4;
+  pointer-events: none;
+}
+.c-travel.is-palm { width: var(--travel-palm); }
+.c-travel.is-pan { width: var(--travel-pan); }
+.c-travel.is-pan::after {
+  content: "";
+  position: absolute;
+  left: var(--travel-threshold);
+  top: -3mm;
+  height: 6mm;
+  border-left: 2px solid #5a8fd4;
+}
 .c-pen-tip {
   position: absolute;
   width: 40px;

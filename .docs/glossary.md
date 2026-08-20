@@ -16,7 +16,7 @@ Durable ubiquitous language. Anatomy lives in `.docs/domain/`; this file is voca
 | Clipboard slot | One in-document copy buffer on the device; not the OS pasteboard | in-document clipboard | [ADR-0024](./adr/ADR-0024-in-document-clipboard.md) |
 | Viewport follow | Optional exclusive coupling of two independent cameras (`none` \| `infini_to_epaper` \| `epaper_to_infini`) | follow | [viewport-follow](./domain/viewport-follow.md) · [ADR-0029](./adr/ADR-0029-independent-cameras-viewport-follow.md) |
 | Viewport token | **Retired 2026-08-20.** Last-writer ownership of a shared viewport. Do not implement. | last-writer | [ADR-0023](./adr/ADR-0023-viewport-last-writer.md) superseded by [ADR-0029](./adr/ADR-0029-independent-cameras-viewport-follow.md) |
-| Pen-button map | Per-button Click + Hold-move bindings; tablet authors the live map; Infini persists/restores as settings | barrel map | [pen-button-map](./domain/pen-button-map.md) · [ADR-0030](./adr/ADR-0030-tablet-authors-pen-button-map.md) |
+| Pen-button map | Per-button Click + Hold-move bindings; tablet authors the live map and persists it on this Epaper device; not Infini, not the document | barrel map | [pen-button-map](./domain/pen-button-map.md) · [ADR-0031](./adr/ADR-0031-device-settings-persist-on-epaper.md) |
 | Hold-move | Barrel button down + movement past threshold until release; temporary-tool catalogue | hold | [pen-button-map](./domain/pen-button-map.md) |
 | Click (barrel) | Barrel button down+up with movement below threshold; discrete catalogue | barrel click | [pen-button-map](./domain/pen-button-map.md) |
 | Eraser nib | Distinct stylus **tool** report (hardware invert); not a barrel button | eraser end | [ADR-0025](./adr/ADR-0025-barrel-vs-eraser-nib.md) |
