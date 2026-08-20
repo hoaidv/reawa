@@ -1,7 +1,7 @@
 ---
 feature: region-sync
-parent_req: [REQ-02]
-version: 0.5.0
+parent_req: [REQ-02, REQ-10, REQ-19]
+version: 0.6.0
 lifecycle: active
 ---
 
@@ -9,11 +9,14 @@ lifecycle: active
 
 Epaper side of the viewport channel under
 [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) /
-[ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md), with stroke paint parity from
+[ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md), as amended by
+[ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md)
+(independent cameras; follow-gated viewport). Stroke paint parity from
 [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md).
 Sibling: [infini/tablet-sync](../../../infini/features/tablet-sync/srs-logic.md).
 Local ink: [SRS-EP-01](../local-pen-ink/srs-logic.md).
 Document + sync contract: [SRS-EP-07 / SRS-EP-08](../device-document/srs-logic.md).
+Follow anatomy: [domain/viewport-follow](../../../../domain/viewport-follow.md).
 
 **Code SoT (2026-08-11):** `epaper/tabletcanvasitem.cpp`, `epaper/strokesync.cpp`.
 Header-only `epaper/regionsync/` is **unit-tested**, not linked into the device binary.
@@ -22,8 +25,10 @@ Header-only `epaper/regionsync/` is **unit-tested**, not linked into the device 
 
 <!-- revised: 2026-08-13 — CHL-0008 / ADR-0014. The local document is authoritative for paint;
      doc_snapshot replace-on-arrival is withdrawn. Same id, content revised. -->
+<!-- revised: 2026-08-20 — ADR-0029. Apply Infini viewport only while Epaper follow is on.
+     Same id; follow toggle is [SRS-EP-49], not a parent of this section. -->
 
-Parent REQ: [REQ-02](../../prd.md#region-sync).
+Parent REQ: [REQ-02](../../prd.md#region-sync). **Gate (not parent):** [REQ-19](../../prd.md#viewport-follow) / [SRS-EP-49](#srs-ep-49-viewport-follow).
 
 > **Revised 2026-08-13.** This section owns the **map**, not the picture. The picture comes from the
 > device's own document ([SRS-EP-07](../device-document/srs-logic.md)); the only inbound document
@@ -34,8 +39,9 @@ Parent REQ: [REQ-02](../../prd.md#region-sync).
 ### Endpoint(s)
 
 JSON-lines TCP to Infini (`RM_SYNC_HOST`, typically Mac USB `10.11.99.12:9877`).
-Epaper **produces** `stroke_*` (preview) + `doc_change`, and **consumes** `viewport` + one
-`doc_load` per session epoch.
+Epaper **produces** `stroke_*` (preview) + `doc_change` + `viewport` **only while Infini follow is on**,
+and **consumes** `viewport` **only while Epaper follow is on** + one `doc_load` per session epoch
++ `viewport_follow`. Default: independent cameras — **0** viewport either way.
 
 ### Digitizer → panel (always)
 
@@ -74,8 +80,14 @@ Applies to **live** `emitSegment` and **vector** `drawVectorNode`. Wire
 
 ### On `viewport` (Infini → Epaper)
 
+**Only while Epaper follow is on** (`direction = infini_to_epaper`). Otherwise: ignore + log; **do not** apply; **do not** treat arrival as implicit follow-on ([ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md)).
+
+While following:
+
 1. Update `drawingRegion`, `orientation`, `seq` **immediately** (map before next pen).
 2. Read `settle` bool → `scheduleVectorRasterize(settle)`.
+
+Local camera is the default map. Infini pan/zoom does not change it while follow is off.
 
 ### On `doc_load`
 
@@ -122,6 +134,8 @@ Soft may look faded on e-ink; settle must sharpen.
 | `stroke_begin` / `stroke_point` / `stroke_end` | **yes** — preview only |
 | `doc_change` | **yes** — one per committed op ([SRS-EP-08](../device-document/srs-logic.md)) |
 | `hello` / `queue_empty` / `load_ack` | **yes** — handshake |
+| `viewport` (up) | **only** while Infini follow is on ([SRS-EP-24](#srs-ep-24-two-finger-viewport)) |
+| `viewport_follow` | **yes** — session enum ([SRS-EP-49](#srs-ep-49-viewport-follow)); **0** document |
 | `stroke_begin.intent` / `tool_intent` | **no** — retired with [SRS-IN-13](../../../infini/features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport) |
 
 ### `regionsync/` library (not device runtime)
@@ -148,23 +162,25 @@ behavior is the Qt canvas item above.
 ## [SRS-EP-24] Two-finger pan/zoom and viewport publish {#srs-ep-24-two-finger-viewport}
 
 <!-- lifecycle: active -->
+<!-- revised: 2026-08-20 — ADR-0029. Local Must; publish only if Infini follow is on. BRD-07 ship gate lifted. -->
 
-**Parent:** [REQ-10](../../prd.md#hand-touch) (two-finger half; [REQ-16](../../prd.md#device-pan-zoom) retired). **Decision:** [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md). **Links (not parents):** [SRS-EP-02](#srs-ep-02) inbound Infini map apply, [SRS-EP-08](../device-document/srs-logic.md).
+**Parent:** [REQ-10](../../prd.md#hand-touch) (two-finger half; [REQ-16](../../prd.md#device-pan-zoom) retired). **Decision:** [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md). **Links (not parents):** [SRS-EP-02](#srs-ep-02) inbound Infini map apply, [SRS-EP-49](#srs-ep-49-viewport-follow) follow enum, [SRS-EP-08](../device-document/srs-logic.md). Do **not** parent Infini [REQ-06](../../../infini/prd.md#viewport-follow) here.
 
-Ship of this slice stays blocked on a [BRD-07](../../../../brd.md) amendment; the behaviour below is the bind SM/QA/Dev will use once that gate opens.
+Local two-finger pan/pinch is **Must**. Last-writer token is withdrawn.
 
 ### Gesture
 
 | Rule | Value |
 |---|---|
 | Fingers | **Two** on empty canvas (or not claiming a one-finger box-move) |
-| One-finger box-move in flight | Two-finger **does not run**; 0 pan from the move ([SRS-EP-21](../ink-box/srs-logic.md#srs-ep-21-one-finger)) |
+| One-finger box-move or resize in flight | Two-finger **does not run**; 0 pan from the move/resize ([SRS-EP-21](../ink-box/srs-logic.md#srs-ep-21-one-finger)) |
 | Pan | Translate `drawingRegion` / equivalent `translate` |
 | Pinch | Uniform `scale` only (no rotate/skew) |
 | Local map | Apply **immediately** so the next pen sample is correct (p95 ≤100 ms map apply — [SRS-EP-26](./srs-quality.md#srs-ep-26-two-finger-quality)) |
-| Publish | `viewport` **up** with `source: epaper` while token is `epaper` |
-| Link down | Local map still updates; publish waits/drops with the session |
-| Token | Claim on two-finger start; flush `settle: true` on end; release after 150 ms idle two-finger ([ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md)) |
+| If Epaper follow is on at gesture start | Set `direction = none` **then** drive the local camera ([SRS-EP-49](#srs-ep-49-viewport-follow) follower local-nav) |
+| Publish | `viewport` **up** with `source: epaper` **only if** Infini follow is on (`direction = epaper_to_infini`). Otherwise **0** viewport up |
+| Flush | `settle: true` on two-finger end when publishing |
+| Link down | Local map still updates; follow is already `none`; **0** publish |
 
 Does not change digitizer→panel Round 19 ([SRS-EP-01](../local-pen-ink/srs-logic.md)). Does not paint from a peer picture.
 
@@ -173,8 +189,48 @@ Does not change digitizer→panel Round 19 ([SRS-EP-01](../local-pen-ink/srs-log
 | Field | Drives |
 |---|---|
 | `touch.fingerCount` | Must be 2 |
-| `viewportOwner` | `epaper` during gesture |
-| `viewport.{translate,scale,drawingRegion,settle}` | Map + Infini follow |
+| `follow.direction` | Publish iff `epaper_to_infini`; local-nav iff was `infini_to_epaper` |
+| `viewport.{translate,scale,drawingRegion,settle}` | Local map; Infini apply only while Infini following |
+
+---
+
+## [SRS-EP-49] Viewport-follow Infini {#srs-ep-49-viewport-follow}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-19](../../prd.md#viewport-follow). **Decision:** [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md). **Anatomy:** [domain/viewport-follow](../../../../domain/viewport-follow.md). **Map apply (not parent):** [SRS-EP-02](#srs-ep-02). **Peer:** [SRS-IN-26](../../../infini/features/tablet-sync/srs-logic.md#srs-in-26-viewport-follow). **Do not parent this on SRS-EP-02 / SRS-EP-24 / SRS-EP-05.**
+
+Follow is a **choice**. Default `none`. Not a ToolChip exclusive tool, recognizer, or hand-tool tile.
+
+### Session enum (closed)
+
+| `direction` | Epaper camera | Viewport on wire |
+|---|---|---|
+| `none` (default) | Local | **0** either way |
+| `infini_to_epaper` | Apply Infini `viewport` ([SRS-EP-02](#srs-ep-02)) | Infini → Epaper only |
+| `epaper_to_infini` | Local; Infini is the follower | Epaper → Infini only (from local nav, [SRS-EP-24](#srs-ep-24-two-finger-viewport) / [SRS-EP-21](../ink-box/srs-logic.md#srs-ep-21-one-finger) past threshold) |
+
+### Rules
+
+| Trigger | Effect |
+|---|---|
+| Creator enables Epaper follow (session live, was `none`) | Set `infini_to_epaper`; emit `viewport_follow`; apply Infini’s current viewport (p95 map ≤100 ms); Infini follow stays off |
+| Creator enables Epaper follow while Infini follow is on | Set `infini_to_epaper`; Infini follow **off** (0 dual-on; peer toggle p95 ≤300 ms); start applying Infini viewport |
+| Creator disables Epaper follow | Set `none`; stop applying inbound `viewport` |
+| Follower local-nav (one-finger empty pan **past** 10 mm, or two-finger pan/pinch) while `infini_to_epaper` | Set `none` **then** local camera; 0 continued Infini apply after that gesture starts |
+| Box pick / move / resize | **Does not** change follow |
+| Connection lost / no session | Force `none` before the next gesture. Reconnect does **not** restore |
+| Inbound `viewport` while not `infini_to_epaper` | Ignore + log; 0 apply; 0 implicit on |
+| Inbound `viewport_follow` | Adopt `direction` (latest `seq`); update toggle |
+
+`viewport_follow` is session, not document (**0** `doc_*` from this feature).
+
+### UI-driving fields
+
+| Field | Drives |
+|---|---|
+| `follow.direction` | Toggle state ([SRS-EP-50](./srs-ui.md#srs-ep-50-follow-toggle)) |
+| `session.connected` | Toggle unavailable / forced off when false |
 
 ---
 

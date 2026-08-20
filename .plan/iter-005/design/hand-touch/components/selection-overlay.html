@@ -6,18 +6,13 @@
   <style>
     :root {
       --color-paper: #ffffff; --color-ink: #000000;
-      --handle-visual: 28px; --handle-hit: 56px;
-      --bounds-outer: 3px; --bounds-gap: 2px; --bounds-inner: 1px;
+      --handle-visual: 4mm; --handle-hit: 10mm;
     }
     body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; }
     .demo { position: relative; width: 360px; height: 220px; background: #fff; border: 1px solid #000; }
     .c-bounds {
       position: absolute; left: 16%; top: 18%; width: 68%; height: 62%;
-      border: var(--bounds-outer) solid var(--color-ink); background: transparent;
-    }
-    .c-bounds::before {
-      content: ""; position: absolute; inset: var(--bounds-gap);
-      border: var(--bounds-inner) solid var(--color-ink); pointer-events: none;
+      border: 2px dotted var(--color-ink); background: transparent;
     }
     .c-handle {
       position: absolute; width: var(--handle-hit); height: var(--handle-hit);
@@ -28,32 +23,26 @@
       content: ""; position: absolute; left: 50%; top: 50%;
       width: var(--handle-visual); height: var(--handle-visual);
       margin: calc(var(--handle-visual) / -2) 0 0 calc(var(--handle-visual) / -2);
-      background: var(--color-ink); border: 2px solid var(--color-ink);
+      background: var(--color-paper); border: 2px solid var(--color-ink);
     }
-    .c-handle::after {
-      content: ""; position: absolute; left: 50%; top: 50%;
-      width: 10px; height: 10px; margin: -5px 0 0 -5px; background: var(--color-paper);
-    }
-    .c-handle:active::before, .c-handle.is-pressed::before { background: var(--color-paper); }
-    .c-handle:active::after, .c-handle.is-pressed::after { background: var(--color-ink); }
-    .c-handle.is-noop::before {
-      background: repeating-linear-gradient(-45deg, #fff, #fff 2px, #000 2px, #000 3px);
+    .c-handle:active::before, .c-handle.is-pressed::before {
+      background: var(--color-ink);
     }
     .nw { left: 0; top: 0; } .n { left: 50%; top: 0; } .ne { left: 100%; top: 0; }
-    .e { left: 100%; top: 50%; } .se { left: 100%; top: 100%; } .s { left: 50%; top: 100%; }
-    .sw { left: 0; top: 100%; } .w { left: 0; top: 50%; }
+    .e { left: 100%; top: 50%; display: none; } .se { left: 100%; top: 100%; } .s { left: 50%; top: 100%; }
+    .sw { left: 0; top: 100%; } .w { left: 0; top: 50%; display: none; }
     .note { font-size: 12px; max-width: 36rem; }
   </style>
 </head>
 <body>
-  <p class="note">Hit 56 du — pen only. Finger on a handle is 0 transform (hatch). No rotation. Press inverts (pen).</p>
+  <p class="note">Visual 4 mm hollow square. Hit 10 mm — finger and pen. No rotation. Press inverts.</p>
   <div class="demo" data-region="SelectionOverlay">
     <div class="c-bounds" id="ovl.selection_bounds">
       <button type="button" class="c-handle nw" data-interactive aria-label="Resize northwest"></button>
       <button type="button" class="c-handle n" data-interactive aria-label="Resize north"></button>
       <button type="button" class="c-handle ne" data-interactive aria-label="Resize northeast"></button>
       <button type="button" class="c-handle e" data-interactive aria-label="Resize east"></button>
-      <button type="button" class="c-handle se is-noop" data-interactive aria-label="Resize southeast (pen only)"></button>
+      <button type="button" class="c-handle se is-pressed" data-interactive aria-label="Resize southeast"></button>
       <button type="button" class="c-handle s" data-interactive aria-label="Resize south"></button>
       <button type="button" class="c-handle sw" data-interactive aria-label="Resize southwest"></button>
       <button type="button" class="c-handle w" data-interactive aria-label="Resize west"></button>

@@ -30,7 +30,7 @@ Semantics inherited from the deprecated infini sections [SRS-IN-10], [SRS-IN-11]
 - BDD: [bdd/](./bdd/) — inherited from the deprecated infini features and re-tagged
 - Decisions: [ADR-0011](../../../../adr/ADR-0011-smart-group.md) (semantics survive) ·
   [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) (where they run) ·
-  [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md) (one-finger does not claim viewport)
+  [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md) (empty pan is local; publish only if Infini following)
 - Forward constraint: must conform to [node-manipulation](../node-manipulation/srs-product.md)
   ([REQ-08](../../prd.md#node-manipulation))
 - Siblings: [tool-modes](../tool-modes/index.md) (how a tool is armed) ·

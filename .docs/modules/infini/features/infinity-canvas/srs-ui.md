@@ -30,7 +30,7 @@ Durable UI contract for `/designer` and `/dev`. Thickened 2026-08-10 (PM) for ST
 
 **Navigate an infinite 2D world** inside a desktop window using pan and zoom; show empty or
 populated content under translate + uniform scale. One job: navigation + correct transform —
-not editing tools.
+not editing tools. Viewport-follow toggle is **[SRS-IN-27](../tablet-sync/srs-ui.md#srs-in-27-follow-toggle)**, not this canvas package.
 
 ---
 

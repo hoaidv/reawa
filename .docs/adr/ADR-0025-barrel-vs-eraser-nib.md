@@ -34,13 +34,13 @@ Classifier isolation:
 
 1. Nib-down never enters the barrel Click vs Hold-move state machine.
 2. Barrel-down never sets the digitizer eraser tool flag.
-3. Latch catalogues at **button-down**; a rebind from Infini applies to the **next** gesture ([ADR-0028](./ADR-0028-pen-button-map-settings-channel.md)).
+3. Latch catalogues at **button-down**; a rebind (on-device editor, or Infini restore) applies to the **next** gesture ([ADR-0030](./ADR-0030-tablet-authors-pen-button-map.md)).
 4. Movement threshold splits Click vs Hold-move; **0** dual fire (REQ-18 20-gesture fixture).
 
 ## Consequences
 
 - Tool-modes own barrel dispatch; local-pen-ink owns nib geometry; device-document owns the erase/undo op. Do not hang nib erase on [SRS-EP-04](../modules/epaper/features/tool-modes/srs-logic.md) as parent.
-- Infini map editor ([SRS-IN-24](../modules/infini/features/tablet-sync/srs-ui.md)) lists barrel catalogues only — **no** “eraser nib” slot.
+- On-device map editor ([SRS-EP-52](../modules/epaper/features/tool-modes/srs-ui.md#srs-ep-52-pen-map-editor); [SRS-IN-24](../modules/infini/features/tablet-sync/srs-ui.md#srs-in-24-pen-map-ui) retired) lists barrel catalogues only — **no** “eraser nib” slot. UI home amended 2026-08-20 by [ADR-0030](./ADR-0030-tablet-authors-pen-button-map.md); routing in this ADR is unchanged.
 - Missing nib: Path A does not fire; Path B + optional `temp_erase` remain.
 - Missing buttons: 0 barrel gestures; ToolChip still complete.
 

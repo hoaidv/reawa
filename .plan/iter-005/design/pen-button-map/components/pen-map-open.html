@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>PenMapOpen — UI-EP-08</title>
+  <style>
+    :root { --pen-map-btn: 10mm; --pen-map-icon: 4mm; --color-ink: #000; --color-paper: #fff; }
+    body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; cursor: none; }
+    .c-pen-map-open {
+      display: inline-flex; background: var(--color-paper);
+      border: 1px solid var(--color-ink); overflow: hidden;
+    }
+    .c-pen-map-open-btn {
+      width: var(--pen-map-btn); height: var(--pen-map-btn); padding: 0; margin: 0;
+      border: 0; background: var(--color-paper); color: var(--color-ink);
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent; cursor: none; text-decoration: none;
+    }
+    .c-pen-map-open-btn img { width: var(--pen-map-icon); height: var(--pen-map-icon); pointer-events: none; }
+    .c-pen-map-open-btn[aria-pressed="true"],
+    .c-pen-map-open-btn:active,
+    .c-pen-map-open-btn.is-pressed { background: var(--color-ink); color: var(--color-paper); }
+    .c-pen-map-open-btn[aria-pressed="true"] img,
+    .c-pen-map-open-btn:active img,
+    .c-pen-map-open-btn.is-pressed img { filter: invert(1); }
+    .note { font-size: 12px; max-width: 36rem; }
+    .row { display: flex; gap: 16px; align-items: flex-end; margin-top: 12px; }
+    .cell { display: flex; flex-direction: column; gap: 6px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <p class="note">GAP-01 proposal: 10 mm leading sibling of ToolChip — not a fourth exclusive, not Infini File menu.</p>
+  <div class="row">
+    <div class="cell">
+      <span>rest</span>
+      <div class="c-pen-map-open" data-region="PenMapOpen">
+        <button type="button" class="c-pen-map-open-btn" data-interactive aria-pressed="false" aria-label="Pen buttons">
+          <img src="../../system/assets/icon-epaper-pen-map.svg" alt="" />
+        </button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>open (editor up)</span>
+      <div class="c-pen-map-open" data-region="PenMapOpen">
+        <button type="button" class="c-pen-map-open-btn" data-interactive aria-pressed="true" aria-label="Pen buttons">
+          <img src="../../system/assets/icon-epaper-pen-map.svg" alt="" />
+        </button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>pressed</span>
+      <div class="c-pen-map-open" data-region="PenMapOpen">
+        <button type="button" class="c-pen-map-open-btn is-pressed" data-interactive aria-pressed="false" aria-label="Pen buttons">
+          <img src="../../system/assets/icon-epaper-pen-map.svg" alt="" />
+        </button>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

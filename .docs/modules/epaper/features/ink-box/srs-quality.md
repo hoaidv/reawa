@@ -106,18 +106,20 @@ its whole premise.
 | Field | Value |
 |---|---|
 | Source | Creator finger |
-| Stimulus | Down on box / drag / down on anchor / empty canvas |
+| Stimulus | Down on box / drag / down on knob / empty canvas (≤10 mm vs >10 mm) |
 | Artifact | Exclusive tool, selection, box transform, viewport |
 | Environment | Normal; link up or down |
-| Response | Tool switch, live move, or no-op |
+| Response | Tool switch, live move, live resize, palm no-op, or local pan |
 | Response measure | See table |
 
 | Scenario | Target |
 |---|---|
 | Finger-down on box → `sel_freeform` + chip + selected | p95 ≤**300 ms** |
 | Finger move inside selected box | 0 px jump on lift; ≥**5 Hz** partial refresh; **0** viewport pan |
-| Finger on &lt;64 du anchor | **0** accidental transforms |
-| One-finger empty canvas | Exclusive tool unchanged; **0** nodes selected; **0** lassos; **0** pans |
+| Finger on resize knob | same live-direct bar as pen resize; **0** viewport pan |
+| One-finger empty, travel ≤ **10 mm** (89 du @ 226 dpi) | Exclusive tool unchanged; **0** nodes selected; **0** lassos; **0** pans |
+| One-finger empty, travel > **10 mm** | **Local** pan; tool unchanged; **0** selection; **0** lasso; Infini matches **only if** Infini follow on |
+| Box / knob / chip hit vs would-be empty pan | Hit wins; **0** empty-canvas pan |
 | ToolChip 64 du tile tap | REQ-03 still holds (this REQ does not steal) |
 
 ---

@@ -201,7 +201,8 @@ Every inbound message is classified by `type` before any document mutation.
 
 | `type` | Action |
 |---|---|
-| `viewport` | Apply always — map only, [SRS-EP-02](../region-sync/srs-logic.md). Never document content |
+| `viewport` | Map only, never document. **Apply only while Epaper follow is on** — [SRS-EP-02](../region-sync/srs-logic.md). Else ignore + log; 0 implicit follow-on ([ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md)) |
+| `viewport_follow` | Session enum — [SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow). **0** document |
 | `drain_ack` | Handshake only — start publishing the queue |
 | `doc_load` | Accept **only** when the handshake below says the load is legal. Otherwise reject |
 | `doc_snapshot` | **Reject** — retired. Log once per session, surface in the status line ([SRS-EP-05](../tool-modes/srs-ui.md)) |
@@ -212,7 +213,9 @@ Every inbound message is classified by `type` before any document mutation.
 | anything else | Reject, log as a protocol defect, surface in the status line |
 
 After a session has **accepted** its initial `doc_load`, inbound document-bearing messages
-for the rest of that epoch must be **0**. Viewport continues. An unsolicited `doc_load`
+for the rest of that epoch must be **0**. Viewport flows **only along the active follow**
+([SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow)); both off → **0** viewport.
+An unsolicited `doc_load`
 mid-session (no handshake in progress) is a protocol defect: local document unchanged,
 logged, surfaced — not applied.
 

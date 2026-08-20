@@ -82,3 +82,12 @@ Bitmap `region_refresh` is **rejected** on device. Live bidirectional `doc_op` /
 Same-picture rule still holds: Epaper paints from its local vector node list ∩ current
 `drawingRegion` after applying viewport; Infini shows the same WorldLayer content for
 that AABB. Migration to a pure op-log does not change the rule — only the encoding.
+
+### 2026-08-20 — Independent cameras; follow-gated viewport ([ADR-0029](./ADR-0029-independent-cameras-viewport-follow.md))
+
+The Decision’s “Infini owns `translate + uniform scale`” clause is **amended**, not rewritten:
+each peer owns **its** camera by default. Viewport messages flow **only while follow is on**,
+and **only along the active follow direction**. Document channel unchanged. Last-writer
+([ADR-0023](./ADR-0023-viewport-last-writer.md)) is superseded. Same-picture for a region still
+holds **when the follower is applying the leader’s `drawingRegion`**; while follow is off the
+two cameras may show different regions of the same document (that is the product).

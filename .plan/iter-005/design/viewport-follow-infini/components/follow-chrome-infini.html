@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FollowChrome — Infini trailing cluster</title>
+  <style>
+    :root {
+      --color-surface: #f2f4f7;
+      --color-ink: #1c2430;
+      --color-ink-muted: #5b6573;
+      --color-primary: #0f766e;
+      --color-on-primary: #ffffff;
+      --color-focus: #0f766e;
+      --color-border: #d0d5dd;
+      --color-chrome: rgba(255, 255, 255, 0.92);
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --radius-control: 6px;
+      --font-caption: 12px;
+      --target-desktop: 24px;
+      --follow-hit: 32px;
+    }
+    body { margin: 0; font-family: "DM Sans", system-ui, sans-serif; background: var(--color-surface); color: var(--color-ink); min-height: 12rem; position: relative; }
+    .c-chrome-trailing {
+      position: absolute; top: var(--space-md); right: var(--space-md);
+      display: flex; align-items: center; gap: var(--space-sm);
+    }
+    .c-follow-cluster { display: flex; align-items: center; gap: var(--space-sm); }
+    .c-follow-toggle {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: var(--follow-hit); height: var(--follow-hit);
+      min-width: var(--target-desktop); min-height: var(--target-desktop);
+      padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-control);
+      background: var(--color-chrome); color: var(--color-ink); cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+    .c-follow-toggle img { width: 20px; height: 20px; pointer-events: none; }
+    .c-follow-toggle:hover { border-color: var(--color-primary); }
+    .c-follow-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .c-follow-toggle:active, .c-follow-toggle.is-pressed {
+      transform: scale(0.96); background: var(--color-primary); color: var(--color-on-primary);
+    }
+    .c-follow-caption {
+      margin: 0; padding: var(--space-xs) var(--space-sm);
+      border: 1px solid var(--color-border); border-radius: var(--radius-control);
+      background: var(--color-chrome); font-size: var(--font-caption); color: var(--color-ink-muted);
+    }
+    .c-zoom-readout {
+      min-width: 3.25rem; min-height: var(--target-desktop);
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border);
+      border-radius: var(--radius-control); background: var(--color-chrome);
+      font-size: var(--font-caption); font-weight: 600; font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body>
+  <div class="c-chrome-trailing">
+    <div class="c-follow-cluster" data-region="FollowToggle">
+      <button type="button" class="c-follow-toggle" data-interactive aria-pressed="false" aria-label="Follow Epaper">
+        <img src="../../system/assets/icon-viewport-follow-infini.svg" alt="" />
+      </button>
+      <p class="c-follow-caption">Follow off</p>
+    </div>
+    <div class="c-zoom-readout" data-region="StatusZoom" aria-live="polite">100%</div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach(function (el) {
+      el.addEventListener("pointerdown", function () { el.classList.add("is-pressed"); });
+      ["pointerup", "pointerleave", "blur"].forEach(function (ev) {
+        el.addEventListener(ev, function () { el.classList.remove("is-pressed"); });
+      });
+    });
+  </script>
+</body>
+</html>

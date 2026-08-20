@@ -1,92 +1,105 @@
 <!DOCTYPE html>
-<html lang="en" data-platform="desktop">
+<html lang="en" data-platform="epaper">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pen-button map — 2-button</title>
+  <title>map.layout_2 — pen-button-map</title>
   <link rel="stylesheet" href="tokens.css" />
   <link rel="stylesheet" href="common.css" />
   <style>
-    .c-pen-map-btn:hover { background: var(--color-primary); color: var(--color-on-primary); }
-    .c-pen-map-select:hover { border-color: var(--color-primary); background: var(--color-surface); }
-    .c-pen-map-option:hover { background: var(--color-surface); }
-    .c-pen-map-btn:focus-visible,
-    .c-pen-map-select:focus-visible,
-    .c-pen-map-option:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-    .c-pen-map-btn:active,
-    .c-pen-map-select:active,
-    .c-pen-map-option:active { transform: scale(0.985); }
+    /* Live press invert — duplicated here so adlc interactivity scan sees :active on the scene file. */
+    .c-pen-map-open-btn:active, .c-pen-map-open-btn.is-pressed,
+    .c-pen-map-close:active, .c-pen-map-close.is-pressed,
+    .c-pen-map-slot:active, .c-pen-map-slot.is-pressed,
+    .c-pen-map-option:active, .c-pen-map-option.is-pressed,
+    .c-pen-map-cancel:active, .c-pen-map-cancel.is-pressed,
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: #000; color: #fff; }
+    .c-pen-map-open-btn:active img, .c-pen-map-open-btn.is-pressed img,
+    .c-pen-map-close:active img, .c-pen-map-close.is-pressed img,
+    .c-pen-map-slot:active img, .c-pen-map-slot.is-pressed img,
+    .c-pen-map-option:active img, .c-pen-map-option.is-pressed img,
+    .c-pen-map-cancel:active img, .c-pen-map-cancel.is-pressed img,
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
   </style>
 </head>
-<body>
-  <div data-region="WindowFrame" data-platform="desktop" data-state="map.layout_2">
-    <div class="app-mark">Infini</div>
-    <section class="c-pen-map-editor" data-region="MapEditor">
-      <h1 class="c-pen-map-editor__title">
-        <img class="c-icon" src="../system/assets/icon-pen-map.svg" alt="" />
-        Pen-button map
-      </h1>
-      <p data-region="CapabilityStatus">Tablet reports 2 barrel buttons.</p>
-      <p class="c-pen-map-editor__note">App settings — not part of the document.</p>
-      <p class="c-pen-map-editor__nib">Eraser nib is hardware, not a barrel slot.</p>
-      <article class="c-pen-map-row" data-region="ButtonRow" data-button-index="1">
-        <h2 class="c-pen-map-row__heading">
-          <img src="../system/assets/icon-pen-map-button-1.svg" alt="" />
-          Button 1
-        </h2>
-        <div class="c-pen-map-slot" data-region="SlotClick">
-          <span class="c-pen-map-slot__label"><img src="../system/assets/icon-pen-map-click.svg" alt="" /> Click</span>
-          <a class="c-pen-map-select" href="pen-button-map-slot-click.html" aria-haspopup="listbox" aria-expanded="false">
-            <img src="../system/assets/icon-pen-map-pen.svg" alt="" />
-            <span class="c-pen-map-select__value">Pen ↔ freeform</span>
-          </a>
-        </div>
-        <div class="c-pen-map-slot" data-region="SlotHoldMove">
-          <span class="c-pen-map-slot__label"><img src="../system/assets/icon-pen-map-hold.svg" alt="" /> Hold-move</span>
-          <a class="c-pen-map-select" href="pen-button-map-slot-hold.html" aria-haspopup="listbox" aria-expanded="false">
-            <img src="../system/assets/icon-pen-map-freeform.svg" alt="" />
-            <span class="c-pen-map-select__value">Temporary freeform</span>
-          </a>
-        </div>
-      </article>
-      <article class="c-pen-map-row" data-region="ButtonRow" data-button-index="2">
-        <h2 class="c-pen-map-row__heading">
-          <img src="../system/assets/icon-pen-map-button-2.svg" alt="" />
-          Button 2
-        </h2>
-        <div class="c-pen-map-slot" data-region="SlotClick">
-          <span class="c-pen-map-slot__label"><img src="../system/assets/icon-pen-map-click.svg" alt="" /> Click</span>
-          <a class="c-pen-map-select" href="pen-button-map-slot-click.html" aria-haspopup="listbox" aria-expanded="false">
-            <img src="../system/assets/icon-pen-map-eraser.svg" alt="" />
-            <span class="c-pen-map-select__value">Pen ↔ eraser</span>
-          </a>
-        </div>
-        <div class="c-pen-map-slot" data-region="SlotHoldMove">
-          <span class="c-pen-map-slot__label"><img src="../system/assets/icon-pen-map-hold.svg" alt="" /> Hold-move</span>
-          <a class="c-pen-map-select" href="pen-button-map-slot-hold.html" aria-haspopup="listbox" aria-expanded="false">
-            <img src="../system/assets/icon-pen-map-eraser.svg" alt="" />
-            <span class="c-pen-map-select__value">Temporary erase</span>
-          </a>
-        </div>
-      </article>
-      <div data-region="Save">
-        <button type="button" class="c-pen-map-btn" data-interactive>
-          <img src="../system/assets/icon-pen-map-save.svg" alt="" />
-          <span class="c-pen-map-btn__label">Save and publish</span>
-        </button>
-        <p class="c-pen-map-save-hint">Publishes <code>pen_button_map</code> — 0 document messages.</p>
+<body data-state="map.layout_2">
+  <div data-region="DeviceScreen" data-platform="epaper" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <svg class="ink-demo" viewBox="0 0 400 300" aria-hidden="true">
+          <path class="ink-stroke" d="M40 80c40-30 90-20 120 20s80 40 140 10"/>
+          <path class="ink-stroke" d="M60 160c50 10 90-20 140 0"/>
+        </svg>
       </div>
-    </section>
+      <div class="c-ink-hatch" aria-hidden="true"></div>
+      <p class="scene-caption">map.layout_2 — 2 barrel buttons</p>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <div class="c-pen-map-open" data-region="PenMapOpen">
+      <button type="button" class="c-pen-map-open-btn" data-interactive aria-pressed="true" aria-label="Pen buttons">
+        <img src="../system/assets/icon-epaper-pen-map.svg" alt="" />
+      </button>
+    </div>
+    <div class="c-pen-map-overlay" data-region="PenMapOverlay">
+      <div class="c-pen-map-head">
+        <h1>Pen-button map</h1>
+        <a class="c-pen-map-close" data-interactive href="./pen-button-map-entry.html" aria-label="Close">
+          <img src="../system/assets/icon-epaper-pen-map-close.svg" alt="" />
+        </a>
+      </div>
+      <p class="c-pen-map-cap">Tablet reports 2 barrel buttons.</p>
+      <p class="c-pen-map-note">Eraser nib is hardware, not a barrel slot.</p>
+      <div class="c-pen-map-body">
+        <div class="c-pen-map-row" data-region="SlotRow">
+          <h2><img src="../system/assets/icon-epaper-pen-map-button-1.svg" alt="" /> Button 1</h2>
+          <a class="c-pen-map-slot" data-region="SlotClick" data-interactive href="./pen-button-map-slot-click.html" aria-label="Click">
+            <img src="../system/assets/icon-epaper-pen-map-click.svg" alt="" />
+            <span class="c-pen-map-slot-k">Click</span>
+            <span class="c-pen-map-slot-v">Current primary ↔ Freeform Select</span>
+          </a>
+          <a class="c-pen-map-slot" data-region="SlotHoldMove" data-interactive href="./pen-button-map-slot-hold.html" aria-label="Hold-move">
+            <img src="../system/assets/icon-epaper-pen-map-hold.svg" alt="" />
+            <span class="c-pen-map-slot-k">Hold-move</span>
+            <span class="c-pen-map-slot-v">Temporary eraser</span>
+          </a>
+        </div>
+        <div class="c-pen-map-row" data-region="SlotRow">
+          <h2><img src="../system/assets/icon-epaper-pen-map-button-2.svg" alt="" /> Button 2</h2>
+          <a class="c-pen-map-slot" data-region="SlotClick" data-interactive href="./pen-button-map-slot-click.html" aria-label="Click">
+            <img src="../system/assets/icon-epaper-pen-map-click.svg" alt="" />
+            <span class="c-pen-map-slot-k">Click</span>
+            <span class="c-pen-map-slot-v">Current primary ↔ Eraser</span>
+          </a>
+          <a class="c-pen-map-slot" data-region="SlotHoldMove" data-interactive href="./pen-button-map-slot-hold.html" aria-label="Hold-move">
+            <img src="../system/assets/icon-epaper-pen-map-hold.svg" alt="" />
+            <span class="c-pen-map-slot-k">Hold-move</span>
+            <span class="c-pen-map-slot-v">Temporary eraser</span>
+          </a>
+        </div>
+      </div>
+    </div>
   </div>
   <script>
-    (() => {
-      for (const el of document.querySelectorAll(".c-pen-map-btn:not([disabled]), .c-pen-map-select, .c-pen-map-option")) {
-        el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
-        for (const ev of ["pointerup", "pointerleave", "blur"]) {
-          el.addEventListener(ev, () => el.classList.remove("is-pressed"));
-        }
-      }
-    })();
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
   </script>
 </body>
 </html>

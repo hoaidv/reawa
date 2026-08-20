@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>viewport-follow-epaper — scene navigator</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    /* Navigator chrome. Scenes are inlined in .scene-frame so IDE HTML preview
+       (which cannot load nested local iframes) still paints. Sibling .html files remain canonical. */
+    body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f5; }
+    .nav-shell { display: flex; min-height: 100vh; min-height: 100dvh; }
+    .nav-side {
+      width: 16rem; flex-shrink: 0; padding: 1rem;
+      border-right: 1px solid #d4d4d8; background: #fff;
+    }
+    .nav-side strong { display: block; margin-bottom: 0.75rem; font-size: 14px; }
+    .nav-side a {
+      display: block; padding: 0.4rem 0.5rem; margin: 0.1rem 0;
+      border-radius: 0.35rem; color: inherit; text-decoration: none; font-size: 12px;
+    }
+    .nav-side a:hover, .nav-side a:focus-visible { background: #e4e4e7; outline: none; }
+    .nav-side a[aria-current="page"] { background: #e4e4e7; font-weight: 600; }
+    .nav-main {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: flex-start; padding: 1rem; min-width: 0; min-height: 0;
+      overflow: auto;
+    }
+    .nav-main .hint { align-self: stretch; margin: 0 0 0.75rem; font-size: 0.875rem; color: #52525b; }
+    .preview-stage { display: block; width: auto; overflow: auto; }
+    .preview-scale {
+      position: relative;
+      flex-shrink: 0;
+      background: #fff;
+      box-shadow: 0 1px 8px rgb(0 0 0 / 12%);
+      overflow: hidden;
+      border: 1px solid #a1a1aa;
+    }
+    .preview-scale iframe {
+      position: absolute; width: 0; height: 0; border: 0; overflow: hidden;
+    }
+    .preview-scale .scene-frame:not([hidden]) {
+      position: absolute;
+      top: 0; left: 0;
+      display: block;
+      width: 246mm;
+      height: 187mm;
+      overflow: hidden;
+      transform: scale(0.8);
+      transform-origin: top left;
+    }
+    .preview-scale .scene-frame[hidden] { display: none; }
+    .preview-scale .scene-frame > [data-region="DeviceScreen"] {
+      position: relative; width: 246mm; height: 187mm;
+    }
+    .preview-stage[data-preview-scale="mobile"] .preview-scale {
+      width: calc(246mm * 0.8);
+      height: calc(187mm * 0.8);
+    }
+    .preview-stage[data-preview-scale="mobile"].is-states .preview-scale {
+      width: calc(246mm * 0.8);
+      height: 80vh;
+      overflow: auto;
+    }
+    .preview-stage[data-preview-scale="mobile"].is-states .scene-frame:not([hidden]) {
+      width: 246mm;
+      height: auto;
+      min-height: 100vh;
+      overflow: visible;
+      transform: scale(0.8);
+      transform-origin: top left;
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-shell" data-platform="epaper">
+    <nav class="nav-side" aria-label="Scenes">
+      <strong>viewport-follow-epaper</strong>
+      <a href="./viewport-follow-epaper-off.html" target="scene-preview" aria-current="page">follow.off</a>
+      <a href="./viewport-follow-epaper-following-infini.html" target="scene-preview">follow.following_infini</a>
+      <a href="./viewport-follow-epaper-peer-following-you.html" target="scene-preview">follow.peer_following_you</a>
+      <a href="./viewport-follow-epaper-connection-lost.html" target="scene-preview">follow.connection_lost</a>
+      <a href="./viewport-follow-epaper-reconnect-stays-off.html" target="scene-preview">follow.reconnect_stays_off</a>
+      <a href="./viewport-follow-epaper-states.html" target="scene-preview" data-kind="states">States showcase</a>
+    </nav>
+    <main class="nav-main">
+      <p class="hint">Epaper landscape 246×187 mm at 80% navigator scale · 10 mm follow toggle (not a ToolChip exclusive) · 1-bit · no hover. Scenes paint in this document (IDE preview cannot load nested local iframes).</p>
+      <div class="preview-stage" data-preview-scale="mobile">
+        <div class="preview-scale">
+          <iframe name="scene-preview" title="Scene preview" src="about:blank"></iframe>
+          <article class="scene-frame" data-scene-file="viewport-follow-epaper-off.html" data-kind="scene" data-state="follow.off">
+    <style>
+.scene-frame[data-scene-file="viewport-follow-epaper-off.html"] {
+.c-follow-btn:active, .c-follow-btn.is-pressed,
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: #000; color: #fff; }
+    .c-follow-btn:active img, .c-follow-btn.is-pressed img,
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
+}
+    </style>
+<div data-region="DeviceScreen" data-platform="epaper" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <svg class="ink-demo" viewBox="0 0 400 300" aria-hidden="true">
+          <path class="ink-stroke" d="M40 80c40-30 90-20 120 20s80 40 140 10"/>
+          <path class="ink-stroke" d="M60 160c50 10 90-20 140 0"/>
+        </svg>
+      </div>
+      <p class="scene-caption">follow.off — local camera; tap follow to match Infini</p>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <div class="c-follow-cluster" data-region="FollowToggle">
+      <a class="c-follow-btn" data-interactive href="./viewport-follow-epaper-following-infini.html" aria-pressed="false" aria-label="Follow Infini">
+        <img src="../system/assets/icon-epaper-viewport-follow.svg" alt="" />
+      </a>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="viewport-follow-epaper-following-infini.html" data-kind="scene" data-state="follow.following_infini" hidden>
+    <style>
+.scene-frame[data-scene-file="viewport-follow-epaper-following-infini.html"] {
+.c-follow-btn:active, .c-follow-btn.is-pressed,
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: #000; color: #fff; }
+    .c-follow-btn:active img, .c-follow-btn.is-pressed img,
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
+}
+    </style>
+<div data-region="DeviceScreen" data-platform="epaper" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world is-following">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <svg class="ink-demo" viewBox="0 0 400 300" aria-hidden="true">
+          <path class="ink-stroke" d="M40 80c40-30 90-20 120 20s80 40 140 10"/>
+          <path class="ink-stroke" d="M60 160c50 10 90-20 140 0"/>
+        </svg>
+      </div>
+      <p class="scene-caption">follow.following_infini — applying Infini viewport; tap to turn off</p>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <div class="c-follow-cluster" data-region="FollowToggle">
+      <a class="c-follow-btn" data-interactive href="./viewport-follow-epaper-off.html" aria-pressed="true" aria-label="Following Infini">
+        <img src="../system/assets/icon-epaper-viewport-follow.svg" alt="" />
+      </a>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="viewport-follow-epaper-peer-following-you.html" data-kind="scene" data-state="follow.peer_following_you" hidden>
+    <style>
+.scene-frame[data-scene-file="viewport-follow-epaper-peer-following-you.html"] {
+.c-follow-btn:active, .c-follow-btn.is-pressed,
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: #000; color: #fff; }
+    .c-follow-btn:active img, .c-follow-btn.is-pressed img,
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
+}
+    </style>
+<div data-region="DeviceScreen" data-platform="epaper" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <svg class="ink-demo" viewBox="0 0 400 300" aria-hidden="true">
+          <path class="ink-stroke" d="M40 80c40-30 90-20 120 20s80 40 140 10"/>
+          <path class="ink-stroke" d="M60 160c50 10 90-20 140 0"/>
+        </svg>
+      </div>
+      <p class="scene-caption">follow.peer_following_you — Infini following this tablet; Epaper toggle stays off</p>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <div class="c-follow-cluster" data-region="FollowToggle">
+      <a class="c-follow-btn" data-interactive href="./viewport-follow-epaper-following-infini.html" aria-pressed="false" aria-label="Follow Infini" aria-description="Infini is following this tablet. Tap to follow Infini instead.">
+        <img src="../system/assets/icon-epaper-viewport-follow.svg" alt="" />
+      </a>
+      <span class="sr-only">Infini is following this tablet. This toggle is off. Tap to follow Infini (turns Infini follow off).</span>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="viewport-follow-epaper-connection-lost.html" data-kind="scene" data-state="follow.connection_lost" hidden>
+    <style>
+.scene-frame[data-scene-file="viewport-follow-epaper-connection-lost.html"] {
+.c-follow-btn:active, .c-follow-btn.is-pressed,
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: #000; color: #fff; }
+    .c-follow-btn:active img, .c-follow-btn.is-pressed img,
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
+}
+    </style>
+<div data-region="DeviceScreen" data-platform="epaper" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <svg class="ink-demo" viewBox="0 0 400 300" aria-hidden="true">
+          <path class="ink-stroke" d="M40 80c40-30 90-20 120 20s80 40 140 10"/>
+          <path class="ink-stroke" d="M60 160c50 10 90-20 140 0"/>
+        </svg>
+      </div>
+      <p class="scene-caption">follow.connection_lost — forced off; local camera still works</p>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="queued" title="Queued"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <div class="c-follow-cluster" data-region="FollowToggle">
+      <button type="button" class="c-follow-btn is-unavailable" aria-pressed="false" aria-disabled="true" aria-label="Follow Infini unavailable">
+        <img src="../system/assets/icon-epaper-viewport-follow.svg" alt="" />
+      </button>
+      <span class="sr-only">Connection lost. Follow is off and unavailable.</span>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="viewport-follow-epaper-reconnect-stays-off.html" data-kind="scene" data-state="follow.reconnect_stays_off" hidden>
+    <style>
+.scene-frame[data-scene-file="viewport-follow-epaper-reconnect-stays-off.html"] {
+.c-follow-btn:active, .c-follow-btn.is-pressed,
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: #000; color: #fff; }
+    .c-follow-btn:active img, .c-follow-btn.is-pressed img,
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
+}
+    </style>
+<div data-region="DeviceScreen" data-platform="epaper" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <svg class="ink-demo" viewBox="0 0 400 300" aria-hidden="true">
+          <path class="ink-stroke" d="M40 80c40-30 90-20 120 20s80 40 140 10"/>
+          <path class="ink-stroke" d="M60 160c50 10 90-20 140 0"/>
+        </svg>
+      </div>
+      <p class="scene-caption">follow.reconnect_stays_off — link back; follow still off until tap</p>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <div class="c-follow-cluster" data-region="FollowToggle">
+      <a class="c-follow-btn" data-interactive href="./viewport-follow-epaper-following-infini.html" aria-pressed="false" aria-label="Follow Infini" aria-description="Reconnected. Follow was not restored.">
+        <img src="../system/assets/icon-epaper-viewport-follow.svg" alt="" />
+      </a>
+      <span class="sr-only">Reconnected. Follow stays off until you opt in.</span>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="viewport-follow-epaper-states.html" data-kind="states" data-state="states" hidden>
+    <style>
+.scene-frame[data-scene-file="viewport-follow-epaper-states.html"] {
+& {
+      height: auto; min-height: 100%; overflow: auto; background: #e4e4e7;
+    }
+& { padding: 16px 20px 48px; }
+    h1 { font-size: 16px; margin: 0 0 8px; }
+    h2 { font-size: 13px; margin: 20px 0 8px; }
+    .note { font-size: 12px; max-width: 44rem; margin: 0 0 16px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+    .cell { display: flex; flex-direction: column; gap: 6px; }
+    .cell span { font-size: 11px; }
+    .na { font-size: 11px; border: 1px dashed #000; padding: 8px; background: #fff; }
+    [data-region="FollowToggle"] { position: static; }
+    .c-tool-chip {
+      position: static;
+      display: inline-flex;
+      left: auto;
+      right: auto;
+      width: max-content;
+      grid-template-columns: none;
+      transform: none;
+    }
+    .c-tool-chip > .c-tool-cluster:nth-child(1),
+    .c-tool-chip > .c-tool-cluster:nth-child(2),
+    .c-tool-chip > .c-tool-cluster:nth-child(3) {
+      grid-column: auto;
+      justify-self: auto;
+    }
+    .c-follow-btn:active, .c-follow-btn.is-pressed,
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: #000; color: #fff; }
+    .c-follow-btn:active img, .c-follow-btn.is-pressed img,
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
+}
+    </style>
+<h1>Viewport-follow Epaper — control states</h1>
+  <p class="note">
+    Platform <code>epaper</code> (epaper-device): no hover, no focus, no cursor, no motion.
+    Press = invert. Follow tile = 10 mm, not a ToolChip exclusive. Peer-following-you is visually off.
+    Last-writer token chrome is not painted.
+  </p>
+
+  <h2>FollowToggle (<code>btn.viewport_follow</code> · 10 mm)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>off (default)</span>
+      <div class="c-follow-cluster" data-region="FollowToggle">
+        <button type="button" class="c-follow-btn" data-interactive aria-pressed="false" aria-label="Follow Infini">
+          <img src="../system/assets/icon-epaper-viewport-follow.svg" alt="" />
+        </button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>following Infini</span>
+      <div class="c-follow-cluster" data-region="FollowToggle">
+        <button type="button" class="c-follow-btn" data-interactive aria-pressed="true" aria-label="Following Infini">
+          <img src="../system/assets/icon-epaper-viewport-follow.svg" alt="" />
+        </button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>pressed</span>
+      <div class="c-follow-cluster" data-region="FollowToggle">
+        <button type="button" class="c-follow-btn is-pressed" data-interactive aria-pressed="false" aria-label="Follow Infini">
+          <img src="../system/assets/icon-epaper-viewport-follow.svg" alt="" />
+        </button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>peer following you (off)</span>
+      <div class="c-follow-cluster" data-region="FollowToggle">
+        <button type="button" class="c-follow-btn" data-interactive aria-pressed="false" aria-label="Follow Infini" aria-description="Infini is following this tablet">
+          <img src="../system/assets/icon-epaper-viewport-follow.svg" alt="" />
+        </button>
+      </div>
+    </div>
+    <div class="cell">
+      <span>unavailable (connection lost)</span>
+      <div class="c-follow-cluster" data-region="FollowToggle">
+        <button type="button" class="c-follow-btn is-unavailable" aria-pressed="false" aria-disabled="true" aria-label="Follow Infini unavailable">
+          <img src="../system/assets/icon-epaper-viewport-follow.svg" alt="" />
+        </button>
+      </div>
+    </div>
+    <div class="cell"><span>hover</span><div class="na">N/A — no hover on epaper</div></div>
+    <div class="cell"><span>focus</span><div class="na">N/A — no keyboard on panel</div></div>
+  </div>
+
+  <h2>ToolButton (UI-EP-04 compose · not a follow tile)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>default</span>
+      <div class="c-tool-chip" role="toolbar">
+        <div class="c-tool-cluster">
+          <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="cell">
+      <span>armed</span>
+      <div class="c-tool-chip" role="toolbar">
+        <div class="c-tool-cluster">
+          <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="cell">
+      <span>pressed</span>
+      <div class="c-tool-chip" role="toolbar">
+        <div class="c-tool-cluster">
+          <button type="button" class="c-tool-btn is-pressed" data-interactive aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="cell"><span>hover / focus</span><div class="na">N/A</div></div>
+  </div>
+
+  <h2>Publish strip (session)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>linked</span>
+      <div class="c-tool-chip"><div class="c-tool-cluster"><span class="c-publish" data-status="linked"></span><button type="button" class="c-tool-btn" data-interactive aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button></div></div>
+    </div>
+    <div class="cell">
+      <span>queued (connection lost)</span>
+      <div class="c-tool-chip"><div class="c-tool-cluster"><span class="c-publish" data-status="queued"></span><button type="button" class="c-tool-btn" data-interactive aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button></div></div>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    (function () {
+      var stage = document.querySelector(".preview-scale");
+      var previewStage = document.querySelector(".preview-stage");
+      function fileOf(href) {
+        return String(href || "").split("?")[0].split("#")[0].split("/").pop();
+      }
+      function show(file) {
+        stage.querySelectorAll(".scene-frame").forEach(function (el) {
+          el.hidden = el.getAttribute("data-scene-file") !== file;
+        });
+        document.querySelectorAll(".nav-side a[target='scene-preview']").forEach(function (a) {
+          if (fileOf(a.getAttribute("href")) === file) a.setAttribute("aria-current", "page");
+          else a.removeAttribute("aria-current");
+        });
+        if (previewStage) {
+          var current = stage.querySelector('.scene-frame[data-scene-file="' + file + '"]');
+          previewStage.classList.toggle("is-states", !!(current && current.getAttribute("data-kind") === "states"));
+        }
+      }
+      document.querySelectorAll(".nav-side a[target='scene-preview']").forEach(function (a) {
+        a.addEventListener("click", function (e) {
+          e.preventDefault();
+          show(fileOf(a.getAttribute("href")));
+        });
+      });
+      stage.addEventListener("click", function (e) {
+        var a = e.target.closest("a[href]");
+        if (!a || a.target === "_blank") return;
+        var file = fileOf(a.getAttribute("href"));
+        if (!file || !file.endsWith(".html")) return;
+        if (!stage.querySelector('.scene-frame[data-scene-file="' + file + '"]')) return;
+        e.preventDefault();
+        show(file);
+      });
+    })();
+  </script>
+</body>
+</html>

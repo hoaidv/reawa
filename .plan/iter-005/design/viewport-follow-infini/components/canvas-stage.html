@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Component — CanvasStage</title>
+  <style>
+    :root { --color-focus: #0f766e; --color-surface: #f2f4f7; }
+    body { margin: 0; font-family: system-ui, sans-serif; }
+    .c-canvas-stage {
+      display: block; width: 100%; min-height: 200px; border: 0;
+      background: var(--color-surface); cursor: grab; outline: none;
+    }
+    .c-canvas-stage:hover { cursor: grab; }
+    .c-canvas-stage:active, .c-canvas-stage.is-gesturing { cursor: grabbing; }
+    .c-canvas-stage:focus-visible { box-shadow: inset 0 0 0 3px var(--color-focus); }
+  </style>
+</head>
+<body>
+  <button type="button" class="c-canvas-stage" data-region="CanvasStage" aria-label="Infinity canvas">
+    CanvasStage — hover grab / focus / press grabbing
+  </button>
+</body>
+</html>

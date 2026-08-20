@@ -16,7 +16,8 @@ and the desktop both hold the document tree, its anatomy stopped being an Infini
 | Doc | Concept | Implemented by |
 |---|---|---|
 | [vector-document.md](./vector-document.md) | The document tree — node kinds, roles, transforms, ops, invariants; connector terminals + attachments | `epaper` (C++, device-side working document) · `infini` (TypeScript, mirror + persistence) |
-| [pen-button-map.md](./pen-button-map.md) | Barrel-button Click / Hold-move map (settings, not document) | `infini` (author, persist, publish) · `epaper` (consume, dispatch) |
+| [pen-button-map.md](./pen-button-map.md) | Barrel-button Click / Hold-move map (settings, not document) | `epaper` (author live map, dispatch) · `infini` (persist, restore) |
+| [viewport-follow.md](./viewport-follow.md) | Optional exclusive one-way camera follow (session, not document) | `epaper` (toggle + apply) · `infini` (toggle + apply) |
 
 ## Rules
 

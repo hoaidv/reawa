@@ -4,40 +4,51 @@
   <meta charset="utf-8" />
   <title>InkScaleModeToggle — self-contained</title>
   <style>
-    :root { --color-paper: #ffffff; --color-ink: #000000; }
+    :root {
+      --color-paper: #ffffff;
+      --color-ink: #000000;
+      --chip-btn: 10mm;
+      --chip-icon: 4mm;
+      --chip-radius: 0;
+    }
     body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; }
     .c-mode-toggle {
-      display: inline-flex; align-items: center; gap: 6px; height: 36px;
-      padding: 0 8px 0 4px; border: 2px solid var(--color-ink);
-      background: repeating-linear-gradient(-45deg, #fff, #fff 3px, #000 3px, #000 4px);
-      font-size: 12px; cursor: none; -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center;
+      width: var(--chip-btn); height: var(--chip-btn);
+      padding: 0; border: 1px solid var(--color-ink);
+      border-radius: var(--chip-radius);
+      background: var(--color-paper);
+      cursor: none; -webkit-tap-highlight-color: transparent;
     }
     .c-mode-toggle img {
-      width: 20px; height: 20px; background: #fff; border: 1px solid #000;
+      width: var(--chip-icon); height: var(--chip-icon);
+      background: transparent; border: 0;
     }
     .c-mode-current {
-      background: #fff; border: 1px solid #000; padding: 2px 6px; white-space: nowrap;
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
     }
-    .c-mode-toggle:active, .c-mode-toggle.is-pressed {
-      background: #000; color: #fff;
+    .c-mode-toggle:active, .c-mode-toggle.is-pressed, .c-mode-toggle[aria-pressed="true"] {
+      background: var(--color-ink); color: var(--color-paper);
     }
-    .c-mode-toggle:active img, .c-mode-toggle.is-pressed img { filter: invert(1); }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+    .c-mode-toggle:active img, .c-mode-toggle.is-pressed img, .c-mode-toggle[aria-pressed="true"] img { filter: invert(1); }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
     .note { font-size: 12px; }
   </style>
 </head>
 <body>
-  <p class="note">Lives on the selected box. Hatch fill vs ink strokes. Press inverts. Hover/focus N/A.</p>
+  <p class="note">Icon-only. Size = primary ToolChip tile (10 mm). Press inverts. Hover/focus N/A.</p>
   <div class="row">
-    <button type="button" class="c-mode-toggle" id="tgl.ink_scale_mode" data-interactive data-mode="withBounds" aria-pressed="true">
+    <button type="button" class="c-mode-toggle" id="tgl.ink_scale_mode" data-interactive data-mode="withBounds" aria-pressed="true" aria-label="Scale ink">
       <img src="../../system/assets/icon-epaper-mode-with-bounds.svg" alt="" />
-      <span class="c-mode-current" id="ind.mode_current">Scale ink</span>
+      <span class="c-mode-current">Scale ink</span>
     </button>
-    <button type="button" class="c-mode-toggle" data-interactive data-mode="fixedInk" aria-pressed="false">
+    <button type="button" class="c-mode-toggle" data-interactive data-mode="fixedInk" aria-pressed="false" aria-label="Keep size">
       <img src="../../system/assets/icon-epaper-mode-fixed-ink.svg" alt="" />
       <span class="c-mode-current">Keep size</span>
     </button>
-    <button type="button" class="c-mode-toggle is-pressed" data-interactive>
+    <button type="button" class="c-mode-toggle is-pressed" data-interactive aria-label="Scale ink">
       <img src="../../system/assets/icon-epaper-mode-with-bounds.svg" alt="" />
       <span class="c-mode-current">Scale ink</span>
     </button>

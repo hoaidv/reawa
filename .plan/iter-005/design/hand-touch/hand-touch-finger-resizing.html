@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>hand.finger_anchor_noop — hand-touch</title>
+  <title>hand.finger_resizing — hand-touch</title>
   <link rel="stylesheet" href="tokens.css" />
   <link rel="stylesheet" href="common.css" />
   <style>
@@ -12,53 +12,47 @@
     a.c-tool-btn { text-decoration: none; color: inherit; }
   </style>
 </head>
-<body data-state="hand.finger_anchor_noop">
+<body data-state="hand.finger_resizing">
   <div data-region="DeviceScreen" data-orientation="gutToLeft">
     <div data-region="InkSurface">
       <div class="c-world">
         <div class="c-rule-grid" aria-hidden="true"></div>
-        <div class="ink-cluster">
-          <svg viewBox="0 0 420 240" aria-hidden="true">
-            <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
-            <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
-            <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
-            <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
-            <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
-          </svg>
+        <div class="ink-cluster is-resizing-with-bounds">
+          <a class="hop-box" href="./hand-touch-finger-hit-box.html" aria-label="Release resize">
+            <svg viewBox="0 0 420 240" aria-hidden="true">
+              <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+              <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+              <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+              <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+              <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+            </svg>
+          </a>
         </div>
         <div data-region="SelectionOverlay">
-          <div class="c-bounds pos-default" id="ovl.selection_bounds">
-            <button type="button" class="c-handle nw" data-interactive aria-label="Resize northwest (pen only)"></button>
-            <button type="button" class="c-handle n" data-interactive aria-label="Resize north (pen only)"></button>
-            <button type="button" class="c-handle ne" data-interactive aria-label="Resize northeast (pen only)"></button>
-            <button type="button" class="c-handle e" data-interactive aria-label="Resize east (pen only)"></button>
-            <a href="./hand-touch-finger-hit-box.html" class="c-handle se is-noop" data-interactive aria-label="Finger on handle — 0 transform"></a>
-            <button type="button" class="c-handle s" data-interactive aria-label="Resize south (pen only)"></button>
-            <button type="button" class="c-handle sw" data-interactive aria-label="Resize southwest (pen only)"></button>
-            <button type="button" class="c-handle w" data-interactive aria-label="Resize west (pen only)"></button>
+          <div class="c-bounds pos-resized" id="ovl.selection_bounds">
+            <button type="button" class="c-handle nw" data-interactive aria-label="Resize northwest"></button>
+            <button type="button" class="c-handle n" data-interactive aria-label="Resize north"></button>
+            <button type="button" class="c-handle ne" data-interactive aria-label="Resize northeast"></button>
+            <button type="button" class="c-handle e" data-interactive aria-label="Resize east"></button>
+            <a href="./hand-touch-finger-hit-box.html" class="c-handle se is-pressed" data-interactive aria-label="Finger resize southeast"></a>
+            <button type="button" class="c-handle s" data-interactive aria-label="Resize south"></button>
+            <button type="button" class="c-handle sw" data-interactive aria-label="Resize southwest"></button>
+            <button type="button" class="c-handle w" data-interactive aria-label="Resize west"></button>
             <button type="button" class="c-mode-toggle" data-interactive>
               <img src="../system/assets/icon-epaper-mode-with-bounds.svg" alt="" />
               <span class="c-mode-current">Scale ink</span>
             </button>
-            <span class="hit-callout pen-only" style="left:100%;top:100%">
-              <img src="../system/assets/icon-hand-touch-pen-only.svg" alt="" width="12" height="12" /> 56 du pen-only
-            </span>
-          </div>
-          <div class="c-indicator pos-se" id="ind.finger_anchor_noop">
-            <img src="../system/assets/icon-hand-touch-noop.svg" alt="" />
-            <span class="c-indicator__copy">Finger: 0 transform — pen only (56 du)</span>
           </div>
         </div>
         <div data-region="GestureAnnotate">
-          <span class="c-finger" style="left:58%;top:66%">
+          <span class="c-finger" style="left:66%;top:72%" title="Finger on southeast knob">
             <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
           </span>
         </div>
       </div>
       <p class="scene-caption">
-        hand.finger_anchor_noop — finger on &lt;64 du handle; box unmoved. Hatch = settled “blink,” not motion.
-        <a href="./hand-touch-finger-hit-box.html">Lift</a> ·
-        <a href="./hand-touch-pen-resize-after-finger-select.html">Same handle with pen</a>
+        hand.finger_resizing — finger on resize knob; ink scales with bounds; sel_freeform kept.
+        <a href="./hand-touch-finger-hit-box.html">Release</a>
       </p>
       <span class="orient-tag">orient: gutToLeft</span>
     </div>
@@ -78,7 +72,7 @@
         <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
       </div>
     </div>
-    <p data-region="StatusLine">hit.kind=anchor_lt64 · fingers=1 · 0 transform</p>
+    <p data-region="StatusLine">sel.resizing.with_bounds · hit.kind=anchor · fingers=1</p>
   </div>
   <script>
     document.querySelectorAll("[data-interactive]").forEach((el) => {

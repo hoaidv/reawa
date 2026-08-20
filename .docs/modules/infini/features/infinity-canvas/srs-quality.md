@@ -17,14 +17,16 @@ lifecycle: active
 
 ---
 
-## [SRS-IN-22] Tablet-follow viewport quality {#srs-in-22-follow-quality}
+## [SRS-IN-22] Tablet-viewport apply quality {#srs-in-22-follow-quality}
 
 <!-- lifecycle: active -->
+<!-- revised: 2026-08-20 — ADR-0029. Apply-while-following; not last-writer. -->
 
-**Parent:** Epaper [REQ-10](../../../epaper/prd.md#hand-touch). **Constrains:** [SRS-IN-20](./srs-logic.md#srs-in-20-follow-viewport), [SRS-IN-21](../tablet-sync/srs-logic.md#srs-in-21-viewport-token). Does **not** steal [SRS-IN-03](#srs-in-03) parent (Infini REQ-01).
+**Parent:** [REQ-01](../../prd.md#infinity-canvas). **Constrains:** [SRS-IN-20](./srs-logic.md#srs-in-20-follow-viewport), [SRS-IN-21](../tablet-sync/srs-logic.md#srs-in-21-viewport-token). Does **not** steal [SRS-IN-03](#srs-in-03) parent (REQ-01 gesture budget). **Does not parent [REQ-06](../../prd.md#viewport-follow)** — that is [SRS-IN-28](../tablet-sync/srs-quality.md#srs-in-28-follow-quality). **Decision:** [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md).
 
 | Scenario | Target |
 |---|---|
-| Tablet pan while both idle | Infini sends **0** competing `viewport` bursts |
-| After tablet settle | Infini view matches tablet region (**0** divergent viewports) |
+| Infini follow **on**, tablet pan after settle | Infini view matches tablet region (**0** divergent viewports) |
+| Infini follow **off**, tablet pans | Infini canvas change from that gesture **0**; **0** competing `viewport` down from a stolen token (token withdrawn) |
+| Infini follow **on**, Infini local-nav starts | Infini follow **off** before local pan applies; **0** continued tablet apply |
 | Infini frame budget during follow | Must not regress [SRS-IN-03](#srs-in-03) when Infini is **not** gesturing |

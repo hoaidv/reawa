@@ -11,29 +11,30 @@ estimate: 5
 owner: dev
 depends_on: [STORY-EP-037]
 acceptance_criteria:
-  - "Given two fingers on empty canvas and no box-move in flight, When pan or pinch runs >=5 s, Then the next pen sample uses the new region with p95 map apply <=100 ms."
-  - "Given a live session, When the tablet viewport changes from this gesture, Then Infini view matches after settle (0 divergent viewports) — peer IN-033."
-  - "Given a one-finger box-move in flight, When a second finger lands, Then 0 pan starts until the move ends."
+  - "Given two fingers on empty canvas and no box-move or resize in flight, When pan or pinch runs >=5 s, Then the next pen sample uses the new local region with p95 map apply <=100 ms."
+  - "Given Infini follow is off, When the tablet two-finger pans, Then Infini's camera is unchanged (independent default)."
+  - "Given Infini follow is on, When the tablet two-finger pans, Then Infini view matches after settle — peer IN-033."
+  - "Given a one-finger box-move or resize in flight, When a second finger lands, Then 0 pan starts until that gesture ends."
   - "Given the link down, When the creator two-finger pans, Then local viewport still changes."
+  - "Given Epaper is following Infini, When the creator two-finger pans on Epaper, Then Epaper follow turns off (follower local-nav)."
 design_package: ".plan/iter-005/design/hand-touch/"
 ui_spec: ".plan/iter-005/design/hand-touch/ui-spec.md"
 scenes:
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-hit-box.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-finger-moving.html"
-  - ".plan/iter-005/design/hand-touch/hand-touch-finger-anchor-noop.html"
+  - ".plan/iter-005/design/hand-touch/hand-touch-finger-resizing.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-one-finger-empty.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-two-finger-pan.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-pinch.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-pan-vs-move.html"
   - ".plan/iter-005/design/hand-touch/hand-touch-link-down-local-view.html"
-  - ".plan/iter-005/design/hand-touch/hand-touch-pen-resize-after-finger-select.html"
 hifi: ".plan/iter-005/design/hand-touch/hand-touch-finger-hit-box.html"
 wireframe: ""
 ---
 
 # STORY-EP-039 — Two-finger pan and pinch; publish viewport
 
-TRACK-005. Parent [REQ-10]. [REQ-10](../../../.docs/modules/epaper/prd.md#hand-touch) two-finger slice. BRD-07 amendment still open — do not ship this story as Must until analyst updates BRD.
+TRACK-005. Parent [REQ-10](../../../.docs/modules/epaper/prd.md#hand-touch) two-finger **local** Must. Publish **only if** Infini follow is on ([ADR-0029](../../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md)). BRD-07 ship gate **lifted** 2026-08-20.
 
 
 

@@ -1,15 +1,20 @@
 ---
 id: ADR-0028
 title: Pen-button map publish is a settings channel
-status: accepted
+status: superseded
 date: 2026-08-19
 deciders: [architect]
 supersedes: null
+superseded-by: [ADR-0030]
 amends: [ADR-0015]
 source: TRACK-005 / Infini [REQ-05] / Epaper [REQ-18]
 ---
 
 # ADR-0028 — Pen-button map publish is a settings channel
+
+> **Superseded 2026-08-20** by [ADR-0030](./ADR-0030-tablet-authors-pen-button-map.md).
+> The **settings family** on `:9877` stands (`pen_capability` / `pen_button_map`, 0 document messages).
+> **Do not implement** Infini-as-author or Desktop→Tablet publish-on-save. Forward: tablet authors the live map; Infini persist/restore.
 
 ## Context
 
@@ -55,7 +60,7 @@ Do **not** hang this on [SRS-IN-05](../modules/infini/features/vector-document/s
 ## Consequences
 
 - ADR-0015 “anything else is a protocol defect” is amended: **`pen_capability` / `pen_button_map` are allowed**. They are not document, not viewport, not debug.
-- Viewport last-writer ([ADR-0023](./ADR-0023-viewport-last-writer.md)) remains a separate family (`viewport`).
+- Viewport follow ([ADR-0029](./ADR-0029-independent-cameras-viewport-follow.md)) remains a separate family (`viewport` / `viewport_follow`). Last-writer ([ADR-0023](./ADR-0023-viewport-last-writer.md)) is superseded.
 - Barrel vs nib ([ADR-0025](./ADR-0025-barrel-vs-eraser-nib.md)) is device routing; this ADR is **how the map arrives**.
 - Sensitivity: **settings-on-session** vs **new TCP port**. One socket keeps USB/firewall boring; type-level audit still proves 0 document messages.
 

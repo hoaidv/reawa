@@ -99,6 +99,7 @@ hits on the chip are excluded from ink via hit-test ([SRS-EP-04](./srs-logic.md)
 [ADR-0017](../../../../adr/ADR-0017-four-tool-chip.md)). `ovl.drag_ghost` is **removed** — the ink
 itself moves. No brushes, colors, layers, or document browser ([epaper Non-Goals](../../prd.md)).
 Undo/Redo are **actions**, not exclusive tools. Recognizer toggles are **not** `toolMode`.
+Viewport-follow is **[SRS-EP-50](../region-sync/srs-ui.md#srs-ep-50-follow-toggle)** — **not** a fourth exclusive tool, recognizer, or hand-tool tile. Do not add `btn.viewport_follow` to this inventory.
 
 ### Interaction map
 
@@ -180,6 +181,8 @@ disarmed.
 ### Out of scope (UI)
 
 - Pan / zoom **chrome** (two-finger has no dedicated tool tile — [SRS-EP-22](../ink-box/srs-ui.md#srs-ep-22-hand-touch-ui)).
+- Viewport-follow icon toggle ([SRS-EP-50](../region-sync/srs-ui.md#srs-ep-50-follow-toggle)) — not this chip.
+- On-device pen-button map editor ([SRS-EP-52](#srs-ep-52-pen-map-editor)) — not a 5-way radio on exclusive-tool tiles.
 - Page navigation, document browser.
 - Rotation, multi-select, marquee, align/distribute affordances — [REQ-08](../../prd.md#node-manipulation).
 - A `doc_load` confirmation dialog — the handshake makes a load safe by construction; the creator
@@ -231,23 +234,124 @@ Barrel hold-move temp erase is REQ-18 chrome ([SRS-EP-42](#srs-ep-42-chip-temp-t
 <!-- lifecycle: active -->
 <!-- needs_design: yes -->
 
-**Parent:** [REQ-18](../../prd.md#pen-buttons). **Logic:** [SRS-EP-41](./srs-logic.md#srs-ep-41-barrel-dispatch). Infini map editor is **not** this surface ([SRS-IN-24](../../../infini/features/tablet-sync/srs-ui.md#srs-in-24-pen-map-ui)).
+**Parent:** [REQ-18](../../prd.md#pen-buttons). **Logic:** [SRS-EP-41](./srs-logic.md#srs-ep-41-barrel-dispatch). **Not the map editor** — that is [SRS-EP-52](#srs-ep-52-pen-map-editor).
 
 ### Purpose
 
-Show the **temporary** exclusive tool (or erase) **during hold-move**, then restore unless Click toggled. Tablet does **not** host a 5-way radio.
+When Hold-move is **Temporary eraser**, show that temporary tool **during hold-move**, then restore unless Click toggled. Drag-under-tip does **not** switch the exclusive tool. Tablet does **not** host a 5-way radio on chip tiles.
 
 ### Closed inventory (chip only)
 
-Reuse `ind.tool_active`. No extra barrel-map editor on device.
+Reuse `ind.tool_active`. **0** barrel-map editor controls on the chip.
 
-### States
+### States (do not add dropped catalogues)
 
-`barrel.hold_temp_freeform` · `barrel.hold_temp_rect` · `barrel.hold_temp_erase` · `barrel.click_toggled` · `barrel.capability_0` (slots absent)
+`barrel.hold_temp_erase` · `barrel.hold_drag_under_tip` · `barrel.click_toggled` · `barrel.capability_0` (slots absent)
+
+**Dropped:** `barrel.hold_temp_freeform` · `barrel.hold_temp_rect`.
 
 ### Hit
 
 Chip tiles remain 64 du. Barrel itself has no on-panel hit target.
+
+---
+
+## [SRS-EP-52] On-device pen-button map editor {#srs-ep-52-pen-map-editor}
+
+<!-- lifecycle: active -->
+<!-- needs_design: yes -->
+
+**Parent:** [REQ-18](../../prd.md#pen-buttons). **Logic:** [SRS-EP-53](./srs-logic.md#srs-ep-53-pen-map-author). **Quality:** [SRS-EP-43](./srs-quality.md#srs-ep-43-barrel-quality). **Scene graph:** [srs-ui-multi-scene.md](./srs-ui-multi-scene.md). **Platform:** **epaper-device** (`data-platform: epaper`). **Do not parent on [SRS-EP-05](#srs-ep-05-tool-chip)** (ToolChip) or [SRS-EP-42](#srs-ep-42-chip-temp-tool) (chip mirror). Infini [SRS-IN-24](../../../infini/features/tablet-sync/srs-ui.md#srs-in-24-pen-map-ui) is **retired** — do not paint desktop map chrome. Catalogues: [domain/pen-button-map](../../../../domain/pen-button-map.md).
+
+### Design authority
+
+1. This section + [srs-ui-multi-scene.md](./srs-ui-multi-scene.md)
+2. [REQ-18](../../prd.md#pen-buttons) acceptance
+3. Physical constraints (1-bit, no hover, partial refresh) — they outrank aesthetics
+4. Design package `.plan/iter-005/design/pen-button-map/` — scenes + Spec
+5. `.docs/DESIGN.md` tokens — **advisory only**; desktop system does not transfer
+
+### Purpose
+
+**One job:** let the creator bind each **present** barrel slot (Click and Hold-move) to **exactly one** closed-catalogue item **on the tablet**. Not document chrome. Not a ToolChip exclusive tool.
+
+### Physical constraints (binding)
+
+Same panel profile as [SRS-EP-05](#srs-ep-05-tool-chip): 1404 × 1872, **1-bit**, no hover, no focus, no cursor, no motion. Finger-eligible hits ≥ **64 du**. Overlay/sheet must be an isolatable rect (chip-style partial refresh preferred; full-panel overlay allowed if Designer cannot fit closed lists otherwise).
+
+### Composition / containment (contract, not craft)
+
+| Region | Parent | Role |
+|---|---|---|
+| DeviceScreen | panel | Full panel / drawing underlay |
+| PenMapOverlay | DeviceScreen | Editor hub — **not** inside exclusive-tool cluster, **not** follow toggle |
+| SlotRow | PenMapOverlay | One row per present button (index 1 or 2) |
+| SlotClick | SlotRow | Closed Click value; opens Click list |
+| SlotHoldMove | SlotRow | Closed Hold-move value; opens Hold-move list |
+| ClickList | sheet over overlay | Three Click items only |
+| HoldList | sheet over overlay | Three Hold-move items only |
+
+**Entry control placement is a design story.** Binding: `cta.pen_map_open` exists; Designer proposes where. Must not be Infini File menu or a 5-way radio on `tool.*` tiles.
+
+### Closed control inventory
+
+| id | Kind | Notes |
+|---|---|---|
+| `cta.pen_map_open` | entry | Unnamed placement; on-device only |
+| `cta.pen_map_close` | dismiss | Return to drawing |
+| `slot.click` | value + open list | Per present button |
+| `slot.hold_move` | value + open list | Per present button |
+| `list.click.toggle_pen_freeform` | pick | Current primary ↔ Freeform Select |
+| `list.click.toggle_pen_eraser` | pick | Current primary ↔ Eraser |
+| `list.click.off` | pick | No-op |
+| `list.hold.temp_erase` | pick | Temporary eraser |
+| `list.hold.drag_node_under_tip` | pick | Drag node under tip |
+| `list.hold.off` | pick | No-op |
+
+Designer **must not** add `undo`, `temp_sel_freeform`, `temp_sel_rect`, or an eraser-nib slot.
+
+### States matrix (journeys from PRD — do not add)
+
+| State id | Scene | When |
+|---|---|---|
+| `map.layout_0` | `scene.pen_map_editor` | 0-button: **0** slot rows (0 fake bindings) |
+| `map.layout_1` | `scene.pen_map_editor` | 1-button: one row |
+| `map.layout_2` | `scene.pen_map_editor` | 2-button: two rows |
+| `map.slot_click` | `scene.pen_map_click` | Click closed list open |
+| `map.slot_hold` | `scene.pen_map_hold` | Hold-move closed list open |
+| `map.offline` | `scene.pen_map_editor` | Session down; editor still usable; persist waits |
+| `map.rebound_next_gesture` | underlay | Bind committed; in-flight barrel gesture unchanged |
+
+Chip hold-move states stay on [SRS-EP-42](#srs-ep-42-chip-temp-tool) — **out of this overlay**.
+
+### Interaction map
+
+| Control | Action | Result |
+|---|---|---|
+| `cta.pen_map_open` | tap | `present-modal` → `scene.pen_map_editor` |
+| `cta.pen_map_close` | tap | `dismiss`; live map kept |
+| `slot.click` | tap | `present-sheet` → `scene.pen_map_click` |
+| `slot.hold_move` | tap | `present-sheet` → `scene.pen_map_hold` |
+| `list.click.*` / `list.hold.*` | tap | Write that id; `dismiss` to hub; persist-up if linked |
+| List cancel / empty-overlay tap | tap | `dismiss`; **0** writes |
+
+### UI-driving fields
+
+`pen.buttonCount`, `pen.map.buttons[].click`, `pen.map.buttons[].holdMove`, `session.connected` — Designer must not invent a third slot type or disable the editor when the session is down.
+
+### Anti-patterns
+
+- Infini / Electron / slate desktop settings chrome
+- Hover, focus, cursor, color, motion
+- Undo on the Click list
+- Temporary freeform / rect on the Hold-move list
+- 5-way radio on exclusive-tool tiles
+- Saving the map into the SVG
+- Gating the editor on `session.connected`
+
+### Dual-ask
+
+`/designer` Spec + one scene HTML per editor state id above (chip mirror scenes belong to [SRS-EP-42](#srs-ep-42-chip-temp-tool)). `/qa` BDD from [REQ-18](../../prd.md#pen-buttons) AC + [SRS-EP-43](./srs-quality.md#srs-ep-43-barrel-quality).
 
 ---
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-platform="desktop">
+<html lang="en" data-platform="epaper">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,125 +7,236 @@
   <link rel="stylesheet" href="tokens.css" />
   <link rel="stylesheet" href="common.css" />
   <style>
-    body { padding: var(--space-lg); background: var(--color-surface); }
-    .showcase-title { font-family: var(--font-display-face); font-size: var(--font-display); margin: 0 0 var(--space-sm); }
-    .showcase-note { margin: 0 0 var(--space-lg); color: var(--color-ink-muted); font-size: var(--font-caption); max-width: 40rem; }
-    h2 { font-size: var(--font-title); margin: var(--space-lg) 0 var(--space-sm); }
-    .row { display: flex; flex-wrap: wrap; gap: var(--space-md); }
-    .swatch {
-      width: 240px; min-height: 120px; padding: var(--space-sm);
-      border: 1px solid var(--color-border); border-radius: var(--radius-control);
-      background: var(--color-surface-elevated);
+    /* Live press invert for adlc scan. */
+    .c-tool-btn:active, .c-tool-btn.is-pressed,
+    .c-pen-map-open-btn:active, .c-pen-map-open-btn.is-pressed,
+    .c-pen-map-close:active, .c-pen-map-close.is-pressed,
+    .c-pen-map-slot:active, .c-pen-map-slot.is-pressed,
+    .c-pen-map-option:active, .c-pen-map-option.is-pressed,
+    .c-pen-map-cancel:active, .c-pen-map-cancel.is-pressed { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img,
+    .c-pen-map-open-btn:active img, .c-pen-map-open-btn.is-pressed img { filter: invert(1); }
+
+    html[data-platform="epaper"],
+    html[data-platform="epaper"] body {
+      height: auto; min-height: 100%; overflow: auto; background: #e4e4e7;
     }
-    .swatch label { display: block; font-size: var(--font-caption); color: var(--color-ink-muted); margin-bottom: var(--space-sm); }
-    .c-pen-map-btn:hover { background: var(--color-primary); color: var(--color-on-primary); }
-    .c-pen-map-select:hover { border-color: var(--color-primary); background: var(--color-surface); }
-    .c-pen-map-option:hover { background: var(--color-surface); }
-    .c-pen-map-btn:focus-visible,
-    .c-pen-map-select:focus-visible,
-    .c-pen-map-option:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-    .c-pen-map-btn:active,
-    .c-pen-map-select:active,
-    .c-pen-map-option:active { transform: scale(0.985); }
+    body { padding: 16px 20px 48px; }
+    h1 { font-size: 16px; margin: 0 0 8px; }
+    h2 { font-size: 13px; margin: 20px 0 8px; }
+    .note { font-size: 12px; max-width: 44rem; margin: 0 0 16px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+    .cell { display: flex; flex-direction: column; gap: 6px; min-width: 10rem; }
+    .cell span { font-size: 11px; }
+    .na { font-size: 11px; border: 1px dashed var(--color-ink); padding: 8px; background: var(--color-paper); }
+    .cell .c-pen-map-slot,
+    .cell .c-pen-map-option,
+    .cell .c-pen-map-cancel { width: 72mm; }
+
+    /* Canonical sibling: ToolChip / PenMapOpen / lists must not float. */
+    [data-region="PenMapOpen"] { position: static; }
+    [data-region="ClickList"],
+    [data-region="HoldList"],
+    .c-pen-map-list {
+      position: static;
+      height: auto;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      width: auto;
+    }
+    .c-tool-chip {
+      position: static;
+      display: inline-flex;
+      left: auto;
+      right: auto;
+      width: max-content;
+      grid-template-columns: none;
+      transform: none;
+    }
+    .c-tool-chip > .c-tool-cluster:nth-child(1),
+    .c-tool-chip > .c-tool-cluster:nth-child(2),
+    .c-tool-chip > .c-tool-cluster:nth-child(3) {
+      grid-column: auto;
+      justify-self: auto;
+    }
+
+    /* Navigator inlined copy later: prefix is optional here; sibling file is canonical. */
+    .scene-frame[data-scene-file="pen-button-map-states.html"] [data-region="PenMapOpen"] { position: static; }
+    .scene-frame[data-scene-file="pen-button-map-states.html"] .c-pen-map-list {
+      position: static;
+      height: auto;
+    }
+    .scene-frame[data-scene-file="pen-button-map-states.html"] .c-tool-chip {
+      position: static;
+      display: inline-flex;
+      left: auto;
+      right: auto;
+      width: max-content;
+      grid-template-columns: none;
+      transform: none;
+    }
+    .scene-frame[data-scene-file="pen-button-map-states.html"] .c-tool-chip > .c-tool-cluster:nth-child(1),
+    .scene-frame[data-scene-file="pen-button-map-states.html"] .c-tool-chip > .c-tool-cluster:nth-child(2),
+    .scene-frame[data-scene-file="pen-button-map-states.html"] .c-tool-chip > .c-tool-cluster:nth-child(3) {
+      grid-column: auto;
+      justify-self: auto;
+    }
   </style>
 </head>
-<body>
-  <h1 class="showcase-title">Control states — Pen-button map</h1>
-  <p class="showcase-note">Platform: desktop Electron. Hover required. Targets ≥24 px. N/A: touch-only hover skip. Empty collection N/A (this is a settings form, not a list fetch).</p>
+<body data-state="states">
+  <h1>Pen-button map — control states</h1>
+  <p class="note">
+    Platform <code>epaper</code> (epaper-device): no hover, no focus, no cursor, no motion.
+    Press = invert. Finger-eligible targets = 10 mm. Hover N/A · focus N/A.
+  </p>
 
-  <h2>btn.save (PenMapButton)</h2>
-  <div class="row">
-    <div class="swatch">
-      <label>default</label>
-      <button type="button" class="c-pen-map-btn" data-interactive><span class="c-pen-map-btn__label">Save and publish</span></button>
+  <h2>PenMapOpen (<code>cta.pen_map_open</code> · 10 mm)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>rest</span>
+      <div class="c-pen-map-open" data-region="PenMapOpen">
+        <button type="button" class="c-pen-map-open-btn" data-interactive aria-pressed="false" aria-label="Pen buttons">
+          <img src="../system/assets/icon-epaper-pen-map.svg" alt="" />
+        </button>
+      </div>
     </div>
-    <div class="swatch">
-      <label>hover (pointer)</label>
-      <button type="button" class="c-pen-map-btn" data-interactive><span class="c-pen-map-btn__label">Save and publish</span></button>
+    <div class="cell">
+      <span>open</span>
+      <div class="c-pen-map-open" data-region="PenMapOpen">
+        <button type="button" class="c-pen-map-open-btn" data-interactive aria-pressed="true" aria-label="Pen buttons">
+          <img src="../system/assets/icon-epaper-pen-map.svg" alt="" />
+        </button>
+      </div>
     </div>
-    <div class="swatch">
-      <label>focus-visible</label>
-      <button type="button" class="c-pen-map-btn"><span class="c-pen-map-btn__label">Save and publish</span></button>
+    <div class="cell">
+      <span>pressed</span>
+      <div class="c-pen-map-open" data-region="PenMapOpen">
+        <button type="button" class="c-pen-map-open-btn is-pressed" data-interactive aria-pressed="false" aria-label="Pen buttons">
+          <img src="../system/assets/icon-epaper-pen-map.svg" alt="" />
+        </button>
+      </div>
     </div>
-    <div class="swatch">
-      <label>active / pressed</label>
-      <button type="button" class="c-pen-map-btn is-pressed"><span class="c-pen-map-btn__label">Save and publish</span></button>
-    </div>
-    <div class="swatch">
-      <label>disabled</label>
-      <button type="button" class="c-pen-map-btn" disabled><span class="c-pen-map-btn__label">Nothing to publish</span></button>
-    </div>
-    <div class="swatch">
-      <label>loading</label>
-      <button type="button" class="c-pen-map-btn" aria-busy="true"><span class="c-pen-map-btn__label">Publishing…</span></button>
-    </div>
+    <div class="cell"><span>hover N/A</span><div class="na">hover N/A</div></div>
+    <div class="cell"><span>focus N/A</span><div class="na">focus N/A</div></div>
   </div>
 
-  <h2>list.slot_click / list.slot_hold (PenMapSelect)</h2>
-  <div class="row">
-    <div class="swatch">
-      <label>default closed</label>
-      <button type="button" class="c-pen-map-select" data-interactive>Pen ↔ freeform</button>
+  <h2>Close (<code>cta.pen_map_close</code> · 10 mm)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>rest</span>
+      <button type="button" class="c-pen-map-close" data-interactive aria-label="Close">
+        <img src="../system/assets/icon-epaper-pen-map-close.svg" alt="" />
+      </button>
     </div>
-    <div class="swatch">
-      <label>hover (pointer)</label>
-      <button type="button" class="c-pen-map-select" data-interactive>Temporary freeform</button>
+    <div class="cell">
+      <span>pressed</span>
+      <button type="button" class="c-pen-map-close is-pressed" data-interactive aria-label="Close">
+        <img src="../system/assets/icon-epaper-pen-map-close.svg" alt="" />
+      </button>
     </div>
-    <div class="swatch">
-      <label>focus-visible</label>
-      <button type="button" class="c-pen-map-select">Pen ↔ eraser</button>
-    </div>
-    <div class="swatch">
-      <label>active / pressed</label>
-      <button type="button" class="c-pen-map-select is-pressed">Undo</button>
-    </div>
-    <div class="swatch">
-      <label>disabled</label>
-      <button type="button" class="c-pen-map-select" disabled>Off</button>
-    </div>
-    <div class="swatch">
-      <label>invalid</label>
-      <button type="button" class="c-pen-map-select" aria-invalid="true">legacy_bind</button>
-    </div>
-    <div class="swatch">
-      <label>open / selected option</label>
-      <button type="button" class="c-pen-map-option is-selected" aria-selected="true">Pen ↔ freeform</button>
-    </div>
+    <div class="cell"><span>hover N/A</span><div class="na">hover N/A</div></div>
+    <div class="cell"><span>focus N/A</span><div class="na">focus N/A</div></div>
   </div>
 
-  <h2>Catalogue option (PenMapOption)</h2>
-  <div class="row">
-    <div class="swatch">
-      <label>default</label>
-      <button type="button" class="c-pen-map-option" data-interactive>Off</button>
+  <h2>Slot (<code>slot.click</code> / <code>slot.hold_move</code> · 10 mm)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>rest</span>
+      <button type="button" class="c-pen-map-slot" data-interactive aria-label="Click">
+        <img src="../system/assets/icon-epaper-pen-map-click.svg" alt="" />
+        <span class="c-pen-map-slot-k">Click</span>
+        <span class="c-pen-map-slot-v">Current primary ↔ Freeform Select</span>
+      </button>
     </div>
-    <div class="swatch">
-      <label>hover</label>
-      <button type="button" class="c-pen-map-option" data-interactive>Temporary rectangle</button>
+    <div class="cell">
+      <span>pressed</span>
+      <button type="button" class="c-pen-map-slot is-pressed" data-interactive aria-label="Hold-move">
+        <img src="../system/assets/icon-epaper-pen-map-hold.svg" alt="" />
+        <span class="c-pen-map-slot-k">Hold-move</span>
+        <span class="c-pen-map-slot-v">Temporary eraser</span>
+      </button>
     </div>
-    <div class="swatch">
-      <label>focus-visible</label>
-      <button type="button" class="c-pen-map-option">Drag node under tip</button>
+    <div class="cell"><span>hover N/A</span><div class="na">hover N/A</div></div>
+    <div class="cell"><span>focus N/A</span><div class="na">focus N/A</div></div>
+  </div>
+
+  <h2>List option (<code>.c-pen-map-option</code>)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>rest</span>
+      <button type="button" class="c-pen-map-option" data-interactive aria-selected="false">
+        <img src="../system/assets/icon-epaper-pen-map-eraser.svg" alt="" />
+        Current primary ↔ Eraser
+      </button>
     </div>
-    <div class="swatch">
-      <label>active</label>
-      <button type="button" class="c-pen-map-option is-pressed">Temporary erase</button>
+    <div class="cell">
+      <span>selected</span>
+      <button type="button" class="c-pen-map-option" data-interactive aria-selected="true">
+        <img src="../system/assets/icon-epaper-pen-map-freeform.svg" alt="" />
+        Current primary ↔ Freeform Select
+      </button>
     </div>
-    <div class="swatch">
-      <label>selected</label>
-      <button type="button" class="c-pen-map-option" aria-selected="true">Temporary freeform</button>
+    <div class="cell">
+      <span>pressed</span>
+      <button type="button" class="c-pen-map-option is-pressed" data-interactive aria-selected="false">
+        <img src="../system/assets/icon-epaper-pen-map-drag.svg" alt="" />
+        Drag node under tip
+      </button>
     </div>
+    <div class="cell"><span>hover N/A</span><div class="na">hover N/A</div></div>
+    <div class="cell"><span>focus N/A</span><div class="na">focus N/A</div></div>
+  </div>
+
+  <h2>Cancel (<code>list.cancel</code>)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>rest</span>
+      <button type="button" class="c-pen-map-cancel" data-interactive>Cancel</button>
+    </div>
+    <div class="cell">
+      <span>pressed</span>
+      <button type="button" class="c-pen-map-cancel is-pressed" data-interactive>Cancel</button>
+    </div>
+    <div class="cell"><span>hover N/A</span><div class="na">hover N/A</div></div>
+    <div class="cell"><span>focus N/A</span><div class="na">focus N/A</div></div>
+  </div>
+
+  <h2>ToolChip tile (<code>.c-tool-btn</code> · 10 mm)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>rest</span>
+      <div class="c-tool-chip" role="toolbar">
+        <div class="c-tool-cluster">
+          <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="cell">
+      <span>armed</span>
+      <div class="c-tool-chip" role="toolbar">
+        <div class="c-tool-cluster">
+          <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="cell">
+      <span>pressed</span>
+      <div class="c-tool-chip" role="toolbar">
+        <div class="c-tool-cluster">
+          <button type="button" class="c-tool-btn is-pressed" data-interactive aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="cell"><span>hover N/A</span><div class="na">hover N/A</div></div>
+    <div class="cell"><span>focus N/A</span><div class="na">focus N/A</div></div>
   </div>
 
   <script>
-    (() => {
-      for (const el of document.querySelectorAll("[data-interactive]")) {
-        el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
-        for (const ev of ["pointerup", "pointerleave", "blur"]) {
-          el.addEventListener(ev, () => el.classList.remove("is-pressed"));
-        }
-      }
-    })();
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
   </script>
 </body>
 </html>

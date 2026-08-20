@@ -81,17 +81,21 @@ Both described behaviour this rework deletes.
 
 <!-- lifecycle: active -->
 
-**Parent:** [REQ-18](../../prd.md#pen-buttons). **Constrains:** [SRS-EP-41](./srs-logic.md#srs-ep-41-barrel-dispatch). Does **not** steal [SRS-EP-06](#srs-ep-06) parent (REQ-03).
+**Parent:** [REQ-18](../../prd.md#pen-buttons). **Constrains:** [SRS-EP-41](./srs-logic.md#srs-ep-41-barrel-dispatch), [SRS-EP-52](./srs-ui.md#srs-ep-52-pen-map-editor), [SRS-EP-53](./srs-logic.md#srs-ep-53-pen-map-author). Does **not** steal [SRS-EP-06](#srs-ep-06) parent (REQ-03).
 
 | Scenario | Target |
 |---|---|
 | 1-button default Click (no move) | Toggle `pen` ↔ `sel_freeform` p95 ≤**300 ms**; **0** hold-move |
-| 1-button default Hold-move | Temporary freeform until release; **0** click toggle on release |
+| 1-button default Hold-move | Temporary **erase** until release; **0** click toggle on release |
 | 2-button default B2 Hold-move | Temporary erase until release; B1 unchanged |
 | Rebind Hold-move `drag_node_under_tip` on node | Live-direct bar (0 px / ≥5 Hz); empty canvas: **0** move, **0** lasso |
 | 0-button pen | **0** button gestures; REQ-03 still works |
 | 20-gesture mixed click/hold fixture | **0** events fire **both** click and hold-move |
-| Map apply after Infini publish | Next gesture uses map p95 ≤**300 ms**; in-flight unchanged |
+| On-device rebind (session up or down) | Next gesture uses map p95 ≤**300 ms**; in-flight unchanged; **0** lost local binds when Infini is down |
+| Infini restore on later session | Next gesture uses persisted map p95 ≤**300 ms**; in-flight unchanged |
+| Editor 0-button | **0** slot rows; **0** fake bindings |
+| Click list | Only `toggle_pen_freeform` · `toggle_pen_eraser` · `off` (**0** Undo) |
+| Hold-move list | Only `temp_erase` · `drag_node_under_tip` · `off` (**0** temp freeform/rect) |
 
 ---
 

@@ -28,9 +28,10 @@ grammar and specifies what is **device-local** — the structures that never cro
 | Op envelope `{ opId, type, payload, ts?, source? }` | [SRS-IN-09](../../../infini/features/vector-document/srs-data.md) Transmit ops |
 | `doc_change { type, seq, opId, op, baseSeq }` | [SRS-IN-09](../../../infini/features/vector-document/srs-data.md) · [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) §2 |
 | `doc_load { type, document, seq }` | [SRS-IN-09](../../../infini/features/vector-document/srs-data.md) · ADR-0015 §4 |
-| `viewport`, `stroke_begin` / `stroke_point` / `stroke_end` | [SRS-IN-07](../../../infini/features/tablet-sync/srs-logic.md) — shipped, unchanged; **up** `viewport` `source: epaper` per [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md) / [SRS-EP-24](../region-sync/srs-logic.md) |
+| `viewport`, `stroke_begin` / `stroke_point` / `stroke_end` | [SRS-IN-07](../../../infini/features/tablet-sync/srs-logic.md) — payload shape unchanged; **direction follow-gated** ([ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md)). Up `source: epaper` only while Infini follow is on ([SRS-EP-24](../region-sync/srs-logic.md)) |
+| `viewport_follow` | Session `{ direction, seq }` — [SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow). Not document |
 | Handshake `hello` / `drain_ack` / `queue_empty` / `load_ack` | ADR-0015 §7 |
-| `pen_button_map` / `pen_capability` | Settings, not document — [ADR-0028](../../../../adr/ADR-0028-pen-button-map-settings-channel.md) |
+| `pen_button_map` / `pen_capability` | Settings, not document — [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md) (supersedes [ADR-0028](../../../../adr/ADR-0028-pen-button-map-settings-channel.md)) |
 
 A device change to any row above is a change to the shared grammar and belongs in SRS-IN-09, with
 this section following. **The device must not add fields the desktop cannot parse** — an unknown
@@ -48,8 +49,8 @@ field arriving on the desktop is a mirror-suspect condition, not a graceful exte
 | Tool mode | `pen \| ink_box \| selection` | Device-local, never transmitted ([ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md) §1) |
 | Opaque carry-through | Raw form of node kinds the device does not author | Preserved verbatim from `doc_load`, re-emitted unchanged |
 | Clipboard slot | `{ nodes: Node[] } \| empty` | Session-only; one slot; never on the wire as a node ([ADR-0024](../../../../adr/ADR-0024-in-document-clipboard.md), [SRS-EP-31](./srs-logic.md#srs-ep-31-clipboard)) |
-| Pen-button map (live) | Domain [pen-button-map](../../../../domain/pen-button-map.md) | Consumed from `pen_button_map`; not persisted on device across restart in v1 |
-| Viewport token | `infini` \| `epaper` | [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md) — session, not document |
+| Pen-button map (live) | Domain [pen-button-map](../../../../domain/pen-button-map.md) | **Authored on device** ([SRS-EP-53](../tool-modes/srs-logic.md#srs-ep-53-pen-map-author)); persist/restore via settings; not persisted on device across restart in v1 |
+| Viewport follow | `none` \| `infini_to_epaper` \| `epaper_to_infini` | [domain/viewport-follow](../../../../domain/viewport-follow.md) — session, not document. Last-writer token withdrawn |
 
 ### Ink sample retention
 

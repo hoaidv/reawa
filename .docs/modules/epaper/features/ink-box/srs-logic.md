@@ -245,7 +245,7 @@ the descriptor is a logic requirement here and not merely a product aspiration.
 
 <!-- lifecycle: active -->
 
-**Parent:** [REQ-10](../../prd.md#hand-touch). **Links (not parents):** [SRS-EP-11](#srs-ep-11-device-manipulation) live-direct move, [SRS-EP-04](../tool-modes/srs-logic.md) exclusive tools, [SRS-EP-23](../tool-modes/srs-logic.md#srs-ep-23-finger-tool-switch). **Decision:** [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md) (viewport is **not** claimed by one-finger).
+**Parent:** [REQ-10](../../prd.md#hand-touch). **Links (not parents):** [SRS-EP-11](#srs-ep-11-device-manipulation) live-direct move, [SRS-EP-04](../tool-modes/srs-logic.md) exclusive tools, [SRS-EP-23](../tool-modes/srs-logic.md#srs-ep-23-finger-tool-switch), [SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow). **Decision:** [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md) (one-finger does **not** publish unless Infini is following; box-move never pans).
 
 Does **not** overload SRS-EP-11. Pen pick/move stays there. This section is **finger** only.
 
@@ -254,12 +254,15 @@ Does **not** overload SRS-EP-11. Pen pick/move stays there. This section is **fi
 | Pointer | Target | Eligible? |
 |---|---|---|
 | Finger | SmartGroup world `bounds` at/above LOD ([SRS-EP-11](#srs-ep-11-device-manipulation) 96 du min-axis when scale &lt; 1) | **Yes** — pick + move |
-| Finger | Resize anchors / 6 square anchors / any control whose **hit target &lt; 64 du** | **No** — 0 transform, 0 scale-mode, 0 end-kind. Pen still may |
+| Finger | Resize knobs (hit ≥ primary ToolChip tile) | **Yes** — resize with [SRS-EP-11](#srs-ep-11-device-manipulation) live-direct; knob wins over box-move |
+| Finger | Any other control whose **hit target &lt; 64 du** | **No** — 0 transform, 0 scale-mode, 0 end-kind. Pen still may |
 | Finger | ToolChip primary tile (64 du) | Chip wins — this REQ does not steal ([SRS-EP-05](../tool-modes/srs-ui.md)) |
-| Finger | Empty canvas (no box hit), one finger | **No-op**: exclusive tool unchanged; **0** nodes selected; **0** lasso; **0** pan |
+| Finger | Empty canvas (no box, knob, or chip hit), one finger | Palm vs pan by travel — not this table’s job. See Gesture: ≤ **10 mm** no-op; > **10 mm** local pan |
 | Two fingers | — | Not this section — [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport) |
 
 1 du = 1 panel pixel @ 226 dpi. Finger-eligible floor = primary ToolChip tile **64×64 du** ([CHL-0019](../../../../../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md)).
+
+**Pan threshold (architect bind, [REQ-10](../../prd.md#hand-touch) open question):** **10 mm** Euclidean panel travel from finger-down (**89 du** @ 226 dpi). At/below = palm-rest / tap (**0** pan, **0** selection, **0** tool switch). Past = **local** one-finger pan. Box / knob / chip hit on the same down **wins** (0 empty-canvas pan). Not a PRD millimetre; QA measures this number.
 
 ### Gesture
 
@@ -267,22 +270,29 @@ Does **not** overload SRS-EP-11. Pen pick/move stays there. This section is **fi
 |---|---|
 | Finger-down inside a hittable SmartGroup | Select that box; exclusive tool → `sel_freeform` ([SRS-EP-23](../tool-modes/srs-logic.md#srs-ep-23-finger-tool-switch)); chip updates with p95 ≤300 ms |
 | Same down, or following finger drag, inside the selected box | **Move** with [REQ-06](../../prd.md#device-manipulation) live-direct contract: 0 px jump on lift; ≥5 Hz partial refresh; ToolCanvasLayer live node ([SRS-EP-11](#srs-ep-11-device-manipulation)) |
-| During this move | **0** viewport pan; two-finger does not start; token stays idle/`infini` ([ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md)) |
-| Finger-down on a &lt;64 du control | No-op (table above) |
-| Already selected box, finger-down inside bounds | May start the move on that same down |
+| Finger-down on a resize knob of the selected box | **Resize** with the same live-direct contract as pen on that knob (ink-scale mode applies). Knob hit wins over box-move. |
+| During this move or resize | **0** viewport pan; two-finger does not start; follow unchanged (box-move is **not** local-nav) |
+| Finger-down on a &lt;64 du control that is **not** a resize knob | No-op (table above) |
+| Already selected box, finger-down inside bounds (not on a knob) | May start the move on that same down |
+| Empty canvas, travel ≤ 10 mm, lift | Palm-rest / tap: **0** pan, **0** selection, **0** tool switch |
+| Empty canvas, first sample with travel > 10 mm | **Local pan** (exclusive tool unchanged; 0 nodes selected; 0 lasso). If Epaper follow was on: set `direction = none` **then** pan ([SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow)). Publish `viewport` up **only if** Infini follow is on |
+| Empty canvas, box/knob/chip hit on the same down | Hit wins — **0** empty-canvas pan |
 
 ### UI-driving fields
 
 | Field | Drives |
 |---|---|
 | `touch.fingerCount` | 1 vs 2 (2 → not this section) |
-| `hit.kind` | `box` \| `anchor_lt64` \| `chip` \| `empty` |
-| `toolMode` | Must become `sel_freeform` on box hit |
+| `hit.kind` | `box` \| `anchor` \| `chip` \| `empty` |
+| `touch.travelMm` | Euclidean panel travel from down; pan iff `hit.kind=empty` and > **10** |
+| `toolMode` | Must become `sel_freeform` on box hit; **unchanged** on empty pan |
+| `follow.direction` | Local-nav while following Infini → `none` |
 | `sel.moving` | Live-direct chrome ([SRS-EP-22](./srs-ui.md#srs-ep-22-hand-touch-ui)) |
+| `sel.resizing.*` | Live-direct resize chrome when `hit.kind=anchor` |
 
 ### Out of scope
 
-Finger resize, rotation, connector re-anchor ([REQ-08](../../prd.md#node-manipulation)). Two-finger pan. REQ-15 tables.
+Finger rotation, connector re-anchor ([REQ-08](../../prd.md#node-manipulation)). Two-finger pan. REQ-15 tables.
 
 ---
 

@@ -22,7 +22,21 @@
       position: relative; width: 220px; height: 140px; background: #fff; border: 1px solid #000;
     }
     .stage .c-bounds { left: 24px; top: 20px; width: 160px; height: 90px; }
-    .c-tool-chip { position: static; transform: none; }
+    .c-tool-chip {
+      position: static;
+      display: inline-flex;
+      left: auto;
+      right: auto;
+      width: max-content;
+      grid-template-columns: none;
+      transform: none;
+    }
+    .c-tool-chip > .c-tool-cluster:nth-child(1),
+    .c-tool-chip > .c-tool-cluster:nth-child(2),
+    .c-tool-chip > .c-tool-cluster:nth-child(3) {
+      grid-column: auto;
+      justify-self: auto;
+    }
     .c-mode-toggle { position: static; transform: none; }
     .c-indicator { position: static; }
     .c-finger { position: relative; left: auto; top: auto; margin: 0; }
@@ -35,7 +49,7 @@
   <h1>Hand-touch — control states</h1>
   <p class="note">
     Platform <code>epaper</code> (epaper-device): no hover, no focus, no cursor, no motion.
-    Press = invert. Finger-eligible floor = 64 du. Resize hit = 56 du (pen-only).
+    Press = invert. Finger-eligible floor = 10 mm. Resize knobs: 4 mm visual / 10 mm hit (finger and pen).
   </p>
 
   <h2>ToolButton (64 du · UI-EP-04)</h2>
@@ -88,24 +102,20 @@
     </div>
   </div>
 
-  <h2>Resize handle (56 du · pen-only)</h2>
+  <h2>Resize knob (10 mm hit · finger and pen)</h2>
   <div class="grid">
     <div class="cell">
-      <span>default (pen path)</span>
+      <span>default</span>
       <div class="stage"><div class="c-bounds"><button type="button" class="c-handle se" data-interactive aria-label="Resize"></button></div></div>
     </div>
     <div class="cell">
-      <span>pressed (pen)</span>
+      <span>pressed</span>
       <div class="stage"><div class="c-bounds"><button type="button" class="c-handle se is-pressed" data-interactive aria-label="Resize"></button></div></div>
-    </div>
-    <div class="cell">
-      <span>finger noop (0 transform)</span>
-      <div class="stage"><div class="c-bounds"><button type="button" class="c-handle se is-noop" data-interactive aria-label="Finger noop"></button></div></div>
     </div>
     <div class="cell"><span>hover / focus</span><div class="na">N/A</div></div>
   </div>
 
-  <h2>Mode toggle (36 du · pen-only)</h2>
+  <h2>Mode toggle (10 mm · icon-only)</h2>
   <div class="grid">
     <div class="cell">
       <span>default</span>
@@ -120,21 +130,6 @@
         <img src="../system/assets/icon-epaper-mode-with-bounds.svg" alt="" />
         <span class="c-mode-current">Scale ink</span>
       </button>
-    </div>
-  </div>
-
-  <h2>ind.finger_anchor_noop</h2>
-  <div class="grid">
-    <div class="cell">
-      <span>hidden</span>
-      <div class="na">not shown</div>
-    </div>
-    <div class="cell">
-      <span>visible (settled hatch, no blink)</span>
-      <div class="c-indicator" id="ind.finger_anchor_noop">
-        <img src="../system/assets/icon-hand-touch-noop.svg" alt="" />
-        <span class="c-indicator__copy">Finger: 0 transform — pen only (56 du)</span>
-      </div>
     </div>
   </div>
 

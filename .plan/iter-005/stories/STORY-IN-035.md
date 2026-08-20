@@ -1,6 +1,6 @@
 ---
 id: STORY-IN-035
-title: Persist and publish pen-button map to tablet
+title: Persist and restore pen-button map (not the editor)
 kind: implement
 parent_srs: [SRS-IN-23, SRS-IN-25]
 parent_req: [REQ-05]
@@ -9,30 +9,33 @@ priority: P0
 iter: iter-005
 estimate: 3
 owner: dev
-depends_on: [STORY-IN-034]
+depends_on: [STORY-EP-056]
 acceptance_criteria:
-  - "Given 1- or 2-button capability, When the creator assigns each slot and saves, Then the next tablet gesture uses that map (p95 <=300 ms after publish) and in-flight gestures are unchanged."
-  - "Given a 0-button pen, When settings are shown, Then barrel slots are absent or disabled (0 fake bindings)."
-  - "Given a live session, When the map is published, Then Infini sends 0 document messages for that publish (settings channel)."
+  - "Given the creator binds a map on the tablet, When Infini is connected, Then Infini persists that map (not in the document) and sends 0 document messages for that persist."
+  - "Given a later session with a persisted map and matching 1- or 2-button capability, When hello completes, Then the tablet next gesture uses that map (p95 <=300 ms after restore) and in-flight gestures are unchanged."
+  - "Given a 0-button pen, When Infini restores, Then 0 fake button bindings are applied."
+  - "Given Infini has no session, When the tablet edits the map, Then the live device map still applies (persist waits; 0 lost local binds)."
 design_package: ".plan/iter-005/design/pen-button-map/"
 ui_spec: ".plan/iter-005/design/pen-button-map/ui-spec.md"
 scenes:
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-entry.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-0.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-2.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-offline.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-click.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-hold.html"
-  - ".plan/iter-005/design/pen-button-map/pen-button-map-invalid-stale.html"
-  - ".plan/iter-005/design/pen-button-map/pen-button-map-offline-then-publish.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-chip-temp-erase.html"
+  - ".plan/iter-005/design/pen-button-map/pen-button-map-chip-drag.html"
 hifi: ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
 wireframe: ""
 ---
 
-# STORY-IN-035 — Persist and publish pen-button map to tablet
+# STORY-IN-035 — Persist and restore pen-button map (not the editor)
 
-TRACK-005. Parent [REQ-05]. Infini [REQ-05](../../../.docs/modules/infini/prd.md#pen-button-map)
+TRACK-005. Parent Infini [REQ-05](../../../.docs/modules/infini/prd.md#pen-button-map) (re-scoped 2026-08-20). Persist/restore only — no desktop editor. Bound: [SRS-IN-23](../../../.docs/modules/infini/features/tablet-sync/srs-logic.md), [SRS-IN-25](../../../.docs/modules/infini/features/tablet-sync/srs-quality.md). [ADR-0030](../../../.docs/adr/ADR-0030-tablet-authors-pen-button-map.md) supersedes [ADR-0028](../../../.docs/adr/ADR-0028-pen-button-map-settings-channel.md) authoring direction.
 
-
+Depends on [STORY-EP-056](./STORY-EP-056.md) (epaper-device package), not the historical Infini paint of [STORY-IN-034](./STORY-IN-034.md). Status stays **draft** until the design package is `done` and behavior-driven scenarios exist.
 
 ## Kind
 
@@ -40,6 +43,4 @@ TRACK-005. Parent [REQ-05]. Infini [REQ-05](../../../.docs/modules/infini/prd.md
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Depends on | STORY-IN-034 |
-
-Stories stay **draft** until `/architect` binds dedicated SRS (current parent_srs is the nearest existing section).
+| Depends on | STORY-EP-056 |

@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-19T11:09:05+00:00",
+  "generated_at": "2026-08-20T09:51:38+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 18,
-    "ready": 1,
+    "draft": 20,
+    "ready": 2,
     "in-progress": 0,
     "in-review": 0,
-    "done": 120,
+    "done": 123,
     "blocked": 13,
     "cancelled": 1
   },
@@ -18,19 +18,19 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 52,
-      "done": 29,
+      "total": 56,
+      "done": 31,
       "in_review": 0
     },
     "infini": {
-      "total": 35,
-      "done": 25,
+      "total": 37,
+      "done": 26,
       "in_review": 0
     }
   },
-  "open_challenges": 1,
-  "resolved_challenges_this_iter": 0,
-  "sync_orphans": 132,
+  "open_challenges": 2,
+  "resolved_challenges_this_iter": 1,
+  "sync_orphans": 139,
   "master_plan": true,
   "tracks": [
     {
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "W2 /qa BDD EP-038 then /dev EP-038 \u2014 human visual on W1 packages first",
+      "cursor": "NOW EP-054 hand-touch empty-pan after human glance at UI-EP-08",
       "iter": "iter-005"
     }
   ]

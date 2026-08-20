@@ -112,7 +112,7 @@ SelectionOverlay is a child of InkSurface in z-order (painted over ink).
 | ToolChip | **reuse** UI-EP-03 | `.c-tool-chip` | 4 tools, 64×64, radius 0 | ToolStrip |
 | ToolButton | **reuse** UI-EP-01 | `.c-tool-btn` | default, active, pressed, unavailable | ToolStrip |
 | SelectionOverlay | **build** | `.c-bounds` + handles | selected, moving, resizing, hidden | SelectionOverlay |
-| InkScaleModeToggle | **build** | `.c-mode-toggle` | withBounds, fixedInk, pressed, hidden | SelectionOverlay |
+| InkScaleModeToggle | **build** | `.c-mode-toggle` | icon-only 10 mm (same as primary tile); withBounds, fixedInk, pressed, hidden | SelectionOverlay |
 | CreateRefusedIndicator | **build** | `.c-indicator` | hidden, visible | near selection |
 | ManipulationUnavailableIndicator | **build** | `.c-indicator` | hidden, visible | SelectionOverlay |
 
@@ -205,8 +205,7 @@ cannot mistake a handle for a stroke:
 
 1. Bounds = double-rail, never a dashed marquee or single 2px stroke.
 2. Handles = filled black squares with a paper well; pressed inverts. Edge + corner, **no rotation**.
-3. Mode toggle sits on the **box** (bottom-center, content-space), hatch-filled, with a paper label
-   (`ind.mode_current`). Not parked on ToolChip.
+3. Mode toggle sits on the **box** (bottom-center, content-space), **icon-only, 10 mm**, **8 mm below** the AABB (human 2026-08-20 / [CHL-0023](../../../iter-005/challenges/CHL-0023-epaper-physical-scale.md)). Not parked on ToolChip.
 4. Indicators = hatch chip + paper text. Transient, near the selection.
 
 ## Interaction map (from SRS)

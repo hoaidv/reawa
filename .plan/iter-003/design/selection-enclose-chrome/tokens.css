@@ -3,36 +3,37 @@
   --color-ink: #000000;
   --color-rule: #000000;
   /* Composed from UI-EP-01 v0.4 — do not restyle the chip */
-  --chip-h: 64px;
+  --chip-h: 10mm;
   --chip-pad: 0;
-  --chip-gap: 0;
-  --chip-btn: 64px;
-  --chip-icon: 24px;
+  --chip-gap: 5mm;
+  --chip-btn: 10mm;
+  --chip-icon: 4mm;
   --chip-radius: 0;
-  --chip-inset: 8px;
+  --chip-inset: 2mm;
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 16px;
   --font-caption: 11px;
   --font-label: 12px;
   --font-sans: "DM Sans", system-ui, sans-serif;
-  /* RM2 panel 1404×1872 @ 226 dpi; preview landscape 1872×1404 */
-  --panel-portrait-w: 1404px;
-  --panel-portrait-h: 1872px;
-  --panel-w: 1872px;
-  --panel-h: 1404px;
+  /* RM2 landscape 246mm × 187mm (1872×1404). Preview = real mm, no parent scale. */
+  --panel-portrait-w: 187mm;
+  --panel-portrait-h: 246mm;
+  --panel-w: 246mm;
+  --panel-h: 187mm;
   /* Spike proposals — 1 CSS px = 1 device unit in this preview. OPEN until architect confirms. */
-  --handle-visual: 28px;
-  --handle-hit: 56px;
-  --lod-min-axis: 96px;
-  --bounds-outer: 3px;
-  --bounds-gap: 2px;
-  --bounds-inner: 1px;
-  --mode-toggle-h: 36px;
+  --handle-visual: 4mm;
+  --handle-hit: 8mm;
+  --lod-min-axis: 12mm;
+  --bounds-outer: 0;
+  --bounds-gap: 0;
+  --bounds-inner: 0;
+  --mode-toggle-h: 10mm;
+  --sel-chrome-gap: 8mm;
   --z-overlay: 2;
   --z-chip: 5;
   --marquee-stroke: 1px;
-  --anchor-visual: 16px;
-  --anchor-hit: 40px;
-  --enclose-h: 64px;
+  --anchor-visual: 4mm;
+  --anchor-hit: 8mm;
+  --enclose-h: 10mm;
 }

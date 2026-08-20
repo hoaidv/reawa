@@ -3,7 +3,7 @@ title: Business Requirements Document — Reawa
 version: 1.0.0
 status: approved
 owner: analyst
-last_review: 2026-07-05
+last_review: 2026-08-20
 ---
 
 # BRD — Reawa
@@ -60,15 +60,47 @@ pen-matched coordinates. Code lives in repo-root `epaper/` (sibling of `macOS/`)
 ## [BRD-07] Infinity canvas + tablet sync (Infini ↔ Epaper)
 
 Product line that turns the reMarkable into a **drawing tablet for an infinite desktop
-canvas**: desktop Infini owns pan/zoom viewing; Epaper owns local ink; both share a
-vector document and a drawing-region mapping
+canvas**. Epaper owns local ink. Infini remains navigator of **its own** infinity canvas
+and the **persistence home** (desktop is the file). Both share a vector document.
+The **document channel stays one-way** this campaign (tablet authors in-session; desktop
+is the file)
 ([EXP-0001](../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md) →
 modules [infini](modules/infini/prd.md) + [epaper](modules/epaper/prd.md)).
 
+**Cameras are independent by default.** Always-on viewport sync (Infini drives the tablet
+drawing region; last-writer shared camera) is **obsolete**. Infini pans/zooms its own
+canvas; it does not exclusively own the tablet’s camera. On-device pan/zoom on Epaper is
+**in-scope**.
+
 | Goal | Measurable Outcome | Sponsor |
 |---|---|---|
-| Desktop infinity navigation | Smooth pan + zoom/pinch; transform = translate + uniform scale | Product |
+| Independent cameras by default | With a session connected and follow off, a pan/zoom on Epaper leaves Infini’s camera unchanged, and a pan/zoom on Infini leaves Epaper’s camera unchanged | Product |
+| Infini own-canvas navigation | Infini pans/zooms its own infinity canvas (transform = translate + uniform scale). It does not exclusively own the tablet camera | Product |
+| On-device viewport (Epaper) | Two-finger pan/zoom on Epaper changes the **tablet’s** camera. Local one-finger pan on empty canvas is allowed (independent camera). Neither implies Infini’s camera moves unless Infini is following Epaper | Product |
+| Follow on → peer camera matches | When follow is on, the follower’s viewport matches the leader’s (Epaper → Infini, or Infini → Epaper) | Product |
+| Exactly one follow direction | While Epaper and Infini are connected, turning one follow toggle on turns the other off. Both off is valid and is the default | Product |
+| Follow off on disconnect | When the connection is lost, follow is automatically off; neither camera continues to track the other | Product |
 | Interchangeable vectors | One persistence format (SVG profile), one in-memory model, one transmit encoding | Product |
-| Tablet ↔ desktop session | Local ink on RM; vectors to Infini; Infini viewport drives RM drawing region with mapping ahead of full refresh | Product |
 
-**Out of this BRD (defer):** on-device pan/zoom on Epaper.
+### Business rule (human 2026-08-20)
+
+1. **Tablet may change its own viewport.** Epaper and Infini viewports are **independent by default**.
+2. **Optional follow** (exactly one direction at a time when connected):
+   - Infini may optionally **follow** the connected Epaper (viewport sync Epaper → Infini).
+   - Epaper may optionally **follow** the connected Infini (viewport sync Infini → Epaper).
+   - **Exactly one** follow direction is enabled at a time while Epaper and Infini are connected. Turning one on turns the other off.
+   - Follow is **automatically off** when the connection is lost.
+3. **Chrome (business, not layout):** a **viewport-follow icon toggle** on **both** products. Epaper toggle: follow connected Infini. Infini toggle: follow connected Epaper. This is **not** a ToolChip exclusive “hand tool” tile.
+4. Infini remains navigator + persistence home. Document channel stays one-way this campaign.
+
+### Assumptions
+
+- Palm-vs-pan threshold for one-finger empty-canvas pan is Product Manager detail — not a BRD field list.
+
+### Decision (2026-08-20)
+
+**Decided.** Supersedes the prior BRD-07 rule “desktop Infini owns pan/zoom viewing; Epaper owns local ink,” the session rule “Infini viewport drives RM drawing region,” and the deferral “on-device pan/zoom on Epaper.” Last-writer shared camera is **not** the business model.
+
+**Forward (not a Must this campaign):** Infini may follow other Infini instances.
+
+**Out of this BRD (defer):** reversing document direction / CRDT / multi-writer document this campaign. Human: “we change document direction later.”

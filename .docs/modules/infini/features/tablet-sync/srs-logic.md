@@ -1,7 +1,7 @@
 ---
 feature: tablet-sync
-parent_req: [REQ-03]
-version: 0.7.0
+parent_req: [REQ-03, REQ-06]
+version: 0.8.0
 lifecycle: active
 ---
 
@@ -10,8 +10,13 @@ lifecycle: active
 Binds Infini to the session contract in
 [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) under the ownership model of
 [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md), with stroke paint parity from
-[ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md).
+[ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md), as amended by
+[ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md)
+(independent cameras; follow-gated viewport) and
+[ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md)
+(tablet authors the pen-button map; Infini persist/restore).
 Shared node semantics: [domain/vector-document](../../../../domain/vector-document.md).
+Follow anatomy: [domain/viewport-follow](../../../../domain/viewport-follow.md).
 Device peer: [epaper/device-document](../../../epaper/features/device-document/srs-logic.md).
 
 **Code SoT (2026-08-11):** `infini/src/session/TabletSession.ts`,
@@ -29,9 +34,11 @@ Parent REQ: [REQ-03](../../prd.md#tablet-sync).
 
 > **Revised 2026-08-13.** Infini is no longer the document authority
 > ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md)). It **loads** the document
-> to the device once, **drives the viewport**, and **applies** the device's published changes to its
-> mirror. The pre-rework rules that pushed `doc_snapshot` after Infini edits, on orientation change,
-> and on reconnect are withdrawn — that reflex is what clobbered device work.
+> to the device once, **may** send `viewport` **only while Epaper follow is on**, and **applies**
+> the device's published changes to its mirror. Always-on Infini→tablet viewport drive is withdrawn
+> ([ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md)). The pre-rework rules
+> that pushed `doc_snapshot` after Infini edits, on orientation change, and on reconnect are
+> withdrawn — that reflex is what clobbered device work.
 
 ### Endpoint(s)
 
@@ -42,13 +49,15 @@ Auth: none in v0 (trusted local link). Default listen: `0.0.0.0:9877`.
 
 | Channel | Owner (writer) | Consumer | Cardinality / priority |
 |---|---|---|---|
-| **Viewport** | Infini | Epaper | Continuous, ≤30 Hz — apply before next pen sample |
+| **Viewport** | **Leader** of the active follow | Follower | **Only along `follow.direction`.** Coalesce ≤30 Hz when on; **0** either way when `none` |
+| **Follow control** | Either peer | Peer | Session `viewport_follow` `{ direction, seq }` — not document |
+| **Pen-button map** | Tablet authors live map; Infini persist/restore | Peer | Settings `pen_capability` T→D; `pen_button_map` T→D persist, D→T restore-on-hello ([SRS-IN-23](#srs-in-23-pen-map-publish)) |
 | **Load** | Infini | Epaper | **Once** per session start / reconnect / explicit resync, handshake-gated |
 | **Change** | Epaper | Infini | One `doc_change` per committed op |
 | **Preview stroke** | Epaper | Infini | Continuous during a stroke — advisory, never persisted |
 
 **Invariant (testable by message type):** after the load completes, Infini sends **0** document
-messages for the rest of the session. Only `viewport` may flow down **while Infini owns the token**. Settings: [SRS-IN-23](#srs-in-23-pen-map-publish). Tablet viewport: [SRS-IN-21](#srs-in-21-viewport-token).
+messages for the rest of the session. `viewport` may flow **only along the active follow**. Settings persist/restore: [SRS-IN-23](#srs-in-23-pen-map-publish) ([ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md)). Viewport gates: [SRS-IN-21](#srs-in-21-viewport-token). Follow enum: [SRS-IN-26](#srs-in-26-viewport-follow).
 
 ### Tablet drawing frame (CSS) and `drawingRegion` (world)
 
@@ -80,11 +89,14 @@ Legacy aliases on Epaper ingest: `portrait`→`gutToLeft`, `landscape`→`gutOnT
 | Pan/zoom active | Visible outline of CSS frame |
 | Gesture end | Hide after **100 ms** settle debounce (no fade required) |
 
-### Viewport message (Infini → Epaper)
+### Viewport message (along active follow)
+
+Same payload either way (`source: infini` \| `epaper`):
 
 | Field | Required | Meaning |
 |---|---|---|
 | `type` | yes | `viewport` |
+| `source` | yes (follow-gated) | `infini` \| `epaper` |
 | `translate` | yes | `{ x, y }` |
 | `scale` | yes | uniform > 0 |
 | `drawingRegion` | yes | World AABB of tablet frame |
@@ -180,7 +192,8 @@ Per [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md):
 
 | id | Channel | Direction |
 |---|---|---|
-| `viewport` | viewport | Infini → Epaper |
+| `viewport` | viewport | **Along follow only** — Infini → Epaper while `infini_to_epaper`; Epaper → Infini while `epaper_to_infini`; **0** when `none` |
+| `viewport_follow` | session | Either → peer — `{ direction, seq }`; not document |
 | `doc_load` | load — handshake-gated | Infini → Epaper |
 | `drain_ack` | session | Infini → Epaper |
 | `hello` / `queue_empty` / `load_ack` | session | Epaper → Infini |
@@ -206,7 +219,7 @@ Per [ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md):
 | No native bridge | Browser-only; no RM sync |
 | Bad JSON line | Log; continue |
 | Unknown host→RM type | Epaper ignores and logs a protocol defect |
-| RM disconnect | Status update. **Do not** push a document on reconnect — run the handshake: drain the device queue first, then offer `doc_load` |
+| RM disconnect | Status update. Follow → `none` **before** the next gesture; reconnect does **not** restore follow. **Do not** push a document on reconnect — run the handshake: drain the device queue first, then offer `doc_load` |
 | `doc_change` gap (`baseSeq` mismatch) | Mirror marked suspect; request explicit resync; do not save a suspect mirror |
 | Device reports `queued: k > 0` | Send `drain_ack`, ingest k changes in order, wait for `queue_empty` before any load |
 
@@ -253,7 +266,7 @@ two decoders.** Sharing a listen port, a parser, or a `type` switch with `:9877`
 | `debug_log` | Epaper → Infini | One log record |
 
 No other `type` values are legal on `:9878`. Handshake types from ADR-0015 (`viewport`,
-`doc_load`, `doc_change`, `hello`, `stroke_*`, …) arriving here are **dropped** — never
+`viewport_follow`, `doc_load`, `doc_change`, `hello`, `stroke_*`, …) arriving here are **dropped** — never
 forwarded to the `:9877` decoder, never applied to `VectorDocument`.
 
 ### Control sequence
@@ -414,38 +427,85 @@ and `doc_op` carries these edits in both directions.
 
 ---
 
-## [SRS-IN-21] Viewport last-writer session rules {#srs-in-21-viewport-token}
+## [SRS-IN-21] Viewport emit/apply session gates {#srs-in-21-viewport-token}
 
 <!-- lifecycle: active -->
+<!-- revised: 2026-08-20 — ADR-0029. Last-writer withdrawn. Same id; emit/apply gates only.
+     Follow enum is [SRS-IN-26], not a parent of this section. -->
 
-**Parent:** Epaper [REQ-10](../../../epaper/prd.md#hand-touch). **Decision:** [ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md). **Canvas apply:** [SRS-IN-20](../infinity-canvas/srs-logic.md#srs-in-20-follow-viewport).
+**Parent:** [REQ-03](../../prd.md#tablet-sync) (session wire). **Gate (not parent):** [REQ-06](../../prd.md#viewport-follow) / [SRS-IN-26](#srs-in-26-viewport-follow). **Decision:** [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md). **Canvas apply:** [SRS-IN-20](../infinity-canvas/srs-logic.md#srs-in-20-follow-viewport). **Do not parent Infini REQ-06 here.**
+
+`viewportOwner` / steal / 150 ms release are **withdrawn**.
 
 | Rule | Value |
 |---|---|
-| Idle | `viewportOwner = infini`; `viewport` down as [SRS-IN-07](#srs-in-07) |
-| Inbound `viewport` `source: epaper` | Apply; set owner `epaper`; **send 0** competing `viewport` until steal or release |
-| Steal | New Infini pan/pinch starts → owner `infini`, resume down `viewport` |
-| Document channel | Unchanged — 0 `doc_load` / `doc_change` from this feature |
+| `direction = none` (default) | **0** `viewport` either way |
+| `direction = infini_to_epaper` | Infini **emits** `viewport` down (`source: infini`, ≤30 Hz, `settle: true` on flush). **Ignore** inbound tablet `viewport` |
+| `direction = epaper_to_infini` | Infini **applies** inbound `source: epaper` ([SRS-IN-20](../infinity-canvas/srs-logic.md#srs-in-20-follow-viewport)). **0** competing `viewport` down |
+| Inbound `viewport` while not the follower | Ignore + log; 0 apply; 0 implicit follow-on |
+| Document channel | Unchanged — **0** `doc_load` / `doc_change` / `doc_snapshot` from viewport or follow |
 
-QA: *Given both idle, When the creator pans on the tablet, Then Infini sends 0 competing viewport bursts.*
+QA: *Given both follows off, When the creator pans on the tablet, Then Infini sends 0 viewport and does not move its canvas from that gesture.*
 
 ---
 
-## [SRS-IN-23] Pen-button map persist and settings publish {#srs-in-23-pen-map-publish}
+## [SRS-IN-26] Viewport-follow Epaper {#srs-in-26-viewport-follow}
 
 <!-- lifecycle: active -->
 
-**Parent:** Infini [REQ-05](../../prd.md#pen-button-map). **Decision:** [ADR-0028](../../../../adr/ADR-0028-pen-button-map-settings-channel.md). **Not a parent of [SRS-IN-05](../vector-document/srs-ui.md)** (open/save chrome). **Anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). Device consume: [SRS-EP-41](../../../epaper/features/tool-modes/srs-logic.md#srs-ep-41-barrel-dispatch).
+**Parent:** [REQ-06](../../prd.md#viewport-follow). **Decision:** [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md). **Anatomy:** [domain/viewport-follow](../../../../domain/viewport-follow.md). **Apply (not parent):** [SRS-IN-20](../infinity-canvas/srs-logic.md#srs-in-20-follow-viewport). **Emit/apply gates (not parent):** [SRS-IN-21](#srs-in-21-viewport-token). **Peer:** [SRS-EP-49](../../../epaper/features/region-sync/srs-logic.md#srs-ep-49-viewport-follow). **Do not parent this on SRS-IN-01 / SRS-IN-07 / SRS-IN-20 / SRS-IN-21.**
+
+Follow is a **choice**. Default `none`. Not a ToolChip, recognizer, or hand-tool tile. Infini→Infini follow is a Non-Goal.
+
+### Session enum (closed)
+
+| `direction` | Infini camera | Viewport on wire |
+|---|---|---|
+| `none` (default) | Local | **0** either way |
+| `epaper_to_infini` | Apply tablet `viewport` ([SRS-IN-20](../infinity-canvas/srs-logic.md#srs-in-20-follow-viewport)) | Epaper → Infini only |
+| `infini_to_epaper` | Local; Epaper is the follower | Infini → Epaper only (from Infini nav, [SRS-IN-01](../infinity-canvas/srs-logic.md)) |
+
+### Rules
+
+| Trigger | Effect |
+|---|---|
+| Creator enables Infini follow (session live, was `none`) | Set `epaper_to_infini`; emit `viewport_follow`; apply tablet’s current viewport after settle (0 divergent); Epaper follow stays off |
+| Creator enables Infini follow while Epaper follow is on | Set `epaper_to_infini`; Epaper follow **off** (0 dual-on; peer toggle p95 ≤300 ms); start applying tablet viewport |
+| Creator disables Infini follow | Set `none`; stop applying inbound tablet `viewport` |
+| Follower local-nav (trackpad/mouse pan or pinch/zoom) while `epaper_to_infini` | Set `none` **then** local camera; 0 continued tablet apply after that gesture starts |
+| Connection lost / no session | Force `none` before the next gesture. Reconnect / `hello` does **not** restore |
+| Inbound `viewport` while not `epaper_to_infini` | Ignore + log; 0 apply; 0 implicit on |
+| Inbound `viewport_follow` | Adopt `direction` (latest `seq`); update toggle |
+
+`viewport_follow` is session, not document (**0** `doc_*` from this feature).
+
+### UI-driving fields
+
+| Field | Drives |
+|---|---|
+| `follow.direction` | Toggle state ([SRS-IN-27](./srs-ui.md#srs-in-27-follow-toggle)) |
+| `session.connected` | Toggle unavailable / forced off when false |
+
+---
+
+## [SRS-IN-23] Pen-button map persist and restore {#srs-in-23-pen-map-publish}
+
+<!-- lifecycle: active -->
+<!-- revised: 2026-08-20 — tablet authors; Infini persist/restore only. Same id. -->
+
+**Parent:** Infini [REQ-05](../../prd.md#pen-button-map). **Decision:** [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md) (supersedes [ADR-0028](../../../../adr/ADR-0028-pen-button-map-settings-channel.md)). **Not a parent of [SRS-IN-05](../vector-document/srs-ui.md)** (open/save chrome). **Anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). Device author: [SRS-EP-53](../../../epaper/features/tool-modes/srs-logic.md#srs-ep-53-pen-map-author). Device consume: [SRS-EP-41](../../../epaper/features/tool-modes/srs-logic.md#srs-ep-41-barrel-dispatch). **UI:** Infini presents **0** map-editor screens ([SRS-IN-24](./srs-ui.md#srs-in-24-pen-map-ui) retired).
 
 | Rule | Value |
 |---|---|
 | Persist | Infini **app settings**, never SVG / VectorDocument |
-| Publish | `pen_button_map` on `:9877` after save; once after hello if a map exists |
-| Document messages | **0** for that publish (assert by type: not `doc_load` / `doc_change` / `doc_snapshot`) |
+| Inbound persist | Consume `pen_button_map` from the tablet; store. **0** `doc_*` for that persist |
+| Restore | After hello + `pen_capability`, if a persisted map **matches** `buttonCount` **and** the tablet has not authored this session → send `pen_button_map` desktop→tablet |
+| Hello race | If tablet sends a map first (`pending_persist` / authored this session), **store it**. Do not clobber with an older persist |
 | Capability | Consume `pen_capability` `{ buttonCount: 0\|1\|2 }` |
-| In-flight | Device keeps latched map; next gesture uses new map; p95 ≤300 ms after device apply |
-| Offline | Edit locally; publish after ADR-0015 handshake, still as settings |
-| 0-button | Do not publish fake slots |
+| In-flight | Device keeps latched map; next gesture uses restored map; p95 ≤300 ms after device apply |
+| No session | Persist waits on the tablet; Infini has nothing to store until reconnect |
+| 0-button | Do not restore or store fake slots |
+| Screens | **0** Infini map-editor surfaces |
 
 ---
 

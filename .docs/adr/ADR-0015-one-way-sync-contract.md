@@ -179,3 +179,17 @@ repaint, not a corrected gesture.
 | Bidirectional `doc_op` now (ADR-0009 target) | + | small | − needs conflict rules | Deferred — that is multi-directional sync |
 | No preview stream (desktop updates at pen-up only) | + | smallest | + simplest | Rejected — regresses the shipped ≤50 ms desktop liveness |
 | Merge queued changes into the load instead of draining first | + | small | − that is a merge algorithm | Rejected — deferred scope, and unnecessary with one writer |
+
+## Amendments
+
+### 2026-08-20 — Viewport is follow-gated ([ADR-0029](./ADR-0029-independent-cameras-viewport-follow.md))
+
+§5 “Viewport is unchanged and stays privileged” and §7 `viewport` D→T are **amended**, not rewritten:
+`viewport` still never carries document content (that type-level split stays). It is **no longer**
+always-on D→T. Messages flow **only along the active follow direction**. Both off → **0** viewport
+either way. Last-writer ([ADR-0023](./ADR-0023-viewport-last-writer.md)) is superseded.
+
+Allowed session type (not document): `viewport_follow` `{ direction, seq }` on the same `:9877`
+socket. Auditors still count `doc_load` / `doc_change` / `doc_snapshot` only for the document
+invariant. `viewport_follow` is **not** a protocol defect.
+

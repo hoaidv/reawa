@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-19T10:49:37+00:00
+generated_at: 2026-08-20T09:25:35+00:00
 ---
 
 # Sync Report
@@ -61,6 +61,11 @@ _None._
 | [SRS-EP-46] | epaper |
 | [SRS-EP-47] | epaper |
 | [SRS-EP-48] | epaper |
+| [SRS-EP-49] | epaper |
+| [SRS-EP-50] | epaper |
+| [SRS-EP-51] | epaper |
+| [SRS-EP-52] | epaper |
+| [SRS-EP-53] | epaper |
 | [SRS-IN-01] | infini |
 | [SRS-IN-02] | infini |
 | [SRS-IN-03] | infini |
@@ -77,8 +82,10 @@ _None._
 | [SRS-IN-21] | infini |
 | [SRS-IN-22] | infini |
 | [SRS-IN-23] | infini |
-| [SRS-IN-24] | infini |
 | [SRS-IN-25] | infini |
+| [SRS-IN-26] | infini |
+| [SRS-IN-27] | infini |
+| [SRS-IN-28] | infini |
 | [SRS-RW-01] | reawa |
 | [SRS-RW-02] | reawa |
 | [SRS-RW-03] | reawa |
@@ -197,6 +204,11 @@ _None._
 | [SRS-EP-46] | 0 | missing |
 | [SRS-EP-47] | 0 | missing |
 | [SRS-EP-48] | 0 | missing |
+| [SRS-EP-49] | 0 | missing |
+| [SRS-EP-50] | 0 | missing |
+| [SRS-EP-51] | 0 | missing |
+| [SRS-EP-52] | 0 | missing |
+| [SRS-EP-53] | 0 | missing |
 | [SRS-IN-01] | 6 | covered |
 | [SRS-IN-02] | 4 | covered |
 | [SRS-IN-03] | 3 | covered |
@@ -222,6 +234,9 @@ _None._
 | [SRS-IN-23] | 0 | missing |
 | [SRS-IN-24] | 0 | missing |
 | [SRS-IN-25] | 0 | missing |
+| [SRS-IN-26] | 0 | missing |
+| [SRS-IN-27] | 0 | missing |
+| [SRS-IN-28] | 0 | missing |
 | [SRS-RW-01] | 0 | missing |
 | [SRS-RW-02] | 0 | missing |
 | [SRS-RW-03] | 0 | missing |

@@ -2,8 +2,8 @@
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
-  height: 100%;
-  overflow: hidden;
+  height: auto; min-height: 100%;
+  overflow: auto;
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: #52525b;
@@ -11,8 +11,9 @@ html, body {
 [data-region="DeviceScreen"] {
   position: relative;
   /* Fills landscape tablet iframe (1872×1404) */
-  width: 100%;
-  height: 100%;
+  width: var(--panel-w);
+  height: var(--panel-h);
+  flex-shrink: 0;
   margin: 0;
   background: var(--color-paper);
   overflow: hidden;
@@ -49,14 +50,22 @@ html, body {
 [data-orientation="gutToRight"] .c-tool-chip,
 [data-orientation="gutAtBottom"] .c-tool-chip {
   top: var(--chip-inset);
-  left: 50%;
-  transform: translateX(-50%);
+  left: var(--chip-inset);
+  right: var(--chip-inset);
+  margin-left: auto;
+  margin-right: auto;
+  width: max-content;
+  transform: none;
 }
 [data-orientation="gutOnTop"] .c-tool-chip {
   bottom: var(--chip-inset);
   top: auto;
-  left: 50%;
-  transform: translateX(-50%);
+  left: var(--chip-inset);
+  right: var(--chip-inset);
+  margin-left: auto;
+  margin-right: auto;
+  width: max-content;
+  transform: none;
 }
 .c-tool-btn {
   box-sizing: border-box;
@@ -162,4 +171,12 @@ html, body {
   padding: 2px 6px;
   background: #fff;
   pointer-events: none;
+}
+
+
+/* Design-preview copy — not product chrome (CHL-0023) */
+.scene-caption,
+.orient-tag,
+[data-region="StatusLine"] {
+  display: none !important;
 }

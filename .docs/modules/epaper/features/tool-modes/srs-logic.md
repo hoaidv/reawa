@@ -44,9 +44,9 @@ Touch-on-chip uses MouseArea; pen-on-chip press is ignored for ink (fallback pat
 
 | Tool | Pen down on canvas | Finger / pen on ToolChip | Finger on canvas |
 |---|---|---|---|
-| `pen` | Local ink → **dispatch** at pen-up ([ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)): enclose / membership / connector / ordinary ink | Switch tool or flip a toggle | Ignored (no on-device pan — PRD Non-Goal) |
-| `sel_rect` | Rect marquee / pick / move / resize against the local document ([SRS-EP-10](../ink-box/srs-logic.md), [SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Ignored |
-| `sel_freeform` | Freeform lasso / pick / move / resize ([SRS-EP-10](../ink-box/srs-logic.md), [SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Ignored |
+| `pen` | Local ink → **dispatch** at pen-up ([ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)): enclose / membership / connector / ordinary ink | Switch tool or flip a toggle | [SRS-EP-21](../ink-box/srs-logic.md#srs-ep-21-one-finger) / [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport) — not this section |
+| `sel_rect` | Rect marquee / pick / move / resize against the local document ([SRS-EP-10](../ink-box/srs-logic.md), [SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Same — finger canvas is REQ-10, not a fourth exclusive tool |
+| `sel_freeform` | Freeform lasso / pick / move / resize ([SRS-EP-10](../ink-box/srs-logic.md), [SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Same |
 
 `pen` is the only inking exclusive tool — same Round 19 map, same paint. Recognizers differ only
 in **what the device does at pen-up**, so ink latency cannot regress by toggle
@@ -82,7 +82,7 @@ Tool mode is device-local and now trivially so: the peer has no tools this campa
   (the ink area keeps its content, [SRS-EP-06](./srs-quality.md)).
 - Chip anchor follows **gut orientation top** (see SRS-EP-05); exclusion rect moves with it.
 
-<!-- CHL-0022: the Input routing row “Finger on canvas | Ignored (no on-device pan)” is **not** the parent of [REQ-10](../../prd.md#hand-touch). Implement [SRS-EP-21](../ink-box/srs-logic.md#srs-ep-21-one-finger) / [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport). Do not silently rewrite the table above until PM adopts CHL-0022. -->
+<!-- revised: 2026-08-20 — PM adopted local pan ([REQ-10](../../prd.md#hand-touch)). Finger-on-canvas is SRS-EP-21 / SRS-EP-24, not a ToolChip exclusive. Viewport-follow is [SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow), not this file. -->
 
 ---
 
@@ -97,7 +97,7 @@ Tool mode is device-local and now trivially so: the peer has no tools this campa
 | Trigger | Finger-down that **hits a SmartGroup box** per SRS-EP-21 |
 | Effect | Exclusive tool becomes `sel_freeform`; recognizer toggles dim per existing Selection rules |
 | Chip | `ind.tool_active` shows freeform; p95 ≤300 ms; **chip bounds only** refresh |
-| Does not | Steal ToolChip hits; switch on empty-canvas one-finger; switch on &lt;64 du anchors |
+| Does not | Steal ToolChip hits; switch on empty-canvas one-finger; switch on resize-knob hit (resize, no extra tool change) |
 | Pen path | Unchanged — pen on a box still follows SRS-EP-11 (does not have to switch tools unless already specified there) |
 
 QA can write: *Given `pen` active and a box at/above LOD, When finger-down inside bounds, Then tool is `sel_freeform` and chip matches, p95 ≤300 ms.*
@@ -108,7 +108,7 @@ QA can write: *Given `pen` active and a box at/above LOD, When finger-down insid
 
 <!-- lifecycle: active -->
 
-**Parent:** [REQ-18](../../prd.md#pen-buttons). **Decisions:** [ADR-0025](../../../../adr/ADR-0025-barrel-vs-eraser-nib.md), [ADR-0028](../../../../adr/ADR-0028-pen-button-map-settings-channel.md). **Map anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). **Nib erase is not this section** — [SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib).
+**Parent:** [REQ-18](../../prd.md#pen-buttons). **Decisions:** [ADR-0025](../../../../adr/ADR-0025-barrel-vs-eraser-nib.md), [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md) (supersedes [ADR-0028](../../../../adr/ADR-0028-pen-button-map-settings-channel.md)). **Map anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). **Authoring is not this section** — [SRS-EP-53](#srs-ep-53-pen-map-author). **Nib erase is not this section** — [SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib).
 
 ### Classifier
 
@@ -117,25 +117,29 @@ QA can write: *Given `pen` active and a box at/above LOD, When finger-down insid
 | Button down+up | Below threshold | **Click** | Hold-move **must not** run |
 | Button down + move past threshold until release | At/above threshold | **Hold-move** | Click **must not** run on release |
 
-Threshold is device-local (start: **12 du** of tip travel while button is down). QA fixture: 20 mixed clicks and holds → **0** events fire both. Latch map at **button-down**; Infini rebind applies to the **next** gesture.
+Threshold is device-local (start: **12 du** of tip travel while button is down). QA fixture: 20 mixed clicks and holds → **0** events fire both. Latch map at **button-down**; on-device rebind or Infini restore applies to the **next** gesture.
 
 ### Click catalogue (closed — do not invent)
 
-`toggle_pen_freeform` · `toggle_pen_eraser` · `undo` · `off`
+`toggle_pen_freeform` · `toggle_pen_eraser` · `off`
+
+**Dropped:** `undo` (Undo stays on the ToolChip).
 
 ### Hold-move catalogue (closed — do not invent)
 
-`temp_sel_freeform` · `temp_sel_rect` · `temp_erase` · `drag_node_under_tip` · `off`
+`temp_erase` · `drag_node_under_tip` · `off`
+
+**Dropped:** `temp_sel_freeform` · `temp_sel_rect` (Hold-move snaps back; temporary select is meaningless if we do nothing after it).
 
 `drag_node_under_tip`: if tip is on a hittable node at latch, move with SRS-EP-11 live-direct; if empty, **0** nodes move and **0** lasso. Combined empty→lasso/node→drag is **not** a v1 id.
 
 ### Defaults
 
-See domain doc. 0-button: **0** barrel gestures; ToolChip still complete. 2-button B2 hold-move `temp_erase` uses Path A **mutation** ([SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib)) via the **barrel channel**, not the nib HID flag.
+See domain doc. 1-button Hold-move default is **`temp_erase`** (not temporary freeform). 0-button: **0** barrel gestures; ToolChip still complete. 2-button B2 hold-move `temp_erase` uses Path A **mutation** ([SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib)) via the **barrel channel**, not the nib HID flag.
 
 ### Chip during hold-move
 
-Shows the **temporary** exclusive tool (or erase-in-progress) until release, then restores unless the event was a Click toggle ([SRS-EP-42](./srs-ui.md#srs-ep-42-chip-temp-tool)).
+When Hold-move is **`temp_erase`**, the chip **mirrors** that temporary tool until release, then restores unless the event was a Click toggle ([SRS-EP-42](./srs-ui.md#srs-ep-42-chip-temp-tool)). **`drag_node_under_tip` does not** switch the exclusive tool on the chip. The chip is **not** the map editor ([SRS-EP-52](./srs-ui.md#srs-ep-52-pen-map-editor)).
 
 ### UI-driving fields
 
@@ -145,6 +149,58 @@ Shows the **temporary** exclusive tool (or erase-in-progress) until release, the
 | `pen.map` | Live catalogue ids |
 | `barrel.phase` | `idle` \| `click` \| `hold_move` |
 | `toolMode` + `toolMode.restore` | Chip + routing |
+
+---
+
+## [SRS-EP-53] On-device pen-button map authoring {#srs-ep-53-pen-map-author}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-18](../../prd.md#pen-buttons). **Decision:** [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md). **Anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). **UI:** [SRS-EP-52](./srs-ui.md#srs-ep-52-pen-map-editor). **Scene graph:** [srs-ui-multi-scene.md](./srs-ui-multi-scene.md). **Dispatch:** [SRS-EP-41](#srs-ep-41-barrel-dispatch). **Persist peer:** [SRS-IN-23](../../../infini/features/tablet-sync/srs-logic.md#srs-in-23-pen-map-publish). **Not the chip** — [SRS-EP-42](./srs-ui.md#srs-ep-42-chip-temp-tool).
+
+The tablet **writes** the live map. Infini stores and may restore; it does not author.
+
+| Rule | Value |
+|---|---|
+| Bind | Editor writes `buttons[].click` / `holdMove` from the closed catalogues only. New `mapId` per committed bind |
+| Apply | Live map replaces immediately for the **next** gesture; in-flight latch unchanged |
+| Persist-up | While session linked: emit `pen_button_map` tablet→desktop. **0** `doc_*` |
+| Offline | Editor remains usable. State `map.pending_persist`. Next barrel gesture uses the live map. Persist waits |
+| Reconnect | If `pending_persist` or authored this session: emit persist-up **before** accepting restore. Live map wins |
+| Restore-down | Apply inbound `pen_button_map` only when this session has not authored (`map.absent` / factory default). Next gesture; in-flight unchanged |
+| 0-button | Store **0** slots; ignore inbound maps that invent indexes |
+| Unknown id | Apply that slot as `off` |
+| Defaults | If never bound and no restore: domain defaults |
+
+### Closed ids (editor + lists)
+
+`cta.pen_map_open` · `cta.pen_map_close` · `slot.click` · `slot.hold_move` · `list.click.toggle_pen_freeform` · `list.click.toggle_pen_eraser` · `list.click.off` · `list.hold.temp_erase` · `list.hold.drag_node_under_tip` · `list.hold.off`
+
+`cta.pen_map_open` **placement is unnamed** — Designer proposes; PM adopts. Must be on-device chrome. Must **not** be Infini File menu, a 5-way radio on exclusive-tool tiles, or a fourth `toolMode`.
+
+### Routes / presentations (UI-driving)
+
+| Closed id | Nav kind | Target `scene_id` |
+|---|---|---|
+| `cta.pen_map_open` | `present-modal` | `scene.pen_map_editor` |
+| `cta.pen_map_close` / overlay dismiss | `dismiss` | drawing surface (underlay) |
+| `slot.click` | `present-sheet` | `scene.pen_map_click` |
+| `slot.hold_move` | `present-sheet` | `scene.pen_map_hold` |
+| `list.click.*` (pick) | `dismiss` | `scene.pen_map_editor` (write live map) |
+| `list.hold.*` (pick) | `dismiss` | `scene.pen_map_editor` (write live map) |
+
+Picker cancel = `dismiss` with **0** writes.
+
+### UI-driving fields
+
+| Field | Drives |
+|---|---|
+| `pen.buttonCount` | Hub layout 0 / 1 / 2; 0-button → **0** slot rows |
+| `pen.map.buttons[].click` / `holdMove` | Slot values |
+| `map.state` | `absent` \| `applied` \| `pending_persist` |
+| `session.connected` | Persist now vs wait — **does not** disable the editor |
+
+QA can write: *Given the editor and no session, When the creator rebinds Hold-move to drag-under-tip, Then the next hold-move uses that id and 0 binds are lost.*
 
 ---
 

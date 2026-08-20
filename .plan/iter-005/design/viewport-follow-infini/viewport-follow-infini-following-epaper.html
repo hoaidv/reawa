@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="desktop">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>follow.following_epaper — viewport-follow-infini</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    .c-follow-toggle:hover, .c-follow-toggle.is-hover { border-color: var(--color-ink); background: var(--color-ink); color: var(--color-on-primary); }
+    .c-follow-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .c-follow-toggle:active, .c-follow-toggle.is-pressed { transform: scale(0.96); }
+    .c-canvas-stage:hover { cursor: grab; }
+    .c-canvas-stage:active, .c-canvas-stage.is-pressed { cursor: grabbing; }
+    .c-canvas-stage:focus-visible { box-shadow: inset 0 0 0 3px var(--color-focus); }
+  </style>
+</head>
+<body data-state="follow.following_epaper">
+  <div data-region="WindowFrame">
+    <div class="app-mark" aria-hidden="true">Infini</div>
+    <a class="c-canvas-stage" data-region="CanvasStage" data-interactive href="./viewport-follow-infini-local-nav-turns-off.html" aria-label="Infinity canvas — pan to stop following">
+      <div class="c-world-layer" data-region="WorldLayer" style="transform: translate(-80px, 40px) scale(0.87)">
+        <div class="figure figure-circle" title="circle"></div>
+        <div class="figure figure-rect" title="rect"></div>
+        <div class="figure figure-line" title="line"></div>
+      </div>
+    </a>
+    <div class="c-chrome-trailing">
+      <div class="c-follow-cluster" data-region="FollowToggle">
+        <a class="c-follow-toggle" data-interactive href="./viewport-follow-infini-off.html" aria-pressed="true" aria-label="Following Epaper">
+          <img src="../system/assets/icon-viewport-follow-infini-on.svg" alt="" />
+        </a>
+        <p class="c-follow-caption">Following Epaper</p>
+      </div>
+      <div class="c-zoom-readout" data-region="StatusZoom" aria-live="polite">87%</div>
+    </div>
+    <p class="scene-legend">
+      <strong>follow.following_epaper</strong>
+      Infini applies the tablet viewport. Click follow to stop, or pan to turn off.
+    </p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach(function (el) {
+      el.addEventListener("pointerdown", function () { el.classList.add("is-pressed"); });
+      ["pointerup", "pointerleave", "blur"].forEach(function (ev) {
+        el.addEventListener(ev, function () { el.classList.remove("is-pressed"); });
+      });
+    });
+  </script>
+</body>
+</html>

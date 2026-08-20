@@ -7,8 +7,10 @@
   <link rel="stylesheet" href="tokens.css" />
   <link rel="stylesheet" href="common.css" />
   <style>
+    /* Navigator chrome. Scenes are inlined in .scene-frame so IDE HTML preview
+       (which cannot load nested local iframes) still paints. Sibling .html files remain canonical. */
     body { margin: 0; font-family: system-ui, sans-serif; background: #f4f4f5; }
-    .nav-shell { display: flex; min-height: 100vh; }
+    .nav-shell { display: flex; min-height: 100vh; min-height: 100dvh; }
     .nav-side {
       width: 16rem; flex-shrink: 0; padding: 1rem;
       border-right: 1px solid #d4d4d8; background: #fff;
@@ -20,28 +22,47 @@
     }
     .nav-side a:hover, .nav-side a:focus-visible { background: #e4e4e7; outline: none; }
     .nav-side a[aria-current="page"] { background: #e4e4e7; font-weight: 600; }
-    .nav-main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 1rem; min-width: 0; overflow: auto; }
-    .hint { align-self: stretch; margin: 0 0 0.75rem; font-size: 0.875rem; color: #52525b; }
-    .preview-stage { display: flex; justify-content: center; width: 100%; }
+    .nav-main {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: flex-start; padding: 1rem; min-width: 0; min-height: 0;
+      overflow: auto;
+    }
+    .nav-main .hint { align-self: stretch; margin: 0 0 0.75rem; font-size: 0.875rem; color: #52525b; }
+    .preview-stage {
+      display: block; width: auto; overflow: auto;
+    }
     .preview-scale {
       position: relative;
-      transform-origin: top center;
+      width: 246mm;
+      height: 187mm;
+      flex-shrink: 0;
       background: #fff;
       box-shadow: 0 1px 8px rgb(0 0 0 / 12%);
+      overflow: hidden;
     }
     .preview-scale iframe {
+      position: absolute; width: 0; height: 0; border: 0; overflow: hidden;
+    }
+    .preview-scale .scene-frame:not([hidden]) {
       position: absolute; inset: 0;
-      display: block; border: 0; width: 100%; height: 100%;
+      display: block; width: 100%; height: 100%;
+      overflow: hidden;
+    }
+    .preview-scale .scene-frame[hidden] { display: none; }
+    .preview-stage[data-preview-scale="mobile"] .preview-scale {
+      width: 246mm;
+      height: 187mm;
+      transform: none;
+      aspect-ratio: auto;
+      border-radius: 0;
+      border: 1px solid #a1a1aa;
       background: #52525b;
     }
-    /* Touch / epaper — 80% of RM2 landscape 1872×1404 (campaign lock) */
-    .preview-stage[data-preview-scale="mobile"] .preview-scale {
-      width: 1872px;
-      height: 1404px;
-      transform: scale(0.8);
-      border-radius: 0.5rem;
-      overflow: hidden;
-      border: 1px solid #a1a1aa;
+    .preview-scale .scene-frame > [data-region="DeviceScreen"] {
+      position: relative; width: 246mm; height: 187mm;
+    }
+    .preview-stage[data-preview-scale="mobile"] .scene-frame[data-kind="states"]:not([hidden]) {
+      overflow: auto; background: #e4e4e7;
     }
   </style>
 </head>
@@ -51,34 +72,784 @@
       <strong>hand-touch</strong>
       <a href="./hand-touch-finger-hit-box.html" target="scene-preview" aria-current="page">hand.finger_hit_box</a>
       <a href="./hand-touch-finger-moving.html" target="scene-preview">hand.finger_moving</a>
-      <a href="./hand-touch-finger-anchor-noop.html" target="scene-preview">hand.finger_anchor_noop</a>
+      <a href="./hand-touch-finger-resizing.html" target="scene-preview">hand.finger_resizing</a>
       <a href="./hand-touch-one-finger-empty.html" target="scene-preview">hand.one_finger_empty</a>
       <a href="./hand-touch-two-finger-pan.html" target="scene-preview">hand.two_finger_pan</a>
       <a href="./hand-touch-pinch.html" target="scene-preview">hand.pinch</a>
       <a href="./hand-touch-pan-vs-move.html" target="scene-preview">hand.pan_vs_move</a>
       <a href="./hand-touch-link-down-local-view.html" target="scene-preview">hand.link_down_local_view</a>
-      <a href="./hand-touch-pen-resize-after-finger-select.html" target="scene-preview">hand.pen_resize_after_finger_select</a>
       <a href="./hand-touch-states.html" target="scene-preview">States showcase</a>
     </nav>
     <main class="nav-main">
-      <p class="hint">
-        RM2 landscape 1872×1404 @ <strong>80%</strong> · UI-EP-06 · 1-bit · REQ-10 grammar (not “finger ignored”).
-        Finger ≥64 du · handles 56 du pen-only.
-      </p>
+      <p class="hint">RM2 landscape <strong>246×187 mm</strong> (1872×1404) · 1 cm tiles · real size, no parent scale · UI-EP-06.</p>
       <div class="preview-stage" data-preview-scale="mobile">
         <div class="preview-scale">
-          <iframe name="scene-preview" title="Scene preview" src="./hand-touch-finger-hit-box.html"></iframe>
+          <iframe name="scene-preview" title="Scene preview" src="about:blank"></iframe>
+          <article class="scene-frame" data-scene-file="hand-touch-finger-hit-box.html" data-kind="scene" data-state="hand.finger_hit_box">
+    <style>
+
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    a.c-tool-btn { text-decoration: none; color: inherit; }
+  
+    </style>
+<div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <div class="ink-cluster">
+          <a class="hop-box" href="./hand-touch-finger-moving.html" aria-label="Drag to move box">
+            <svg viewBox="0 0 420 240" aria-hidden="true">
+              <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+              <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+              <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+              <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+              <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+            </svg>
+          </a>
+        </div>
+        <div data-region="SelectionOverlay">
+          <div class="c-bounds pos-default" id="ovl.selection_bounds">
+            <button type="button" class="c-handle nw" data-interactive aria-label="Resize northwest"></button>
+            <button type="button" class="c-handle n" data-interactive aria-label="Resize north"></button>
+            <button type="button" class="c-handle ne" data-interactive aria-label="Resize northeast"></button>
+            <button type="button" class="c-handle e" data-interactive aria-label="Resize east"></button>
+            <a href="./hand-touch-finger-resizing.html" class="c-handle se" data-interactive aria-label="Finger resize southeast"></a>
+            <button type="button" class="c-handle s" data-interactive aria-label="Resize south"></button>
+            <button type="button" class="c-handle sw" data-interactive aria-label="Resize southwest"></button>
+            <button type="button" class="c-handle w" data-interactive aria-label="Resize west"></button>
+            <button type="button" class="c-mode-toggle" id="tgl.ink_scale_mode" data-interactive aria-pressed="true">
+              <img src="../system/assets/icon-epaper-mode-with-bounds.svg" alt="" />
+              <span class="c-mode-current">Scale ink</span>
+            </button>
+          </div>
+        </div>
+        <div data-region="GestureAnnotate">
+          <span class="c-finger" style="left:40%;top:46%" title="Finger on box">
+            <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
+          </span>
+        </div>
+      </div>
+      <p class="scene-caption">
+        hand.finger_hit_box — finger-down on box; tool → sel_freeform; chip still hittable (64 du).
+        <a href="./hand-touch-finger-moving.html">Move</a> ·
+        <a href="./hand-touch-finger-resizing.html">Finger resize</a> ·
+        <a href="./hand-touch-one-finger-empty.html">Empty</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">sel_freeform · hit.kind=box · fingers=1 · chip 64 du still hittable</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="hand-touch-finger-moving.html" data-kind="scene" hidden data-state="hand.finger_moving">
+    <style>
+
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    a.c-tool-btn { text-decoration: none; color: inherit; }
+  
+    </style>
+<div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <div class="ink-cluster is-moving">
+          <a class="hop-box" href="./hand-touch-finger-hit-box.html" aria-label="Release move">
+            <svg viewBox="0 0 420 240" aria-hidden="true">
+              <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+              <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+              <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+              <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+              <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+            </svg>
+          </a>
+        </div>
+        <div data-region="SelectionOverlay">
+          <div class="c-bounds pos-moving" id="ovl.selection_bounds">
+            <button type="button" class="c-handle nw" data-interactive aria-label="Resize northwest"></button>
+            <button type="button" class="c-handle n" data-interactive aria-label="Resize north"></button>
+            <button type="button" class="c-handle ne" data-interactive aria-label="Resize northeast"></button>
+            <button type="button" class="c-handle e" data-interactive aria-label="Resize east"></button>
+            <button type="button" class="c-handle se" data-interactive aria-label="Resize southeast"></button>
+            <button type="button" class="c-handle s" data-interactive aria-label="Resize south"></button>
+            <button type="button" class="c-handle sw" data-interactive aria-label="Resize southwest"></button>
+            <button type="button" class="c-handle w" data-interactive aria-label="Resize west"></button>
+            <button type="button" class="c-mode-toggle" data-interactive>
+              <img src="../system/assets/icon-epaper-mode-with-bounds.svg" alt="" />
+              <span class="c-mode-current">Scale ink</span>
+            </button>
+          </div>
+        </div>
+        <div data-region="GestureAnnotate">
+          <span class="c-finger" style="left:48%;top:54%">
+            <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
+          </span>
+          <a class="c-finger is-ignored" href="./hand-touch-pan-vs-move.html" style="left:72%;top:38%;pointer-events:auto" aria-label="Second finger during move">
+            <img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" />
+          </a>
+        </div>
+      </div>
+      <p class="scene-caption">
+        hand.finger_moving — real ink follows the finger; world unshifted (0 pan).
+        <a href="./hand-touch-finger-hit-box.html">Release</a> ·
+        <a href="./hand-touch-pan-vs-move.html">Second finger</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">sel.moving · fingers=1 · viewportOwner idle · 0 pan</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="hand-touch-finger-resizing.html" data-kind="scene" hidden data-state="hand.finger_resizing">
+    <style>
+
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    a.c-tool-btn { text-decoration: none; color: inherit; }
+  
+    </style>
+<div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <div class="ink-cluster is-resizing-with-bounds">
+          <a class="hop-box" href="./hand-touch-finger-hit-box.html" aria-label="Release resize">
+            <svg viewBox="0 0 420 240" aria-hidden="true">
+              <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+              <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+              <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+              <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+              <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+            </svg>
+          </a>
+        </div>
+        <div data-region="SelectionOverlay">
+          <div class="c-bounds pos-resized" id="ovl.selection_bounds">
+            <button type="button" class="c-handle nw" data-interactive aria-label="Resize northwest"></button>
+            <button type="button" class="c-handle n" data-interactive aria-label="Resize north"></button>
+            <button type="button" class="c-handle ne" data-interactive aria-label="Resize northeast"></button>
+            <button type="button" class="c-handle e" data-interactive aria-label="Resize east"></button>
+            <a href="./hand-touch-finger-hit-box.html" class="c-handle se is-pressed" data-interactive aria-label="Finger resize southeast"></a>
+            <button type="button" class="c-handle s" data-interactive aria-label="Resize south"></button>
+            <button type="button" class="c-handle sw" data-interactive aria-label="Resize southwest"></button>
+            <button type="button" class="c-handle w" data-interactive aria-label="Resize west"></button>
+            <button type="button" class="c-mode-toggle" data-interactive>
+              <img src="../system/assets/icon-epaper-mode-with-bounds.svg" alt="" />
+              <span class="c-mode-current">Scale ink</span>
+            </button>
+          </div>
+        </div>
+        <div data-region="GestureAnnotate">
+          <span class="c-finger" style="left:66%;top:72%" title="Finger on southeast knob">
+            <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
+          </span>
+        </div>
+      </div>
+      <p class="scene-caption">
+        hand.finger_resizing — finger on resize knob; ink scales with bounds; sel_freeform kept.
+        <a href="./hand-touch-finger-hit-box.html">Release</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">sel.resizing.with_bounds · hit.kind=anchor · fingers=1</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="hand-touch-one-finger-empty.html" data-kind="scene" hidden data-state="hand.one_finger_empty">
+    <style>
+
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    a.c-tool-btn { text-decoration: none; color: inherit; }
+  
+    </style>
+<div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <a class="hop-empty" href="./hand-touch-two-finger-pan.html" aria-label="Two-finger pan (not this one-finger)"></a>
+        <div class="ink-cluster">
+          <a class="hop-box" href="./hand-touch-finger-hit-box.html" aria-label="Finger-down on box">
+            <svg viewBox="0 0 420 240" aria-hidden="true">
+              <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+              <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+              <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+              <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+              <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+            </svg>
+          </a>
+        </div>
+        <div data-region="SelectionOverlay" class="is-hidden"></div>
+        <div data-region="GestureAnnotate">
+          <span class="c-finger" style="left:72%;top:58%">
+            <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
+          </span>
+        </div>
+      </div>
+      <p class="scene-caption">
+        hand.one_finger_empty — one finger on empty paper: tool stays Pen; 0 lasso; 0 pan (palm rest is not a pan).
+        <a href="./hand-touch-finger-hit-box.html">Hit box</a> ·
+        <a href="./hand-touch-two-finger-pan.html">Two fingers</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">pen · hit.kind=empty · fingers=1 · 0 selected · 0 pan</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="hand-touch-two-finger-pan.html" data-kind="scene" hidden data-state="hand.two_finger_pan">
+    <style>
+
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    a.c-tool-btn { text-decoration: none; color: inherit; }
+  
+    </style>
+<div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world is-panned">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <div class="ink-cluster">
+          <svg viewBox="0 0 420 240" aria-hidden="true">
+            <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+            <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+            <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+            <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+            <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+          </svg>
+        </div>
+        <div data-region="SelectionOverlay" class="is-hidden"></div>
+        <div data-region="GestureAnnotate">
+          <a class="c-finger" href="./hand-touch-pinch.html" style="left:32%;top:50%;pointer-events:auto" aria-label="Pinch">
+            <img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" />
+          </a>
+          <span class="c-finger" style="left:50%;top:60%">
+            <img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" />
+          </span>
+        </div>
+      </div>
+      <p class="scene-caption">
+        hand.two_finger_pan — world translated; no extra chrome; viewportOwner=epaper.
+        <a href="./hand-touch-pinch.html">Pinch</a> ·
+        <a href="./hand-touch-link-down-local-view.html">Link down</a> ·
+        <a href="./hand-touch-one-finger-empty.html">One finger</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">viewportOwner=epaper · fingers=2 · pan · source epaper</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="hand-touch-pinch.html" data-kind="scene" hidden data-state="hand.pinch">
+    <style>
+
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    a.c-tool-btn { text-decoration: none; color: inherit; }
+  
+    </style>
+<div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world is-pinched">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <div class="ink-cluster">
+          <svg viewBox="0 0 420 240" aria-hidden="true">
+            <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+            <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+            <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+            <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+            <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+          </svg>
+        </div>
+        <div data-region="SelectionOverlay" class="is-hidden"></div>
+        <div data-region="GestureAnnotate">
+          <span class="c-finger" style="left:36%;top:48%">
+            <img src="../system/assets/icon-hand-touch-pinch.svg" alt="" />
+          </span>
+          <a class="c-finger" href="./hand-touch-two-finger-pan.html" style="left:46%;top:52%;pointer-events:auto" aria-label="Continue pan">
+            <img src="../system/assets/icon-hand-touch-pinch.svg" alt="" />
+          </a>
+        </div>
+      </div>
+      <p class="scene-caption">
+        hand.pinch — uniform scale only (no rotate). Contacts closer than pan.
+        <a href="./hand-touch-two-finger-pan.html">Pan</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">viewportOwner=epaper · fingers=2 · pinch scale · 0 rotate</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="hand-touch-pan-vs-move.html" data-kind="scene" hidden data-state="hand.pan_vs_move">
+    <style>
+
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    a.c-tool-btn { text-decoration: none; color: inherit; }
+  
+    </style>
+<div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <div class="ink-cluster is-moving">
+          <a class="hop-box" href="./hand-touch-finger-hit-box.html" aria-label="Release move">
+            <svg viewBox="0 0 420 240" aria-hidden="true">
+              <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+              <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+              <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+              <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+              <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+            </svg>
+          </a>
+        </div>
+        <div data-region="SelectionOverlay">
+          <div class="c-bounds pos-moving" id="ovl.selection_bounds">
+            <button type="button" class="c-handle nw" data-interactive aria-label="Resize northwest"></button>
+            <button type="button" class="c-handle n" data-interactive aria-label="Resize north"></button>
+            <button type="button" class="c-handle ne" data-interactive aria-label="Resize northeast"></button>
+            <button type="button" class="c-handle e" data-interactive aria-label="Resize east"></button>
+            <button type="button" class="c-handle se" data-interactive aria-label="Resize southeast"></button>
+            <button type="button" class="c-handle s" data-interactive aria-label="Resize south"></button>
+            <button type="button" class="c-handle sw" data-interactive aria-label="Resize southwest"></button>
+            <button type="button" class="c-handle w" data-interactive aria-label="Resize west"></button>
+            <button type="button" class="c-mode-toggle" data-interactive>
+              <img src="../system/assets/icon-epaper-mode-with-bounds.svg" alt="" />
+              <span class="c-mode-current">Scale ink</span>
+            </button>
+          </div>
+        </div>
+        <div data-region="GestureAnnotate">
+          <span class="c-finger" style="left:48%;top:54%">
+            <img src="../system/assets/icon-hand-touch-finger.svg" alt="" />
+          </span>
+          <span class="c-finger is-ignored" style="left:68%;top:36%">
+            <img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" />
+          </span>
+          <span class="c-finger is-ignored" style="left:78%;top:48%">
+            <img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" />
+          </span>
+        </div>
+      </div>
+      <p class="scene-caption">
+        hand.pan_vs_move — box-move in flight; two extra contacts dashed; grid not translated.
+        <a href="./hand-touch-finger-hit-box.html">Release move</a> ·
+        <a href="./hand-touch-finger-moving.html">Move only</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">sel.moving · two-finger does not run · viewportOwner idle</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="hand-touch-link-down-local-view.html" data-kind="scene" hidden data-state="hand.link_down_local_view">
+    <style>
+
+    .c-tool-btn:active, .c-handle:active, .c-mode-toggle:active { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-mode-toggle:active img { filter: invert(1); }
+    a.c-tool-btn { text-decoration: none; color: inherit; }
+  
+    </style>
+<div data-region="DeviceScreen" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world is-panned-local">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <div class="ink-cluster">
+          <svg viewBox="0 0 420 240" aria-hidden="true">
+            <path class="ink-boundary" d="M24 30 C 90 22, 210 26, 392 28 L 398 206 C 280 218, 100 214, 22 208 Z"/>
+            <path class="ink-stroke" d="M48 72c40-14 70 8 120-4 38-9 88 12 140-6 28-10 52 4 70 2"/>
+            <path class="ink-stroke" d="M52 108c55 10 90-16 150 4 42 14 86-8 130 6"/>
+            <path class="ink-stroke" d="M46 144c48-8 96 14 148-2 50-12 92 10 128 4"/>
+            <path class="ink-stroke" d="M54 178c36 8 78-10 118 2 44 12 80-6 110 4"/>
+          </svg>
+        </div>
+        <div data-region="SelectionOverlay" class="is-hidden"></div>
+        <div data-region="GestureAnnotate">
+          <span class="c-finger" style="left:34%;top:52%">
+            <img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" />
+          </span>
+          <span class="c-finger" style="left:52%;top:60%">
+            <img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" />
+          </span>
+        </div>
+      </div>
+      <p class="scene-caption">
+        hand.link_down_local_view — local map still pans; publish waits (queued hatch).
+        <a href="./hand-touch-two-finger-pan.html">Link up</a>
+      </p>
+      <span class="orient-tag">orient: gutToLeft</span>
+    </div>
+    <div class="link-badge">
+      <img src="../system/assets/icon-epaper-usb-unplugged.svg" alt="" />
+      Link down · local view
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="queued" title="Queued"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <p data-region="StatusLine">link down · local pan · publish queued · viewportOwner=epaper</p>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
+          <article class="scene-frame" data-scene-file="hand-touch-states.html" data-kind="states" hidden data-state="states">
+    <style>
+
+    .scene-frame[data-scene-file="hand-touch-states.html"] {
+      height: auto; min-height: 100%; overflow: auto; background: #e4e4e7;
+    }
+    .scene-frame[data-scene-file="hand-touch-states.html"] { padding: 16px 20px 48px; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] h1 { font-size: 16px; margin: 0 0 8px; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] h2 { font-size: 13px; margin: 20px 0 8px; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .note { font-size: 12px; max-width: 44rem; margin: 0 0 16px; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .grid { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .cell { display: flex; flex-direction: column; gap: 6px; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .cell span { font-size: 11px; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .stage {
+      position: relative; width: 220px; height: 140px; background: #fff; border: 1px solid #000;
+    }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .stage .c-bounds { left: 24px; top: 20px; width: 160px; height: 90px; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-tool-chip {
+      position: static;
+      display: inline-flex;
+      left: auto;
+      right: auto;
+      width: max-content;
+      grid-template-columns: none;
+      transform: none;
+    }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-tool-chip > .c-tool-cluster:nth-child(1),
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-tool-chip > .c-tool-cluster:nth-child(2),
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-tool-chip > .c-tool-cluster:nth-child(3) {
+      grid-column: auto;
+      justify-self: auto;
+    }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-mode-toggle { position: static; transform: none; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-indicator { position: static; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-finger { position: relative; left: auto; top: auto; margin: 0; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .na { font-size: 11px; border: 1px dashed #000; padding: 8px; background: #fff; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-tool-btn:active,
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-handle:active,
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-mode-toggle:active { background: #000; color: #fff; }
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-tool-btn:active img,
+    .scene-frame[data-scene-file="hand-touch-states.html"] .c-mode-toggle:active img { filter: invert(1); }
+  
+    </style>
+<h1>Hand-touch — control states</h1>
+  <p class="note">
+    Platform <code>epaper</code> (epaper-device): no hover, no focus, no cursor, no motion.
+    Press = invert. Finger-eligible floor = 10 mm. Resize knobs: 4 mm visual / 10 mm hit (finger and pen).
+  </p>
+
+  <h2>ToolButton (64 du · UI-EP-04)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>default</span>
+      <div class="c-tool-chip" role="toolbar">
+        <div class="c-tool-cluster">
+          <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="cell">
+      <span>armed (sel_freeform)</span>
+      <div class="c-tool-chip" role="toolbar">
+        <div class="c-tool-cluster">
+          <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="cell">
+      <span>pressed</span>
+      <div class="c-tool-chip" role="toolbar">
+        <div class="c-tool-cluster">
+          <button type="button" class="c-tool-btn is-pressed" data-interactive aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="cell">
+      <span>dimmed + armed</span>
+      <div class="c-tool-chip" role="toolbar">
+        <div class="c-tool-cluster">
+          <button type="button" class="c-tool-btn is-dimmed" aria-pressed="true" aria-disabled="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        </div>
+      </div>
+    </div>
+    <div class="cell"><span>hover</span><div class="na">N/A — no hover on epaper</div></div>
+    <div class="cell"><span>focus</span><div class="na">N/A — no keyboard on panel</div></div>
+  </div>
+
+  <h2>Publish strip</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>linked</span>
+      <div class="c-tool-chip"><div class="c-tool-cluster"><span class="c-publish" data-status="linked"></span><button type="button" class="c-tool-btn" data-interactive aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button></div></div>
+    </div>
+    <div class="cell">
+      <span>queued (link down)</span>
+      <div class="c-tool-chip"><div class="c-tool-cluster"><span class="c-publish" data-status="queued"></span><button type="button" class="c-tool-btn" data-interactive aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button></div></div>
+    </div>
+  </div>
+
+  <h2>Resize knob (10 mm hit · finger and pen)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>default</span>
+      <div class="stage"><div class="c-bounds"><button type="button" class="c-handle se" data-interactive aria-label="Resize"></button></div></div>
+    </div>
+    <div class="cell">
+      <span>pressed</span>
+      <div class="stage"><div class="c-bounds"><button type="button" class="c-handle se is-pressed" data-interactive aria-label="Resize"></button></div></div>
+    </div>
+    <div class="cell"><span>hover / focus</span><div class="na">N/A</div></div>
+  </div>
+
+  <h2>Mode toggle (10 mm · icon-only)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>default</span>
+      <button type="button" class="c-mode-toggle" data-interactive>
+        <img src="../system/assets/icon-epaper-mode-with-bounds.svg" alt="" />
+        <span class="c-mode-current">Scale ink</span>
+      </button>
+    </div>
+    <div class="cell">
+      <span>pressed</span>
+      <button type="button" class="c-mode-toggle is-pressed" data-interactive>
+        <img src="../system/assets/icon-epaper-mode-with-bounds.svg" alt="" />
+        <span class="c-mode-current">Scale ink</span>
+      </button>
+    </div>
+  </div>
+
+  <h2>Finger contact (preview-only)</h2>
+  <div class="grid">
+    <div class="cell">
+      <span>one finger (≥64 du language)</span>
+      <span class="c-finger"><img src="../system/assets/icon-hand-touch-finger.svg" alt="" /></span>
+    </div>
+    <div class="cell">
+      <span>two-finger</span>
+      <span class="c-finger"><img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" /></span>
+    </div>
+    <div class="cell">
+      <span>ignored (pan vs move)</span>
+      <span class="c-finger is-ignored"><img src="../system/assets/icon-hand-touch-two-finger.svg" alt="" /></span>
+    </div>
+    <div class="cell">
+      <span>pen tip</span>
+      <span class="c-pen-tip" style="position:relative"><img src="../system/assets/icon-hand-touch-pen-tip.svg" alt="" /></span>
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+          </article>
         </div>
       </div>
     </main>
   </div>
   <script>
-    document.querySelectorAll('.nav-side a[target="scene-preview"]').forEach((a) => {
-      a.addEventListener("click", () => {
-        document.querySelectorAll(".nav-side a").forEach((l) => l.removeAttribute("aria-current"));
-        a.setAttribute("aria-current", "page");
+    (function () {
+      var stage = document.querySelector(".preview-scale");
+      function fileOf(href) {
+        return String(href || "").split("?")[0].split("#")[0].split("/").pop();
+      }
+      function show(file) {
+        stage.querySelectorAll(".scene-frame").forEach(function (el) {
+          el.hidden = el.getAttribute("data-scene-file") !== file;
+        });
+        document.querySelectorAll(".nav-side a[target='scene-preview']").forEach(function (a) {
+          if (fileOf(a.getAttribute("href")) === file) a.setAttribute("aria-current", "page");
+          else a.removeAttribute("aria-current");
+        });
+      }
+      document.querySelectorAll(".nav-side a[target='scene-preview']").forEach(function (a) {
+        a.addEventListener("click", function (e) {
+          e.preventDefault();
+          show(fileOf(a.getAttribute("href")));
+        });
       });
-    });
+      stage.addEventListener("click", function (e) {
+        var a = e.target.closest("a[href]");
+        if (!a || a.target === "_blank") return;
+        var file = fileOf(a.getAttribute("href"));
+        if (!file || !file.endsWith(".html")) return;
+        if (!stage.querySelector('.scene-frame[data-scene-file="' + file + '"]')) return;
+        e.preventDefault();
+        show(file);
+      });
+    })();
+
   </script>
 </body>
 </html>

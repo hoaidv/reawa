@@ -1,6 +1,7 @@
 ---
 iter: iter-005
-goal: "Hand-on-paper (REQ-10…18 except REQ-15): finger grammar, erase, clipboard, connector decorate, barrel buttons, manual create"
+goal: "Hand-on-paper (REQ-10…18 except REQ-15) plus independent cameras and optional viewport follow"
+committed_points: 96
 start: 2026-08-16
 end: ""
 capacity: 72
@@ -17,14 +18,18 @@ Lock: **vertical · verified · wip 2**.
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 
-W0 bind **done** 2026-08-19. W1 design [STORY-EP-037](./stories/STORY-EP-037.md) and [STORY-IN-034](./stories/STORY-IN-034.md) **done**. Other committed stories stay **draft** until their wave.
+W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). **NOW** W-empty: [STORY-EP-054](./stories/STORY-EP-054.md) after human glance.
 
 ## Committed
 
 ### Design (W1+)
 
 - [STORY-EP-037](./stories/STORY-EP-037.md) — design — 5 — hand-touch — **done** (W1-A) [UI-EP-06](./design/hand-touch/)
-- [STORY-IN-034](./stories/STORY-IN-034.md) — design — 3 — pen-button map **∥ EP-037** — **done** (W1-B) [UI-IN-03](./design/pen-button-map/)
+- [STORY-IN-034](./stories/STORY-IN-034.md) — design — 3 — pen-button map **∥ EP-037** — **done** (W1-B, Infini paint **superseded**) [UI-IN-03](./design/pen-button-map/)
+- [STORY-EP-053](./stories/STORY-EP-053.md) — design — 3 — viewport-follow Epaper — **done** (W-follow) [UI-EP-07](./design/viewport-follow-epaper/)
+- [STORY-IN-036](./stories/STORY-IN-036.md) — design — 3 — viewport-follow Infini — **done** (W-follow) [UI-IN-04](./design/viewport-follow-infini/)
+- [STORY-EP-056](./stories/STORY-EP-056.md) — design — 5 — revise pen-button map as Epaper — **done** (W-pen-map) [UI-EP-08](./design/pen-button-map/)
+- [STORY-EP-054](./stories/STORY-EP-054.md) — design — 3 — hand-touch empty pan delta — **ready** (**NOW**)
 - [STORY-EP-040](./stories/STORY-EP-040.md) — design — 3 — erase
 - [STORY-EP-043](./stories/STORY-EP-043.md) — design — 3 — clipboard
 - [STORY-EP-045](./stories/STORY-EP-045.md) — design — 3 — connector ends
@@ -33,9 +38,11 @@ W0 bind **done** 2026-08-19. W1 design [STORY-EP-037](./stories/STORY-EP-037.md)
 
 ### Implement (gated by design + BDD)
 
-- [STORY-EP-038](./stories/STORY-EP-038.md) — 5 — 1-finger · depends EP-037
-- [STORY-EP-039](./stories/STORY-EP-039.md) — 5 — 2-finger pan · depends EP-037
-- [STORY-IN-033](./stories/STORY-IN-033.md) — 3 — Infini viewport · depends EP-039
+- [STORY-EP-038](./stories/STORY-EP-038.md) — 5 — 1-finger · depends EP-037 + EP-054
+- [STORY-EP-039](./stories/STORY-EP-039.md) — 5 — 2-finger **local** pan (BRD-07 lifted)
+- [STORY-IN-033](./stories/STORY-IN-033.md) — 3 — Infini apply while following · depends EP-039 + IN-037
+- [STORY-EP-055](./stories/STORY-EP-055.md) — 5 — Epaper follow toggle · depends EP-053
+- [STORY-IN-037](./stories/STORY-IN-037.md) — 5 — Infini follow toggle · depends IN-036
 - [STORY-EP-041](./stories/STORY-EP-041.md) — 5 — eraser nib · depends EP-040
 - [STORY-EP-042](./stories/STORY-EP-042.md) — 3 — selection-erase · depends EP-040
 - [STORY-EP-044](./stories/STORY-EP-044.md) — 5 — clipboard ops · depends EP-043
@@ -43,8 +50,8 @@ W0 bind **done** 2026-08-19. W1 design [STORY-EP-037](./stories/STORY-EP-037.md)
 - [STORY-EP-047](./stories/STORY-EP-047.md) — 5 — endpoint ink · depends EP-045
 - [STORY-EP-049](./stories/STORY-EP-049.md) — 5 — attachments warp · depends EP-048
 - [STORY-EP-051](./stories/STORY-EP-051.md) — 8 — manual insert · depends EP-050
-- [STORY-EP-052](./stories/STORY-EP-052.md) — 5 — barrel dispatch · depends IN-034
-- [STORY-IN-035](./stories/STORY-IN-035.md) — 3 — publish map · depends IN-034
+- [STORY-EP-052](./stories/STORY-EP-052.md) — 5 — barrel dispatch · depends EP-056
+- [STORY-IN-035](./stories/STORY-IN-035.md) — 3 — persist/restore map · depends EP-056
 
 ## Carry-over (not NOW)
 
@@ -56,10 +63,11 @@ W0 bind **done** 2026-08-19. W1 design [STORY-EP-037](./stories/STORY-EP-037.md)
 
 ## Risks
 
-- CHL-0022 shipped “no pan / no arrowheads” prose vs new ids — Product Manager adopt
-- REQ-10 two-finger **ship** still needs BRD-07 amendment (SRS-EP-24 exists)
-- Product Manager experience/product Software Requirements Specification not thickened (architect Concern)
-- Vertical work-in-progress 2 vs many features — waves are serial after W1 pair
+- CHL-0022 shipped “no pan” prose — Product Manager adopt
+- EP-037 package still empty=no-op until EP-054
+- PM `srs-product` BR-D08 still always-on viewport (architect flagged)
+- Vertical work-in-progress 2 vs many features — W-empty NOW; barrel implement waits on BDD
+- GAP-01: Product Manager adopt pen-map entry tile (leading 10 mm)
 
 ## Links
 

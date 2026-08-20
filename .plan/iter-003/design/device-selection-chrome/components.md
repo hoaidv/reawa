@@ -20,9 +20,8 @@
 
 ### InkScaleModeToggle
 
-- Hatch fill chip attached to the box (not ToolChip)
-- Icon + `ind.mode_current` paper label
-- Tap swaps `withBounds` ↔ `fixedInk`
+- Icon-only square, size = primary ToolChip tile (10 mm), attached to the box (not ToolChip)
+- Label is visually hidden; icon swaps `withBounds` ↔ `fixedInk`
 
 ### Indicators
 

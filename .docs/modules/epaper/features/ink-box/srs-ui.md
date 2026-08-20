@@ -203,11 +203,11 @@ a creator unable to tell which mode they were resizing in until after they relea
 <!-- lifecycle: active -->
 <!-- needs_design: yes -->
 
-**Parent:** [REQ-10](../../prd.md#hand-touch). **Logic:** [SRS-EP-21](./srs-logic.md#srs-ep-21-one-finger), [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport). **Quality:** [SRS-EP-25](./srs-quality.md#srs-ep-25-one-finger-quality). **Platform:** **epaper-device** (`data-platform: epaper`) — same profile as [SRS-EP-12](#srs-ep-12-selection-chrome). **Do not parent on SRS-EP-12.**
+**Parent:** [REQ-10](../../prd.md#hand-touch). **Logic:** [SRS-EP-21](./srs-logic.md#srs-ep-21-one-finger), [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport). **Quality:** [SRS-EP-25](./srs-quality.md#srs-ep-25-one-finger-quality). **Platform:** **epaper-device** (`data-platform: epaper`) — same profile as [SRS-EP-12](#srs-ep-12-selection-chrome). **Do not parent on SRS-EP-12.** Follow toggle is **[SRS-EP-50](../region-sync/srs-ui.md#srs-ep-50-follow-toggle)**, not this package.
 
 ### Purpose
 
-One job: make **finger** pick/move vs **two-finger** pan/zoom legible and hittable without turning fine gizmos into finger targets.
+One job: make **finger** pick / move / **resize knobs** vs **one-finger empty pan** vs **palm-rest** vs **two-finger** pan/zoom legible and hittable. Knob **visual** stays a small hollow square; knob **hit** meets the finger-eligible floor.
 
 ### Hit rules (binding — Designer must not loosen)
 
@@ -216,43 +216,51 @@ One job: make **finger** pick/move vs **two-finger** pan/zoom legible and hittab
 | SmartGroup bounds (LOD ok) | AABB as painted | Finger **and** pen |
 | ToolChip primary tile | **64×64 du** | Finger-eligible |
 | Enclose CTA | 64 du | Finger-eligible |
-| Resize / 6 square anchors | visual 28 / hit **56 du** (&lt; 64) | **Pen only** |
+| Resize / 6 square knobs | visual small hollow square; hit **≥ primary tile** | Finger **and** pen |
 | Connector end-kind / other &lt;64 du | as specified | **Pen only** |
 
 ### Closed control inventory (additive — do not invent)
 
 | id | Kind | Notes |
 |---|---|---|
-| *(existing SRS-EP-12 overlay)* | — | Reused; no new gizmo for finger resize |
-| `ind.finger_anchor_noop` | transient | Finger hit a &lt;64 du control — **0** transform; optional 1-bit blink of that handle only |
-| `ind.two_finger_pan` | in-progress | Two-finger pan/pinch active — **no** extra chrome required; Designer may use existing region marker **only if** it does not fight Infini ([ADR-0023](../../../../adr/ADR-0023-viewport-last-writer.md)) |
+| *(existing SRS-EP-12 overlay)* | — | Reused; knobs are finger-eligible ([CHL-0024](../../../../../.plan/iter-005/challenges/CHL-0024-finger-resize-knobs.md)) |
+| `ind.two_finger_pan` | in-progress | Two-finger pan/pinch active — **no** extra chrome required; Designer may use existing region marker **only if** it does not imply Infini always matches ([ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md)) |
 
-No pan-mode tool, no finger-resize handles, no “hand tool” tile.
+<!-- lifecycle: retired -->
+<!-- superseded-by: [CHL-0024] -->
+`ind.finger_anchor_noop` — **retired 2026-08-20.** Finger on a knob resizes; no no-op hatch.
+
+No pan-mode tool, no “hand tool” tile. Resize knobs are the existing overlay — not a second handle set.
 
 ### States matrix (journeys from PRD — do not add)
 
 | State id | When |
 |---|---|
 | `hand.finger_hit_box` | Finger-down on box; tool → `sel_freeform` |
-| `hand.finger_moving` | Finger drag inside selected box |
-| `hand.finger_anchor_noop` | Finger on &lt;64 du control |
-| `hand.one_finger_empty` | One finger empty canvas — no-op |
-| `hand.two_finger_pan` | Two-finger pan in progress |
+| `hand.finger_moving` | Finger drag inside selected box (not on a knob) |
+| `hand.finger_resizing` | Finger drag on a resize knob |
+| `hand.one_finger_empty_palm` | One finger empty canvas; travel ≤ **10 mm** — palm-rest / tap no-op |
+| `hand.one_finger_empty_pan` | One finger empty canvas; travel > **10 mm** — local pan |
+| `hand.two_finger_pan` | Two-finger pan in progress (local; Infini matches only if Infini following) |
 | `hand.pinch` | Pinch in progress |
 | `hand.pan_vs_move` | Two-finger ignored because box-move in flight |
 | `hand.link_down_local_view` | Two-finger still pans locally |
-| `hand.pen_resize_after_finger_select` | Pen on anchor after finger select — resize allowed |
+
+<!-- lifecycle: retired -->
+`hand.finger_anchor_noop` and `hand.pen_resize_after_finger_select` — **retired 2026-08-20** ([CHL-0024](../../../../../.plan/iter-005/challenges/CHL-0024-finger-resize-knobs.md)). Do not demonstrate.
 
 ### UI-driving fields
 
-`touch.fingerCount`, `hit.kind`, `toolMode`, `viewportOwner` — Designer must not invent extra modes.
+`touch.fingerCount`, `hit.kind`, `touch.travelMm`, `toolMode`, `follow.direction` — Designer must not invent extra modes or a follow button in this package.
 
 ### Anti-patterns
 
-- Finger-eligible resize handles
-- One-finger empty canvas as pan
+- Sub-floor knob hit (finger would miss or violate the size rule)
+- One-finger empty pan **without** the 10 mm threshold (palm would pan)
+- Follow-toggle buttons in this package ([SRS-EP-50](../region-sync/srs-ui.md#srs-ep-50-follow-toggle))
 - Hover/focus/cursor
 - Phone chrome; this is RM2 1872×1404 landscape preview
+- A required scene for pen-after-finger-select (same knob, either pointer)
 
 ---
 

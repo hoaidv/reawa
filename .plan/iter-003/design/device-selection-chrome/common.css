@@ -2,16 +2,17 @@
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
-  height: 100%;
-  overflow: hidden;
+  height: auto; min-height: 100%;
+  overflow: auto;
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: #52525b;
 }
 [data-region="DeviceScreen"] {
   position: relative;
-  width: 100%;
-  height: 100%;
+  width: var(--panel-w);
+  height: var(--panel-h);
+  flex-shrink: 0;
   margin: 0;
   background: var(--color-paper);
   overflow: hidden;
@@ -107,16 +108,11 @@ html, body {
   position: absolute;
   pointer-events: auto;
   background: transparent;
-  /* Double-rail: 3px outer black, paper gap, 1px inner — not a single ink stroke */
-  border: var(--bounds-outer) solid var(--color-ink);
+  border: 2px dotted var(--color-ink);
   box-shadow: none;
 }
 .c-bounds::before {
-  content: "";
-  position: absolute;
-  inset: var(--bounds-gap);
-  border: var(--bounds-inner) solid var(--color-ink);
-  pointer-events: none;
+  content: none;
 }
 
 .c-handle {
@@ -139,19 +135,11 @@ html, body {
   width: var(--handle-visual);
   height: var(--handle-visual);
   margin: calc(var(--handle-visual) / -2) 0 0 calc(var(--handle-visual) / -2);
-  background: var(--color-ink);
+  background: var(--color-paper);
   border: 2px solid var(--color-ink);
 }
 .c-handle::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
-  background: var(--color-paper);
-  pointer-events: none;
+  content: none;
 }
 .c-handle:active::before,
 .c-handle.is-pressed::before {
@@ -170,52 +158,54 @@ html, body {
 .c-handle.nw { left: 0; top: 0; }
 .c-handle.n  { left: 50%; top: 0; }
 .c-handle.ne { left: 100%; top: 0; }
-.c-handle.e  { left: 100%; top: 50%; }
+.c-handle.e  { left: 100%; top: 50%; display: none; }
 .c-handle.se { left: 100%; top: 100%; }
 .c-handle.s  { left: 50%; top: 100%; }
 .c-handle.sw { left: 0; top: 100%; }
-.c-handle.w  { left: 0; top: 50%; }
+.c-handle.w  { left: 0; top: 50%; display: none; }
 
 /* Mode toggle + current-mode indicator — on the selection, not the chip */
 .c-mode-toggle {
   position: absolute;
   left: 50%;
-  top: calc(100% + 10px);
+  top: calc(100% + var(--sel-chrome-gap));
   transform: translateX(-50%);
-  display: inline-flex;
+  box-sizing: border-box;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  height: var(--mode-toggle-h);
-  padding: 0 8px 0 4px;
-  border: 2px solid var(--color-ink);
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--color-paper),
-    var(--color-paper) 3px,
-    var(--color-ink) 3px,
-    var(--color-ink) 4px
-  );
+  justify-content: center;
+  width: var(--chip-btn);
+  height: var(--chip-btn);
+  min-width: var(--chip-btn);
+  min-height: var(--chip-btn);
+  padding: 0;
+  gap: 0;
+  border: 1px solid var(--color-ink);
+  border-radius: var(--chip-radius);
+  background: var(--color-paper);
   color: var(--color-ink);
-  font-size: var(--font-label);
-  line-height: 1;
+  font-size: 0;
+  line-height: 0;
   pointer-events: auto;
   cursor: none;
   -webkit-tap-highlight-color: transparent;
 }
 .c-mode-toggle img {
-  width: 20px;
-  height: 20px;
-  background: var(--color-paper);
-  border: 1px solid var(--color-ink);
+  width: var(--chip-icon);
+  height: var(--chip-icon);
+  background: transparent;
+  border: 0;
   pointer-events: none;
 }
 .c-mode-toggle:active,
-.c-mode-toggle.is-pressed {
+.c-mode-toggle.is-pressed,
+.c-mode-toggle[aria-pressed="true"] {
   background: var(--color-ink);
   color: var(--color-paper);
 }
 .c-mode-toggle:active img,
-.c-mode-toggle.is-pressed img {
+.c-mode-toggle.is-pressed img,
+.c-mode-toggle[aria-pressed="true"] img {
   filter: invert(1);
 }
 .c-mode-toggle[hidden],
@@ -223,11 +213,15 @@ html, body {
   display: none;
 }
 .c-mode-current {
-  background: var(--color-paper);
-  border: 1px solid var(--color-ink);
-  padding: 2px 6px;
-  font-size: var(--font-label);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+  border: 0;
 }
 
 /* Refuse / unavailable — hatch chips, text not color */
@@ -292,14 +286,22 @@ html, body {
 [data-orientation="gutToRight"] .c-tool-chip,
 [data-orientation="gutAtBottom"] .c-tool-chip {
   top: var(--chip-inset);
-  left: 50%;
-  transform: translateX(-50%);
+  left: var(--chip-inset);
+  right: var(--chip-inset);
+  margin-left: auto;
+  margin-right: auto;
+  width: max-content;
+  transform: none;
 }
 [data-orientation="gutOnTop"] .c-tool-chip {
   bottom: var(--chip-inset);
   top: auto;
-  left: 50%;
-  transform: translateX(-50%);
+  left: var(--chip-inset);
+  right: var(--chip-inset);
+  margin-left: auto;
+  margin-right: auto;
+  width: max-content;
+  transform: none;
 }
 .c-tool-btn {
   box-sizing: border-box;
@@ -408,4 +410,12 @@ html, body {
   pointer-events: auto;
   text-decoration: none;
   color: inherit;
+}
+
+
+/* Design-preview copy — not product chrome (CHL-0023) */
+.scene-caption,
+.orient-tag,
+[data-region="StatusLine"] {
+  display: none !important;
 }

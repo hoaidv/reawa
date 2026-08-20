@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Component — WorldLayer</title>
+  <style>
+    .c-world-layer {
+      position: relative; width: 100%; min-height: 240px;
+      background-image: linear-gradient(#c5ccd6 1px, transparent 1px), linear-gradient(90deg, #c5ccd6 1px, transparent 1px);
+      background-size: 48px 48px; background-color: #f2f4f7;
+    }
+    .figure { position: absolute; border: 2.5px solid #1c2430; }
+    .figure-circle { width: 80px; height: 80px; border-radius: 50%; left: 40%; top: 30%; }
+  </style>
+</head>
+<body>
+  <div class="c-world-layer" data-region="WorldLayer">
+    <div class="figure figure-circle" title="circle"></div>
+  </div>
+</body>
+</html>

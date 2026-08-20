@@ -17,7 +17,7 @@ View over [PRD](./prd.md). Specs live in feature `srs-*`; decisions in ADRs.
 ## Quality goals (prioritised)
 
 1. **Gesture smoothness** — continuous pan/pinch without visible stutter on a 60 Hz display ([REQ-01](./prd.md#infinity-canvas)).
-2. **Mapping latency** — Epaper input map tracks Infini viewport before full panel refresh ([REQ-03](./prd.md#tablet-sync), [ADR-0009](../../adr/ADR-0009-shared-document-viewport.md)).
+2. **Mapping latency** — while Epaper follow is on, Epaper input map tracks Infini viewport before full panel refresh ([REQ-03](./prd.md#tablet-sync), [REQ-06](./prd.md#viewport-follow), [ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md)).
 3. **Mirror convergence** — every published device change applied, in order, idempotently, ≤300 ms p95; a gapped mirror is visible and never saved silently ([ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md)).
 4. **Stroke/region paint parity** — world-unit stroke width × viewport/panel scale on both peers ([ADR-0012](../../adr/ADR-0012-world-stroke-viewport-parity.md)).
 5. **Document fidelity** — SVG/profile round-trip ±1 px @ 100% zoom; tree parenting preserved ([REQ-02](./prd.md#vector-document), [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md)).
@@ -38,8 +38,8 @@ React owns infinity canvas UI with `screen = (world + T) * S`.
 The TypeScript **tree-of-vectors** library (`VectorDocument`) becomes the desktop's **mirror**:
 inbound `doc_change` applies to it idempotently by `opId`, paint is driven from it, and it is what
 SVG save serializes. Inbound `stroke_*` is demoted to a **transient preview layer** on WorldLayer.
-Outbound is `viewport` plus exactly one `doc_load` per session epoch
-([ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md)).
+Outbound is `viewport` **only along the active follow** plus exactly one `doc_load` per session epoch
+([ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md), [ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md)).
 
 **The main desktop work is the inversion of the paint source**: today `rebuildWithRmInk` turns
 strokes into flat WorldLayer primitives and nothing enters `VectorDocument`. Enclose recognition is
@@ -58,8 +58,9 @@ Shared semantics: [domain/vector-document](../../domain/vector-document.md).
 | Tool mode | **Device-local UI state**, never on the wire ([ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) §1) |
 | Document change | `doc_change { seq, opId, op, baseSeq }` — the only inbound document truth |
 | Document load | `doc_load` — one per epoch, handshake-gated, the only outbound document message |
-| Viewport | translate, scale, gut orientation, tablet CSS frame → drawingRegion; **last-writer token** [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md) |
-| Pen-button map | Settings message `pen_button_map` — [domain/pen-button-map](../../domain/pen-button-map.md), **not** SVG |
+| Viewport | translate, scale, gut orientation, tablet CSS frame → drawingRegion; **follow-gated** [ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md) |
+| Viewport follow | Session enum `none` \| `infini_to_epaper` \| `epaper_to_infini` — [domain/viewport-follow](../../domain/viewport-follow.md) |
+| Pen-button map | Settings `pen_button_map` — tablet authors live; Infini persist/restore ([domain/pen-button-map](../../domain/pen-button-map.md)), **not** SVG. **0** Infini editor screens |
 | Session | TCP JSON-lines Epaper ↔ Infini |
 
 Retired with [SRS-IN-13](./features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport):
@@ -72,7 +73,7 @@ flowchart LR
   artist["Artist"] --> epaper["Epaper RM2 — owns the document"]
   artist --> infini["Infini desktop — views, navigates, persists"]
   epaper -->|"doc_change + stroke preview"| session["TCP JSON-lines"]
-  infini -->|"viewport + one doc_load per epoch"| session
+  infini -->|"viewport (only while Epaper follow on) + one doc_load per epoch"| session
   session --> epaper
   session --> infini
 ```
@@ -100,8 +101,8 @@ flowchart TB
     ink --> doc
     doc --> pub
   end
-  pub -->|"doc_change / stroke preview"| main
-  main -->|"viewport / doc_load"| doc
+  pub -->|"doc_change / stroke preview / viewport-up if Infini following"| main
+  main -->|"viewport-down if Epaper following / doc_load / viewport_follow"| doc
   logs["debug ship :9878"] -.->|"debug_log (when requested)"| main
 ```
 
@@ -131,8 +132,8 @@ flowchart TB
 - [ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) — ink-box tool modes (§1 and §6 survive; §2–§5 superseded)
 - [ADR-0014](../../adr/ADR-0014-document-ownership-inversion.md) — the device owns the working document
 - [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md) — one-way sync contract v1
-- [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md) — tablet vs Infini viewport token
-- [ADR-0028](../../adr/ADR-0028-pen-button-map-settings-channel.md) — pen-button map is settings, not `doc_*`
+- [ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md) — independent cameras + exclusive one-way follow (supersedes [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md))
+- [ADR-0030](../../adr/ADR-0030-tablet-authors-pen-button-map.md) — tablet authors the map; Infini persist/restore (supersedes [ADR-0028](../../adr/ADR-0028-pen-button-map-settings-channel.md))
 - Sync bind: [tablet-sync SRS-IN-07](./features/tablet-sync/srs-logic.md) shipped wire + change applier
 - Debug sidecar: [tablet-sync SRS-IN-17](./features/tablet-sync/srs-logic.md#srs-in-17-debug-log-channel) TCP `:9878` (not ADR-0015)
 - Device bind: [epaper SRS-EP-08](../epaper/features/device-document/srs-logic.md) the other end of the contract

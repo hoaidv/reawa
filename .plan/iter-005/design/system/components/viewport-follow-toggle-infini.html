@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ViewportFollowToggle — Infini (SRS-IN-27)</title>
+  <style>
+    :root {
+      --color-surface: #f2f4f7;
+      --color-surface-elevated: #ffffff;
+      --color-ink: #1c2430;
+      --color-ink-muted: #5b6573;
+      --color-primary: #0f766e;
+      --color-on-primary: #ffffff;
+      --color-focus: #0f766e;
+      --color-border: #d0d5dd;
+      --color-chrome: rgba(255, 255, 255, 0.92);
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --radius-control: 6px;
+      --font-caption: 12px;
+      --target-desktop: 24px;
+      --follow-hit: 32px;
+    }
+    body { margin: 0; font-family: "DM Sans", system-ui, sans-serif; background: var(--color-surface); color: var(--color-ink); }
+    .c-preview { padding: 1.5rem; }
+    .c-preview__title { margin: 0 0 0.5rem; font-size: 1.125rem; }
+    .c-preview__note { margin: 0 0 1.5rem; color: var(--color-ink-muted); font-size: 0.875rem; max-width: 40rem; }
+    .c-states { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-end; }
+    .c-states__cell { display: flex; flex-direction: column; gap: 0.35rem; }
+    .c-states__label { font-size: 0.75rem; color: var(--color-ink-muted); }
+    .c-follow-toggle {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: var(--follow-hit); height: var(--follow-hit);
+      min-width: var(--target-desktop); min-height: var(--target-desktop);
+      padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-control);
+      background: var(--color-chrome); color: var(--color-ink); cursor: pointer;
+      text-decoration: none; outline: none;
+      transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+    }
+    .c-follow-toggle img { width: 20px; height: 20px; pointer-events: none; }
+    .c-follow-toggle:hover, .c-follow-toggle.is-hover {
+      border-color: var(--color-primary); background: var(--color-surface-elevated);
+    }
+    .c-follow-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+    .c-follow-toggle:active, .c-follow-toggle.is-pressed {
+      transform: scale(0.96); background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary);
+    }
+    .c-follow-toggle[aria-pressed="true"] {
+      background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary);
+    }
+    .c-follow-toggle[aria-pressed="true"]:hover {
+      background: var(--color-ink); border-color: var(--color-ink);
+    }
+    .c-follow-toggle[disabled], .c-follow-toggle[aria-disabled="true"] {
+      opacity: 0.5; cursor: not-allowed;
+    }
+    @media (prefers-reduced-motion: reduce) { .c-follow-toggle { transition: none; } }
+  </style>
+</head>
+<body>
+  <main class="c-preview">
+    <h1 class="c-preview__title">ViewportFollowToggle</h1>
+    <p class="c-preview__note">Desktop icon toggle. Hover required. Peer-following-you is visually off (exactly one direction). Unavailable when no session. Unique file — not the Epaper 1-bit sibling.</p>
+    <div class="c-states">
+      <div class="c-states__cell">
+        <span class="c-states__label">off (default)</span>
+        <button type="button" class="c-follow-toggle" data-interactive aria-pressed="false" aria-label="Follow Epaper">
+          <img src="../assets/icon-viewport-follow-infini.svg" alt="" />
+        </button>
+      </div>
+      <div class="c-states__cell">
+        <span class="c-states__label">hover</span>
+        <button type="button" class="c-follow-toggle is-hover" data-interactive aria-pressed="false" aria-label="Follow Epaper">
+          <img src="../assets/icon-viewport-follow-infini.svg" alt="" />
+        </button>
+      </div>
+      <div class="c-states__cell">
+        <span class="c-states__label">pressed</span>
+        <button type="button" class="c-follow-toggle is-pressed" data-interactive aria-pressed="false" aria-label="Follow Epaper">
+          <img src="../assets/icon-viewport-follow-infini.svg" alt="" />
+        </button>
+      </div>
+      <div class="c-states__cell">
+        <span class="c-states__label">following Epaper</span>
+        <button type="button" class="c-follow-toggle" data-interactive aria-pressed="true" aria-label="Following Epaper">
+          <img src="../assets/icon-viewport-follow-infini-on.svg" alt="" />
+        </button>
+      </div>
+      <div class="c-states__cell">
+        <span class="c-states__label">peer following you (off)</span>
+        <button type="button" class="c-follow-toggle" data-interactive aria-pressed="false" aria-label="Follow Epaper" aria-description="Epaper is following you. Click to follow the tablet instead.">
+          <img src="../assets/icon-viewport-follow-infini-peer.svg" alt="" />
+        </button>
+      </div>
+      <div class="c-states__cell">
+        <span class="c-states__label">unavailable</span>
+        <button type="button" class="c-follow-toggle" disabled aria-pressed="false" aria-label="Follow Epaper unavailable">
+          <img src="../assets/icon-viewport-follow-infini-offline.svg" alt="" />
+        </button>
+      </div>
+    </div>
+  </main>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach(function (el) {
+      el.addEventListener("pointerdown", function () { el.classList.add("is-pressed"); });
+      ["pointerup", "pointerleave", "blur"].forEach(function (ev) {
+        el.addEventListener(ev, function () { el.classList.remove("is-pressed"); });
+      });
+    });
+  </script>
+</body>
+</html>

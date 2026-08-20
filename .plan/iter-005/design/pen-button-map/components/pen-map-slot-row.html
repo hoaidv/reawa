@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <title>PenMapSlotRow — UI-EP-08</title>
+  <style>
+    :root {
+      --target-epaper: 10mm; --pen-map-icon: 4mm;
+      --color-ink: #000; --color-paper: #fff;
+      --font-label: 12px; --space-xs: 4px;
+    }
+    body { margin: 1rem; font-family: system-ui, sans-serif; background: #ddd; cursor: none; }
+    .c-pen-map-row { border: 1px solid #000; padding: 4px; background: #fff; width: 180mm; }
+    .c-pen-map-row h2 {
+      margin: 0 0 4px; font-size: var(--font-label); display: flex; align-items: center; gap: 4px;
+    }
+    .c-pen-map-row h2 img { width: var(--pen-map-icon); height: var(--pen-map-icon); }
+    .c-pen-map-slot {
+      display: flex; align-items: center; gap: 4px; min-height: var(--target-epaper);
+      width: 100%; margin: 0 0 4px; padding: 0 4px; border: 1px solid #000;
+      background: #fff; color: #000; font-size: var(--font-label); font-family: inherit;
+      text-align: left; cursor: none; text-decoration: none;
+    }
+    .c-pen-map-slot:last-child { margin-bottom: 0; }
+    .c-pen-map-slot img { width: var(--pen-map-icon); height: var(--pen-map-icon); pointer-events: none; }
+    .c-pen-map-slot-k { flex: 0 0 22mm; font-weight: 600; }
+    .c-pen-map-slot-v { flex: 1; }
+    .c-pen-map-slot:active, .c-pen-map-slot.is-pressed { background: #000; color: #fff; }
+    .c-pen-map-slot:active img, .c-pen-map-slot.is-pressed img { filter: invert(1); }
+    .note { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <p class="note">1-button defaults: Click = current ↔ Freeform Select; Hold-move = Temporary eraser. Min-height 10 mm.</p>
+  <div class="c-pen-map-row" data-region="SlotRow">
+    <h2><img src="../../system/assets/icon-epaper-pen-map-button-1.svg" alt="" /> Button 1</h2>
+    <a class="c-pen-map-slot" data-region="SlotClick" data-interactive href="#" aria-label="Click">
+      <img src="../../system/assets/icon-epaper-pen-map-click.svg" alt="" />
+      <span class="c-pen-map-slot-k">Click</span>
+      <span class="c-pen-map-slot-v">Current primary ↔ Freeform Select</span>
+    </a>
+    <a class="c-pen-map-slot" data-region="SlotHoldMove" data-interactive href="#" aria-label="Hold-move">
+      <img src="../../system/assets/icon-epaper-pen-map-hold.svg" alt="" />
+      <span class="c-pen-map-slot-k">Hold-move</span>
+      <span class="c-pen-map-slot-v">Temporary eraser</span>
+    </a>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

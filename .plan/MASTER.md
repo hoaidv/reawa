@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-19
+updated: 2026-08-20
 current_iter: iter-005
 owner: sm
 
@@ -38,8 +38,8 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Scope | epaper ink-box, tool-modes, connector-ink, region-sync, local-pen-ink, device-document; infini canvas, tablet-sync, vector-document | REQ-10…14, 17, 18 + infini REQ-05 |
 | Stop line | **verified** | design → BDD → implement → human confirm |
 | Autonomy | **bounded** | Run inside lock; sink REQ-15 / REQ-08 |
-| WIP | **2** | W1: EP-037 ∥ IN-034 |
-| Validated | — | W0 bind 2026-08-19; W1 paint open |
+| WIP | **2** | W-empty: EP-054 after glance at UI-EP-08 |
+| Validated | — | BRD-07 lifted; follow design done; pen-button map on-device (EP-056) |
 
 **Out-of-scope log**
 
@@ -64,16 +64,16 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Goal & capacity
 
-- Goal: **Hand-on-paper** — REQ-10 (finger pick/move + pan/zoom), erase, clipboard, connector ends + attachments, barrel buttons, manual create. **Not** REQ-15.
-- Capacity: ~77 pts committed. W0 architect **done**. W1 design EP-037 and IN-034 **done**. Next: Quality Assurance Engineer EP-038.
-- Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); BRD-07 still defers on-device pan ship (EP-039); PM experience not thickened.
+- Goal: **Hand-on-paper** plus **viewport follow** (human 2026-08-20). Cameras independent by default.
+- Capacity: committed stories include EP-053…056 / IN-036…037. **NOW** W-empty ([STORY-EP-054](./iter-005/stories/STORY-EP-054.md)) after human glance at [UI-EP-08](./iter-005/design/pen-button-map/).
+- Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); EP-037 package still empty=no-op until EP-054; PM `srs-product` BR-D08 lag; GAP-01 pen-map entry tile needs Product Manager adopt.
 
 ### Tracks
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
 | TRACK-001…004 | planned | **done** | — | [tracks](./tracks/) |
-| TRACK-005 | planned | **active** | **W2 `/qa` EP-038** (W1 design done) | [track](./tracks/TRACK-005-hand-on-paper.md) |
+| TRACK-005 | planned | **active** | **EP-054** hand-touch empty-pan after glance at UI-EP-08 | [track](./tracks/TRACK-005-hand-on-paper.md) |
 
 ### Open challenges / blocked
 
@@ -83,13 +83,15 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Design packages in flight
 
-- [hand-touch](./iter-005/design/hand-touch/) — EP-037 **done** (UI-EP-06)
-- [pen-button-map](./iter-005/design/pen-button-map/) — IN-034 **done** (UI-IN-03)
+- [hand-touch](./iter-005/design/hand-touch/) — EP-037 **done**; EP-054 delta **queued**
+- [pen-button-map](./iter-005/design/pen-button-map/) — EP-056 **done** ([UI-EP-08](./iter-005/design/pen-button-map/ui-spec.md)); UI-IN-03 superseded
+- [viewport-follow-epaper](./iter-005/design/viewport-follow-epaper/) — EP-053 **done** (UI-EP-07)
+- [viewport-follow-infini](./iter-005/design/viewport-follow-infini/) — IN-036 **done** (UI-IN-04)
 - (queued) erase-chrome, clipboard-chrome, connector-ends, connector-attach, manual-create
 
 ### Execution board(s)
 
-- [iter-005 execution-board](./iter-005/execution-board.md) — **NOW W2** `/qa` EP-038 (W1 design done)
+- [iter-005 execution-board](./iter-005/execution-board.md) — **NOW W-empty** EP-054 after glance at UI-EP-08
 
 ### Freeze notes
 
@@ -97,6 +99,6 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ## Forward
 
-- After W2 scenarios: **`/dev`** EP-038. Product Manager: adopt CHL-0022, accept ADR-0023…26, clean PRD campaign comments, optional experience thicken.
+- After human glance at UI-EP-08: **EP-054** then Quality Assurance Engineer EP-038. Barrel BDD (REQ-18) can run after glance. Two-finger **local** EP-039 unblocked. Product Manager: BR-D08 viewport-follow in `srs-product`; adopt GAP-01 pen-map entry tile.
 - Parked: REQ-15, REQ-08, CHL-0011, CHL-0012, EP-035 measure.
 - Backlog: [backlog.md](./backlog.md)

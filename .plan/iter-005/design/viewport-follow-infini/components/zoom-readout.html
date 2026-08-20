@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Component — ZoomReadout</title>
+  <style>
+    .c-zoom-readout {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 3.25rem; min-height: 24px; padding: 4px 8px;
+      border: 1px solid #d0d5dd; border-radius: 6px;
+      background: rgba(255,255,255,0.92); font: 600 12px/1.2 "DM Sans", system-ui, sans-serif;
+      font-variant-numeric: tabular-nums; text-align: center; color: #1c2430;
+    }
+  </style>
+</head>
+<body>
+  <div class="c-zoom-readout" data-region="StatusZoom" aria-live="polite">100%</div>
+</body>
+</html>

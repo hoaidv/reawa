@@ -1,15 +1,19 @@
 ---
 id: ADR-0023
 title: Viewport last-writer token (tablet vs Infini)
-status: proposed
+status: superseded
 date: 2026-08-19
 deciders: [architect, pm]
 supersedes: null
+superseded-by: [ADR-0029]
 amends: [ADR-0009, ADR-0015]
 source: TRACK-005 / [REQ-10]
 ---
 
 # ADR-0023 — Viewport last-writer token (tablet vs Infini)
+
+> **Superseded 2026-08-20** by [ADR-0029](./ADR-0029-independent-cameras-viewport-follow.md).
+> Last-writer is **not** the product model. Do not implement this token. Forward: independent cameras + optional exclusive one-way follow.
 
 ## Context
 

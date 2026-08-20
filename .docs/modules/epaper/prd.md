@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.8.0-draft
+version: 0.10.0-draft
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -22,6 +22,16 @@ Epaper is no longer an intent courier. It **owns the working document in-session
 tree, ingests its own ink, recognizes and creates ink-boxes, and manipulates them locally. Infini
 becomes viewer, navigator, and persistence home. Sync is one-way per direction
 ([REQ-07](#one-way-sync)).
+
+**Viewport follow (2026-08-20, human).** Epaper and Infini cameras are **independent by default**.
+Always-on Infini→tablet viewport drive is **obsolete**. Optional one-way **follow**
+([REQ-19](#viewport-follow) / [infini REQ-06](../infini/prd.md#viewport-follow)) is mutually
+exclusive and off on disconnect. The tablet **can** change its own viewport ([REQ-10](#hand-touch)).
+Document channel stays one-way (change later is a Non-Goal).
+
+**Pen-button map (2026-08-20, human).** Barrel-button bindings are configured **on the tablet**
+([REQ-18](#pen-buttons)) — epaper-device chrome, not an Infini desktop settings screen.
+Infini [REQ-05](../infini/prd.md#pen-button-map) persist/restore is **not** the map editor.
 
 ## Problem & Job-to-be-Done
 
@@ -47,7 +57,7 @@ viewed at scale, and saved.
 |---|---|---|
 | Pen-down → local pixel (p95) | ≤ 30 ms | Manual / EXP S1 |
 | Orientation / aspect match | Circle stays circle; axes match chosen gut pose | Manual |
-| Drawing-region map latency | Next sample uses Infini viewport (ahead of full refresh) | Manual / EXP S3 |
+| Drawing-region map latency | **While Epaper follow is on:** next sample uses Infini viewport (ahead of full refresh). **Follow off (default):** Infini pan does not change the tablet map | Manual / EXP S3 |
 | Stroke thickness under zoom | Live + rasterized ink use world × panel scale | Manual |
 | Tool switch (tap → active indicator) | p95 ≤ 300 ms; no measurable ink-latency regression | Manual |
 | Stroke → local document node | p95 ≤ 50 ms after pen-up; 0 strokes lost | Manual / trace |
@@ -60,7 +70,9 @@ viewed at scale, and saved.
 | Default-on recognizer false positives | ≤2% of `pen` strokes on a real corpus incl. a fresh page's first 20 strokes | EXP-0002 G1/G2 — **ship gate** |
 | Connector selectable (marquee or pen hit) | 100% of recognized connectors on a 10-connector fixture; 0 missed hits on the stroke, 0 AABB-only false hits | Manual QA |
 | Finger hit on ink-box → freeform + move | p95 ≤300 ms to `sel_freeform` + selection; move follows finger; 0 accidental resizes | Manual QA |
-| Two-finger pan/zoom on tablet | Next pen sample uses new region p95 ≤100 ms; Infini view matches after settle | Manual QA — REQ-10 slice; BRD-07 block |
+| Two-finger pan/zoom on tablet | Next pen sample uses **local** new region p95 ≤100 ms. Infini view matches after settle **only if Infini follow is on**. Default: independent. BRD-07 ship gate **lifted** | Manual QA — REQ-10 |
+| One-finger empty-canvas pan | Movement past the pan threshold pans **locally**; palm-rest (at/below threshold) 0 pan / 0 selection; box hit wins over pan | Manual QA — REQ-10 |
+| Viewport-follow toggle | Enabling one peer’s follow disables the other with p95 ≤300 ms; 0 dual-follow; disconnect forces off | Manual QA — REQ-19 |
 | Erase stroke / selection-erase | p95 ≤50 ms after gesture end; 1 undo restores; 0 accidental ink | Manual QA — **iter-005 draft** |
 | Paste fidelity | Pasted subtree geometry ±1 px @ 100% zoom vs source | Manual QA — **iter-005 draft** |
 | Connector end style + warp | Style survives bound-node drag; endpoint ink stays on the end (0 orphaned ink) | Manual QA — **iter-005 draft** |
@@ -85,22 +97,30 @@ viewed at scale, and saved.
 ## [REQ-02] Drawing-region mapping from Infini {#region-sync}
 <!-- revised: 2026-08-13 — CHL-0008. Document transport moved to [REQ-07]; this REQ is now
      viewport/world-mapping only. Same id, content revised; no supersession. -->
+<!-- revised: 2026-08-20 — Human: independent viewports by default. Apply Infini viewport only
+     while Epaper follow ([REQ-19]) is on. Same id: outcome remains mapping pen samples to world;
+     follow is the gate. Always-on Infini→tablet drive is obsolete. -->
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: no
-- Infini owns pan/zoom. Epaper applies Infini's `viewport` (drawing region + gut `orientation` +
-  optional `settle`) so that pen input maps to the right world coordinates. Full e-paper refresh may
-  lag; **coordinate mapping for new pen input must track Infini with least latency.** Epaper
-  re-rasterizes locally from its own document — it does not wait for a picture from the desktop.
-  PNG `region_refresh` is **not** used.
+- **Default: local camera.** Epaper maps pen samples through **its own** viewport. Infini pan/zoom
+  does **not** change that map while follow is off.
+- **While Epaper follow is on** ([REQ-19](#viewport-follow)): Epaper applies Infini's drawing region
+  (and the gut orientation / settle that travel with that region) so pen input maps to the right
+  world coordinates. Full e-paper refresh may lag; **coordinate mapping for new pen input must track
+  the active source with least latency** — Infini while following, otherwise the local camera.
+- Epaper re-rasterizes locally from its own document — it does not wait for a picture from the
+  desktop. PNG `region_refresh` is **not** used.
 
 **Acceptance**
-- Given Infini changes pan/zoom, When Epaper receives the drawing region, Then the next
-  pen sample (≤100 ms map apply p95) uses that world region even if the panel still
+- Given Epaper follow is **on** and Infini changes pan/zoom, When Epaper receives the drawing region,
+  Then the next pen sample (≤100 ms map apply p95) uses that world region even if the panel still
   shows a stale refresh (ghosting allowed).
-- Given a settle viewport, When Epaper repaints the region, Then figures match the device's own
-  document for those bounds after sharp settle (0 divergent figures).
-- Given zoom-out on Infini, When the user continues drawing, Then live stroke thickness
-  matches thinned existing vectors (world width × current panel scale).
+- Given Epaper follow is **off** (default), When Infini pans or zooms for ≥5 s, Then the tablet map
+  is unchanged (0 Infini-driven region changes) and the next pen sample uses the local camera.
+- Given a settle viewport **while following**, When Epaper repaints the region, Then figures match
+  the device's own document for those bounds after sharp settle (0 divergent figures).
+- Given zoom-out on Infini **while following**, When the user continues drawing, Then live stroke
+  thickness matches thinned existing vectors (world width × current panel scale).
 
 ## [REQ-03] On-device tool modes {#tool-modes}
 <!-- revised: 2026-08-14 — BS-0001 / ADR-0021. Three exclusive tools + two recognizer
@@ -115,7 +135,8 @@ viewed at scale, and saved.
   [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)).
   Switched by **finger touch** on the chip, so the pen stays free for content. `Pen` is the default and
   leaves [REQ-01](#local-pen-ink) local ink behaviour unchanged. Canvas **hand-touch** (finger on
-  ink, not on the chip) is [REQ-10](#hand-touch).
+  ink, not on the chip) is [REQ-10](#hand-touch). Viewport-follow is a **separate icon toggle**
+  ([REQ-19](#viewport-follow)) — **not** a ToolChip exclusive tool, recognizer, or hand-tool tile.
 - **Exclusive tools** (exactly three): `sel_rect` · `sel_freeform` · `pen`. There is no
   `ink_box` tool. The two Selection arms still replace a single mouse-like Selection button.
 - **Recognizer toggles** (independent, not tools): `recog.ink_box` ("Ink-box recognition")
@@ -326,15 +347,23 @@ viewed at scale, and saved.
   unavailable below LOD; undo of a manipulation.
 
 ## [REQ-07] One-way document sync {#one-way-sync}
+<!-- revised: 2026-08-13 — CHL-0008. Downward traffic narrowed; document changes flow up. -->
+<!-- revised: 2026-08-20 — Viewport down is follow-gated ([REQ-19]); document channel still
+     one-way. Same id; no supersession. -->
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: no *(status affordances are designed under [REQ-03](#tool-modes))*
 - **Outcome:** the session is stable because each direction carries exactly one kind of traffic, and
   neither end has to reconcile the other's edits.
-- **Desktop → Tablet — only two things:**
-  1. an **initial full-document load**, at session start, on reconnect, or on an explicit resync;
-  2. **pan/zoom viewport events** ([REQ-02](#region-sync)).
-  Nothing else crosses. No post-edit picture push, no pickable list, no correction of a gesture in
-  flight.
+- **Desktop → Tablet — document vs viewport:**
+  1. an **initial full-document load**, at session start, on reconnect, or on an explicit resync
+     (**only** inbound document traffic);
+  2. **pan/zoom viewport events** ([REQ-02](#region-sync)) **only while Epaper follow is on**
+     ([REQ-19](#viewport-follow)).
+  Viewport is **not** a document message. It flows **only along the active follow direction**
+  (Epaper following Infini → down; Infini following Epaper → up). Always-on viewport drive is
+  obsolete. Nothing else crosses downward. No post-edit picture push, no pickable list, no
+  correction of a gesture in flight. Document channel stays **one-way** tablet → desktop (changing
+  that is a Non-Goal).
 - **Tablet → Desktop — document changes.** The device publishes what it did to the document; the
   desktop applies them to its mirror and persists ([infini REQ-02](../infini/prd.md#vector-document)).
 - **Live ink preview.** The device may keep streaming in-progress stroke samples so the desktop feels
@@ -349,9 +378,12 @@ viewed at scale, and saved.
   on-device storage, and working offline then syncing at any moment. Not this iter (Non-Goals).
 
 **Acceptance**
-- Given a live session, When the creator pans or zooms on the desktop for ≥5 s, Then the tablet
-  receives viewport messages only (**0** document messages) and the next pen sample uses the new
-  region with p95 ≤100 ms.
+- Given a live session and Epaper follow **on**, When the creator pans or zooms on the desktop for
+  ≥5 s, Then the tablet receives viewport messages (**0** document messages) and the next pen sample
+  uses the new region with p95 ≤100 ms.
+- Given a live session and Epaper follow **off**, When the creator pans or zooms on the desktop for
+  ≥5 s, Then the tablet receives **0** viewport messages from that gesture and **0** document
+  messages; the local map is unchanged.
 - Given a live session after the initial load, When anything happens on the desktop, Then the tablet
   receives **0** inbound document messages for the rest of the session (desktop authoring is
   deprecated — [infini REQ-04](../infini/prd.md#smart-group)).
@@ -429,15 +461,40 @@ viewed at scale, and saved.
   refuse/no-op (stroke stays ink, no banner); marquee vs path-hit vs AABB-miss.
 
 ## [REQ-10] Hand-touch on canvas {#hand-touch}
-<!-- added: 2026-08-15; revised: 2026-08-16 — merged [REQ-16] two-finger pan/zoom into this REQ -->
+<!-- added: 2026-08-15; revised: 2026-08-16 — merged [REQ-16] two-finger pan/zoom into this REQ; revised: 2026-08-20 — CHL-0024 finger resize knobs; revised: 2026-08-20 — two-finger local Must (BRD-07 ship gate lifted); one-finger empty = local pan; publish only if Infini is following -->
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
-- **Campaign:** **one grammar, two slices.** One-finger pick/move is this iteration (after connector select). Two-finger pan/zoom is the rest of the same REQ (iter-005 draft until [BRD-07](../../brd.md) on-device pan/zoom deferral is amended). [REQ-16](#device-pan-zoom) is **retired** — superseded by this section.
-- **Outcome:** the **hand** is how the creator moves around the page and shoves large objects; the **pen** stays the precision instrument. One coherent capacitive grammar — not a separate “pan product” and “hit-box product.”
-- **One finger — pick and move.** A finger press whose hit is an **ink-box** (Smart Group world bounds, at/above the LOD cutoff) **selects that box** and **switches the exclusive tool to `sel_freeform`**. The chip updates with the same p95 ≤300 ms bar as [REQ-03](#tool-modes). Finger on empty canvas does not switch tools and does not start a lasso (palm rest is not a selection). Once a box is selected (by this hit, or already selected), a finger drag **inside the bounds** moves it with the [REQ-06](#device-manipulation) live-direct contract. The same down that hits the box may start the move.
-- **Two fingers — pan and zoom.** Two-finger pan/pinch changes the **same viewport** Infini uses ([REQ-02](#region-sync)); the device **publishes** viewport so the desktop follows. Does not run while a one-finger box-move is in flight. Link down: local viewport still works.
-- **No subtle manipulation.** Finger does **not** drive the **6 square anchors** or any control whose hit target is **< 64 du**. Resize stays **pen**. Enclose and ToolChip tiles are 64 du → finger-eligible.
-- **Size rule.** Finger may hit a control only if its **hit target is ≥ the primary ToolChip tile** (**64×64 du**, [CHL-0019](../../../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md)). Handles 28 visual / 56 hit → pen-only.
+- **Campaign:** **one grammar, two slices.** One-finger pick/move/resize **and** two-finger **local**
+  pan/zoom are both Must this iteration. The BRD-07 deferral is **not** a ship gate for **local**
+  pan (human 2026-08-20). [REQ-16](#device-pan-zoom) is **retired** — superseded by this section.
+- **Outcome:** the **hand** is how the creator moves around the page and shoves large objects; the
+  **pen** stays the precision instrument. One coherent capacitive grammar — not a separate “pan
+  product” and “hit-box product.” The tablet camera is **local**. Infini matches it **only** while
+  Infini follow is on ([infini REQ-06](../infini/prd.md#viewport-follow)).
+- **One finger — pick, move, resize knobs, or empty-canvas pan.** A finger press whose hit is an
+  **ink-box** (Smart Group world bounds, at/above the LOD cutoff) **selects that box** and
+  **switches the exclusive tool to `sel_freeform`**. The chip updates with the same p95 ≤300 ms bar
+  as [REQ-03](#tool-modes). A finger-down whose hit is a **resize knob** (hit target ≥ primary
+  ToolChip tile) **resizes** with the same live-direct contract as pen on that knob; the knob wins
+  over box-move. Ink-scale mode still applies ([REQ-06](#device-manipulation)). Once a box is
+  selected (by this hit, or already selected), a finger drag **inside the bounds** moves it with the
+  [REQ-06](#device-manipulation) live-direct contract. The same down that hits the box may start the
+  move. **Empty canvas (no box, knob, or chip hit):** the touch does not switch tools and does not
+  start a lasso. If movement stays **at or below** a documented pan threshold, it is palm-rest / tap
+  — **no pan, no selection, no tool switch**. If movement goes **past** that threshold, it is
+  **local one-finger pan**. Box / knob / chip hit always wins over empty-canvas pan.
+- **Two fingers — local pan and zoom.** Two-finger pan/pinch changes the **tablet’s local viewport**.
+  The device **publishes** that viewport **only if Infini follow is on**. Does not run while a
+  one-finger box-move **or resize** is in flight. Link down: local viewport still works; follow
+  auto-off ([REQ-19](#viewport-follow)).
+- **Follow vs local navigation.** A local navigation gesture (one-finger empty pan past threshold,
+  or two-finger pan/pinch) on a tablet that is following Infini **turns Epaper follow off**. Box
+  pick/move/resize does **not** turn follow off.
+- **Size rule.** Finger may hit a control only if its **hit target is ≥ the primary ToolChip tile**
+  (**64×64 du**, [CHL-0019](../../../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md)).
+  Resize knobs meet that floor (visual may stay a small hollow square). Controls still under the
+  floor (rotation, connector end-kind, …) stay **pen**. Enclose and ToolChip tiles remain
+  finger-eligible.
 
 **Acceptance**
 - Given `Pen` active and a Smart Group at/above LOD, When the creator **finger-downs inside
@@ -446,18 +503,71 @@ viewed at scale, and saved.
 - Given that finger-down (or a following finger drag) inside the selected box, When the finger
   moves, Then the box follows with the [REQ-06](#device-manipulation) live-direct bar (0 px jump
   on lift; ≥5 Hz partial refresh) and **0** viewport pan starts.
-- Given a selected Smart Group, When the creator **finger-downs on a resize anchor** (or any
-  control whose hit target is **< 64 du**), Then **no** resize/scale-mode/end-kind gesture
-  starts (0 accidental transforms). Pen on the same anchor still resizes.
-- Given **one** finger-down on empty canvas (no box hit), When the touch ends, Then the exclusive tool
-  is unchanged and 0 nodes are selected by that touch (0 accidental lassos; 0 pans).
-- Given **two** fingers on empty canvas (no box-move in flight), When the creator pans or pinches for ≥5 s, Then the drawing region translates/scales with p95 map apply ≤100 ms for the next pen sample, and Infini’s view matches after settle (0 divergent viewports).
-- Given Infini and the tablet both idle, When the creator pans on the tablet, Then Infini sends **0** competing viewport bursts that fight the tablet gesture (architect: last-writer or token — ADR).
+- Given a selected Smart Group, When the creator **finger-downs on a resize knob** (hit ≥ primary ToolChip tile), Then resize starts with the [REQ-06](#device-manipulation) live-direct bar (0 px jump on lift; ≥5 Hz partial refresh) and **0** viewport pan. Pen on the same knob still resizes.
+- Given a control whose hit target is **< 64 du** (not a resize knob), When the creator finger-downs on it, Then **no** scale-mode/end-kind/rotation gesture starts (0 accidental transforms).
+- Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **at or below**
+  the documented pan threshold, When the touch ends, Then the exclusive tool is unchanged, 0 nodes
+  are selected, and **0** pan occurs (palm rest / tap — 0 accidental lassos).
+- Given **one** finger-down on empty canvas (no box, knob, or chip hit) and movement **past** the
+  documented pan threshold, When the finger moves, Then the **local** viewport pans, the exclusive
+  tool is unchanged, 0 nodes are selected, and 0 lasso starts. Infini’s view matches after settle
+  **only if Infini follow is on**; otherwise Infini is unchanged.
+- Given a box, knob, or chip hit, When the same one-finger drag would otherwise pan empty canvas,
+  Then pick/move/resize/chip wins (0 empty-canvas pan).
+- Given **two** fingers on empty canvas (no box-move or resize in flight), When the creator pans or
+  pinches for ≥5 s, Then the **local** drawing region translates/scales with p95 map apply ≤100 ms
+  for the next pen sample. Infini’s view matches after settle **only if Infini follow is on**
+  (0 divergent viewports in that case); if Infini follow is off, Infini’s view is unchanged
+  (independent cameras).
+- Given Infini follow is **off**, When the creator pans on the tablet, Then Infini sends **0**
+  viewport messages and does not move its canvas from that gesture.
+- Given Infini follow is **on**, When the creator pans on the tablet, Then Infini applies the
+  published region after settle (0 divergent viewports) and Epaper follow is off (0 dual-follow;
+  0 competing Infini→tablet viewport).
+- Given Epaper follow is **on**, When the creator starts a local navigation gesture (one-finger empty
+  pan past threshold or two-finger pan/pinch), Then Epaper follow turns **off** and the gesture
+  drives the local camera.
 - Given finger-down on a ToolChip primary tile (64 du), When the tap completes, Then
   [REQ-03](#tool-modes) still holds — this REQ does not steal chip hits.
 - **UI states / journeys to design:** finger hit box while `Pen`; finger move in progress;
-  finger on anchor no-op; one-finger empty canvas no-op; two-finger pan in progress; pinch;
-  pan vs box-move conflict; link down (local viewport); mixed pen-resize after finger-select.
+  finger resize in progress; one-finger empty **palm-rest no-op**; one-finger empty **local pan**;
+  two-finger pan in progress (local; publish only if Infini following); pinch; pan vs box-move
+  conflict; link down (local viewport). Follow-toggle chrome is **[REQ-19](#viewport-follow)**, not
+  this package’s ToolChip.
+
+## [REQ-19] Viewport-follow Infini {#viewport-follow}
+<!-- added: 2026-08-20 — human decision: optional mutually exclusive follow; icon toggle, not a
+     ToolChip hand-tool tile. -->
+- **Priority:** Must · **Traces:** [BRD-07]
+- Needs design: yes
+- **Outcome:** the creator on the tablet can **opt in** to matching Infini’s drawing region — and
+  works on an independent camera by default. Follow is a **choice**, not the session.
+- **Affordance:** a viewport-follow **icon toggle button** on Epaper. **Not** a ToolChip exclusive
+  tool, recognizer, or hand-tool tile ([REQ-03](#tool-modes) stays three exclusive tools).
+- **States:**
+  - **Off** (default, and after disconnect): local camera; Infini pan does not drive the tablet
+    ([REQ-02](#region-sync)).
+  - **Following Infini:** apply Infini viewport ([REQ-02](#region-sync)).
+  - **Connection lost / no session:** follow is **automatically off**. Reconnect does **not** restore
+    follow — the creator must opt in again.
+  - **Mutual exclusion:** exactly one direction at a time when connected. If Infini is following
+    this tablet ([infini REQ-06](../infini/prd.md#viewport-follow)), Epaper follow cannot stay on.
+    Enabling Epaper follow **disables** Infini follow (and the reverse). Both off is allowed.
+- Infini→Infini follow is a Non-Goal this campaign.
+
+**Acceptance**
+- Given a live session and both follows off, When the creator enables Epaper follow, Then the tablet
+  applies Infini’s current viewport with p95 map ≤100 ms and Infini follow remains off (0 dual-follow).
+- Given Infini follow is on, When the creator enables Epaper follow, Then Infini follow turns off
+  with p95 ≤300 ms and Epaper begins following Infini (0 intervals where both are on).
+- Given Epaper follow is on, When the session drops, Then follow is off before the next gesture and
+  stays off across reconnect until the creator enables it again.
+- Given no session, When the creator looks at the toggle, Then it is off (or unavailable) and 0
+  follow-on states persist.
+- **UI states / journeys to design:** off (default); following Infini; mutual-exclusion (peer is
+  following you — enabling this side turns the other off); connection lost → forced off; reconnect
+  stays off; placement vs ToolChip (icon toggle, **not** a fourth exclusive tool). Dual-ask:
+  `/designer` Spec + scenes for those states; `/qa` BDD from this AC.
 
 ## [REQ-08] Direct manipulation of any document node {#node-manipulation}
 - **Priority:** Should · **Traces:** [BRD-07] · **Campaign:** distinct iteration — thickened now,
@@ -601,32 +711,52 @@ viewed at scale, and saved.
 - **UI states / journeys to design:** entry into manual create (chip vs context); frame place; connector place; primitive place; cancel; conflict with Pen ink.
 
 ## [REQ-18] Configurable pen barrel-button accelerators {#pen-buttons}
-<!-- campaign: iter-005-draft — BS-0002 D9 -->
+<!-- campaign: iter-005-draft — BS-0002 D9; editor home revised 2026-08-20 (human) -->
 - **Priority:** Must · **Traces:** [BRD-07]
-- Needs design: yes *(Infini settings; chip only mirrors temporary tool)*
-- **Campaign:** iter-005 **draft**. [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md) **D9**.
-- **Outcome:** optional Wacom barrel buttons (0, 1, or 2) speed up erase / select / drag **without** making those the only path. Each button has two slots — **Click** and **Hold-move** — each bound to **exactly one** item from a **closed catalogue**. The user configures the binding ([infini REQ-05](../infini/prd.md#pen-button-map)). **Never** three jobs on one hold-while-moving gesture.
-- **Click** (button down+up, movement below threshold): discrete catalogue — toggle current exclusive tool ↔ pinned tool (v1 pin `sel_freeform`); toggle Pen ↔ eraser; Undo; Off.
-- **Hold-move** (button down + movement past threshold until release): temporary-tool catalogue — `sel_freeform`; `sel_rect`; erase; drag node under tip (miss → no-op, not a lasso); Off. Context “empty→lasso / node→drag” is **not** default; allowed later only as its **own** named catalogue item.
-- **Defaults:** 1-button → Click = Pen↔freeform toggle; Hold-move = temporary freeform. 2-button → B1 as 1-button; B2 Click = Pen↔eraser; B2 Hold-move = temporary erase.
-- Missing hardware: slots absent (0 misfires). Eraser **nib** is [REQ-11](#erase), not barrel 2. Accelerators only — ToolChip remains complete. Latch at button-down; rebind never changes a gesture in flight. Chip shows the temporary tool during hold-move, then restores unless the event was a click toggle.
+- Needs design: yes *(on-device map editor; chip still mirrors temporary tool during hold-move)*
+- **Campaign:** iter-005 **draft**. [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md) **D9** catalogues **replaced** 2026-08-20 (human). D9 lists are not current.
+- **Outcome:** optional Wacom barrel buttons (0, 1, or 2) speed up erase / select / drag **without** making those the only path. Each present button has two slots — **Click** and **Hold-move** — each bound to **exactly one** item from a **closed catalogue**. The creator configures the binding **on the tablet** (this REQ — epaper-device chrome). Infini [REQ-05](../infini/prd.md#pen-button-map) **persists and restores** the map; it is **not** the settings surface. **Never** three jobs on one hold-while-moving gesture.
+- **Click** (button down+up, movement below threshold) — discrete toggle; closed catalogue **only**:
+  - Current primary tool ↔ Freeform Select (`sel_freeform`)
+  - Current primary tool ↔ Eraser (erase arm — **not** the nib; [REQ-11](#erase))
+  - Off
+- **Hold-move** (button down + movement past threshold until release) — temporary while the button is held **and** moving; closed catalogue **only**:
+  - Temporary eraser
+  - Drag node under tip (miss → no-op, **0** lasso)
+  - Off
+- **Why Hold-move is not temporary freeform (or rect).** Hold-move is a **temporary** overlay: on release the exclusive tool snaps back to whatever it was. Temporary freeform is meaningless if we do nothing after it and immediately switch back to the current tool — the selection gesture never becomes a lasting tool change. Same for temporary rect. Those items are **removed** from Hold-move (`temp_sel_freeform` and `temp_sel_rect` are not in the catalogue). Lasting select stays a **Click** toggle (current primary ↔ Freeform Select) or the ToolChip ([REQ-03](#tool-modes)).
+- **Not in the catalogues:** Undo (stays on the chip); temporary freeform; temporary rect; a combined “empty→lasso / node→drag” item (later only as its **own** named id).
+- **Defaults:** 1-button → Click = current primary tool ↔ Freeform Select; Hold-move = **Temporary eraser** (replaces the old 1-button Hold-move of temporary freeform). 2-button → B1 as 1-button; B2 Click = current primary tool ↔ Eraser; B2 Hold-move = Temporary eraser.
+- Missing hardware: slots absent (0 misfires). Eraser **nib** is [REQ-11](#erase), not barrel 2. Accelerators only — ToolChip remains complete. Latch at button-down; rebind never changes a gesture in flight.
+- **Chip during hold-move:** when Hold-move is Temporary eraser, the chip **mirrors** that temporary tool until release, then restores (unless the event was a Click toggle). Drag-under-tip does **not** switch the exclusive tool on the chip. The chip is **not** a 5-way radio and is **not** the map editor.
 
 **Acceptance**
-- Given a 1-button pen and default map, When the creator **clicks** the button (no move), Then the exclusive tool toggles Pen ↔ `sel_freeform` with p95 ≤300 ms and **0** hold-move gesture runs.
-- Given the same pen, When the creator **hold-moves** with the button down, Then a temporary freeform selection runs until release (selection completes on release) and **0** click toggle fires on release.
-- Given a 2-button pen and defaults, When B2 is hold-moved, Then temporary erase runs until release ([REQ-11](#erase) Path A feel) and B1 is unchanged.
+- Given a 1-button pen and default map, When the creator **clicks** the button (no move), Then the exclusive tool toggles current primary ↔ `sel_freeform` with p95 ≤300 ms and **0** hold-move gesture runs.
+- Given the same pen and default map, When the creator **hold-moves** with the button down, Then **temporary erase** runs until release ([REQ-11](#erase) Path A feel) and **0** click toggle fires on release.
+- Given a 2-button pen and defaults, When B2 is hold-moved, Then temporary erase runs until release and B1 is unchanged.
 - Given the creator rebinds Hold-move to “drag node under tip”, When they hold-move starting on a hittable node, Then that node moves with the [REQ-06](#device-manipulation) live-direct bar; when they start on empty canvas, Then 0 nodes move and 0 lasso starts.
 - Given a 0-button pen, When the creator draws, Then 0 button gestures fire and [REQ-03](#tool-modes) still works.
 - Given a 20-gesture fixture mixing clicks and holds, When executed, Then 0 events fire **both** click and hold-move.
-- **UI states / journeys to design:** Infini map editor (per slot, closed lists); device chip during hold-move; 0/1/2 button capability; rebound map mid-session (next gesture only).
+- Given the on-device map editor and 0-button capability, When it is shown, Then **0** barrel slots appear (0 fake bindings).
+- Given the on-device map editor and 1- or 2-button capability, When a Click list is opened, Then it offers only the three Click items above (0 Undo, 0 extra ids).
+- Given the same editor, When a Hold-move list is opened, Then it offers only Temporary eraser, Drag node under tip, and Off (0 temporary freeform, 0 temporary rect).
+- **UI states / journeys to design (epaper-device, 1-bit, no hover):** on-device map editor — 0-button (slots absent), 1-button, 2-button; Click closed list; Hold-move closed list; entry into the editor from device chrome (not Infini, not a 5-way radio on exclusive-tool tiles); chip during hold-move Temporary eraser (mirror then restore); chip during hold-move Drag-under-tip (exclusive tool unchanged); rebound map mid-session (next gesture only); editor still usable when the desktop session is down (live map is on-device). Dual-ask: `/designer` Spec + scenes; `/qa` BDD from this AC.
 
 ---
 
 ## Non-Goals
 
-- **On-device pan / zoom / pinch** — specified as the two-finger half of [REQ-10](#hand-touch).
-  Still **blocked on BRD-07 amendment** before that slice ships. One-finger empty canvas is not a pan.
-- **Finger resize, rotation, or connector re-anchor** — Won't this slice. Fine gizmos stay pen.
+- **Always-on Infini→tablet viewport drive** — obsolete (human 2026-08-20). Viewports are
+  independent by default; optional one-way follow is [REQ-19](#viewport-follow) /
+  [infini REQ-06](../infini/prd.md#viewport-follow).
+- **Hand-tool exclusive chip tile** for pan — follow is an **icon toggle**, not a ToolChip tool.
+  No fourth exclusive tool for hand/pan.
+- **Infini → Infini follow** — later / Non-Goal this campaign (do not specify as Must).
+- **Two-way document sync** — changing the document channel is an explicit Non-Goal this campaign
+  ([REQ-07](#one-way-sync) stays one-way tablet → desktop).
+- **Finger rotation or connector re-anchor** — Won't this slice. Fine gizmos stay pen.
+  **Finger resize knobs are in** ([REQ-10](#hand-touch),
+  [CHL-0024](../../../.plan/iter-005/challenges/CHL-0024-finger-resize-knobs.md)).
 - Acting as a Reawa-style mouse/stylus driver for other Mac apps.
 - Cloud sync or multi-peer sessions.
 - **On-device persistence, offline work across app restarts, and sync-at-any-moment** — the device
@@ -659,6 +789,13 @@ viewed at scale, and saved.
     draw-into.
   - This campaign keeps `inkScaleMode` (`withBounds` | `fixedInk`) only; membership does **not**
     expand bounds; no content align/reflow.
+- **Infini as the pen-button map editor** — the creator does not configure barrel buttons on a
+  desktop settings screen. Map editor is on-device ([REQ-18](#pen-buttons)). Infini persist/restore
+  is not that surface ([infini REQ-05](../infini/prd.md#pen-button-map)).
+- **Temporary freeform or temporary rect on Hold-move** — removed (human 2026-08-20). Hold-move
+  snaps back on release; a temp select that does nothing afterward is meaningless.
+- **Undo as a barrel Click catalogue item** — not in the closed Click list. Undo stays on the
+  ToolChip ([REQ-03](#tool-modes) / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)).
 - A general on-device tool palette — no brushes, colors, layers, or document browser.
   [REQ-17](#manual-create) is a **closed** insert set (frame, connector, attachment, primitive),
   not an illustration suite. ToolChip exclusive tools stay three unless a later ADR adds an entry.
@@ -667,9 +804,12 @@ viewed at scale, and saved.
 
 ## Assumptions & Dependencies
 
-- Infini [REQ-01]–[REQ-03] define the desktop side of the session; Infini is viewer + navigator +
-  persistence home, and its own ink-box authoring is deprecated
-  ([infini REQ-04](../infini/prd.md#smart-group)).
+- Infini [REQ-01]–[REQ-03] and [REQ-06](../infini/prd.md#viewport-follow) define the desktop side of
+  the session; Infini is viewer + navigator + persistence home, and its own ink-box authoring is
+  deprecated ([infini REQ-04](../infini/prd.md#smart-group)). Viewport last-writer
+  ([ADR-0023](../../adr/ADR-0023-viewport-last-writer.md)) is **not** the product model — Architect
+  supersedes it with a follow / token-optional ADR. Infini [REQ-05](../infini/prd.md#pen-button-map)
+  persist/restore of the barrel map is settings, not a UI; the map editor is [REQ-18](#pen-buttons).
 - Node semantics are shared with Infini: [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md) tree,
   [ADR-0011](../../adr/ADR-0011-smart-group.md) Smart Group. Where recognition and writes happen is
   re-decided by the architect under CHL-0008 (ADR-0014 / ADR-0015 pending).
@@ -684,7 +824,11 @@ viewed at scale, and saved.
 ## Open Questions
 
 - **Iter-005 draft REQs minted 2026-08-16** from [BS-0002](../../../.plan/iter-004/brainstorms/BS-0002-iter-005-feature-wave.md): [REQ-11](#erase)–[REQ-18](#pen-buttons) ([REQ-16](#device-pan-zoom) **retired** into [REQ-10](#hand-touch)). **Do not slice** until iter-004 retro-gate. **AI** still unspecified — no REQ. — **owner:** pm — **needed by:** iter-005 open.
-- [REQ-10](#hand-touch) two-finger pan/zoom vs [BRD-07](../../brd.md) on-device pan/zoom deferral — **owner:** analyst — **needed by:** before the pan/zoom **slice** of REQ-10 ships.
+- Pen-button map editor on Infini desktop — **owner:** pm — **closed 2026-08-20 (human):** editor is on-device ([REQ-18](#pen-buttons)); Infini persist/restore is not a settings screen. D9 catalogues replaced: Click = current↔Freeform Select / current↔Eraser / Off (no Undo); Hold-move = Temporary eraser / Drag node under tip / Off (no temp freeform/rect). 1-button Hold-move default = Temporary eraser.
+- [REQ-10](#hand-touch) two-finger pan/zoom vs [BRD-07](../../brd.md) on-device pan/zoom deferral — **owner:** pm — **closed 2026-08-20 (human):** two-finger **local** pan is Must; always-on viewport sync is obsolete; optional mutually exclusive follow ([REQ-19](#viewport-follow)). Analyst amends BRD-07 in parallel; this PRD is the product source until BRD catches up. One-finger empty canvas is **local pan** (threshold vs palm-rest), not a no-op.
+- Exact empty-canvas pan threshold (distance / time) — **owner:** architect — **needed by:** SRS
+  bind for [REQ-10](#hand-touch) one-finger empty pan. Product rule is already: at/below threshold =
+  palm-rest no-op; past threshold = local pan; box/knob/chip hit wins.
 
 - Undo depth and affordance on the device — **closed 2026-08-14** ([CHL-0016](../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
   / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)): depth 20; on-panel Undo and Redo after
@@ -697,7 +841,8 @@ viewed at scale, and saved.
 - Multi-document / document switching on the device — **owner:** pm — assumed out of scope this
   iter; confirm before [REQ-04](#device-document) is sliced.
 - Finger-eligible control size vs 32 vs 64 — **closed 2026-08-15 (pm):** primary tile is **64 du**
-  (CHL-0019). Hand-touch rule: hit target **< 64 du** → pen only ([REQ-10](#hand-touch)).
+  (CHL-0019). Hit target **< 64 du** → pen only, **except** resize knobs which **must** meet the
+  floor so finger can resize ([CHL-0024](../../../.plan/iter-005/challenges/CHL-0024-finger-resize-knobs.md), 2026-08-20).
 - Minimum fitted-rect size for enclose — **closed 2026-08-15 (pm):** adaptive **28** with content, **36** empty + primitive-shape gate.
 - LOD cutoff for on-device manipulation — **closed 2026-08-13 (architect).** Unavailable when the
   selected box's smaller **on-panel** axis is **< 96 du** (not `TILE_LOD_SCALE = 0.35`). Handle

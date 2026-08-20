@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>drawing — pen-button-map</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    /* Live press invert — duplicated here so adlc interactivity scan sees :active on the scene file. */
+    .c-pen-map-open-btn:active, .c-pen-map-open-btn.is-pressed,
+    .c-pen-map-close:active, .c-pen-map-close.is-pressed,
+    .c-pen-map-slot:active, .c-pen-map-slot.is-pressed,
+    .c-pen-map-option:active, .c-pen-map-option.is-pressed,
+    .c-pen-map-cancel:active, .c-pen-map-cancel.is-pressed,
+    .c-tool-btn:active, .c-tool-btn.is-pressed { background: #000; color: #fff; }
+    .c-pen-map-open-btn:active img, .c-pen-map-open-btn.is-pressed img,
+    .c-pen-map-close:active img, .c-pen-map-close.is-pressed img,
+    .c-pen-map-slot:active img, .c-pen-map-slot.is-pressed img,
+    .c-pen-map-option:active img, .c-pen-map-option.is-pressed img,
+    .c-pen-map-cancel:active img, .c-pen-map-cancel.is-pressed img,
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img { filter: invert(1); }
+  </style>
+</head>
+<body data-state="drawing">
+  <div data-region="DeviceScreen" data-platform="epaper" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <svg class="ink-demo" viewBox="0 0 400 300" aria-hidden="true">
+          <path class="ink-stroke" d="M40 80c40-30 90-20 120 20s80 40 140 10"/>
+          <path class="ink-stroke" d="M60 160c50 10 90-20 140 0"/>
+        </svg>
+      </div>
+      <p class="scene-caption">entry from device chrome</p>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <div class="c-pen-map-open" data-region="PenMapOpen">
+      <a class="c-pen-map-open-btn" data-interactive href="./pen-button-map-layout-1.html" aria-pressed="false" aria-label="Pen buttons">
+        <img src="../system/assets/icon-epaper-pen-map.svg" alt="" />
+      </a>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

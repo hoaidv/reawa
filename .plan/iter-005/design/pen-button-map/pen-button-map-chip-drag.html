@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="epaper">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>barrel.hold_drag_under_tip — pen-button-map</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="common.css" />
+  <style>
+    /* Live press invert for adlc scan. */
+    .c-tool-btn:active, .c-tool-btn.is-pressed,
+    .c-pen-map-open-btn:active, .c-pen-map-open-btn.is-pressed,
+    .c-pen-map-close:active, .c-pen-map-close.is-pressed,
+    .c-pen-map-slot:active, .c-pen-map-slot.is-pressed,
+    .c-pen-map-option:active, .c-pen-map-option.is-pressed,
+    .c-pen-map-cancel:active, .c-pen-map-cancel.is-pressed { background: #000; color: #fff; }
+    .c-tool-btn:active img, .c-tool-btn.is-pressed img,
+    .c-pen-map-open-btn:active img, .c-pen-map-open-btn.is-pressed img { filter: invert(1); }
+
+    .c-ink-note {
+      position: absolute;
+      left: 8%;
+      bottom: 10%;
+      z-index: 3;
+      margin: 0;
+      padding: var(--space-xs) var(--space-sm);
+      border: 1px solid var(--color-ink);
+      background: var(--color-paper);
+      font-size: var(--font-caption);
+      font-family: var(--font-sans);
+      line-height: 1.3;
+      max-width: 72%;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body data-state="barrel.hold_drag_under_tip">
+  <div data-region="DeviceScreen" data-platform="epaper" data-orientation="gutToLeft">
+    <div data-region="InkSurface">
+      <div class="c-world">
+        <div class="c-rule-grid" aria-hidden="true"></div>
+        <svg class="ink-demo" viewBox="0 0 400 300" aria-hidden="true">
+          <path class="ink-stroke" d="M40 80c40-30 90-20 120 20s80 40 140 10"/>
+          <path class="ink-stroke" d="M60 160c50 10 90-20 140 0"/>
+        </svg>
+      </div>
+      <div class="c-drag-node is-dragging" aria-hidden="true"></div>
+      <p class="c-ink-note">Hold-move Drag node under tip — exclusive tool unchanged</p>
+    </div>
+    <div class="c-tool-chip" data-region="ToolChip" role="toolbar" aria-label="Tools">
+      <div class="c-tool-cluster" data-cluster="tools">
+        <span class="c-publish" data-status="linked" title="Linked"></span>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection rect"><img src="../system/assets/icon-epaper-sel-rect.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Selection freeform"><img src="../system/assets/icon-epaper-sel-freeform.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Pen"><img src="../system/assets/icon-epaper-pen.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster" data-cluster="recog">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Ink-box recognition"><img src="../system/assets/icon-epaper-recog-ink-box.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="true" aria-label="Connector recognition"><img src="../system/assets/icon-epaper-recog-connector.svg" alt="" /></button>
+      </div>
+      <div class="c-tool-cluster" data-cluster="history">
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Undo"><img src="../system/assets/icon-epaper-undo.svg" alt="" /></button>
+        <button type="button" class="c-tool-btn" data-interactive aria-pressed="false" aria-label="Redo"><img src="../system/assets/icon-epaper-redo.svg" alt="" /></button>
+      </div>
+    </div>
+    <div class="c-pen-map-open" data-region="PenMapOpen">
+      <a class="c-pen-map-open-btn" data-interactive href="./pen-button-map-layout-1.html" aria-pressed="false" aria-label="Pen buttons">
+        <img src="../system/assets/icon-epaper-pen-map.svg" alt="" />
+      </a>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll("[data-interactive]").forEach((el) => {
+      el.addEventListener("pointerdown", () => el.classList.add("is-pressed"));
+      ["pointerup", "pointerleave", "blur"].forEach((ev) => el.addEventListener(ev, () => el.classList.remove("is-pressed")));
+    });
+  </script>
+</body>
+</html>

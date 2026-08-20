@@ -21,17 +21,17 @@ scenes:
   - ".plan/iter-005/design/pen-button-map/pen-button-map-layout-2.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-click.html"
   - ".plan/iter-005/design/pen-button-map/pen-button-map-slot-hold.html"
-  - ".plan/iter-005/design/pen-button-map/pen-button-map-invalid-stale.html"
-  - ".plan/iter-005/design/pen-button-map/pen-button-map-offline-then-publish.html"
 hifi: ".plan/iter-005/design/pen-button-map/pen-button-map-layout-1.html"
 wireframe: ""
 ---
 
 # STORY-IN-034 — Design Infini pen-button map settings
 
-TRACK-005. Parent [REQ-05]. Infini [REQ-05](../../../.docs/modules/infini/prd.md#pen-button-map) · epaper [REQ-18](../../../.docs/modules/epaper/prd.md#pen-buttons) D9 catalogues.
+TRACK-005 Wave 1-B. **Historical.** Painted as Infini desktop settings ([UI-IN-03](../../../.docs/design/index.md)). Human 2026-08-20: the package is **Epaper**, not Infini. Do **not** delete this id.
 
-Package `pen-button-map/`. Desktop settings: 0/1/2 button layouts; Click and Hold-move closed lists; invalid/stale map; offline then publish.
+Current product: [REQ-18](../../../.docs/modules/epaper/prd.md#pen-buttons) on-device editor. Revision story: [STORY-EP-056](./STORY-EP-056.md). Infini [REQ-05](../../../.docs/modules/infini/prd.md#pen-button-map) is persist/restore only.
+
+Do not treat this story’s scenes as the shipping user interface.
 
 ## Kind
 
@@ -40,5 +40,3 @@ Package `pen-button-map/`. Desktop settings: 0/1/2 button layouts; Click and Hol
 | Kind | `design` |
 | Owner | `designer` |
 | Depends on | — |
-
-Parents bound 2026-08-19: [SRS-IN-24] pen-button map settings · [SRS-IN-23] persist and settings publish. **Not** [SRS-IN-05] document chrome. Status **ready** for Wave 1 paint.

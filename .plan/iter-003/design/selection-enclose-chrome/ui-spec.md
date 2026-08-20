@@ -153,7 +153,7 @@ Nav kind: **in-scene state**. Relative hops in scene HTML.
 | `tool.sel_rect` / `tool.sel_freeform` | `.c-tool-btn` on primary chip | honor CHL-0015 / ADR-0017 |
 | `ovl.nodes_bounds` | `.c-nodes-bounds` same box as ink cluster | honor — **tight** 0 pad |
 | `ovl.select_anchors` × 6 | `.c-select-anchor` nw n ne sw s se | honor; no e/w |
-| `cta.enclose` | `.c-enclose` icon-only 64×64, no toolbar chrome | honor (human 2026-08-14) |
+| `cta.enclose` | `.c-enclose` icon-only 10 mm, **8 mm** below the box, no toolbar chrome | honor (human 2026-08-14 / 2026-08-20) |
 | ToolChip 4 tools | composed | honor ADR-0017 |
 | `ind.create_refused_no_surround` | reuse UI-EP-02 | honor; chrome kept |
 | `ovl.selection_bounds` / 8 handles | **not in this package** | compose UI-EP-02 `sel.selected` |

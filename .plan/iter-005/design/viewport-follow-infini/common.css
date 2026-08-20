@@ -1,0 +1,285 @@
+/* Feature-shared Infini viewport-follow layout — allowlist with tokens.css only */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+[data-region="WindowFrame"] {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 640px;
+  min-width: 960px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.app-mark {
+  position: absolute;
+  top: var(--space-md);
+  left: var(--space-md);
+  z-index: 3;
+  font-family: var(--font-display-face);
+  font-size: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+  pointer-events: none;
+  opacity: 0.88;
+}
+
+/* Canvas — reuse UI-IN-01 pattern; not WorldLayer chrome */
+.c-canvas-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  outline: none;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.c-canvas-stage:hover {
+  cursor: grab;
+}
+
+.c-canvas-stage:active,
+.c-canvas-stage.is-gesturing,
+.c-canvas-stage.is-pressed {
+  cursor: grabbing;
+}
+
+.c-canvas-stage:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--color-focus);
+}
+
+.c-world-layer {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+  background-image:
+    linear-gradient(var(--color-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center center;
+}
+
+.c-world-layer .figure {
+  position: absolute;
+  border: 2.5px solid var(--color-stroke);
+  background: transparent;
+}
+
+.c-world-layer .figure-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  left: calc(50% - 60px);
+  top: calc(50% - 60px);
+}
+
+.c-world-layer .figure-rect {
+  width: 160px;
+  height: 100px;
+  left: calc(50% + 80px);
+  top: calc(50% - 40px);
+}
+
+.c-world-layer .figure-line {
+  width: 180px;
+  height: 0;
+  border: 0;
+  border-top: 2.5px solid var(--color-stroke);
+  left: calc(50% - 200px);
+  top: calc(50% + 40px);
+  transform: rotate(-18deg);
+}
+
+/* Trailing chrome cluster: FollowToggle leading StatusZoom — neither covers the other */
+.c-chrome-trailing {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  pointer-events: none;
+}
+
+.c-chrome-trailing > * {
+  pointer-events: auto;
+}
+
+.c-zoom-readout,
+[data-region="StatusZoom"] {
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: 4;
+  min-width: 3.25rem;
+  min-height: var(--target-desktop);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-chrome);
+  font-size: var(--font-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+
+[data-region="FollowToggle"],
+.c-follow-cluster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.c-follow-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--follow-hit);
+  height: var(--follow-hit);
+  min-width: var(--target-desktop);
+  min-height: var(--target-desktop);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-chrome);
+  color: var(--color-ink);
+  cursor: pointer;
+  text-decoration: none;
+  outline: none;
+  backdrop-filter: blur(6px);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.c-follow-toggle img {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.c-follow-toggle:hover,
+.c-follow-toggle.is-hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-elevated);
+}
+
+.c-follow-toggle:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.c-follow-toggle:active,
+.c-follow-toggle.is-pressed {
+  transform: scale(0.96);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.c-follow-toggle[aria-pressed="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.c-follow-toggle[aria-pressed="true"]:hover,
+.c-follow-toggle[aria-pressed="true"].is-hover {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-on-primary);
+}
+
+.c-follow-toggle[disabled],
+.c-follow-toggle[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.c-follow-caption {
+  max-width: 11rem;
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-chrome);
+  font-size: var(--font-caption);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--color-ink);
+  backdrop-filter: blur(6px);
+}
+
+.c-follow-caption[data-tone="muted"] {
+  color: var(--color-ink-muted);
+  font-weight: 400;
+}
+
+.scene-legend {
+  position: absolute;
+  left: var(--space-md);
+  bottom: var(--space-md);
+  z-index: 3;
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  max-width: 24rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-chrome);
+  font-size: var(--font-caption);
+  color: var(--color-ink-muted);
+  line-height: 1.45;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+
+.scene-legend strong {
+  display: block;
+  margin-bottom: var(--space-xs);
+  color: var(--color-ink);
+  font-size: var(--font-caption);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .c-follow-toggle {
+    transition: none;
+  }
+}
+
+@media (max-width: 960px) {
+  [data-region="WindowFrame"] {
+    min-width: 0;
+  }
+
+  .c-follow-caption {
+    display: none;
+  }
+}

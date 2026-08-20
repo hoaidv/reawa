@@ -21,28 +21,32 @@
     .nav-side a[aria-current="page"] { background: #e4e4e7; font-weight: 600; }
     .nav-main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 1rem; min-width: 0; }
     .hint { align-self: stretch; margin: 0 0 0.75rem; font-size: 0.875rem; color: #52525b; }
-    .preview-stage { display: flex; justify-content: center; width: 100%; }
+
+    .nav-main { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 1rem; min-width: 0; overflow: auto; }
+    .preview-stage { display: block; width: auto; overflow: auto; }
     .preview-scale {
       position: relative;
-      transform-origin: top center;
+      width: 246mm;
+      height: 187mm;
+      flex-shrink: 0;
+      transform: none;
       background: #fff;
       box-shadow: 0 1px 8px rgb(0 0 0 / 12%);
+      border: 1px solid #a1a1aa;
+      overflow: hidden;
     }
     .preview-scale iframe {
       position: absolute; inset: 0;
       display: block; border: 0; width: 100%; height: 100%;
       background: #52525b;
     }
-    /* RM2 landscape 1872×1404 — tablet horizontal @ 100% */
-    .preview-stage[data-preview-scale="tablet"] .preview-scale {
-      width: min(1120px, 100%);
-      aspect-ratio: 1872 / 1404;
+    .preview-stage[data-preview-scale] .preview-scale {
+      width: 246mm;
+      height: 187mm;
       transform: none;
-      border-radius: 0.5rem;
-      overflow: hidden;
-      border: 1px solid #a1a1aa;
+      aspect-ratio: auto;
     }
-  </style>
+</style>
 </head>
 <body>
   <div class="nav-shell" data-platform="epaper">
@@ -61,8 +65,7 @@
     </nav>
     <main class="nav-main">
       <p class="hint">
-        RM2 landscape tablet preview (1872×1404) · chip 32px · UI-EP-01 v0.3 · float at orientation-top (CHL-0003).
-      </p>
+        RM2 landscape 246×187 mm (1872×1404) · 1 cm tiles · real size, no parent scale. </p>
       <div class="preview-stage" data-preview-scale="tablet">
         <div class="preview-scale">
           <iframe name="scene-preview" title="Scene preview" src="./epaper-tool-strip-pen.html"></iframe>

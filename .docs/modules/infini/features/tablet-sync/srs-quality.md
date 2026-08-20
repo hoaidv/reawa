@@ -1,7 +1,7 @@
 ---
 feature: tablet-sync
-parent_req: [REQ-03]
-version: 0.6.0
+parent_req: [REQ-03, REQ-06]
+version: 0.7.0
 lifecycle: active
 ---
 
@@ -29,7 +29,10 @@ Parent REQ: [REQ-03](../../prd.md#tablet-sync).
 | Replay idempotency | Same stream applied twice | Identical tree (dedupe by `opId`) |
 | Reconnect convergence | After `queue_empty` → `doc_load` → `load_ack` | 0 divergent nodes; 0 queued changes discarded |
 | Gap handling | `baseSeq` mismatch injected | Mirror marked suspect; resync requested; **suspect mirror never saved** |
-| Viewport change → Epaper map applied | p95 | ≤ 100 ms to map apply; panel refresh may trail |
+| Viewport change **while Epaper follow is on** → Epaper map applied | p95 | ≤ 100 ms to map apply; panel refresh may trail |
+| Infini pans ≥5 s **while Epaper follow is off** | Viewport messages from that gesture | **0**; tablet map unchanged |
+| Infini follow **on**, tablet viewport after settle | Divergent viewports | **0** |
+| Infini follow **off**, tablet pans | Infini canvas change from that gesture | **0** |
 | Viewport publish under gesture spam | Outbound rate | ≤ 30 Hz; settle pose always flushed (`settle: true`) |
 | Marker visibility | Idle vs gesturing | Hidden when idle; visible while gesturing; hide ~100 ms after settle |
 | Preview hygiene | Orphaned preview paths after a dropped session | 0 persisted, 0 saved to the mirror |
@@ -76,17 +79,46 @@ Prioritised for this slice: **(1)** document/paint isolation **(2)** bounded mem
 
 ---
 
-## [SRS-IN-25] Pen-button map publish quality {#srs-in-25-map-publish-quality}
+## [SRS-IN-25] Pen-button map persist/restore quality {#srs-in-25-map-publish-quality}
 
 <!-- lifecycle: active -->
 
-**Parent:** Infini [REQ-05](../../prd.md#pen-button-map). **Constrains:** [SRS-IN-23](./srs-logic.md#srs-in-23-pen-map-publish). Does **not** steal [SRS-IN-08](#srs-in-08) parent (REQ-03).
+**Parent:** Infini [REQ-05](../../prd.md#pen-button-map). **Constrains:** [SRS-IN-23](./srs-logic.md#srs-in-23-pen-map-publish). Does **not** steal [SRS-IN-08](#srs-in-08) parent (REQ-03). Does **not** constrain a desktop editor ([SRS-IN-24](./srs-ui.md#srs-in-24-pen-map-ui) retired).
 
 | Scenario | Target |
 |---|---|
-| Save map → next tablet gesture uses it | p95 ≤**300 ms** after device apply; in-flight unchanged |
-| Publish `pen_button_map` | **0** `doc_load` / `doc_change` / `doc_snapshot` for that publish |
-| 0-button UI | Slots absent or disabled; **0** fake bindings |
+| Tablet bind while linked → Infini persist | **0** `doc_load` / `doc_change` / `doc_snapshot`; map in app settings, not SVG |
+| Hello restore (matching 1- or 2-button, tablet not authored this session) | Next tablet gesture uses persisted map p95 ≤**300 ms**; in-flight unchanged |
+| Reconnect with tablet `pending_persist` | Infini stores the tablet map; **0** lost binds; do not clobber with older persist |
+| 0-button restore | **0** fake bindings applied |
+| Infini chrome | **0** map-editor screens |
+
+---
+
+## [SRS-IN-28] Viewport-follow Epaper quality {#srs-in-28-follow-quality}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-06](../../prd.md#viewport-follow). **Constrains:** [SRS-IN-26](./srs-logic.md#srs-in-26-viewport-follow). Does **not** steal [SRS-IN-08](#srs-in-08) (REQ-03) or [SRS-IN-22](../infinity-canvas/srs-quality.md#srs-in-22-follow-quality) (REQ-01).
+
+| Field | Value |
+|---|---|
+| Source | Creator toggle / disconnect / follower local-nav |
+| Stimulus | Enable / disable / peer enable / drop / Infini pan while following |
+| Artifact | `follow.direction`, inbound tablet apply, peer toggle |
+| Environment | Session live or lost |
+| Response | Exclusive follow or both off; canvas tracks tablet only while following |
+| Response measure | See table |
+
+| Scenario | Target |
+|---|---|
+| Enable Infini follow from both-off | Apply tablet viewport after settle (**0** divergent); Epaper follow stays off |
+| Enable Infini follow while Epaper follow on | **0** intervals both on; Epaper follow off p95 ≤**300 ms** |
+| Dual-on (any connected interval) | Count **0** |
+| Infini local-nav while following | Follow **off** before local pan applies; **0** continued tablet apply |
+| Disconnect while following | Follow **off** before next gesture; reconnect stays **off** until opt-in |
+| No session | Toggle off or unavailable; **0** follow-on persist |
+| `viewport_follow` / follow toggle | **0** `doc_load` / `doc_change` / `doc_snapshot` |
 
 ---
 
@@ -94,3 +126,4 @@ Prioritised for this slice: **(1)** document/paint isolation **(2)** bounded mem
 
 _None. SRS-IN-19 is additive._
 SRS-IN-25 is additive.
+SRS-IN-28 is additive.
