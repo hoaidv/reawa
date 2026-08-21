@@ -86,8 +86,11 @@ StrokeSync::StrokeSync(QObject *parent)
         }
         if (m_socket.state() == QAbstractSocket::ConnectedState)
             return;
+        if (m_socket.state() == QAbstractSocket::ConnectingState
+            || m_socket.state() == QAbstractSocket::HostLookupState)
+            return;
         if (m_retriesLeft <= 0)
-            m_retriesLeft = epaper::kTcpRetryLimit;
+            return;
         --m_retriesLeft;
         qInfo() << "[sync] retry left" << m_retriesLeft;
         connectToMac();
@@ -134,6 +137,9 @@ void StrokeSync::connectToMac()
         return;
     }
     if (m_socket.state() == QAbstractSocket::ConnectedState)
+        return;
+    if (m_socket.state() == QAbstractSocket::ConnectingState
+        || m_socket.state() == QAbstractSocket::HostLookupState)
         return;
 
     if (m_socket.state() != QAbstractSocket::UnconnectedState)

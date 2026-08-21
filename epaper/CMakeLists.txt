@@ -54,6 +54,8 @@ qt_add_resources(epaper_bin "epaper_tool_icons"
         icons/icon-epaper-recog-connector-inv.png
         icons/icon-epaper-viewport-follow.png
         icons/icon-epaper-viewport-follow-inv.png
+        icons/icon-epaper-hand.png
+        icons/icon-epaper-hand-inv.png
 )
 
 target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network Threads::Threads ${CMAKE_DL_LIBS})

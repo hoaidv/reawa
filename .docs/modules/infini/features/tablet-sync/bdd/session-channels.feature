@@ -19,8 +19,8 @@ Feature: Infini tablet session viewport load and change channels
   @SRS-IN-07
   Scenario: Epaper stroke stream renders as a transient preview
     Given a live session and Infini WorldLayer
-    When Epaper sends stroke_begin with world brush width then stroke_point panel samples then stroke_end
-    Then Infini maps panel coords through gut UV into drawingRegion world space
+    When Epaper sends stroke_begin with world brush width then stroke_point world samples then stroke_end
+    Then Infini paints those world points as a preview path (no remap through Infini camera)
     And a preview path appears keyed by stroke id with that world stroke width
     And the preview is not written into the mirror
 

@@ -170,8 +170,8 @@ static void test_chip_wins_over_empty_pan()
     CHECK(!s.panApplied);
 }
 
-/** Scenario: One-finger empty pan while following Infini turns Epaper follow off */
-static void test_follower_local_nav_turns_follow_off_then_pans()
+/** Scenario: One-finger empty pan while following Infini is ignored */
+static void test_follower_local_nav_blocks_pan_while_following()
 {
     OneFingerSession s;
     s.hit = HitKind::Empty;
@@ -180,10 +180,10 @@ static void test_follower_local_nav_turns_follow_off_then_pans()
     CHECK(s.inboundApplied == 1);
 
     applyLocalPanStart(s);
-    CHECK(s.follow == FollowDirection::None);
-    CHECK(s.panApplied);
-    CHECK(!tryApplyInboundViewport(s));
-    CHECK(s.inboundApplied == 1);
+    CHECK(s.follow == FollowDirection::InfiniToEpaper);
+    CHECK(!s.panApplied);
+    CHECK(tryApplyInboundViewport(s));
+    CHECK(s.inboundApplied == 2);
     maybePublishViewport(s);
     CHECK(s.viewportUp == 0);
 }
@@ -361,20 +361,20 @@ static void test_two_finger_link_down_local_view()
     CHECK(s.publishQueued);
 }
 
-/** Scenario: Two-finger pan while following Infini turns Epaper follow off */
-static void test_two_finger_follower_local_nav_turns_follow_off()
+/** Scenario: Two-finger pan while following Infini is ignored */
+static void test_two_finger_blocked_while_following_infini()
 {
     TwoFingerSession s = makeTwoFingerIdle();
     s.follow = FollowDirection::InfiniToEpaper;
     CHECK(tryApplyInboundViewport(s));
     CHECK(s.inboundApplied == 1);
-    CHECK(tryStartTwoFinger(s, pinchClosed()));
-    CHECK(s.follow == FollowDirection::None);
-    applyTwoFingerStep(s, panLeft(pinchClosed(), 0.1));
-    CHECK(s.panApplied);
-    CHECK(!tryApplyInboundViewport(s));
-    CHECK(s.inboundApplied == 1);
-    CHECK(s.viewportDown == 1);
+    CHECK(!tryStartTwoFinger(s, pinchClosed()));
+    CHECK(s.follow == FollowDirection::InfiniToEpaper);
+    CHECK(s.action == TwoFingerAction::Blocked);
+    CHECK(!s.twoFingerStarted);
+    CHECK(!s.panApplied);
+    CHECK(tryApplyInboundViewport(s));
+    CHECK(s.inboundApplied == 2);
     maybePublishTwoFinger(s, true);
     CHECK(s.viewportUp == 0);
 }
@@ -391,7 +391,7 @@ int main()
     test_palm_by_contact_count();
     test_empty_pan_local_infini_unchanged();
     test_chip_wins_over_empty_pan();
-    test_follower_local_nav_turns_follow_off_then_pans();
+    test_follower_local_nav_blocks_pan_while_following();
     test_publish_only_if_infini_follow_on();
     test_hit_priority_box_knob_chip();
     test_follow_parse();
@@ -402,7 +402,7 @@ int main()
     test_second_finger_blocked_during_box_move();
     test_second_finger_blocked_during_resize();
     test_two_finger_link_down_local_view();
-    test_two_finger_follower_local_nav_turns_follow_off();
+    test_two_finger_blocked_while_following_infini();
     if (g_fails) {
         std::cerr << g_fails << " failed\n";
         return 1;

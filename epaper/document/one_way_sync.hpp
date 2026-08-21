@@ -162,6 +162,7 @@ public:
         o.emplace_back("x", JsonValue::number(x));
         o.emplace_back("y", JsonValue::number(y));
         o.emplace_back("p", JsonValue::number(p));
+        o.emplace_back("space", JsonValue::string("world"));
         emitLine(JsonValue::object(std::move(o)));
     }
 

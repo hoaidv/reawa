@@ -120,7 +120,6 @@ public slots:
 
         auto snap = probe();
         const std::string udc = firstUdcState();
-        const bool udcConfigured = (udc == "configured");
         const bool udcSuspended = (udc == "suspended");
         bool unplugged = udc.empty()
             ? !(snap.ifacePresent && snap.hasTabletAddr)
@@ -141,7 +140,9 @@ public slots:
         parseEstablishedPorts("/proc/net/tcp", &ssh, &stroke, &log);
         parseEstablishedPorts("/proc/net/tcp6", &ssh, &stroke, &log);
 
-        const bool pathLive = udcConfigured && snap.hasTabletAddr && snap.flagsUp;
+        // Gadget-up is address + IFF_UP (same as classify). Requiring UDC
+        // "configured" aborted TCP whenever sysfs lagged — Infini follow died.
+        const bool pathLive = snap.hasTabletAddr && snap.flagsUp;
         epaper::setUsbEthernetLive(pathLive);
 
         const bool tcpStroke = stroke;
@@ -188,9 +189,7 @@ public slots:
         if (!pluggedNow && m_wasPlugged)
             emit recoverApps();
         if (pluggedNow && !m_wasPlugged) {
-            m_recoverNote = QStringLiteral("plugged: usb0 addr + Infini retry");
-            emit recoverApps();
-        } else if (pathLive && !stroke && pluggedNow) {
+            m_recoverNote = QStringLiteral("plugged: usb0 addr + Infini 3 tries");
             emit recoverApps();
         }
         m_wasPlugged = pluggedNow;

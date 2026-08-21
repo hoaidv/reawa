@@ -376,10 +376,6 @@ void TabletCanvasItem::applyContactPress(const QPointF &canvasPos, const IngestC
         toggleDebugLog();
         return;
     }
-    if (m_handTouchToggleRect.contains(canvasPos)) {
-        toggleHandTouch();
-        return;
-    }
     if (pointInToolChip(canvasPos)) {
         tryArmToolAtCanvasPos(canvasPos);
         return;
@@ -806,7 +802,10 @@ void TabletCanvasItem::syncBegin()
 
 void TabletCanvasItem::syncPoint(const Point &pt)
 {
-    m_oneWay.previewStrokePoint(m_activeStrokeId.toStdString(), pt.pos.x(), pt.pos.y(),
+    // @implements [SRS-EP-02] live preview in world — same space as append_ink
+    ensureLocalDrawingRegion();
+    const QPointF world = panelToWorld(pt.pos);
+    m_oneWay.previewStrokePoint(m_activeStrokeId.toStdString(), world.x(), world.y(),
                                 pt.pressure);
     flushOneWayWire();
 }
@@ -948,7 +947,8 @@ void TabletCanvasItem::setToolMode(const QString &mode)
                       .arg(m_toolMode)
                       .arg(m_pickables.size());
     emit debugChanged();
-    syncToolCanvasPresence();
+    // @fix residual knobs / scale chip when leaving sel_* (QML chrome is not ToolCanvas)
+    refreshSelectionChrome();
 }
 
 void TabletCanvasItem::armTool(const QString &mode)
@@ -995,10 +995,6 @@ bool TabletCanvasItem::tryDebugChromeAtWindowPos(const QPointF &windowPos)
         toggleDebugLog();
         return true;
     }
-    if (m_handTouchToggleRect.contains(windowPos)) {
-        toggleHandTouch();
-        return true;
-    }
     return false;
 }
 
@@ -1029,6 +1025,10 @@ bool TabletCanvasItem::tryArmToolAtCanvasPos(const QPointF &canvasPos)
     }
     if (hit == QLatin1String("tgl.recog.connector")) {
         toggleRecogConnector();
+        return true;
+    }
+    if (hit == QLatin1String("tgl.hand_touch")) {
+        toggleHandTouch();
         return true;
     }
     armTool(hit);
@@ -1113,14 +1113,13 @@ bool TabletCanvasItem::fingerHitsChip(const QPointF &canvasPos) const
         || pointInEncloseCta(canvasPos)
         || kXochitlSwitchRect.contains(canvasPos)
         || m_usbLinkRect.contains(canvasPos)
-        || m_debugToggleRect.contains(canvasPos)
-        || m_handTouchToggleRect.contains(canvasPos);
+        || m_debugToggleRect.contains(canvasPos);
 }
 
 bool TabletCanvasItem::fingerHitsKnob(const QPointF &canvasPos) const
 {
     using namespace epaper::document;
-    if (m_selectedPickableId.isEmpty())
+    if (!isSelectionTool() || m_selectedPickableId.isEmpty())
         return false;
     const DocNode *selected = m_document.find(m_selectedPickableId.toStdString());
     if (!selected)
@@ -1284,12 +1283,10 @@ void TabletCanvasItem::updateFingerTouch(const QPointF &canvasPos, int fingerCou
     if (m_fingerGesture == FingerGesture::EmptyPending) {
         if (actionOnEmptyMove(travelDu(dx, dy)) != FingerAction::LocalPan)
             return;
-        // @implements [SRS-EP-21] follower local-nav turns follow off then pans
+        // @implements [SRS-EP-21] no pan while following Infini
         const LocalNav nav = onLocalNav(followEnum());
-        if (nav.turnedFollowOff) {
-            setFollowDirection(QString::fromLatin1(followId(nav.direction)));
-            emitViewportFollow();
-        }
+        if (nav.blocked)
+            return;
         m_fingerGesture = FingerGesture::EmptyPan;
         m_fingerPanClock.invalidate();
     }
@@ -1349,6 +1346,9 @@ void TabletCanvasItem::endFingerTouch(const QPointF &canvasPos)
 
 bool TabletCanvasItem::canPromoteToTwoFinger() const
 {
+    using namespace epaper::handtouch;
+    if (onLocalNav(followEnum()).blocked)
+        return false;
     return m_fingerGesture == FingerGesture::None
         || m_fingerGesture == FingerGesture::EmptyPending
         || m_fingerGesture == FingerGesture::EmptyPan;
@@ -1386,12 +1386,10 @@ bool TabletCanvasItem::beginTwoFingerTouch(const QPointF &a, const QPointF &b)
         || m_fingerGesture == FingerGesture::Chip)
         return false;
     ensureLocalDrawingRegion();
-    // @implements [SRS-EP-24] follower local-nav turns follow off then pans
+    // @implements [SRS-EP-24] no pinch while following Infini
     const LocalNav nav = onLocalNav(followEnum());
-    if (nav.turnedFollowOff) {
-        setFollowDirection(QString::fromLatin1(followId(nav.direction)));
-        emitViewportFollow();
-    }
+    if (nav.blocked)
+        return false;
     m_fingerPanOrigin = m_drawingRegion;
     m_twoOriginContacts = uvPair(a, b);
     m_fingerGesture = FingerGesture::TwoFinger;
@@ -1520,13 +1518,13 @@ void TabletCanvasItem::updateToolChipRect()
     const auto fr = epaper::follow::followToggleRect(width(), height(), gutOnTop);
     const auto ur = epaper::follow::usbLinkRect(width(), height(), gutOnTop);
     const auto dr = epaper::follow::debugToggleRect(width(), height(), gutOnTop);
-    const auto hr = epaper::follow::handTouchToggleRect(width(), height(), gutOnTop);
     const auto lr = epaper::follow::debugLogRect(width(), height(), gutOnTop);
     const QRectF followNext = panelToQ(fr);
     const QRectF usbNext = panelToQ(ur);
     const QRectF debugNext = panelToQ(dr);
-    const QRectF handNext = panelToQ(hr);
     const QRectF logNext = panelToQ(lr);
+    const QRectF handNext = QRectF(next.x() + epaper::toolchip::kPublish, next.y(),
+                                   epaper::toolchip::kTile, epaper::toolchip::kHeight);
     if (followNext != m_followToggleRect || usbNext != m_usbLinkRect
         || debugNext != m_debugToggleRect || handNext != m_handTouchToggleRect
         || logNext != m_debugLogRect) {
@@ -1608,7 +1606,7 @@ void TabletCanvasItem::refreshSelectionChrome()
     m_modeChipVisible = false;
     m_modeChipLabel.clear();
     m_modeChipRect = QRectF();
-    if (!ids.empty() && !bounds.isEmpty()
+    if (isSelectionTool() && !ids.empty() && !bounds.isEmpty()
         && m_selGesture != SelGesture::Marquee && m_selGesture != SelGesture::Lasso
         && m_selGesture != SelGesture::Move && m_selGesture != SelGesture::Resize) {
         const DocNode *one = ids.size() == 1 ? m_document.find(ids[0]) : nullptr;

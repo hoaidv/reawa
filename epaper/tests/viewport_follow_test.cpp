@@ -47,11 +47,11 @@ static bool near(double a, double b, double eps = 1e-4)
 static int exclusiveToolCount()
 {
     int n = 0;
-    if (hitAtRelX(kPublish + 1) == Hit::SelRect)
+    if (hitAtRelX(kPublish + kTile + 1) == Hit::SelRect)
         ++n;
-    if (hitAtRelX(kPublish + kTile + 1) == Hit::SelFreeform)
+    if (hitAtRelX(kPublish + kTile * 2 + 1) == Hit::SelFreeform)
         ++n;
-    if (hitAtRelX(kPublish + kTile * 2 + 1) == Hit::Pen)
+    if (hitAtRelX(kPublish + kTile * 3 + 1) == Hit::Pen)
         ++n;
     return n;
 }
@@ -79,17 +79,14 @@ static void test_enable_from_both_off_applies_infini_viewport()
     const PanelRect usb = usbLinkRect(panelW, panelH, false);
     const PanelRect follow = followToggleRect(panelW, panelH, false);
     const PanelRect debug = debugToggleRect(panelW, panelH, false);
-    const PanelRect hand = handTouchToggleRect(panelW, panelH, false);
     CHECK(!followIsInsideToolChip(follow, chip));
     CHECK(!follow.intersects(chip));
     CHECK(!follow.intersects(usb));
     CHECK(usb.contains(panelW - kFollowInsetDu - 1, kFollowInsetDu + 1));
     CHECK(follow.x + follow.w <= usb.x + 1e-6);
     CHECK(debug.x + debug.w <= follow.x + 1e-6);
-    CHECK(hand.x + hand.w <= debug.x + 1e-6);
     CHECK(near(follow.y, usb.y));
     CHECK(near(debug.y, usb.y));
-    CHECK(near(hand.y, usb.y));
     CHECK(!chip.contains(follow.x + 1, follow.y + 1));
     const PanelRect log = debugLogRect(panelW, panelH, false);
     CHECK(near(log.h, panelH * 0.25));
@@ -188,8 +185,8 @@ static void test_reconnect_does_not_restore()
     CHECK(s.viewportFollowEmitted == 1);
 }
 
-/** Scenario: Local pan while following Infini turns Epaper follow off */
-static void test_local_pan_while_following_turns_off()
+/** Scenario: Local pan while following Infini is ignored */
+static void test_local_pan_while_following_is_ignored()
 {
     const double thirtySixMmDu = 36.0 / 25.4 * epaper::handtouch::kPanelDpi;
     CHECK(thirtySixMmDu > kPalmTravelDu);
@@ -206,11 +203,11 @@ static void test_local_pan_while_following_turns_off()
     s.hit = epaper::handtouch::HitKind::Empty;
     s.follow = follow.direction;
     applyLocalPanStart(s);
-    CHECK(s.follow == FollowDirection::None);
-    CHECK(s.panApplied);
+    CHECK(s.follow == FollowDirection::InfiniToEpaper);
+    CHECK(!s.panApplied);
     follow.direction = s.follow;
-    CHECK(!follow.tryApplyInboundViewport());
-    CHECK(follow.inboundApplied == appliedAtFollow);
+    CHECK(follow.tryApplyInboundViewport());
+    CHECK(follow.inboundApplied == appliedAtFollow + 1);
     CHECK(follow.exclusiveTool == "pen");
 }
 
@@ -231,7 +228,7 @@ int main()
     test_tap_while_infini_following_takes_over();
     test_connection_lost_forces_follow_off();
     test_reconnect_does_not_restore();
-    test_local_pan_while_following_turns_off();
+    test_local_pan_while_following_is_ignored();
     test_hello_does_not_carry_follow();
     if (g_fails) {
         std::cerr << g_fails << " failed\n";

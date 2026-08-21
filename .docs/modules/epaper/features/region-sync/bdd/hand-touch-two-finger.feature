@@ -73,9 +73,9 @@ Feature: Two-finger local pan pinch and viewport publish
     And 0 viewport up is published
 
   @SRS-EP-24 @SRS-EP-26
-  Scenario: Two-finger pan while following Infini turns Epaper follow off
+  Scenario: Two-finger pan while following Infini is ignored
     Given follow.direction is infini_to_epaper
     When the creator two-finger pans on Epaper
-    Then follow.direction becomes none before the local pan applies
-    And the gesture drives the local camera
-    And 0 continued Infini viewport apply occurs after that gesture starts
+    Then follow.direction stays infini_to_epaper
+    And 0 local pan or pinch applies
+    And inbound Infini viewport still applies

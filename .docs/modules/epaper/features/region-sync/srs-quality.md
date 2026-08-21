@@ -30,7 +30,7 @@ Parent REQ: [REQ-02](../../prd.md#region-sync). Follow quality: [SRS-EP-51](#srs
 | Soft refresh under pan/zoom spam | Min interval between soft paints | ≥ **250 ms**; latest pending wins |
 | Settle / accepted `doc_load` / committed local op | Sharp paint | Immediate; AA on; no soft fade left behind |
 | **Repaints sourced from an inbound peer picture** | Count | **0** |
-| Local ink → wire | `stroke_*` (preview) with world brush + panel x/y | Always |
+| Local ink → wire | `stroke_*` (preview) with world brush + **world** x/y | Always |
 | Stroke width | Live + vector: `world × s_panel` | Always ([ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md)) |
 | Zoom parity | Grow region world width (zoom out) | Panel stroke px shrinks for same world width (±5%) |
 | Hot path | Socket I/O must not block pen sample callback | Always |
@@ -57,7 +57,7 @@ Parent REQ: [REQ-02](../../prd.md#region-sync). Follow quality: [SRS-EP-51](#srs
 | Two-finger pan/pinch ≥5 s → next pen sample map | p95 map apply | ≤**100 ms** |
 | After settle, Infini follow **on** | Divergent viewports | **0** |
 | Infini follow **off**, tablet pans | Infini canvas change from that gesture | **0**; **0** viewport up |
-| Epaper follow **on**, two-finger starts | Epaper follow | **off** before local pan applies |
+| Epaper follow **on**, two-finger starts | Two-finger | **blocked**; follow stays on; **0** local camera change |
 | Link down, two-finger | Local map still updates | Always |
 
 ---
@@ -70,8 +70,8 @@ Parent REQ: [REQ-02](../../prd.md#region-sync). Follow quality: [SRS-EP-51](#srs
 
 | Field | Value |
 |---|---|
-| Source | Creator toggle / disconnect / follower local-nav |
-| Stimulus | Enable / disable / peer enable / drop / pan while following |
+| Source | Creator toggle / disconnect |
+| Stimulus | Enable / disable / peer enable / drop / pan-while-following (ignored on Epaper) |
 | Artifact | `follow.direction`, inbound map apply, peer toggle |
 | Environment | Session live or lost |
 | Response | Exclusive follow or both off; map tracks leader only while following |
@@ -85,7 +85,7 @@ Parent REQ: [REQ-02](../../prd.md#region-sync). Follow quality: [SRS-EP-51](#srs
 | Disconnect while following | Follow **off** before next gesture; reconnect stays **off** until opt-in |
 | No session | Toggle off or unavailable; **0** follow-on persist |
 | `viewport_follow` / follow toggle | **0** `doc_load` / `doc_change` / `doc_snapshot` |
-| Follower local-nav (empty pan > **20 mm** or two-finger) while following Infini | Follow **off** before local pan applies; **0** continued Infini apply after that gesture starts |
+| Follower pan/pinch while following Infini | **0** camera change; follow **stays on**; box pick/move/resize still runs |
 
 ---
 

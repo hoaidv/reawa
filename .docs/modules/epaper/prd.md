@@ -503,9 +503,9 @@ viewed at scale, and saved.
   The device **publishes** that viewport **only if Infini follow is on**. Does not run while a
   one-finger box-move **or resize** is in flight. Link down: local viewport still works; follow
   auto-off ([REQ-19](#viewport-follow)).
-- **Follow vs local navigation.** A local navigation gesture (one-finger empty pan past threshold,
-  or two-finger pan/pinch) on a tablet that is following Infini **turns Epaper follow off**. Box
-  pick/move/resize does **not** turn follow off.
+- **Follow vs local navigation.** While Epaper is following Infini, one-finger empty pan and
+  two-finger pan/pinch are **disabled** (follow stays on so cameras stay coupled). Box
+  pick/move/resize still runs. Turn follow off (toggle) to pan/zoom the tablet locally.
 - **Size rule.** Finger may hit a control only if its **hit target is ≥ the primary ToolChip tile**
   (**64×64 du**, [CHL-0019](../../../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md)).
   Resize knobs meet that floor (visual may stay a small hollow square). Controls still under the
@@ -549,9 +549,9 @@ viewed at scale, and saved.
 - Given Infini follow is **on**, When the creator pans on the tablet, Then Infini applies the
   published region after settle (0 divergent viewports) and Epaper follow is off (0 dual-follow;
   0 competing Infini→tablet viewport).
-- Given Epaper follow is **on**, When the creator starts a local navigation gesture (one-finger empty
-  pan past threshold or two-finger pan/pinch), Then Epaper follow turns **off** and the gesture
-  drives the local camera.
+- Given Epaper follow is **on**, When the creator tries a local navigation gesture (one-finger empty
+  pan past threshold or two-finger pan/pinch), Then **0** pan/pinch applies and follow stays **on**.
+  Box pick/move/resize still runs.
 - Given finger-down on a ToolChip primary tile (64 du), When the tap completes, Then
   [REQ-03](#tool-modes) still holds — this REQ does not steal chip hits.
 - **UI states / journeys to design:** finger hit box while `Pen`; finger move in progress;

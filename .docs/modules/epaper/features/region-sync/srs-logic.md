@@ -52,7 +52,8 @@ rx = raw.y * (w / h)
 ry = h - raw.x * (h / w)
 ```
 
-Wire `stroke_point` uses **panel** coords after this map.
+Wire `stroke_point` uses **world** coords after this map (same space as `append_ink`).
+Infini paints the live preview as world points — it does **not** remap through Infini’s camera.
 
 ### Panel → world (gut-aware)
 
@@ -105,7 +106,7 @@ An unsolicited `doc_load` mid-session is a protocol defect: reject, log, surface
 ### On local pen
 
 1. Ink locally with current map + world×`s_panel` width.
-2. Stream `stroke_*` (panel x/y) as a **preview** for the desktop
+2. Stream `stroke_*` (**world** x/y) as a **preview** for the desktop
    ([ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) §6).
 3. On stroke end, hand the stroke to [SRS-EP-07](../device-document/srs-logic.md) for ingestion into
    the local document, which is what later redraws paint from.
@@ -177,7 +178,7 @@ Local two-finger pan/pinch is **Must**. Last-writer token is withdrawn.
 | Pan | Translate `drawingRegion` / equivalent `translate` |
 | Pinch | Uniform `scale` only (no rotate/skew) |
 | Local map | Apply **immediately** so the next pen sample is correct (p95 ≤100 ms map apply — [SRS-EP-26](./srs-quality.md#srs-ep-26-two-finger-quality)) |
-| If Epaper follow is on at gesture start | Set `direction = none` **then** drive the local camera ([SRS-EP-49](#srs-ep-49-viewport-follow) follower local-nav) |
+| If Epaper follow is on at gesture start | **0** pan, **0** pinch — follow stays `infini_to_epaper`; cameras stay coupled. Box pick / move / resize still runs ([SRS-EP-49](#srs-ep-49-viewport-follow)) |
 | Publish | `viewport` **up** with `source: epaper` **only if** Infini follow is on (`direction = epaper_to_infini`). Otherwise **0** viewport up |
 | Flush | `settle: true` on two-finger end when publishing |
 | Link down | Local map still updates; follow is already `none`; **0** publish |
@@ -189,7 +190,7 @@ Does not change digitizer→panel Round 19 ([SRS-EP-01](../local-pen-ink/srs-log
 | Field | Drives |
 |---|---|
 | `touch.fingerCount` | Must be 2 |
-| `follow.direction` | Publish iff `epaper_to_infini`; local-nav iff was `infini_to_epaper` |
+| `follow.direction` | Publish iff `epaper_to_infini`; pan/pinch **blocked** while `infini_to_epaper` |
 | `viewport.{translate,scale,drawingRegion,settle}` | Local map; Infini apply only while Infini following |
 
 ---
@@ -217,7 +218,7 @@ Follow is a **choice**. Default `none`. Not a ToolChip exclusive tool, recognize
 | Creator enables Epaper follow (session live, was `none`) | Set `infini_to_epaper`; emit `viewport_follow`; apply Infini’s current viewport (p95 map ≤100 ms); Infini follow stays off |
 | Creator enables Epaper follow while Infini follow is on | Set `infini_to_epaper`; Infini follow **off** (0 dual-on; peer toggle p95 ≤300 ms); start applying Infini viewport |
 | Creator disables Epaper follow | Set `none`; stop applying inbound `viewport` |
-| Follower local-nav (one-finger empty pan **past** 20 mm, or two-finger pan/pinch) while `infini_to_epaper` | Set `none` **then** local camera; 0 continued Infini apply after that gesture starts |
+| Follower local-nav (one-finger empty pan **past** 20 mm, or two-finger pan/pinch) while `infini_to_epaper` | **Ignored** — 0 camera change, follow stays on. Box pick / move / resize still runs |
 | Box pick / move / resize | **Does not** change follow |
 | Connection lost / no session | Force `none` before the next gesture. Reconnect does **not** restore |
 | Inbound `viewport` while not `infini_to_epaper` | Ignore + log; 0 apply; 0 implicit on |

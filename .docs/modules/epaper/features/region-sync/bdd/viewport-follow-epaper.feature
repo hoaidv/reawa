@@ -8,7 +8,7 @@ Feature: Epaper follow Infini toggle exclusion and disconnect
   # follow.off, follow.following_infini, follow.peer_following_you,
   # follow.connection_lost, follow.reconnect_stays_off.
   # Mutually exclusive one-way follow (ADR-0029). Icon toggle not ToolChip.
-  # Two-finger follower local-nav is in hand-touch-two-finger.feature.
+  # Two-finger pan/pinch while following Infini is in hand-touch-two-finger.feature.
 
   @SRS-EP-49 @SRS-EP-50 @SRS-EP-51
   Scenario: Enabling Epaper follow from both-off applies Infini viewport
@@ -61,11 +61,11 @@ Feature: Epaper follow Infini toggle exclusion and disconnect
     And 0 follow restore occurs until the creator taps btn.viewport_follow
 
   @SRS-EP-49 @SRS-EP-51
-  Scenario: Local pan while following Infini turns Epaper follow off
+  Scenario: Local pan while following Infini is ignored
     Given follow.direction is infini_to_epaper
     And exclusive tool pen is armed
     And the creator finger-downs on empty canvas with hit.kind empty
     When Euclidean panel travel goes to 36 mm (past 20 mm / 178 du at 226 dpi)
-    Then follow.direction becomes none before the local pan applies
-    And the gesture drives the local camera
-    And 0 continued Infini viewport apply occurs after that gesture starts
+    Then follow.direction stays infini_to_epaper
+    And 0 local pan applies
+    And inbound Infini viewport still applies

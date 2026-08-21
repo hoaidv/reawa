@@ -4,7 +4,7 @@
 
 namespace epaper {
 
-/** usb0 carrier + UDC configured. TCP apps must not connectToHost when false. */
+/** usb0 address + IFF_UP. TCP apps must not connectToHost when false. */
 inline std::atomic<bool> g_usbEthernetLive{false};
 
 inline bool usbEthernetLive()

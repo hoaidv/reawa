@@ -28,7 +28,9 @@ Session-scoped **optional** coupling of two independent cameras. When follow is 
 - **Default and disconnect:** `none`. Connection lost forces `none` on both peers **before** the next gesture. Reconnect / `hello` does **not** carry last `direction`.
 - **Not persisted.** Never SVG, never `doc_change` / `doc_load`.
 - **Apply vs emit:** only the follower applies inbound `viewport`. Only the leader emits `viewport` (≤30 Hz, latest wins, `settle: true` on flush). Inbound `viewport` while `direction` does not name this peer as follower is ignored — it does **not** turn follow on.
-- **Follower local-nav turns follow off:** a navigation gesture on the follower (Epaper: one-finger empty pan past threshold, or two-finger pan/pinch; Infini: trackpad/mouse pan or pinch/zoom) sets `direction = none`, then drives that peer’s local camera. Box pick / move / resize is not local-nav.
+- **Follower local-nav:**
+  - **Epaper** following Infini: one-finger empty pan past threshold and two-finger pan/pinch are **ignored** (0 camera change; follow stays on). Box pick / move / resize still runs.
+  - **Infini** following Epaper: a navigation gesture (trackpad/mouse pan or pinch/zoom) sets `direction = none`, then drives Infini’s local camera.
 - Infini→Infini follow is out of this entity.
 
 ## Relationships

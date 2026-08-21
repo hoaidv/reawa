@@ -129,17 +129,21 @@ inline const char *followId(FollowDirection d)
 struct LocalNav {
     FollowDirection direction = FollowDirection::None;
     bool turnedFollowOff = false;
+    bool blocked = false;
 };
 
-/** Follower local-nav: set none *then* pan. Box pick/move/resize does not call this. */
+/**
+ * Empty pan / two-finger pan-pinch while following Infini is blocked so cameras stay coupled.
+ * Box pick / move / resize does not call this.
+ * @implements [SRS-EP-21] no pan/zoom while following Infini
+ * @implements [SRS-EP-24] no pinch while following Infini
+ */
 inline LocalNav onLocalNav(FollowDirection current)
 {
     LocalNav out;
     out.direction = current;
-    if (current == FollowDirection::InfiniToEpaper) {
-        out.direction = FollowDirection::None;
-        out.turnedFollowOff = true;
-    }
+    if (current == FollowDirection::InfiniToEpaper)
+        out.blocked = true;
     return out;
 }
 
@@ -194,6 +198,11 @@ struct OneFingerSession {
 inline void applyLocalPanStart(OneFingerSession &s)
 {
     const LocalNav nav = onLocalNav(s.follow);
+    if (nav.blocked) {
+        s.action = FingerAction::PalmRest;
+        s.panApplied = false;
+        return;
+    }
     s.follow = nav.direction;
     s.action = FingerAction::LocalPan;
     s.panApplied = true;
@@ -314,9 +323,8 @@ inline bool canStartTwoFinger(const TwoFingerSession &s)
 }
 
 /**
- * Follower local-nav: set none *then* drive the local camera.
- * @implements [SRS-EP-24] two-finger follower local-nav
- * @implements [SRS-EP-26] follow off before local pan
+ * Two-finger pan/pinch is blocked while following Infini; pick/move still runs.
+ * @implements [SRS-EP-24] no pinch while following Infini
  */
 inline bool tryStartTwoFinger(TwoFingerSession &s, const TwoFingerContacts &contacts)
 {
@@ -327,6 +335,10 @@ inline bool tryStartTwoFinger(TwoFingerSession &s, const TwoFingerContacts &cont
         return false;
     }
     const LocalNav nav = onLocalNav(s.follow);
+    if (nav.blocked) {
+        s.action = TwoFingerAction::Blocked;
+        return false;
+    }
     s.follow = nav.direction;
     s.originContacts = contacts;
     s.origin = s.region;

@@ -79,7 +79,7 @@ Panel aspect: RM2 native `1404×1872`. Tall guts → portrait aspect; wide guts 
 
 Legacy aliases on Epaper ingest: `portrait`→`gutToLeft`, `landscape`→`gutOnTop`.
 
-`panelToFrameUv` maps post-digitizer **panel** coords → frame UV for RM→Infini strokes.
+`panelToFrameUv` maps post-digitizer **panel** coords → frame UV for the tablet drawing-region marker. Live `stroke_point` is already world.
 
 ### Drawing-region marker
 
@@ -164,11 +164,11 @@ load while the device reports queued changes.
 | Message | Fields |
 |---|---|
 | `stroke_begin` | `id`, `brush.width` (**world** units), optional `cw`/`ch` panel size |
-| `stroke_point` | `id`, `x`, `y` (**panel** after Round 19 map), optional `p` |
+| `stroke_point` | `id`, `x`, `y` (**world**, same space as `append_ink`), optional `p`, `space: "world"` |
 | `stroke_end` | `id` |
 
-Infini maps panel→UV→`drawingRegion` world and renders a **transient preview path** keyed by stroke
-id, so the desktop keeps its shipped ≤50 ms liveness. The preview is replaced by the real node when
+Infini paints `x`/`y` as **world** points (no remap through Infini’s camera) so live ink matches
+the committed node even when cameras are independent. The preview is replaced by the real node when
 the `doc_change` carrying it arrives.
 
 | Rule | Value |

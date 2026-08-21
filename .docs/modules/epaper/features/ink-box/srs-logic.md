@@ -279,7 +279,7 @@ Does **not** overload SRS-EP-11. Pen pick/move stays there. This section is **fi
 | Empty canvas, travel ≤ 20 mm, lift | Tap: **deselect** (0 nodes, 0 residual chrome); **0** pan; **0** tool switch |
 | Pen near or in contact, or hand-touch toggle off | Hand-touch **off** — ignore canvas fingers until the pen leaves proximity and the toggle is on |
 | ≥3 capacitive contacts | Palm: **0** pan, **0** pinch |
-| Empty canvas, first sample with travel > 20 mm | **Local pan** (exclusive tool unchanged; 0 nodes selected; 0 lasso). If Epaper follow was on: set `direction = none` **then** pan ([SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow)). Publish `viewport` up **only if** Infini follow is on |
+| Empty canvas, first sample with travel > 20 mm | **Local pan** (exclusive tool unchanged; 0 nodes selected; 0 lasso) **unless** Epaper follow is on (`infini_to_epaper`): then **0** pan, follow stays on ([SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow)). Publish `viewport` up **only if** Infini follow is on |
 | Empty canvas, box/knob/chip hit on the same down | Hit wins — **0** empty-canvas pan |
 
 ### UI-driving fields
@@ -289,7 +289,7 @@ Does **not** overload SRS-EP-11. Pen pick/move stays there. This section is **fi
 | `touch.fingerCount` | 1 vs 2 vs ≥3 (2 → not this section; ≥3 → palm) |
 | `pen.near` / `pen.contact` / `handTouch.toggle` | Any disable → hand-touch off |
 | `toolMode` | Must become `sel_freeform` on box hit; **unchanged** on empty pan |
-| `follow.direction` | Local-nav while following Infini → `none` |
+| `follow.direction` | Pan/pinch while following Infini → **blocked** (follow stays on) |
 | `sel.moving` | Live-direct chrome ([SRS-EP-22](./srs-ui.md#srs-ep-22-hand-touch-ui)) |
 | `sel.resizing.*` | Live-direct resize chrome when `hit.kind=anchor` |
 

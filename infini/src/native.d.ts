@@ -8,7 +8,7 @@ export type RmStrokeMsg =
       /** ADR-0013 / SRS-IN-13 — enclose when Ink-box armed. */
       intent?: "ink" | "enclose";
     }
-  | { type: "stroke_point"; id: string; x: number; y: number; p?: number }
+  | { type: "stroke_point"; id: string; x: number; y: number; p?: number; space?: "world" }
   | { type: "stroke_end"; id: string };
 
 export type RmToolIntentMsg = {

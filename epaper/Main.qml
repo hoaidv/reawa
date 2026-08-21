@@ -56,7 +56,7 @@ TabletWindow {
         visible: false
     }
 
-    // Trailing orientation-top row: HT | DBG | Follow Infini | USB (UI-EP-07).
+    // Trailing orientation-top row: DBG | Follow Infini | USB (UI-EP-07).
     // @implements [SRS-EP-50] FollowToggle sibling of ToolChip
     Rectangle {
         id: followToggle
@@ -109,7 +109,7 @@ TabletWindow {
         }
     }
 
-    // Floating tool chip — 3 exclusive tools + 2 recognizer toggles + Undo/Redo (ADR-0021 / UI-EP-04).
+    // Floating tool chip — hand-touch toggle + 3 exclusive tools + 2 recognizer toggles + Undo/Redo.
     Item {
         id: toolChip
         z: 20
@@ -125,7 +125,7 @@ TabletWindow {
 
             Rectangle {
                 id: toolCluster
-                width: 12 + 64 * 3
+                width: 12 + 64 * 4
                 height: parent.height
                 color: "white"
                 border.color: "black"
@@ -140,6 +140,30 @@ TabletWindow {
                         width: 12
                         height: parent.height
                         color: "black"
+                    }
+
+                    Rectangle {
+                        id: handTouchToggle
+                        width: 64
+                        height: 64
+                        // @implements [SRS-EP-22] btn.hand_touch first primary tile
+                        color: drawCanvas.handTouchArmed ? "black" : "white"
+                        border.color: "black"
+                        border.width: 1
+                        Image {
+                            anchors.centerIn: parent
+                            width: parent.width * 0.62
+                            height: parent.height * 0.62
+                            fillMode: Image.PreserveAspectFit
+                            smooth: false
+                            source: drawCanvas.handTouchArmed
+                                    ? "qrc:/icons/icons/icon-epaper-hand-inv.png"
+                                    : "qrc:/icons/icons/icon-epaper-hand.png"
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: drawCanvas.toggleHandTouch()
+                        }
                     }
 
                     Repeater {
@@ -487,31 +511,6 @@ TabletWindow {
         MouseArea {
             anchors.fill: parent
             onClicked: UsbHud.recoverInfini()
-        }
-    }
-
-    Rectangle {
-        id: handTouchToggle
-        z: 30
-        // @implements [SRS-EP-22] btn.hand_touch trailing chrome
-        x: drawCanvas.handTouchToggleRect.x
-        y: drawCanvas.handTouchToggleRect.y
-        width: drawCanvas.handTouchToggleRect.width
-        height: drawCanvas.handTouchToggleRect.height
-        color: drawCanvas.handTouchArmed ? "black" : "white"
-        border.color: "black"
-        border.width: 1
-        Text {
-            anchors.fill: parent
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            font.pixelSize: 14
-            color: drawCanvas.handTouchArmed ? "white" : "black"
-            text: "HT"
-        }
-        MouseArea {
-            anchors.fill: parent
-            onClicked: drawCanvas.toggleHandTouch()
         }
     }
 

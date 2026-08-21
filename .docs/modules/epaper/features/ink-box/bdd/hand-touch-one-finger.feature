@@ -119,11 +119,11 @@ Feature: One-finger hand-touch pick move palm and empty pan
     And 0 SmartGroup is selected by that tap
 
   @SRS-EP-21 @SRS-EP-25
-  Scenario: One-finger empty pan while following Infini turns Epaper follow off
+  Scenario: One-finger empty pan while following Infini is ignored
     Given follow.direction is infini_to_epaper
     And exclusive tool pen is armed
     And the creator finger-downs on empty canvas with hit.kind empty
     When Euclidean panel travel goes to 36 mm (past 20 mm / 178 du at 226 dpi)
-    Then follow.direction becomes none before the local pan applies
-    And the gesture drives the local camera
-    And 0 continued Infini viewport apply occurs after that gesture starts
+    Then follow.direction stays infini_to_epaper
+    And 0 local pan applies
+    And inbound Infini viewport still applies

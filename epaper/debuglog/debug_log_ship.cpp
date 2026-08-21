@@ -146,10 +146,12 @@ private slots:
         }
         if (m_socket->state() == QAbstractSocket::ConnectedState)
             return;
+        if (m_socket->state() == QAbstractSocket::ConnectingState
+            || m_socket->state() == QAbstractSocket::HostLookupState)
+            return;
         if (m_retriesLeft <= 0)
-            m_retriesLeft = epaper::kTcpRetryLimit;
+            return;
         --m_retriesLeft;
-        // Abort stuck Connecting so the retry timer always gets a fresh attempt.
         if (m_socket->state() != QAbstractSocket::UnconnectedState)
             m_socket->abort();
 

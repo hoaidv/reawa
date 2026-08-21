@@ -1,7 +1,8 @@
 #pragma once
 
-// @implements [SRS-EP-05] ToolChip 3 tools + 2 toggles + Undo/Redo (UI-EP-04)
+// @implements [SRS-EP-05] ToolChip 3 tools + hand-touch toggle + 2 recognizers + Undo/Redo
 // @implements [SRS-EP-04] exclusive tools, recognizer toggles, pen-down latch
+// @implements [SRS-EP-22] btn.hand_touch first primary tile
 
 #include <string>
 
@@ -15,13 +16,14 @@ constexpr double kHeight = 64.0;
 
 inline double chipWidth()
 {
-    return kPublish + kTile * 3.0 + kGap + kTile * 2.0 + kGap + kTile * 2.0;
+    return kPublish + kTile * 4.0 + kGap + kTile * 2.0 + kGap + kTile * 2.0;
 }
 
 enum class Hit {
     None,
     Publish,
     Gap,
+    HandTouch,
     SelRect,
     SelFreeform,
     Pen,
@@ -38,6 +40,8 @@ inline const char *hitId(Hit h)
         return "publish";
     case Hit::Gap:
         return "gap";
+    case Hit::HandTouch:
+        return "tgl.hand_touch";
     case Hit::SelRect:
         return "sel_rect";
     case Hit::SelFreeform:
@@ -66,6 +70,9 @@ inline Hit hitAtRelX(double relX)
     if (x < kPublish)
         return Hit::Publish;
     x -= kPublish;
+    if (x < kTile)
+        return Hit::HandTouch;
+    x -= kTile;
     if (x < kTile)
         return Hit::SelRect;
     x -= kTile;

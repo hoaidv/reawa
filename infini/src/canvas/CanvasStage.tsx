@@ -21,7 +21,6 @@ import { demoPrimitives } from "./primitives";
 import {
   frameWorldAabb,
   identityViewport,
-  panelToFrameUv,
   panByScreenDelta,
   preserveCenterOnResize,
   TABLET_ORIENTATIONS,
@@ -81,8 +80,6 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
   const gesturingRef = useRef(false);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const orientationRef = useRef<TabletOrientation>("gutToLeft");
-  /** Transient RM preview strokes — committed ink lives in the VectorDocument mirror. */
-  const rmPanelRef = useRef({ w: 1404, h: 1872 });
 
   const [emptyHint, setEmptyHint] = useState(!populated);
   const [syncHint, setSyncHint] = useState("");
@@ -362,30 +359,16 @@ export function CanvasStage({ populated = false }: CanvasStageProps) {
         // Retired with SRS-IN-13 — Infini is not the document authority.
         return;
       }
-      const cssW = sizeRef.current.w || 800;
-      const cssH = sizeRef.current.h || 600;
-      const orient = currentOrientation();
-      const frame = tabletDrawingFrameCss(cssW, cssH, orient);
-      const region = frameWorldAabb(frame, vpRef.current);
       const session = sessionRef.current;
 
       if (msg.type === "stroke_begin") {
-        if (msg.cw && msg.ch) rmPanelRef.current = { w: msg.cw, h: msg.ch };
         const widthWorld = msg.brush?.width ?? 2.5;
         session?.previewBegin(msg.id, widthWorld);
         return;
       }
       if (msg.type === "stroke_point") {
-        const { u, v } = panelToFrameUv(
-          msg.x,
-          msg.y,
-          rmPanelRef.current.w,
-          rmPanelRef.current.h,
-          orient,
-        );
-        const wx = region.minX + u * (region.maxX - region.minX);
-        const wy = region.minY + v * (region.maxY - region.minY);
-        session?.previewPoint(msg.id, wx, wy);
+        // @implements [SRS-IN-07] live preview is world — same space as append_ink
+        session?.previewPoint(msg.id, msg.x, msg.y);
         paintMirror();
         return;
       }

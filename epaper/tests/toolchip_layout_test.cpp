@@ -28,16 +28,18 @@ using epaper::toolchip::kTile;
 int main()
 {
     CHECK(kTile == 64.0);
-    CHECK(std::fabs(chipWidth() - (12.0 + 64.0 * 3.0 + 32.0 + 64.0 * 2.0 + 32.0 + 64.0 * 2.0))
+    CHECK(std::fabs(chipWidth() - (12.0 + 64.0 * 4.0 + 32.0 + 64.0 * 2.0 + 32.0 + 64.0 * 2.0))
           < 0.001);
 
     CHECK(hitAtRelX(0) == Hit::Publish);
-    CHECK(hitAtRelX(kPublish + 1) == Hit::SelRect);
-    CHECK(hitAtRelX(kPublish + kTile + 1) == Hit::SelFreeform);
-    CHECK(hitAtRelX(kPublish + kTile * 2 + 1) == Hit::Pen);
-    CHECK(std::string(hitId(hitAtRelX(kPublish + kTile * 2 + 1))) == "pen");
+    CHECK(hitAtRelX(kPublish + 1) == Hit::HandTouch);
+    CHECK(std::string(hitId(Hit::HandTouch)) == "tgl.hand_touch");
+    CHECK(hitAtRelX(kPublish + kTile + 1) == Hit::SelRect);
+    CHECK(hitAtRelX(kPublish + kTile * 2 + 1) == Hit::SelFreeform);
+    CHECK(hitAtRelX(kPublish + kTile * 3 + 1) == Hit::Pen);
+    CHECK(std::string(hitId(hitAtRelX(kPublish + kTile * 3 + 1))) == "pen");
 
-    const double afterTools = kPublish + kTile * 3.0;
+    const double afterTools = kPublish + kTile * 4.0;
     CHECK(hitAtRelX(afterTools + 1) == Hit::Gap);
     CHECK(hitAtRelX(afterTools + kGap + 1) == Hit::RecogInkBox);
     CHECK(hitAtRelX(afterTools + kGap + kTile + 1) == Hit::RecogConnector);
