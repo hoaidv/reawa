@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/qt/qml/epaper">
+    <file alias="qmldir">/Users/howard/Project/reawa/epaper/build-clangd/epaper/qmldir</file>
+  </qresource>
+</RCC>
+

@@ -1,0 +1,3 @@
+[<SLASH>Users<SLASH>howard<SLASH>Project<SLASH>reawa<SLASH>epaper]
+importPaths="/Users/howard/Project/reawa/epaper/build-clangd:/Users/howard/Project/reawa/epaper/build-clangd/epaper:/opt/homebrew/opt/qt/share/qt/qml"
+resourceFiles="/Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/qmake_epaper.qrc:/Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/epaper_bin_raw_qml_0.qrc:/Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/epaper_tool_icons.qrc"

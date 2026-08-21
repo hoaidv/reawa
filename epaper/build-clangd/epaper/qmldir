@@ -1,0 +1,6 @@
+module epaper
+typeinfo epaper_bin.qmltypes
+prefer :/qt/qml/epaper/
+Main 1.0 Main.qml
+depends QtQuick
+

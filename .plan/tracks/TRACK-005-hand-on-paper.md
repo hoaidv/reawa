@@ -2,7 +2,7 @@
 id: TRACK-005
 slug: hand-on-paper
 kind: planned
-status: paused
+status: active
 iter: iter-005
 goal: "Hand-on-paper wave: finger grammar (REQ-10), erase, clipboard, connector decorate, barrel buttons, manual create — not tables"
 scope:
@@ -43,8 +43,8 @@ stories:
   - STORY-EP-056
   - STORY-EP-057
   - STORY-EP-058
-cursor: "WAIT remaining Infini + Epaper follow field test; hand-touch human-approved; IN-033 done"
-paused_reason: "Human 2026-08-20: pause after IN-033 for hardware. Hand-touch approved 2026-08-20; follow score still outstanding."
+cursor: "WAIT Product Manager adopt ADR-0032 (CHL-0026); no code; follow field test still outstanding"
+paused_reason: ""
 interrupts: []
 ---
 
@@ -97,13 +97,13 @@ W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SR
 
 ## Cursor
 
-**Paused.** Hand-touch **human-approved** 2026-08-20. Wait on remaining Infini + Epaper **follow** field test. Do **not** start W3 erase design or Device Settings until the human says go.
+**WAIT** Product Manager adopt [ADR-0032](../../../.docs/adr/ADR-0032-inverse-op-undo.md) (Inverse-op undo per session) — **proposed**, verdict READY-WITH-CONCERNS. **No application code.** Do **not** start W3 erase design or Device Settings unless the human says so. Remaining Infini + Epaper **follow** field test is still outstanding (human).
 
-## Freeze note
+## Freeze note (W3 / code still frozen)
 
-- In flight: none. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) (Infini applies tablet viewport only while following) **done** (host `cd infini && npm test`).
-- Open files / risks: no RM2 panel / no live TCP `:9877` in the agent host; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open; device/Qt `epaper_bin` not built here.
-- Resume checklist: re-read this note → take remaining follow field-test notes → re-run gates on Infini surfaces if they found defects → set track `active` → spawn W3 erase design **or** Device Settings scenarios only after the human picks.
+- In flight: [ADR-0032](../../../.docs/adr/ADR-0032-inverse-op-undo.md) **proposed**. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) (Infini applies tablet viewport only while following) **done** (host).
+- Open files / risks: [CHL-0026](../iter-005/challenges/CHL-0026-inverse-op-undo.md); no RM2 panel / no live TCP `:9877` in the agent host; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open.
+- Resume W3 checklist: Architecture Decision Record accepted + stories sliced **or** human explicitly picks erase / Device Settings. Follow field-test notes still wanted.
 
 ## Execution board
 
@@ -123,3 +123,4 @@ W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SR
 | 2026-08-20 | Developer + Quality Assurance Engineer EP-055 ∥ IN-037 **done**. Cursor → IN-033 apply-depth. |
 | 2026-08-20 | IN-033 **done** (host tests). Human: pause and deploy Infini + Epaper. Track **paused**. |
 | 2026-08-20 | Human **approved hand-touch**. PRD 0.12.0-draft; architecture 20 mm / 178 du; UI-EP-06 HT + 20 mm. Track still **paused** for Infini follow score. |
+| 2026-08-21 | Human: snapshot undo is **wrong**. Inverse-op + per-session stack + fail-safe no-op + no undo-through. [CHL-0026](../iter-005/challenges/CHL-0026-inverse-op-undo.md). [ADR-0032](../../../.docs/adr/ADR-0032-inverse-op-undo.md) **proposed** (READY-WITH-CONCERNS). Cursor → Product Manager adopt. **No code.** |

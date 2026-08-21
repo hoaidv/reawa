@@ -3,25 +3,25 @@ title: Execution board — hand-on-paper
 iter: iter-005
 track: TRACK-005
 owner: sm
-date: 2026-08-20
+date: 2026-08-21
 lock: vertical · verified · wip 2
-verdict: "Hand-touch (REQ-10) human-approved 2026-08-20. TRACK-005 still paused for Infini + Epaper follow score. Do not start W3."
-wave: W-field
+verdict: "WAIT Product Manager adopt ADR-0032 (proposed, READY-WITH-CONCERNS). No application code. W3 frozen. Follow field test still outstanding."
+wave: W-undo-adr
 ---
 
 # Execution board — hand-on-paper
 
-**Canonical board** for [TRACK-005](../tracks/TRACK-005-hand-on-paper.md). Track **paused**.
+**Canonical board** for [TRACK-005](../tracks/TRACK-005-hand-on-paper.md). Track **active** (docs-only undo Architecture Decision Record). Application code and W3 still frozen.
 
 ---
 
-## Summary (as of 2026-08-20)
+## Summary (as of 2026-08-21)
 
 | Band | Count | Meaning |
 |---|---|---|
 | Design **done** | 5 current | [UI-EP-06](../../.docs/design/index.md) hand-touch (EP-054; field-test delta 20 mm + HT) · [UI-EP-07](../../.docs/design/index.md) follow Epaper · [UI-IN-04](../../.docs/design/index.md) follow Infini · [UI-EP-08](../../.docs/design/index.md) Device Settings · Pen buttons |
-| Wave **NOW** | W-field (human) | Hand-touch **human-approved**. Remaining: Infini + Epaper **follow** score on hardware. |
-| Queued | — | After human confirm on follow (or explicit skip): W3 erase design **or** Device Settings BDD. |
+| Wave **NOW** | W-undo-adr | [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **proposed**. WAIT Product Manager adopt [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md). **No code.** |
+| Queued | — | Product Manager adopt after proposed record. Then Software Requirements Specification bind. Then Scrum Master slices. W3 erase / Device Settings still wait on human. Follow hardware score still outstanding. |
 
 Cameras independent by default. [ADR-0029](../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md) accepted. [ADR-0023](../../.docs/adr/ADR-0023-viewport-last-writer.md) superseded.
 
@@ -39,10 +39,10 @@ wip: 2
 out_of_scope: backlog
 modules: epaper, infini
 features: epaper/ink-box; epaper/tool-modes; epaper/connector-ink; epaper/region-sync; epaper/local-pen-ink; epaper/device-document; infini/infinity-canvas; infini/tablet-sync; infini/vector-document
-personas: none (paused — docs-only join complete)
-forbidden: REQ-15 tables; REQ-08; CHL-0011; CHL-0012; EP-032; AI; last-writer ADR-0023
-NOW: PAUSE — hand-touch human-approved; remaining Infini + Epaper follow score
-cursor: WAIT human follow field test; do not start W3
+personas: /pm CHL-0026
+forbidden: REQ-15 tables; REQ-08; CHL-0011; CHL-0012; EP-032; AI; last-writer ADR-0023; application code until inverse-undo ADR accepted
+NOW: W-undo-adr WAIT Product Manager adopt ADR-0032
+cursor: /pm CHL-0026; no epaper/ infini/ edits; do not start W3
 ```
 
 ---
@@ -61,7 +61,8 @@ cursor: WAIT human follow field test; do not start W3
 | **W2** | **done** 2026-08-20 | serial | Developer + Quality Assurance Engineer EP-038 then EP-039 |
 | **W-follow-impl** | **done** 2026-08-20 | **∥** | Developer + Quality Assurance Engineer EP-055 ∥ IN-037 |
 | **W-follow-apply** | **done** 2026-08-20 | serial | Quality Assurance Engineer then Developer IN-033 (apply while following) |
-| **W-field** | **NOW (human)** | — | Hand-touch **approved**. Remaining: Infini + Epaper follow score |
+| **W-field** | **partial** | — | Hand-touch **approved**. Remaining: Infini + Epaper follow score (human, outstanding) |
+| **W-undo-adr** | **WAIT PM** | serial | [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) proposed. Product Manager adopt [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md). **No code.** |
 | **W3** | queued | | erase / clipboard design — **do not start until human says go** |
 | **W4** | queued | | connector ends / attachments |
 | **W5** | queued | | barrel BDD then EP-052 / EP-058 / EP-057. IN-035 cancelled. |
@@ -72,9 +73,10 @@ cursor: WAIT human follow field test; do not start W3
 
 | Lane | Story | Writes | Conflicts |
 |---|---|---|---|
+| **A** | [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) Architecture Decision Record | `.docs/adr/` (proposed). Challenge already opened by Scrum Master. | do not edit `epaper/` `infini/`; do not rewrite SRS-EP-07 yet; do not start W3 |
 | **human** | Remaining field test: Infini follow | device + desktop | no agent writes |
 
-Work-in-progress 2 = **0 agent lanes**. Do not spawn Designer / Developer / Quality Assurance Engineer until the human resumes (follow notes, or pick W3 / Device Settings).
+Work-in-progress 2 = Architect lane A. Do not spawn Designer / Developer / Quality Assurance Engineer for W3.
 
 ### Full task table
 
@@ -95,15 +97,17 @@ Work-in-progress 2 = **0 agent lanes**. Do not spawn Designer / Developer / Qual
 | CHORE-2 | PM srs-product BR-D08 always-on viewport | — | — | — | open | after bind | product-manager | — | Architect flagged; not a design blocker. |
 | CHORE-3 | PM adopt GAP-01 pen-map entry tile | — | **adopted** 2026-08-20 | UI-EP-08 | done | — | — | — | Leading 10 mm tile in REQ-20. |
 | CHORE-4 | PM/architect triage CHL-0025 Settings page | — | **adopted + rebound** | UI-EP-08 | done | — | — | — | ADR-0031; SRS-EP-52/53 no sheets; Infini persist SRS retired. |
+| CHORE-5 | Inverse-op undo (not snapshots) | Must | [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) open; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **proposed** | — | WAIT Product Manager adopt | W-undo-adr | Product Manager | A | READY-WITH-CONCERNS. Counterpart undo; per-session (v1 = device epoch); fail-safe no-op; `lastOpId` skip. **No code.** ADR-0014 §5 only. |
 | PL-035 | EP-035 enclose A/L | P1 | — | — | ready | parking | Developer later | — | Not this wave. |
 
 ### Current-wave sub-agent roster
 
 | Lane | Agent role | Story | Writes | Done when |
 |---|---|---|---|---|
+| A | Product Manager | CHL-0026 adopt ADR-0032 | Product Requirements Document + challenge resolution | Adopt or send back; then Architect amends named Software Requirements Specification sections |
 | human | Remaining field test | Infini follow on hardware | device + desktop | Score IN-033 + follow toggles; report back in `/sm` |
 
-Wait: **0 agent spawns** until the human resumes. Hand-touch join: [2026-08-20-sm-to-human-hand-touch-verified.md](./handoffs/2026-08-20-sm-to-human-hand-touch-verified.md). Original pause: [2026-08-20-sm-to-human-field-test.md](./handoffs/2026-08-20-sm-to-human-field-test.md).
+Wait: spawn Product Manager when the human says go. Do **not** implement. Handoff: [2026-08-21-sm-to-pm-inverse-undo.md](./handoffs/2026-08-21-sm-to-pm-inverse-undo.md).
 
 ### Backlog sink
 
@@ -121,4 +125,4 @@ Wait: **0 agent spawns** until the human resumes. Hand-touch join: [2026-08-20-s
 
 ## Verdict
 
-**Paused.** [REQ-10](../../.docs/modules/epaper/prd.md#hand-touch) (Hand-touch on canvas) **human-approved** 2026-08-20. Remaining hardware score is Infini + Epaper **viewport follow**. Do **not** start W3.
+**WAIT** Product Manager adopt [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) (Inverse-op undo per session). [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) open. **No application code.** W3 stays queued. Follow hardware score still outstanding.

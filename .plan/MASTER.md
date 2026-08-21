@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-20
+updated: 2026-08-21
 current_iter: iter-005
 owner: sm
 
@@ -38,7 +38,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Scope | epaper ink-box, tool-modes, connector-ink, region-sync, local-pen-ink, device-document; infini canvas, tablet-sync, vector-document | REQ-10…14, 17, 18 + infini REQ-05 |
 | Stop line | **verified** | design → BDD → implement → human confirm |
 | Autonomy | **bounded** | Run inside lock; sink REQ-15 / REQ-08 |
-| WIP | **2** | 0 agent lanes while paused for field test |
+| WIP | **2** | WAIT Product Manager adopt [ADR-0032](../.docs/adr/ADR-0032-inverse-op-undo.md) (proposed). **No code.** W3 / Device Settings still frozen. |
 | Validated | — | Follow toggles EP-055 + IN-037 **done**; EP-038 + EP-039 **done**; **hand-touch human-approved** 2026-08-20 (20 mm / HT); IN-033 **done** (host); Device Settings on-device (REQ-20 / ADR-0031) |
 
 **Out-of-scope log**
@@ -65,20 +65,21 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 ### Goal & capacity
 
 - Goal: **Hand-on-paper** plus **viewport follow** (human 2026-08-20). Cameras independent by default.
-- Capacity: committed stories include EP-053…058 / IN-036…037. [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) **done**. [TRACK-005](./tracks/TRACK-005-hand-on-paper.md) **paused**: hand-touch **human-approved** 2026-08-20; remaining Infini + Epaper follow score.
-- Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); device/Qt `epaper_bin` not built in this environment.
+- Capacity: committed stories include EP-053…058 / IN-036…037. [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) **done**. Human 2026-08-21: whole-tree snapshot undo is **wrong**; inverse-op undo will change **in this track** ([CHL-0026](./iter-005/challenges/CHL-0026-inverse-op-undo.md)). **No code** until the Architecture Decision Record is accepted.
+- Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); [CHL-0026](./iter-005/challenges/CHL-0026-inverse-op-undo.md); remaining Infini follow field test; device/Qt `epaper_bin` not built in this environment.
 
 ### Tracks
 
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
 | TRACK-001…004 | planned | **done** | — | [tracks](./tracks/) |
-| TRACK-005 | planned | **paused** | WAIT remaining Infini follow field test; hand-touch approved | [track](./tracks/TRACK-005-hand-on-paper.md) |
+| TRACK-005 | planned | **active** | WAIT Product Manager adopt ADR-0032 (CHL-0026). No code. Follow field test still outstanding. | [track](./tracks/TRACK-005-hand-on-paper.md) |
 
 ### Open challenges / blocked
 
 - CHL-0011 / CHL-0012 / REQ-08 **not this lock**.
 - [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md) (Shipped “no device pan / no arrowheads” prose vs TRACK-005) — open; implement against new ids until Product Manager adopts.
+- [CHL-0026](./iter-005/challenges/CHL-0026-inverse-op-undo.md) (Inverse-op undo, not whole-tree snapshots) — open; **this track**; no code until Architecture Decision Record accept.
 - EP-032 parked in iter-004.
 
 ### Design packages in flight
@@ -91,15 +92,16 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [iter-005 execution-board](./iter-005/execution-board.md) — Hand-touch human-approved; **Paused** for remaining Infini follow score
+- [iter-005 execution-board](./iter-005/execution-board.md) — **WAIT** Product Manager adopt [ADR-0032](../.docs/adr/ADR-0032-inverse-op-undo.md). W3 still frozen. Follow field test still outstanding.
 
 ### Freeze notes
 
 - TRACK-004 **done**. Gate: [pm-retro-gate-pass](./iter-004/handoffs/2026-08-16-pm-retro-gate-pass.md).
-- TRACK-005 **paused** 2026-08-20: [sm-to-human-field-test](./iter-005/handoffs/2026-08-20-sm-to-human-field-test.md). Hand-touch join: [sm-to-human-hand-touch-verified](./iter-005/handoffs/2026-08-20-sm-to-human-hand-touch-verified.md).
+- TRACK-005 field-test pause 2026-08-20: [sm-to-human-field-test](./iter-005/handoffs/2026-08-20-sm-to-human-field-test.md). Hand-touch join: [sm-to-human-hand-touch-verified](./iter-005/handoffs/2026-08-20-sm-to-human-hand-touch-verified.md). **Unpaused for docs 2026-08-21:** inverse-op undo ([CHL-0026](./iter-005/challenges/CHL-0026-inverse-op-undo.md)). W3 / application code still frozen.
 
 ## Forward
 
-- After remaining follow field test: say go in `/sm`. Then W3 erase design **or** Device Settings scenarios — human picks.
+- Inverse-op undo: [ADR-0032](../.docs/adr/ADR-0032-inverse-op-undo.md) **proposed**. Next: Product Manager adopt / Product Requirements Document thicken, then Software Requirements Specification bind, then Scrum Master slices. **No code** until then.
+- After remaining follow field test: say go in `/sm`. Then W3 erase design **or** Device Settings scenarios — human picks. Do **not** start those while the undo Architecture Decision Record is in flight unless the human says so.
 - Parked: REQ-15, REQ-08, CHL-0011, CHL-0012, EP-035 measure.
 - Backlog: [backlog.md](./backlog.md)
