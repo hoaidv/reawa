@@ -177,6 +177,10 @@ public:
 
     void paint(QPainter *painter) override;
 
+    QPointF mapInputToCanvas(const QPointF &raw) const;
+    void ingestMappedTablet(QEvent::Type type, const QPointF &canvasPos,
+        const QPointF &rawPos, const IngestChannels &ch);
+
 signals:
     void strokeCountChanged();
     void debugChanged();
@@ -224,7 +228,6 @@ private:
         bool valid = false;
     };
 
-    QPointF mapInputToCanvas(const QPointF &raw) const;
     qreal ingestPanelHeight() const;
     Point makePoint(const QPointF &canvasPos, const IngestChannels &ch) const;
     void applyContactPress(const QPointF &canvasPos, const IngestChannels &ch);

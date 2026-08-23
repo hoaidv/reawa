@@ -12,13 +12,14 @@ qt_add_executable(epaper_bin
     tabletcanvasitem.cpp
     toolcanvasitem.cpp
     tabletwindow.cpp
-    tabletappfilter.cpp
     strokesync.cpp
     epaperbridge.cpp
     debuglog/debug_log_ship.cpp
     usbgadget.cpp
     usb_link.cpp
     ui_stall.cpp
+    gesture/tabletgestures.cpp
+    gesture/canvaspointeritem.cpp
 )
 qt_add_qml_module(epaper_bin
     URI epaper

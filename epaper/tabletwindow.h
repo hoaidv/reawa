@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QQuickWindow>
-#include <QTabletEvent>
 
 class TabletCanvasItem;
 

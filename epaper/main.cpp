@@ -11,12 +11,13 @@
 #include "tabletcanvasitem.h"
 #include "toolcanvasitem.h"
 #include "tabletwindow.h"
-#include "tabletappfilter.h"
 #include "epaperbridge.h"
 #include "debuglog/debug_log_ship.h"
 #include "usb_link.hpp"
 #include "ui_stall.hpp"
 #include "latencyprobe/stub_document.hpp"
+#include "gesture/tabletgestures.h"
+#include "gesture/canvaspointeritem.h"
 
 namespace {
 
@@ -53,6 +54,8 @@ int main(int argc, char *argv[])
     EpaperBridge *bridge = EpaperBridge::instance();
 
     qmlRegisterType<TabletCanvasItem>("epaper", 1, 0, "TabletCanvas");
+    qmlRegisterType<CanvasPointerItem>("epaper", 1, 0, "CanvasPointer");
+
     qmlRegisterType<ToolCanvasItem>("epaper", 1, 0, "ToolCanvas");
     qmlRegisterType<TabletWindow>("epaper", 1, 0, "TabletWindow");
     qmlRegisterSingletonInstance("epaper", 1, 0, "EpaperBridge", bridge);
@@ -79,15 +82,14 @@ int main(int argc, char *argv[])
     });
     termPoll->start();
 
-    auto *filter = new TabletAppFilter(&app);
-    app.installEventFilter(filter);
+    auto *gestures = new TabletGestures(&app);
+    app.installEventFilter(gestures);
     const auto roots = engine.rootObjects();
     for (QObject *root : roots) {
         if (auto *win = qobject_cast<TabletWindow *>(root)) {
-            QObject::connect(win, &TabletWindow::canvasChanged, filter, [filter](TabletCanvasItem *c) {
-                filter->setCanvas(c);
-            });
-            filter->setCanvas(win->canvas());
+            QObject::connect(win, &TabletWindow::canvasChanged, gestures,
+                            [gestures](TabletCanvasItem *c) { gestures->setCanvas(c); });
+            gestures->setCanvas(win->canvas());
             break;
         }
     }

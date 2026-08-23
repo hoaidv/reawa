@@ -297,14 +297,6 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
     m_lastPoint = canvasPos;
     m_lastRaw = pos;
 
-    if (pointInFollowToggle(canvasPos)) {
-        if (type == QEvent::TabletPress || type == QEvent::MouseButtonPress)
-            tapFollowToggle();
-        return;
-    }
-    if (tryDebugChromeAtWindowPos(pos) || tryDebugChromeAtWindowPos(canvasPos))
-        return;
-
     const bool isPress = (type == QEvent::TabletPress || type == QEvent::MouseButtonPress);
     const bool isMove = (type == QEvent::TabletMove || type == QEvent::MouseMove);
     const bool isRelease = (type == QEvent::TabletRelease || type == QEvent::MouseButtonRelease);
@@ -356,34 +348,64 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
     }
 }
 
+void TabletCanvasItem::ingestMappedTablet(QEvent::Type type, const QPointF &canvasPos,
+                                          const QPointF &rawPos, const IngestChannels &ch)
+{
+    EpaperBridge::instance()->traceArrival();
+
+    const qreal p = qBound<qreal>(0.0, ch.pressure, 1.0);
+    IngestChannels bounded = ch;
+    bounded.pressure = p;
+    m_lastPoint = canvasPos;
+    m_lastRaw = rawPos;
+
+    const bool isPress = (type == QEvent::TabletPress);
+    const bool isMove = (type == QEvent::TabletMove);
+    const bool isRelease = (type == QEvent::TabletRelease);
+    const qreal panelH = ingestPanelHeight();
+    const bool stale = epaper::ingest::isStaleOriginSample(
+        double(rawPos.x()), double(rawPos.y()),
+        double(canvasPos.x()), double(canvasPos.y()),
+        double(panelH));
+    const auto guard = epaper::ingest::decideOriginPress(
+        isPress, isMove, isRelease, stale, &m_awaitingPlausiblePress);
+    if (guard == epaper::ingest::OriginGuardAction::Discard
+        || guard == epaper::ingest::OriginGuardAction::DropContact) {
+        return;
+    }
+    const bool treatAsPress =
+        isPress || guard == epaper::ingest::OriginGuardAction::PromoteToPress;
+
+    if (g_docProbe) {
+        epaper::latencyprobe::harness().onIngest(float(canvasPos.x()), float(canvasPos.y()),
+                                                 treatAsPress);
+    }
+
+    if (treatAsPress) {
+        applyContactPress(canvasPos, bounded);
+        return;
+    }
+
+    switch (type) {
+    case QEvent::TabletMove:
+        if (m_strokeActive)
+            appendPoint(canvasPos, bounded);
+        else if (m_selectionGesture)
+            updateSelectionGesture(canvasPos);
+        break;
+    case QEvent::TabletRelease:
+        if (m_strokeActive)
+            endStroke();
+        else if (m_selectionGesture)
+            endSelectionGesture();
+        break;
+    default:
+        break;
+    }
+}
+
 void TabletCanvasItem::applyContactPress(const QPointF &canvasPos, const IngestChannels &ch)
 {
-    // Pen on ToolChip — not ink; arm via tile hit-test (pen-on-chip fallback).
-    // First plausible sample, including Move-after-stale-Press (STORY-EP-033).
-    if (pointInFollowToggle(canvasPos)) {
-        tapFollowToggle();
-        return;
-    }
-    if (kXochitlSwitchRect.contains(canvasPos)) {
-        tryArmToolAtCanvasPos(canvasPos);
-        return;
-    }
-    if (m_usbLinkRect.contains(canvasPos)) {
-        tryArmToolAtCanvasPos(canvasPos);
-        return;
-    }
-    if (m_debugToggleRect.contains(canvasPos)) {
-        toggleDebugLog();
-        return;
-    }
-    if (pointInToolChip(canvasPos)) {
-        tryArmToolAtCanvasPos(canvasPos);
-        return;
-    }
-    if (pointInEncloseCta(canvasPos)) {
-        encloseSelection();
-        return;
-    }
     if (isSelectionTool())
         beginSelectionGesture(canvasPos);
     else
@@ -1231,18 +1253,12 @@ bool TabletCanvasItem::beginFingerTouch(const QPointF &canvasPos)
     using namespace epaper::handtouch;
     m_fingerGesture = FingerGesture::None;
     m_fingerDownPanel = canvasPos;
-    if (pointInEncloseCta(canvasPos)) {
-        encloseSelection();
-        m_fingerGesture = FingerGesture::Chip;
-        return true;
-    }
-    const HitKind hit = classifyHit(fingerHitsChip(canvasPos), fingerHitsKnob(canvasPos),
+    const HitKind hit = classifyHit(false, fingerHitsKnob(canvasPos),
                                     fingerHitsBox(canvasPos));
     const FingerAction act = actionOnDown(hit);
-    if (act == FingerAction::ChipTap) {
-        m_fingerGesture = FingerGesture::Chip;
+    if (act == FingerAction::ChipTap)
         return true;
-    }
+
     if (act == FingerAction::Resize) {
         m_fingerGesture = FingerGesture::Resize;
         beginSelectionGesture(canvasPos, kFingerHandleHitDu);
@@ -1305,10 +1321,7 @@ void TabletCanvasItem::endFingerTouch(const QPointF &canvasPos)
 {
     const FingerGesture g = m_fingerGesture;
     m_fingerGesture = FingerGesture::None;
-    if (g == FingerGesture::Chip) {
-        tryArmToolAtCanvasPos(canvasPos);
-        return;
-    }
+   
     if (g == FingerGesture::Move || g == FingerGesture::Resize) {
         endSelectionGesture();
         return;

@@ -41,6 +41,11 @@ TabletWindow {
         width: root.width
         height: root.height
         z: 0
+
+        CanvasPointer {
+            anchors.fill: parent
+        }
+
         onSegmentDrawn: (x1, y1, x2, y2, w) => addSeg(x1, y1, x2, y2, w)
     }
 
@@ -102,10 +107,11 @@ TabletWindow {
             }
         }
 
-        MouseArea {
-            anchors.fill: parent
+        TapHandler {
+            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
             enabled: !drawCanvas.followUnavailable
-            onClicked: drawCanvas.tapFollowToggle()
+            onTapped: drawCanvas.tapFollowToggle()
         }
     }
 
@@ -118,6 +124,11 @@ TabletWindow {
         width: drawCanvas.toolChipRect.width
         height: drawCanvas.toolChipRect.height
 
+        TapHandler {
+            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+        }
+        
         Row {
             id: chipRow
             spacing: 32
@@ -160,9 +171,10 @@ TabletWindow {
                                     ? "qrc:/icons/icons/icon-epaper-hand-inv.png"
                                     : "qrc:/icons/icons/icon-epaper-hand.png"
                         }
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: drawCanvas.toggleHandTouch()
+                        TapHandler {
+                            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+                            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+                            onTapped: drawCanvas.toggleHandTouch()
                         }
                     }
 
@@ -192,9 +204,10 @@ TabletWindow {
                                        : ("qrc:/icons/icons/" + modelData.icon + ".png")
                             }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: drawCanvas.armTool(modelData.id)
+                            TapHandler {
+                                acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+                                acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+                                onTapped: drawCanvas.armTool(modelData.id)
                             }
                         }
                     }
@@ -263,10 +276,11 @@ TabletWindow {
                                 }
                             }
 
-                            MouseArea {
-                                anchors.fill: parent
+                            TapHandler {
+                                acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+                                acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
                                 enabled: !dimmed
-                                onClicked: {
+                                onTapped: {
                                     if (modelData.id === "ink_box")
                                         drawCanvas.toggleRecogInkBox()
                                     else
@@ -311,9 +325,10 @@ TabletWindow {
                                 source: "qrc:/icons/icons/" + modelData.icon + ".png"
                             }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: {
+                            TapHandler {
+                                acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+                                acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+                                onTapped: {
                                     if (modelData.id === "undo")
                                         drawCanvas.requestUndo()
                                     else
@@ -346,9 +361,10 @@ TabletWindow {
             smooth: false
             source: "qrc:/icons/icons/icon-epaper-enclose.png"
         }
-        MouseArea {
-            anchors.fill: parent
-            onClicked: drawCanvas.encloseSelection()
+        TapHandler {
+            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            onTapped: drawCanvas.encloseSelection()
         }
     }
 
@@ -482,8 +498,12 @@ TabletWindow {
             smooth: false
             source: "qrc:/icons/icons/icon-epaper-switch.png"
         }
-        // No MouseArea — TabletAppFilter is installed after QML load; a synthetic
-        // click here would quit epaper. Pen/finger hit-test is C++.
+
+        TapHandler {
+            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            onTapped: EpaperBridge.restoreXochitl()
+        }
     }
 
     Rectangle {
@@ -508,9 +528,10 @@ TabletWindow {
                       ? "qrc:/icons/icons/icon-epaper-usb-unplugged.png"
                       : "qrc:/icons/icons/icon-epaper-usb-plugged.png"
         }
-        MouseArea {
-            anchors.fill: parent
-            onClicked: UsbHud.recoverInfini()
+        TapHandler {
+            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            onTapped: UsbHud.recoverInfini()
         }
     }
 
@@ -532,9 +553,10 @@ TabletWindow {
             color: drawCanvas.debugLogVisible ? "white" : "black"
             text: "DBG"
         }
-        MouseArea {
-            anchors.fill: parent
-            onClicked: drawCanvas.toggleDebugLog()
+        TapHandler {
+            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            onTapped: drawCanvas.toggleDebugLog()
         }
     }
 
