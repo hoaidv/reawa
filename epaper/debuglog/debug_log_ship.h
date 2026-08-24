@@ -9,6 +9,7 @@
 #include <QString>
 #include <QStringList>
 #include <QThread>
+#include <QTimer>
 
 #include "debug_log_queue.hpp"
 
@@ -52,5 +53,10 @@ private:
     DebugLogWorker *m_worker = nullptr;
     epaper::debuglog::DebugLogQueue m_queue;
     QStringList m_lines;
+    // A log burst must not relayout the panel per line: the visible Text is a
+    // 256-line wrapped block, and on e-paper each relayout drags a repaint with it.
+    QTimer m_uiNotify;
+    bool m_uiPending = false;
     static constexpr int kUiCap = 256;
+    static constexpr int kUiNotifyMs = 250;
 };

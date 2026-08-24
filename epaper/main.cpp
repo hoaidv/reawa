@@ -36,6 +36,14 @@ int main(int argc, char *argv[])
     qputenv("QT_QUICK_BACKEND", "epaper");
 #endif
 
+    // Pen and touch are routed by QML pointer handlers, which read the real
+    // events. A synth mouse on top of that double-handles every gesture — and
+    // worse, it hands the exclusive grab to whatever plain item happens to sit
+    // under the finger (a Text label accepts LeftButton), so the chrome
+    // TapHandler above it then declines the already-grabbed press.
+    QCoreApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTouchEvents, false);
+    QCoreApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTabletEvents, false);
+
     QGuiApplication app(argc, argv);
 
     // Infra: USB gadget stay-up (worker thread). Independent of TCP apps.

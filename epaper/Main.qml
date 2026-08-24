@@ -70,6 +70,7 @@ TabletWindow {
 
         DragHandler {
             id: penDrag
+            objectName: "penDrag"
             target: null
             dragThreshold: 0
             acceptedDevices: PointerDevice.Stylus
@@ -98,6 +99,7 @@ TabletWindow {
         // @implements [SRS-EP-24] one-finger tap selects
         TapHandler {
             id: fingerTap
+            objectName: "fingerTap"
             acceptedDevices: PointerDevice.TouchScreen
             acceptedPointerTypes: PointerDevice.Finger
             gesturePolicy: TapHandler.ReleaseWithinBounds
@@ -106,6 +108,7 @@ TabletWindow {
 
         DragHandler {
             id: fingerDrag
+            objectName: "fingerDrag"
             target: null
             dragThreshold: 0
             // Not 1: exceeding the maximum deactivates the handler, and that
@@ -137,6 +140,7 @@ TabletWindow {
         // @implements [SRS-EP-24] two-finger pan + uniform scale
         PinchHandler {
             id: pinch
+            objectName: "pinch"
             target: null
             acceptedDevices: PointerDevice.TouchScreen
             minimumPointCount: 2
@@ -288,6 +292,7 @@ TabletWindow {
                                     : "qrc:/icons/icons/icon-epaper-hand.png"
                         }
                         TapHandler {
+                            objectName: "handTap"
                             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
                             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
                             gesturePolicy: TapHandler.ReleaseWithinBounds
@@ -710,6 +715,7 @@ TabletWindow {
         }
         TapHandler {
             id: debugTap
+            objectName: "dbgTap"
             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
             // Exclusive grab on press, and nothing may take it. The canvas
@@ -719,19 +725,6 @@ TabletWindow {
             grabPermissions: PointerHandler.CanTakeOverFromItems
                              | PointerHandler.ApprovesCancellation
             onTapped: drawCanvas.toggleDebugLog()
-            onPressedChanged: console.log("[chrome] dbg pressed=" + pressed
-                                          + " at " + point.position.x + "," + point.position.y)
-            onCanceled: console.log("[chrome] dbg canceled")
-        }
-
-        // Does the item QML lays out actually match the rect C++ publishes?
-        Connections {
-            target: drawCanvas
-            function onTrailingChromeChanged() {
-                console.log("[chrome] dbg item " + debugToggle.x + "," + debugToggle.y
-                            + " " + debugToggle.width + "x" + debugToggle.height
-                            + " visible=" + debugToggle.visible)
-            }
         }
     }
 
@@ -783,11 +776,5 @@ TabletWindow {
     Component.onCompleted: {
         root.canvas = drawCanvas
         EpaperBridge.attachPenModeRegion(drawCanvas)
-        // Bindings are settled here; the rect signals fired before QML existed.
-        console.log("[chrome] dbg item " + debugToggle.x + "," + debugToggle.y
-                    + " " + debugToggle.width + "x" + debugToggle.height
-                    + " visible=" + debugToggle.visible
-                    + " | chip " + toolChip.x + "," + toolChip.y
-                    + " " + toolChip.width + "x" + toolChip.height)
     }
 }

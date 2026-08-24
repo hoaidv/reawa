@@ -112,7 +112,7 @@ void TabletGestures::noteContacts(QTouchEvent *touch)
     }
 
     static const bool trace = qEnvironmentVariableIntValue("EPAPER_TOUCH_TRACE") > 0;
-    if (trace || live != m_contacts) {
+    if (trace) {
         QString where;
         for (const QEventPoint &p : touch->points()) {
             where += QStringLiteral(" (%1,%2)")
@@ -205,11 +205,8 @@ bool TabletGestures::eventFilter(QObject *watched, QEvent *event)
             return true;
         return false;
     }
-    // Synthesized mouse from tablet/touch would double every gesture.
-    case QEvent::MouseButtonPress:
-    case QEvent::MouseMove:
-    case QEvent::MouseButtonRelease:
-        return true;
+    // Mouse synthesis is off in main(): swallowing a synth press here would leave
+    // it accepted, handing the grab to whatever item sits under the finger.
     default:
         return false;
     }

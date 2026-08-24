@@ -47,6 +47,10 @@ App env forwarded to the device when set locally:
   RM_DOC_PROBE_EVERY_SAMPLE 1 — hit-test every sample (stress)
   RM_EP_SWAP       1 — direct EPFramebuffer::swapBuffers(Pen) after each flush
   RM_EP_SCREEN_MODE / RM_EP_CONTENT_TYPE   override resolved enum values
+  EPAPER_TOUCH_TRACE 1 — log every touch point the gesture filter sees
+  EPAPER_UI_STALL_MS UI-thread stall threshold for the watchdog log
+  QT_LOGGING_RULES Qt categories, e.g. qt.pointer.grab=true;qt.quick.handler.dispatch=true
+                   Verbose rules cost live ink — pen strokes only land on pen-up.
 EOF
 }
 
@@ -147,7 +151,7 @@ FORWARDED=(RM_SYNC_HOST RM_INK_MODE RM_INK_BEACON RM_INK_TRACE RM_EP_SWAP
            RM_EP_SCREEN_MODE RM_EP_CONTENT_TYPE
            RM_DOC_PROBE RM_DOC_PROBE_SYNTH RM_DOC_PROBE_EVERY_SAMPLE
            EPAPER_DEBUG_LOG EPAPER_DEBUG_PORT INFINI_DEBUG_PORT
-           EPAPER_TOUCH_TRACE)
+           EPAPER_TOUCH_TRACE EPAPER_UI_STALL_MS QT_LOGGING_RULES)
 APP_ENV=""
 for name in "${FORWARDED[@]}"; do
   if [[ -n "${!name:-}" ]]; then

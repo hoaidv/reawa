@@ -310,6 +310,14 @@ DebugLogShip::DebugLogShip(QObject *parent)
     : QObject(parent)
 {
     s_instance = this;
+    m_uiNotify.setSingleShot(true);
+    connect(&m_uiNotify, &QTimer::timeout, this, [this]() {
+        if (!m_uiPending)
+            return;
+        m_uiPending = false;
+        m_uiNotify.start(kUiNotifyMs);
+        emit linesChanged();
+    });
 }
 
 DebugLogShip::~DebugLogShip()
@@ -436,6 +444,12 @@ void DebugLogShip::appendUiLine(const QString &line)
     m_lines.append(line);
     while (m_lines.size() > kUiCap)
         m_lines.removeFirst();
+
+    if (m_uiNotify.isActive()) {
+        m_uiPending = true;
+        return;
+    }
+    m_uiNotify.start(kUiNotifyMs);
     emit linesChanged();
 }
 
