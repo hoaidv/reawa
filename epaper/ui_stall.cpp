@@ -15,11 +15,25 @@ namespace epaper {
 namespace {
 
 constexpr int kBeatMs = 32;
-constexpr int kLogMs = 1000;
+constexpr int kDefaultLogMs = 250;
 
 QTimer *g_beat = nullptr;
 std::uint64_t g_lastMs = 0;
 char g_section[64] = {};
+
+/** A hitch the hand notices is well under a second. EPAPER_UI_STALL_MS to tune. */
+int sectionThresholdMs()
+{
+    static const int ms = []() {
+        if (const char *p = std::getenv("EPAPER_UI_STALL_MS")) {
+            const int v = std::atoi(p);
+            if (v > 0)
+                return v;
+        }
+        return kDefaultLogMs;
+    }();
+    return ms;
+}
 
 std::uint64_t nowMs()
 {
@@ -64,7 +78,8 @@ void onBeat()
     if (g_lastMs != 0) {
         const int gap = static_cast<int>(t - g_lastMs);
         const int stall = gap - kBeatMs;
-        if (stall >= kLogMs)
+        // Heartbeat stays coarser than sections: it fires on every e-ink refresh.
+        if (stall >= sectionThresholdMs() * 4)
             logStall(stall, "heartbeat", g_section);
     }
     g_lastMs = t;
@@ -85,7 +100,7 @@ UiStallSection::UiStallSection(const char *tag)
 UiStallSection::~UiStallSection()
 {
     const int ms = static_cast<int>(nowMs() - m_startMs);
-    if (ms >= kLogMs)
+    if (ms >= sectionThresholdMs())
         logStall(ms, "section", m_tag ? m_tag : "-");
     g_section[0] = 0;
 }

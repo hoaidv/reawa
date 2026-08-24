@@ -57,32 +57,112 @@ TabletWindow {
         visible: false
     }
 
-    // One-finger capacitive. Pen stays in the C++ filter (tablet rate).
-    // Two-finger is also the filter: PointHandler exclusive-grabs contact 0,
-    // so PinchHandler never sees two points on RM Qt 6.8.
+    // Full-bleed canvas input. Handlers take an exclusive grab, so Qt's own
+    // arbitration keeps chrome taps out of the canvas — no hand-written rects.
+    // Chrome sits above in z and grabs first (gesturePolicy below).
     // @implements [SRS-EP-04]
     // @implements [SRS-EP-21]
+    // @implements [SRS-EP-24]
     Item {
         id: canvasInput
         z: 2
         anchors.fill: drawCanvas
 
-        PointHandler {
-            id: canvasPoint
-            acceptedDevices: PointerDevice.TouchScreen
-            acceptedPointerTypes: PointerDevice.Finger
+        DragHandler {
+            id: penDrag
+            target: null
+            dragThreshold: 0
+            acceptedDevices: PointerDevice.Stylus
+            acceptedPointerTypes: PointerDevice.Pen
+            // Approve-only: the default CanTakeOverFromHandlersOfDifferentType let
+            // this steal the grab a chrome TapHandler had already taken.
             grabPermissions: PointerHandler.ApprovesTakeOverByAnything
             onActiveChanged: {
                 if (active)
-                    drawCanvas.onPointerStart(point.position.x, point.position.y, point.pressure, false)
+                    drawCanvas.onPointerStart(centroid.position.x, centroid.position.y,
+                                              centroid.pressure, true)
                 else
-                    drawCanvas.onPointerEnd(point.position.x, point.position.y, false)
+                    drawCanvas.onPointerEnd(centroid.position.x, centroid.position.y, true)
             }
-            onPointChanged: {
+            onCentroidChanged: {
                 if (active)
-                    drawCanvas.onPointerMove(point.position.x, point.position.y, point.pressure, false)
+                    drawCanvas.onPointerMove(centroid.position.x, centroid.position.y,
+                                             centroid.pressure, true)
             }
         }
+
+        // A DragHandler reports nothing until the point travels, so a stationary
+        // finger never reached the canvas at all. Tap-to-select needs its own
+        // handler. Chrome refuses takeover and is offered the point first, so
+        // this only ever sees taps chrome declined.
+        // @implements [SRS-EP-24] one-finger tap selects
+        TapHandler {
+            id: fingerTap
+            acceptedDevices: PointerDevice.TouchScreen
+            acceptedPointerTypes: PointerDevice.Finger
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: drawCanvas.onFingerTap(point.position.x, point.position.y)
+        }
+
+        DragHandler {
+            id: fingerDrag
+            target: null
+            dragThreshold: 0
+            // Not 1: exceeding the maximum deactivates the handler, and that
+            // deactivation raced PinchHandler's takeover — whichever won decided
+            // whether a second contact committed a node move or panned.
+            maximumPointCount: 2
+            acceptedDevices: PointerDevice.TouchScreen
+            acceptedPointerTypes: PointerDevice.Finger
+            // Must take the grab off fingerTap the moment the finger travels.
+            // Safe now that chrome refuses takeover — that refusal, not crippled
+            // permissions here, is what protects the buttons.
+            grabPermissions: PointerHandler.CanTakeOverFromHandlersOfDifferentType
+                             | PointerHandler.CanTakeOverFromItems
+                             | PointerHandler.ApprovesTakeOverByAnything
+            onActiveChanged: {
+                if (active)
+                    drawCanvas.onPointerStart(centroid.position.x, centroid.position.y,
+                                              centroid.pressure, false)
+                else if (!pinch.active)
+                    drawCanvas.onPointerEnd(centroid.position.x, centroid.position.y, false)
+            }
+            onCentroidChanged: {
+                if (active)
+                    drawCanvas.onPointerMove(centroid.position.x, centroid.position.y,
+                                             centroid.pressure, false)
+            }
+        }
+
+        // @implements [SRS-EP-24] two-finger pan + uniform scale
+        PinchHandler {
+            id: pinch
+            target: null
+            acceptedDevices: PointerDevice.TouchScreen
+            minimumPointCount: 2
+            maximumPointCount: 2
+            // Two contacts are already the whole gesture: waiting for Qt's default
+            // drag threshold on top of that is what needed the long travel.
+            dragThreshold: 0
+            // Must outrank the one-finger handler that grabbed the first contact.
+            grabPermissions: PointerHandler.CanTakeOverFromAnything
+                             | PointerHandler.ApprovesTakeOverByAnything
+            onActiveChanged: {
+                if (active)
+                    drawCanvas.onPinchStart(centroid.position.x, centroid.position.y, activeScale)
+                else
+                    drawCanvas.onPinchEnd()
+            }
+            onActiveScaleChanged: {
+                if (active)
+                    drawCanvas.onPinchUpdate(centroid.position.x, centroid.position.y, activeScale)
+            }
+            onCentroidChanged: {
+                if (active)
+                    drawCanvas.onPinchUpdate(centroid.position.x, centroid.position.y, activeScale)
+            }
+        }
+
     }
 
     // Trailing orientation-top row: DBG | Follow Infini | USB (UI-EP-07).
@@ -134,6 +214,12 @@ TabletWindow {
         TapHandler {
             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            // Exclusive grab on press, and nothing may take it. The canvas
+            // handlers below still get a passive grab on this point; refusing
+            // takeover is what keeps them from turning a chrome tap into ink.
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            grabPermissions: PointerHandler.CanTakeOverFromItems
+                             | PointerHandler.ApprovesCancellation
             enabled: !drawCanvas.followUnavailable
             onTapped: drawCanvas.tapFollowToggle()
         }
@@ -151,6 +237,12 @@ TabletWindow {
         TapHandler {
             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            // Exclusive grab on press, and nothing may take it. The canvas
+            // handlers below still get a passive grab on this point; refusing
+            // takeover is what keeps them from turning a chrome tap into ink.
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            grabPermissions: PointerHandler.CanTakeOverFromItems
+                             | PointerHandler.ApprovesCancellation
         }
 
         Row {
@@ -198,6 +290,9 @@ TabletWindow {
                         TapHandler {
                             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
                             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+                            gesturePolicy: TapHandler.ReleaseWithinBounds
+                            grabPermissions: PointerHandler.CanTakeOverFromItems
+                                             | PointerHandler.ApprovesCancellation
                             onTapped: drawCanvas.toggleHandTouch()
                         }
                     }
@@ -231,6 +326,9 @@ TabletWindow {
                             TapHandler {
                                 acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
                                 acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                grabPermissions: PointerHandler.CanTakeOverFromItems
+                                                 | PointerHandler.ApprovesCancellation
                                 onTapped: drawCanvas.armTool(modelData.id)
                             }
                         }
@@ -303,6 +401,9 @@ TabletWindow {
                             TapHandler {
                                 acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
                                 acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                grabPermissions: PointerHandler.CanTakeOverFromItems
+                                                 | PointerHandler.ApprovesCancellation
                                 enabled: !dimmed
                                 onTapped: {
                                     if (modelData.id === "ink_box")
@@ -352,6 +453,9 @@ TabletWindow {
                             TapHandler {
                                 acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
                                 acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                grabPermissions: PointerHandler.CanTakeOverFromItems
+                                                 | PointerHandler.ApprovesCancellation
                                 onTapped: {
                                     if (modelData.id === "undo")
                                         drawCanvas.requestUndo()
@@ -388,6 +492,12 @@ TabletWindow {
         TapHandler {
             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            // Exclusive grab on press, and nothing may take it. The canvas
+            // handlers below still get a passive grab on this point; refusing
+            // takeover is what keeps them from turning a chrome tap into ink.
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            grabPermissions: PointerHandler.CanTakeOverFromItems
+                             | PointerHandler.ApprovesCancellation
             onTapped: drawCanvas.encloseSelection()
         }
     }
@@ -457,6 +567,12 @@ TabletWindow {
         TapHandler {
             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            // Exclusive grab on press, and nothing may take it. The canvas
+            // handlers below still get a passive grab on this point; refusing
+            // takeover is what keeps them from turning a chrome tap into ink.
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            grabPermissions: PointerHandler.CanTakeOverFromItems
+                             | PointerHandler.ApprovesCancellation
             onTapped: drawCanvas.tapModeChip()
         }
     }
@@ -529,6 +645,12 @@ TabletWindow {
         TapHandler {
             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            // Exclusive grab on press, and nothing may take it. The canvas
+            // handlers below still get a passive grab on this point; refusing
+            // takeover is what keeps them from turning a chrome tap into ink.
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            grabPermissions: PointerHandler.CanTakeOverFromItems
+                             | PointerHandler.ApprovesCancellation
             onTapped: EpaperBridge.restoreXochitl()
         }
     }
@@ -558,6 +680,12 @@ TabletWindow {
         TapHandler {
             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            // Exclusive grab on press, and nothing may take it. The canvas
+            // handlers below still get a passive grab on this point; refusing
+            // takeover is what keeps them from turning a chrome tap into ink.
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            grabPermissions: PointerHandler.CanTakeOverFromItems
+                             | PointerHandler.ApprovesCancellation
             onTapped: UsbHud.recoverInfini()
         }
     }
@@ -581,9 +709,29 @@ TabletWindow {
             text: "DBG"
         }
         TapHandler {
+            id: debugTap
             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            // Exclusive grab on press, and nothing may take it. The canvas
+            // handlers below still get a passive grab on this point; refusing
+            // takeover is what keeps them from turning a chrome tap into ink.
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            grabPermissions: PointerHandler.CanTakeOverFromItems
+                             | PointerHandler.ApprovesCancellation
             onTapped: drawCanvas.toggleDebugLog()
+            onPressedChanged: console.log("[chrome] dbg pressed=" + pressed
+                                          + " at " + point.position.x + "," + point.position.y)
+            onCanceled: console.log("[chrome] dbg canceled")
+        }
+
+        // Does the item QML lays out actually match the rect C++ publishes?
+        Connections {
+            target: drawCanvas
+            function onTrailingChromeChanged() {
+                console.log("[chrome] dbg item " + debugToggle.x + "," + debugToggle.y
+                            + " " + debugToggle.width + "x" + debugToggle.height
+                            + " visible=" + debugToggle.visible)
+            }
         }
     }
 
@@ -635,5 +783,11 @@ TabletWindow {
     Component.onCompleted: {
         root.canvas = drawCanvas
         EpaperBridge.attachPenModeRegion(drawCanvas)
+        // Bindings are settled here; the rect signals fired before QML existed.
+        console.log("[chrome] dbg item " + debugToggle.x + "," + debugToggle.y
+                    + " " + debugToggle.width + "x" + debugToggle.height
+                    + " visible=" + debugToggle.visible
+                    + " | chip " + toolChip.x + "," + toolChip.y
+                    + " " + toolChip.width + "x" + toolChip.height)
     }
 }

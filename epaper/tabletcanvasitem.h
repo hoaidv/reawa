@@ -65,7 +65,6 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(QRectF debugLogRect READ debugLogRect NOTIFY trailingChromeChanged)
     Q_PROPERTY(bool debugLogVisible READ debugLogVisible NOTIFY debugLogVisibleChanged)
     Q_PROPERTY(bool handTouchArmed READ handTouchArmed NOTIFY handTouchArmedChanged)
-    Q_PROPERTY(bool canvasPinchOk READ canvasPinchOk NOTIFY canvasPinchOkChanged)
     Q_PROPERTY(QString followDirection READ followDirection NOTIFY followChanged)
     Q_PROPERTY(bool followPressed READ followPressed NOTIFY followChanged)
     Q_PROPERTY(bool followUnavailable READ followUnavailable NOTIFY followChanged)
@@ -106,7 +105,6 @@ public:
     QRectF debugLogRect() const { return m_debugLogRect; }
     bool debugLogVisible() const { return m_debugLogVisible; }
     bool handTouchArmed() const { return m_handTouchArmed; }
-    bool canvasPinchOk() const;
     Q_INVOKABLE void toggleDebugLog();
     Q_INVOKABLE void toggleHandTouch();
     bool followPressed() const { return m_follow.ariaPressed(); }
@@ -160,10 +158,11 @@ public:
     void updateFingerTouch(const QPointF &canvasPos, int fingerCount);
     void endFingerTouch(const QPointF &canvasPos);
     /**
-     * Two-finger local pan/pinch (STORY-EP-039). Blocked while box-move/resize in flight.
+     * Two-finger local pan/pinch (STORY-EP-039). A one-finger manip already in
+     * flight is reverted, not blocking: two contacts always mean navigate.
      * @implements [SRS-EP-24] two-finger canvas pan pinch
      */
-    bool canPromoteToTwoFinger() const;
+    void abortFingerManip();
     bool beginTwoFingerTouch(const QPointF &a, const QPointF &b);
     void updateTwoFingerTouch(const QPointF &a, const QPointF &b);
     void endTwoFingerTouch();
@@ -176,7 +175,6 @@ public:
     void paint(QPainter *painter) override;
 
     QPointF mapInputToCanvas(const QPointF &raw) const;
-    bool isScreenChromeAt(const QPointF &panel) const;
     void ingestMappedTablet(QEvent::Type type, const QPointF &canvasPos,
         const QPointF &rawPos, const IngestChannels &ch);
     /** Panel (canvas item) → document world. */
@@ -187,20 +185,24 @@ public:
     void endHandleDrag();
     Q_INVOKABLE void tapModeChip();
     /**
-     * Qt PointHandler one-finger capacitive entry (pen is the app filter).
+     * Qt DragHandler / PinchHandler canvas entry. Qt owns the hit-test and the
+     * grab; these only carry an already-arbitrated point into the document.
      * @implements [SRS-EP-04] Qt pointer routing
      */
     Q_INVOKABLE void onPointerStart(qreal x, qreal y, qreal pressure, bool pen);
     Q_INVOKABLE void onPointerMove(qreal x, qreal y, qreal pressure, bool pen);
     Q_INVOKABLE void onPointerEnd(qreal x, qreal y, bool pen);
     Q_INVOKABLE void onPointerCancel();
+    /** A finger pressed and released without travelling — select or deselect. */
+    Q_INVOKABLE void onFingerTap(qreal x, qreal y);
+    Q_INVOKABLE void onSecondContact();
+    Q_INVOKABLE void onContactsCleared();
     Q_INVOKABLE void onPinchStart(qreal x, qreal y, qreal scale);
     Q_INVOKABLE void onPinchUpdate(qreal x, qreal y, qreal scale);
     Q_INVOKABLE void onPinchEnd();
     void stashTabletSample(const QPointF &raw, const IngestChannels &ch);
 
 signals:
-    void canvasPinchOkChanged();
     void strokeCountChanged();
     void debugChanged();
     void toolModeChanged();
@@ -374,6 +376,7 @@ private:
     int m_viewportUpCount = 0;
     enum class FingerGesture { None, Chip, Move, Resize, EmptyPending, EmptyPan, TwoFinger } m_fingerGesture =
         FingerGesture::None;
+    bool m_fingerLockedUntilLift = false;
     QPointF m_fingerDownPanel;
     QPointF m_fingerDownWorld;
     WorldAabb m_fingerPanOrigin;
@@ -445,7 +448,6 @@ private:
     IngestChannels m_stashTablet;
     QPointF m_stashRaw;
     bool m_stashValid = false;
-    bool m_pointerIgnore = false;
     bool m_pinchIgnore = false;
     qreal m_pinchArm = 80.0;
     qreal m_pinchScale0 = 1.0;

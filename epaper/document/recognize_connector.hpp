@@ -285,7 +285,49 @@ inline double distSegSeg(Vec2 a, Vec2 b, Vec2 c, Vec2 d, Vec2 *pa, Vec2 *pb)
 }
 
 /** Proper cross first; else T-junction (endpoint onto the other stroke, ≤ R_JOIN). */
-inline SegHit polylineIntersect(const std::vector<InkSample> &a, const std::vector<InkSample> &b)
+/** Padded sample-bounds overlap. Every hit below needs a point of @p a within
+ *  kConnectorJoinWorld of a point of @p b, so disjoint bounds cannot hit. */
+inline bool sampleBoundsMayTouch(const std::vector<InkSample> &a, const std::vector<InkSample> &b,
+                                 double pad)
+{
+    if (a.empty() || b.empty())
+        return false;
+    double ax0 = a[0].x, ay0 = a[0].y, ax1 = a[0].x, ay1 = a[0].y;
+    for (const InkSample &s : a) {
+        ax0 = std::min(ax0, s.x);
+        ay0 = std::min(ay0, s.y);
+        ax1 = std::max(ax1, s.x);
+        ay1 = std::max(ay1, s.y);
+    }
+    double bx0 = b[0].x, by0 = b[0].y, bx1 = b[0].x, by1 = b[0].y;
+    for (const InkSample &s : b) {
+        bx0 = std::min(bx0, s.x);
+        by0 = std::min(by0, s.y);
+        bx1 = std::max(bx1, s.x);
+        by1 = std::max(by1, s.y);
+    }
+    return ax0 - pad <= bx1 && bx0 - pad <= ax1 && ay0 - pad <= by1 && by0 - pad <= ay1;
+}
+
+/** Drops samples closer together than @p minStep, keeping both endpoints. */
+inline std::vector<InkSample> coarsenForJoin(const std::vector<InkSample> &s, double minStep)
+{
+    if (s.size() <= 2)
+        return s;
+    std::vector<InkSample> out;
+    out.reserve(s.size());
+    out.push_back(s.front());
+    for (size_t i = 1; i + 1 < s.size(); ++i) {
+        if (std::hypot(s[i].x - out.back().x, s[i].y - out.back().y) >= minStep)
+            out.push_back(s[i]);
+    }
+    out.push_back(s.back());
+    return out;
+}
+
+inline SegHit polylineIntersectDense(const std::vector<InkSample> &a,
+                                     const std::vector<InkSample> &b,
+                                     double joinTol = kConnectorJoinWorld)
 {
     SegHit best;
     double bestT = 1e300;
@@ -314,7 +356,7 @@ inline SegHit polylineIntersect(const std::vector<InkSample> &a, const std::vect
             Vec2 q;
             const double d = distPointSegClamped(end, {poly[i - 1].x, poly[i - 1].y},
                                                  {poly[i].x, poly[i].y}, &q);
-            if (d <= kConnectorJoinWorld)
+            if (d <= joinTol)
                 consider(q, 1 + d);
         }
     };
@@ -329,7 +371,7 @@ inline SegHit polylineIntersect(const std::vector<InkSample> &a, const std::vect
             for (size_t j = 1; j < b.size(); ++j) {
                 Vec2 pa, pb;
                 const double d = distSegSeg(a0, a1, {b[j - 1].x, b[j - 1].y}, {b[j].x, b[j].y}, &pa, &pb);
-                if (d <= kConnectorJoinWorld)
+                if (d <= joinTol)
                     consider({(pa.x + pb.x) * 0.5, (pa.y + pb.y) * 0.5}, 2 + d);
             }
         }
@@ -337,15 +379,46 @@ inline SegHit polylineIntersect(const std::vector<InkSample> &a, const std::vect
     return best;
 }
 
-inline bool strokesJoin(const DocNode &a, const DocNode &b)
+/**
+ * Every free-ink pair on the page reaches this test, and the dense form is
+ * O(|a|*|b|): two 1900-sample strokes cost seconds on device, which is what
+ * froze pen-up. Two rejection stages run first, and only the exact test can
+ * return a hit, so verdicts and join points are unchanged.
+ *   1. Padded sample bounds — no point of one can be within tolerance of the
+ *      other, so no branch below can fire.
+ *   2. A coarsened re-test. Dropping samples moves the path by at most one
+ *      step, so the filter runs at a tolerance inflated by 2 steps and can
+ *      only over-accept, never hide a real touch.
+ */
+inline SegHit polylineIntersect(const std::vector<InkSample> &a, const std::vector<InkSample> &b)
 {
-    if (polylineIntersect(a.samples, b.samples).ok)
-        return true;
+    if (!sampleBoundsMayTouch(a, b, kConnectorJoinWorld))
+        return SegHit{};
+    const double step = kConnectorJoinWorld * 0.25;
+    const std::vector<InkSample> ca = coarsenForJoin(a, step);
+    const std::vector<InkSample> cb = coarsenForJoin(b, step);
+    if (ca.size() < a.size() || cb.size() < b.size()) {
+        if (!polylineIntersectDense(ca, cb, kConnectorJoinWorld + 2.0 * step).ok)
+            return SegHit{};
+    }
+    return polylineIntersectDense(a, b);
+}
+
+/** Endpoint half of strokesJoin, for callers that already ruled out a cross. */
+inline bool strokesJoinEnds(const DocNode &a, const DocNode &b)
+{
     const Vec2 a0 = inkEnd(a, true);
     const Vec2 a1 = inkEnd(a, false);
     const Vec2 b0 = inkEnd(b, true);
     const Vec2 b1 = inkEnd(b, false);
     return endsJoin(a0, b0) || endsJoin(a0, b1) || endsJoin(a1, b0) || endsJoin(a1, b1);
+}
+
+inline bool strokesJoin(const DocNode &a, const DocNode &b)
+{
+    if (polylineIntersect(a.samples, b.samples).ok)
+        return true;
+    return strokesJoinEnds(a, b);
 }
 
 inline bool strokesJoinCross(const DocNode &a, const DocNode &b)
@@ -357,9 +430,7 @@ inline std::string joinKind(const DocNode &a, const DocNode &b)
 {
     if (polylineIntersect(a.samples, b.samples).ok)
         return "cross";
-    const Vec2 a0 = inkEnd(a, true), a1 = inkEnd(a, false);
-    const Vec2 b0 = inkEnd(b, true), b1 = inkEnd(b, false);
-    if (endsJoin(a0, b0) || endsJoin(a0, b1) || endsJoin(a1, b0) || endsJoin(a1, b1))
+    if (strokesJoinEnds(a, b))
         return "rjoin";
     return "none";
 }
@@ -544,7 +615,8 @@ inline ChainBuild assembleChain(const std::vector<const DocNode *> &freeInks, in
                 continue;
             if (strokesJoinCross(*cand[size_t(i)], *cand[size_t(j)]))
                 cross.push_back(j);
-            else if (strokesJoin(*cand[size_t(i)], *cand[size_t(j)]))
+            // Not strokesJoin: the cross test above is the expensive half of it.
+            else if (strokesJoinEnds(*cand[size_t(i)], *cand[size_t(j)]))
                 ends.push_back(j);
         }
         adj[size_t(i)] = std::move(cross);
