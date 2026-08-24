@@ -2,9 +2,13 @@
 
 #include <QCoreApplication>
 #include <QEvent>
+#include <QEventPoint>
+#include <QList>
 #include <QPointF>
 #include <QPointingDevice>
 #include <QTabletEvent>
+#include <QTouchEvent>
+#include <QVector>
 #include <QWindow>
 
 TabletGestures::TabletGestures(QObject *parent)
@@ -37,11 +41,16 @@ void TabletGestures::notePenLeave()
 {
     m_penNear = false;
     m_penDown = false;
+    m_penOnCanvas = false;
     m_penIdle->stop();
 }
 
 void TabletGestures::suppressCanvasTouch()
 {
+    if (m_twoFinger && m_canvas) {
+        m_canvas->endTwoFingerTouch();
+        m_twoFinger = false;
+    }
     if (m_canvas)
         m_canvas->cancelHandTouch();
 }
@@ -75,15 +84,9 @@ TabletCanvasItem::IngestChannels TabletGestures::channelsFrom(const QTabletEvent
     return ch;
 }
 
-bool TabletGestures::injectMappedTabletIfWindow(QObject *watched, QTabletEvent *tablet)
+bool TabletGestures::injectMapped(QObject *watched, QWindow *w, QTabletEvent *tablet,
+                                 const QPointF &mapped)
 {
-    auto *w = qobject_cast<QWindow *>(watched);
-    if (!m_canvas || !w || m_injectingMapped)
-        return false;
-    const QPointF raw = tablet->position();
-    // Stash before sendEvent so PointHandler onPointerStart sees tilt/rotation.
-    m_canvas->stashTabletSample(raw, channelsFrom(tablet));
-    const QPointF mapped = m_canvas->mapInputToCanvas(raw);
     QTabletEvent mappedEv(tablet->type(), tablet->pointingDevice(), mapped,
                           w->mapToGlobal(mapped), tablet->pressure(),
                           float(tablet->xTilt()), float(tablet->yTilt()),
@@ -97,20 +100,94 @@ bool TabletGestures::injectMappedTabletIfWindow(QObject *watched, QTabletEvent *
     return true;
 }
 
+bool TabletGestures::ingestPen(QObject *watched, QTabletEvent *tablet)
+{
+    auto *w = qobject_cast<QWindow *>(watched);
+    if (!m_canvas || !w || m_injectingMapped)
+        return false;
+
+    const QPointF raw = tablet->position();
+    const QPointF mapped = m_canvas->mapInputToCanvas(raw);
+    const auto ch = channelsFrom(tablet);
+    const QEvent::Type t = tablet->type();
+
+    // Press/release to chrome TapHandlers only. Moves stay in C++ — tablet rate
+    // through QML PointHandler + sendEvent was the pen lag.
+    if (t == QEvent::TabletPress) {
+        m_penOnCanvas = !m_canvas->isScreenChromeAt(mapped);
+        if (m_penOnCanvas)
+            m_canvas->ingestMappedTablet(t, mapped, raw, ch);
+        else
+            injectMapped(watched, w, tablet, mapped);
+        return true;
+    }
+    if (t == QEvent::TabletRelease) {
+        if (m_penOnCanvas)
+            m_canvas->ingestMappedTablet(t, mapped, raw, ch);
+        else
+            injectMapped(watched, w, tablet, mapped);
+        m_penOnCanvas = false;
+        return true;
+    }
+    if (m_penOnCanvas)
+        m_canvas->ingestMappedTablet(t, mapped, raw, ch);
+    return true;
+}
+
+bool TabletGestures::handleTwoFinger(QTouchEvent *touch)
+{
+    if (!m_canvas)
+        return false;
+
+    QVector<const QEventPoint *> pressed;
+    for (const QEventPoint &tp : touch->points()) {
+        if (tp.state() != QEventPoint::State::Released)
+            pressed.append(&tp);
+    }
+    auto canvasOf = [this](const QEventPoint &tp) {
+        return m_canvas->mapFromGlobal(tp.globalPosition());
+    };
+
+    const QEvent::Type t = touch->type();
+    if (t == QEvent::TouchEnd || t == QEvent::TouchCancel) {
+        if (!m_twoFinger)
+            return false;
+        m_canvas->endTwoFingerTouch();
+        m_twoFinger = false;
+        // Let PointHandler see the end so its exclusive grab drops.
+        return false;
+    }
+
+    if (m_twoFinger) {
+        if (pressed.size() < 2) {
+            m_canvas->endTwoFingerTouch();
+            m_twoFinger = false;
+            return true;
+        }
+        m_canvas->updateTwoFingerTouch(canvasOf(*pressed[0]), canvasOf(*pressed[1]));
+        return true;
+    }
+
+    if (pressed.size() == 2 && m_canvas->canPromoteToTwoFinger() && m_canvas->handTouchArmed()) {
+        m_twoFinger = m_canvas->beginTwoFingerTouch(canvasOf(*pressed[0]), canvasOf(*pressed[1]));
+        return m_twoFinger;
+    }
+    return false;
+}
+
 bool TabletGestures::eventFilter(QObject *watched, QEvent *event)
 {
     switch (event->type()) {
     case QEvent::TouchBegin:
     case QEvent::TouchUpdate:
     case QEvent::TouchEnd:
-    case QEvent::TouchCancel:
-        // Pen near: eat capacitive so PointHandler does not pan while inking.
-        // ≥3-contact eat removed — palm is 20 mm travel ([CHL-0027]).
+    case QEvent::TouchCancel: {
         if (m_penNear || m_penDown) {
             suppressCanvasTouch();
             return true;
         }
-        return false;
+        return handleTwoFinger(static_cast<QTouchEvent *>(event));
+    }
     default:
         break;
     }
@@ -137,13 +214,10 @@ bool TabletGestures::eventFilter(QObject *watched, QEvent *event)
             m_penNear = true;
             m_penIdle->start();
         } else {
-            // Keep proximity, but do not cancelHandTouch — that would abort
-            // an in-flight pen move/resize that shares ManipDrag with fingers.
             m_penNear = true;
             m_penDown = tablet->pressure() > 0.01;
-            m_penIdle->start();
         }
-        if (injectMappedTabletIfWindow(watched, tablet))
+        if (ingestPen(watched, tablet))
             return true;
         return false;
     }

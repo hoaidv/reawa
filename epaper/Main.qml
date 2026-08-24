@@ -57,65 +57,31 @@ TabletWindow {
         visible: false
     }
 
-    // Full-bleed Qt pointer routing between ToolCanvas and chrome.
+    // One-finger capacitive. Pen stays in the C++ filter (tablet rate).
+    // Two-finger is also the filter: PointHandler exclusive-grabs contact 0,
+    // so PinchHandler never sees two points on RM Qt 6.8.
     // @implements [SRS-EP-04]
     // @implements [SRS-EP-21]
-    // @implements [SRS-EP-24]
     Item {
         id: canvasInput
         z: 2
         anchors.fill: drawCanvas
 
-        function canvasPos(pt) {
-            return drawCanvas.mapFromItem(canvasInput, pt.position.x, pt.position.y)
-        }
-
-        function isPenPoint(pt) {
-            return pt.pointerType === PointerDevice.Pen
-                    || (pt.device && pt.device.type === PointerDevice.Stylus)
-        }
-
         PointHandler {
             id: canvasPoint
-            enabled: !pinch.active
-            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen
-            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger
+            acceptedDevices: PointerDevice.TouchScreen
+            acceptedPointerTypes: PointerDevice.Finger
+            grabPermissions: PointerHandler.ApprovesTakeOverByAnything
             onActiveChanged: {
-                var p = canvasInput.canvasPos(point)
-                var pen = canvasInput.isPenPoint(point)
                 if (active)
-                    drawCanvas.onPointerStart(p.x, p.y, point.pressure, pen)
-                else if (!pinch.active)
-                    drawCanvas.onPointerEnd(p.x, p.y, pen)
+                    drawCanvas.onPointerStart(point.position.x, point.position.y, point.pressure, false)
+                else
+                    drawCanvas.onPointerEnd(point.position.x, point.position.y, false)
             }
             onPointChanged: {
-                if (!active)
-                    return
-                var p = canvasInput.canvasPos(point)
-                drawCanvas.onPointerMove(p.x, p.y, point.pressure, canvasInput.isPenPoint(point))
-            }
-        }
-
-        PinchHandler {
-            id: pinch
-            enabled: drawCanvas.canvasPinchOk
-            acceptedDevices: PointerDevice.TouchScreen
-            target: null
-            function syncPinch() {
-                if (!active)
-                    return
-                var c = canvasInput.canvasPos(centroid)
-                drawCanvas.onPinchUpdate(c.x, c.y, scale)
-            }
-            onActiveChanged: {
-                var c = canvasInput.canvasPos(centroid)
                 if (active)
-                    drawCanvas.onPinchStart(c.x, c.y, scale)
-                else
-                    drawCanvas.onPinchEnd()
+                    drawCanvas.onPointerMove(point.position.x, point.position.y, point.pressure, false)
             }
-            onScaleChanged: syncPinch()
-            onCentroidChanged: syncPinch()
         }
     }
 

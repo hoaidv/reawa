@@ -7,15 +7,17 @@
 #include "tabletcanvasitem.h"
 
 class QTabletEvent;
+class QTouchEvent;
 class QWindow;
 
 /**
- * Thin app filter: remap tablet, stash digitizer channels, eat mouse synthesis,
- * cancel hand-touch while the pen is near. Canvas input is Qt PointHandler /
- * PinchHandler — this filter does not leftover-ingest.
+ * Thin app filter: remap tablet and ingest pen in C++ (tablet rate is too high
+ * for QML PointHandler). One-finger capacitive is PointHandler; two-finger is
+ * here so the first contact is not exclusive-grabbed away from a pinch.
  * @implements [SRS-EP-04] Qt pointer routing
- * @implements [SRS-EP-09] digitizer channels stashed for PointHandler
+ * @implements [SRS-EP-09] digitizer channels on pen ingest
  * @implements [SRS-EP-21] pen-near cancels one-finger
+ * @implements [SRS-EP-24] two-finger pan pinch
  */
 class TabletGestures : public QObject
 {
@@ -33,12 +35,16 @@ private:
     void notePenNear(bool contact);
     void notePenLeave();
     void suppressCanvasTouch();
-    bool injectMappedTabletIfWindow(QObject *watched, QTabletEvent *tablet);
+    bool ingestPen(QObject *watched, QTabletEvent *tablet);
+    bool injectMapped(QObject *watched, QWindow *w, QTabletEvent *tablet, const QPointF &mapped);
+    bool handleTwoFinger(QTouchEvent *touch);
     TabletCanvasItem::IngestChannels channelsFrom(const QTabletEvent *tablet) const;
 
     TabletCanvasItem *m_canvas = nullptr;
     bool m_penNear = false;
     bool m_penDown = false;
-    QTimer *m_penIdle = nullptr;
+    bool m_penOnCanvas = false;
+    bool m_twoFinger = false;
     bool m_injectingMapped = false;
+    QTimer *m_penIdle = nullptr;
 };

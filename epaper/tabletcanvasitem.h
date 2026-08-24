@@ -176,6 +176,7 @@ public:
     void paint(QPainter *painter) override;
 
     QPointF mapInputToCanvas(const QPointF &raw) const;
+    bool isScreenChromeAt(const QPointF &panel) const;
     void ingestMappedTablet(QEvent::Type type, const QPointF &canvasPos,
         const QPointF &rawPos, const IngestChannels &ch);
     /** Panel (canvas item) → document world. */
@@ -186,7 +187,7 @@ public:
     void endHandleDrag();
     Q_INVOKABLE void tapModeChip();
     /**
-     * Qt PointHandler / PinchHandler entry (chrome sits above in z-order).
+     * Qt PointHandler one-finger capacitive entry (pen is the app filter).
      * @implements [SRS-EP-04] Qt pointer routing
      */
     Q_INVOKABLE void onPointerStart(qreal x, qreal y, qreal pressure, bool pen);
@@ -249,7 +250,6 @@ private:
     qreal ingestPanelHeight() const;
     Point makePoint(const QPointF &canvasPos, const IngestChannels &ch) const;
     void applyContactPress(const QPointF &canvasPos, const IngestChannels &ch);
-    bool isScreenChromeAt(const QPointF &panel) const;
     QPointF pinchArmPoint(qreal x, qreal y, qreal scale, bool positive) const;
     int handleIndexAtPanel(const QPointF &panel, double hitDu) const;
     bool tryBeginHandleAtPanel(const QPointF &panel, double hitDu);

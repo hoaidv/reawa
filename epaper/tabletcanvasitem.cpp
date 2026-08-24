@@ -1889,6 +1889,8 @@ void TabletCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen)
 {
     if (m_pointerIgnore)
         return;
+    if (m_fingerGesture == FingerGesture::TwoFinger)
+        return;
     const QPointF panel(x, y);
     if (pen) {
         IngestChannels ch;
@@ -1922,6 +1924,9 @@ void TabletCanvasItem::onPointerEnd(qreal x, qreal y, bool pen)
         m_stashValid = false;
         return;
     }
+    // Two-finger is owned by the app filter; PointHandler may deactivate mid-pinch.
+    if (m_fingerGesture == FingerGesture::TwoFinger)
+        return;
     endFingerTouch(panel);
 }
 
