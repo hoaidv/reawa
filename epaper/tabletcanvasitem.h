@@ -22,6 +22,7 @@
 #include "document/manipulate.hpp"
 #include "document/one_way_sync.hpp"
 #include "document/viewport_follow.hpp"
+#include "gesture/manipdrag.h"
 #include "toolchip_layout.hpp"
 
 class StrokeSync;
@@ -64,6 +65,7 @@ class TabletCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(QRectF debugLogRect READ debugLogRect NOTIFY trailingChromeChanged)
     Q_PROPERTY(bool debugLogVisible READ debugLogVisible NOTIFY debugLogVisibleChanged)
     Q_PROPERTY(bool handTouchArmed READ handTouchArmed NOTIFY handTouchArmedChanged)
+    Q_PROPERTY(bool canvasPinchOk READ canvasPinchOk NOTIFY canvasPinchOkChanged)
     Q_PROPERTY(QString followDirection READ followDirection NOTIFY followChanged)
     Q_PROPERTY(bool followPressed READ followPressed NOTIFY followChanged)
     Q_PROPERTY(bool followUnavailable READ followUnavailable NOTIFY followChanged)
@@ -104,6 +106,7 @@ public:
     QRectF debugLogRect() const { return m_debugLogRect; }
     bool debugLogVisible() const { return m_debugLogVisible; }
     bool handTouchArmed() const { return m_handTouchArmed; }
+    bool canvasPinchOk() const;
     Q_INVOKABLE void toggleDebugLog();
     Q_INVOKABLE void toggleHandTouch();
     bool followPressed() const { return m_follow.ariaPressed(); }
@@ -149,12 +152,8 @@ public:
     Q_INVOKABLE void armTool(const QString &mode);
     int documentInkCount() const;
     std::string ingestDumpText() const;
-    /** @implements [SRS-EP-04] finger/pen tap on ToolChip tile or toggle */
-    bool tryArmToolAtCanvasPos(const QPointF &canvasPos);
-    /** Window-space debug chips (Switch / Infini). Touch uses this; canvas mapping misses top-right. */
-    bool tryDebugChromeAtWindowPos(const QPointF &windowPos);
     /**
-     * Capacitive one-finger path (STORY-EP-038). Chip / box / knob / empty palm vs pan.
+     * Capacitive one-finger path (STORY-EP-038). Knob / box / empty palm vs pan.
      * @implements [SRS-EP-21] one-finger canvas hit
      */
     bool beginFingerTouch(const QPointF &canvasPos);
@@ -169,7 +168,6 @@ public:
     void updateTwoFingerTouch(const QPointF &a, const QPointF &b);
     void endTwoFingerTouch();
     void cancelHandTouch();
-    bool isChromeHit(const QPointF &canvasPos) const;
     QString followDirection() const { return m_followDirection; }
     void setFollowDirection(const QString &dir);
     Q_INVOKABLE void tapFollowToggle();
@@ -180,8 +178,28 @@ public:
     QPointF mapInputToCanvas(const QPointF &raw) const;
     void ingestMappedTablet(QEvent::Type type, const QPointF &canvasPos,
         const QPointF &rawPos, const IngestChannels &ch);
+    /** Panel (canvas item) → document world. */
+    Q_INVOKABLE QPointF panelToWorld(const QPointF &panel) const;
+    /** @implements [SRS-EP-11] handle drag in world space */
+    void beginHandleDrag(int handleIndex, const QPointF &world);
+    void updateHandleDrag(const QPointF &world);
+    void endHandleDrag();
+    Q_INVOKABLE void tapModeChip();
+    /**
+     * Qt PointHandler / PinchHandler entry (chrome sits above in z-order).
+     * @implements [SRS-EP-04] Qt pointer routing
+     */
+    Q_INVOKABLE void onPointerStart(qreal x, qreal y, qreal pressure, bool pen);
+    Q_INVOKABLE void onPointerMove(qreal x, qreal y, qreal pressure, bool pen);
+    Q_INVOKABLE void onPointerEnd(qreal x, qreal y, bool pen);
+    Q_INVOKABLE void onPointerCancel();
+    Q_INVOKABLE void onPinchStart(qreal x, qreal y, qreal scale);
+    Q_INVOKABLE void onPinchUpdate(qreal x, qreal y, qreal scale);
+    Q_INVOKABLE void onPinchEnd();
+    void stashTabletSample(const QPointF &raw, const IngestChannels &ch);
 
 signals:
+    void canvasPinchOkChanged();
     void strokeCountChanged();
     void debugChanged();
     void toolModeChanged();
@@ -231,6 +249,10 @@ private:
     qreal ingestPanelHeight() const;
     Point makePoint(const QPointF &canvasPos, const IngestChannels &ch) const;
     void applyContactPress(const QPointF &canvasPos, const IngestChannels &ch);
+    bool isScreenChromeAt(const QPointF &panel) const;
+    QPointF pinchArmPoint(qreal x, qreal y, qreal scale, bool positive) const;
+    int handleIndexAtPanel(const QPointF &panel, double hitDu) const;
+    bool tryBeginHandleAtPanel(const QPointF &panel, double hitDu);
     void beginStroke(const QPointF &canvasPos, const IngestChannels &ch);
     void appendPoint(const QPointF &canvasPos, const IngestChannels &ch);
     void endStroke();
@@ -251,24 +273,20 @@ private:
     void applyViewport(const QJsonObject &obj);
     void applyDocSnapshot(const QJsonObject &obj);
     void updateToolChipRect();
-    bool pointInToolChip(const QPointF &canvasPos) const;
-    bool pointInFollowToggle(const QPointF &canvasPos) const;
     void emitViewportFollow();
     void flushFollowOutbound();
     void applyFollowCamera();
     void cacheInfiniViewport(const QJsonObject &obj);
-    bool pointInEncloseCta(const QPointF &canvasPos) const;
-    QString toolChipHitAt(const QPointF &canvasPos) const;
     bool isSelectionTool() const;
     void beginMarqueeOrLasso(const QPointF &canvasPos);
     void finishMarqueeOrLasso();
     void refreshSelectionChrome();
     QString hitLocalSmartGroup(const QPointF &world) const;
     QString hitPickable(const QPointF &world) const;
-    void beginSelectionGesture(const QPointF &canvasPos,
-                               double handleHitDu = epaper::document::kHandleHitDu);
-    bool fingerHitsChip(const QPointF &canvasPos) const;
-    bool fingerHitsKnob(const QPointF &canvasPos) const;
+    void beginSelectionGesture(const QPointF &canvasPos);
+    void startLiveManip(const epaper::document::DocNode *subject,
+                        epaper::document::ResizeHandle handle, const QPointF &world);
+    void applyDragWorld(const QPointF &world);
     bool fingerHitsBox(const QPointF &canvasPos) const;
     void ensureLocalDrawingRegion();
     void applyLocalFingerPan(const QPointF &canvasPos);
@@ -297,7 +315,6 @@ private:
     void collectSmartGroupInkIds(const epaper::document::DocNode &sg, bool boundaryOnly,
                                  std::vector<std::string> *out) const;
     QPointF worldToPanel(double wx, double wy) const;
-    QPointF panelToWorld(const QPointF &panel) const;
     void drawDocNode(QPainter &p, const epaper::document::DocNode &node,
                      const epaper::document::DocNode *smartParent = nullptr);
     void drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
@@ -410,14 +427,7 @@ private:
     QString m_encloseRefuseReason;
     QString m_manipUnavailable;
     QRectF m_manipUnavailableRect;
-    epaper::document::SmartTransform m_originT;
-    epaper::document::SmartTransform m_liveT;
-    epaper::document::SmartBounds m_originB;
-    epaper::document::SmartBounds m_liveB;
-    epaper::document::ResizeHandle m_resizeHandle = epaper::document::ResizeHandle::None;
-    QString m_gesturePickableId;
-    QPointF m_gestureStartWorld;
-    QPointF m_gestureLastWorld;
+    epaper::gesture::ManipDrag m_drag;
     bool m_selectionGesture = false;
     /** Last panel-space chrome rect — dirty region for soft update during drag. */
     QRectF m_selectionChromeDirty;
@@ -431,6 +441,14 @@ private:
     bool m_rasterizeDeferredSharp = false;
     int m_settleFollowUpToken = 0;
     QPointF m_lastRaw;
+    /** Last QTabletEvent sample — PointHandler only exposes pressure. */
+    IngestChannels m_stashTablet;
+    QPointF m_stashRaw;
+    bool m_stashValid = false;
+    bool m_pointerIgnore = false;
+    bool m_pinchIgnore = false;
+    qreal m_pinchArm = 80.0;
+    qreal m_pinchScale0 = 1.0;
     QElapsedTimer m_flushClock;
     QElapsedTimer m_refreshClock;
     QRectF m_pendingDirty;

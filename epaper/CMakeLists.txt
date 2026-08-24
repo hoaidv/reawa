@@ -19,12 +19,11 @@ qt_add_executable(epaper_bin
     usb_link.cpp
     ui_stall.cpp
     gesture/tabletgestures.cpp
-    gesture/canvaspointeritem.cpp
 )
 qt_add_qml_module(epaper_bin
     URI epaper
     VERSION 1.0
-    QML_FILES Main.qml
+    QML_FILES Main.qml ResizeKnob.qml
 )
 
 # Designer icons (rasterized from .plan/.../system/assets/icon-epaper-*.svg)

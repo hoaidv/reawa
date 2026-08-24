@@ -42,10 +42,6 @@ TabletWindow {
         height: root.height
         z: 0
 
-        CanvasPointer {
-            anchors.fill: parent
-        }
-
         onSegmentDrawn: (x1, y1, x2, y2, w) => addSeg(x1, y1, x2, y2, w)
     }
 
@@ -59,6 +55,68 @@ TabletWindow {
         height: drawCanvas.height
         canvas: drawCanvas
         visible: false
+    }
+
+    // Full-bleed Qt pointer routing between ToolCanvas and chrome.
+    // @implements [SRS-EP-04]
+    // @implements [SRS-EP-21]
+    // @implements [SRS-EP-24]
+    Item {
+        id: canvasInput
+        z: 2
+        anchors.fill: drawCanvas
+
+        function canvasPos(pt) {
+            return drawCanvas.mapFromItem(canvasInput, pt.position.x, pt.position.y)
+        }
+
+        function isPenPoint(pt) {
+            return pt.pointerType === PointerDevice.Pen
+                    || (pt.device && pt.device.type === PointerDevice.Stylus)
+        }
+
+        PointHandler {
+            id: canvasPoint
+            enabled: !pinch.active
+            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen
+            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger
+            onActiveChanged: {
+                var p = canvasInput.canvasPos(point)
+                var pen = canvasInput.isPenPoint(point)
+                if (active)
+                    drawCanvas.onPointerStart(p.x, p.y, point.pressure, pen)
+                else if (!pinch.active)
+                    drawCanvas.onPointerEnd(p.x, p.y, pen)
+            }
+            onPointChanged: {
+                if (!active)
+                    return
+                var p = canvasInput.canvasPos(point)
+                drawCanvas.onPointerMove(p.x, p.y, point.pressure, canvasInput.isPenPoint(point))
+            }
+        }
+
+        PinchHandler {
+            id: pinch
+            enabled: drawCanvas.canvasPinchOk
+            acceptedDevices: PointerDevice.TouchScreen
+            target: null
+            function syncPinch() {
+                if (!active)
+                    return
+                var c = canvasInput.canvasPos(centroid)
+                drawCanvas.onPinchUpdate(c.x, c.y, scale)
+            }
+            onActiveChanged: {
+                var c = canvasInput.canvasPos(centroid)
+                if (active)
+                    drawCanvas.onPinchStart(c.x, c.y, scale)
+                else
+                    drawCanvas.onPinchEnd()
+            }
+            onScaleChanged: syncPinch()
+            onCentroidChanged: syncPinch()
+        }
     }
 
     // Trailing orientation-top row: DBG | Follow Infini | USB (UI-EP-07).
@@ -128,7 +186,7 @@ TabletWindow {
             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
             acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
         }
-        
+
         Row {
             id: chipRow
             spacing: 32
@@ -372,9 +430,10 @@ TabletWindow {
         id: selectHandles
         z: 21
         model: drawCanvas.handleCount
-        delegate: Rectangle {
+        delegate: ResizeKnob {
             readonly property var _r: drawCanvas.selectionBoundsRect
             readonly property real _h: drawCanvas.handleSize
+            readonly property real _hit: Math.max(_h, 64)
             readonly property point _pt: {
                 var r = _r
                 var n = drawCanvas.handleCount
@@ -402,14 +461,11 @@ TabletWindow {
                 ]
                 return p6[i]
             }
-            x: _pt.x - _h / 2
-            y: _pt.y - _h / 2
-            width: _h
-            height: _h
+            visualSize: _h
+            hitSize: _hit
+            x: _pt.x - _hit / 2
+            y: _pt.y - _hit / 2
             visible: drawCanvas.handleCount > 0 && _r.width > 0 && _r.height > 0
-            color: "white"
-            border.color: "black"
-            border.width: 2
         }
     }
 
@@ -431,6 +487,11 @@ TabletWindow {
             font.pixelSize: 14
             color: "black"
             text: drawCanvas.modeChipLabel
+        }
+        TapHandler {
+            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+            onTapped: drawCanvas.tapModeChip()
         }
     }
 
