@@ -2,7 +2,7 @@
  * STORY-EP-029 / @SRS-EP-10 ADR-0022 dispatch.
  * Maps recognizer-dispatch.feature. Does not retune enclose/membership thresholds.
  */
-#include "debuglog/debug_log_format.hpp"
+#include "debug/debug_log_format.hpp"
 #include "document/device_document.hpp"
 #include "document/recognizer_dispatch.hpp"
 

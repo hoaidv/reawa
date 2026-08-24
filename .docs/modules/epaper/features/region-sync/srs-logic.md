@@ -18,7 +18,7 @@ Local ink: [SRS-EP-01](../local-pen-ink/srs-logic.md).
 Document + sync contract: [SRS-EP-07 / SRS-EP-08](../device-document/srs-logic.md).
 Follow anatomy: [domain/viewport-follow](../../../../domain/viewport-follow.md).
 
-**Code SoT (2026-08-24):** `epaper/tabletcanvasitem.cpp`, `epaper/regionsync/strokesync.cpp`.
+**Code SoT (2026-08-24):** `epaper/drawing/tabletcanvasitem.cpp`, `epaper/regionsync/strokesync.cpp`.
 Header-only map/session in `epaper/regionsync/` is **unit-tested**; `strokesync.cpp` is linked into the device binary.
 
 ## [SRS-EP-02] Viewport map, vector picture, panel refresh

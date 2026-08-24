@@ -9,21 +9,23 @@ qt_standard_project_setup(REQUIRES 6.5)
 
 qt_add_executable(epaper_bin
     main.cpp
-    tabletcanvasitem.cpp
-    toolcanvasitem.cpp
-    tabletwindow.cpp
+    drawing/tabletcanvasitem.cpp
+    drawing/toolcanvasitem.cpp
+    drawing/tabletwindow.cpp
     regionsync/strokesync.cpp
     epaperbridge.cpp
-    debuglog/debug_log_ship.cpp
-    debuglog/ui_stall.cpp
+    debug/debug_log_ship.cpp
+    debug/ui_stall.cpp
     connectivity/usbgadget.cpp
     connectivity/usb_link.cpp
     input/qtinputfilter.cpp
 )
+set_source_files_properties(drawing/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
+set_source_files_properties(drawing/ResizeKnob.qml PROPERTIES QT_RESOURCE_ALIAS ResizeKnob.qml)
 qt_add_qml_module(epaper_bin
     URI epaper
     VERSION 1.0
-    QML_FILES Main.qml ResizeKnob.qml
+    QML_FILES drawing/Main.qml drawing/ResizeKnob.qml
 )
 
 # Designer icons (rasterized from .plan/.../system/assets/icon-epaper-*.svg)

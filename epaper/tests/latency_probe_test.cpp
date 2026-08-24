@@ -5,7 +5,7 @@
  * Build: ./tests/run_latency_probe.sh
  */
 
-#include "latencyprobe/stub_document.hpp"
+#include "debug/latency_probe.hpp"
 
 #include <cmath>
 #include <iostream>

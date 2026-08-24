@@ -2,7 +2,7 @@
  * STORY-EP-028 / @SRS-EP-04 @SRS-EP-05 — ToolChip inventory, dimmed toggles, pen-down latch.
  * Host test, no Qt.
  */
-#include "toolchip_layout.hpp"
+#include "drawing/primary_toolbar.hpp"
 
 #include <cmath>
 #include <cstdio>

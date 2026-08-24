@@ -7,7 +7,7 @@ Related:
 
 - Spec: [SRS-EP-01](../.docs/modules/epaper/features/local-pen-ink/srs-logic.md)
 - Probe history: [EXP-0001](../.plan/iter-001/explorations/EXP-0001-remarkable-canvas-sync.md)
-- Sources: [`epaperbridge.cpp`](epaperbridge.cpp), [`tabletcanvasitem.cpp`](tabletcanvasitem.cpp), [`Main.qml`](Main.qml)
+- Sources: [`epaperbridge.cpp`](epaperbridge.cpp), [`tabletcanvasitem.cpp`](drawing/tabletcanvasitem.cpp), [`Main.qml`](drawing/Main.qml)
 
 ---
 
@@ -176,7 +176,7 @@ const qreal rx = raw.y() * (w / h);
 const qreal ry = h - raw.x() * (h / w);
 ```
 
-([`tabletcanvasitem.cpp`](tabletcanvasitem.cpp) `mapInputToCanvas`)
+([`tabletcanvasitem.cpp`](drawing/tabletcanvasitem.cpp) `mapInputToCanvas`)
 
 ### The invisible-ink bug: a zero-sized item, not a backend limit (2026-08-09)
 

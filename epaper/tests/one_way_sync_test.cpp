@@ -7,7 +7,7 @@
 
 #include "document/device_document.hpp"
 #include "document/one_way_sync.hpp"
-#include "latencyprobe/stub_document.hpp"
+#include "debug/latency_probe.hpp"
 
 #include <iostream>
 #include <string>

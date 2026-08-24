@@ -22,7 +22,7 @@ emitting intent to a peer ([CHL-0008](../../../../../.plan/iter-003/challenges/C
   ([CHL-0025](../../../../../.plan/iter-005/challenges/CHL-0025-pen-map-settings-page.md) adopted:
   one Settings page; drop `present-sheet` / `scene.pen_map_click` / `scene.pen_map_hold`).
 - Quality: [srs-quality.md](./srs-quality.md) — [SRS-EP-06] · [SRS-EP-43] barrel + Settings + device persist · [SRS-EP-48] manual create
-- Runtime (to build): `epaper/Main.qml`, `epaper/tabletcanvasitem.cpp`, `epaper/tabletappfilter.cpp`
+- Runtime (to build): `epaper/drawing/Main.qml`, `epaper/drawing/tabletcanvasitem.cpp`, `epaper/input/qtinputfilter.cpp`
 - What the tools act on: [device-document](../device-document/index.md) — [SRS-EP-07] ·
   [ink-box](../ink-box/index.md) — [SRS-EP-10] / [SRS-EP-11]
 - Local ink it must not slow: [local-pen-ink](../local-pen-ink/index.md)

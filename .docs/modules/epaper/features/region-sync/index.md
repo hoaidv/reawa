@@ -15,7 +15,7 @@ Apply Infini `viewport` **only while Epaper follow is on**; emit `stroke_*` prev
 - UI: [srs-ui.md](./srs-ui.md) — [SRS-EP-50] follow toggle (`needs_design: yes`) — **not** ToolChip
 - Quality: [srs-quality.md](./srs-quality.md) — [SRS-EP-03] · [SRS-EP-26] two-finger map-apply · [SRS-EP-51] follow exclusivity
 - BDD: [bdd/map-append-refresh.feature](./bdd/map-append-refresh.feature)
-- Runtime: `epaper/tabletcanvasitem.cpp` + `epaper/regionsync/strokesync.cpp`
+- Runtime: `epaper/drawing/tabletcanvasitem.cpp` + `epaper/regionsync/strokesync.cpp`
 - Library: [epaper/regionsync/](../../../../epaper/regionsync/)
 - Protocol: [epaper/protocol/viewport-sync.md](../../../../epaper/protocol/viewport-sync.md)
 - What it paints: [device-document](../device-document/index.md) — [SRS-EP-07];

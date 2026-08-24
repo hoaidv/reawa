@@ -7,7 +7,7 @@
 
 #include "document/viewport_follow.hpp"
 #include "document/hand_touch.hpp"
-#include "toolchip_layout.hpp"
+#include "drawing/primary_toolbar.hpp"
 
 #include <chrono>
 #include <cmath>

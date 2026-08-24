@@ -2,8 +2,8 @@
  * STORY-EP-021 / @SRS-EP-15 @SRS-EP-16 — debug-log queue, env, enclose line, type filter.
  * Host test, no Qt.
  */
-#include "debuglog/debug_log_format.hpp"
-#include "debuglog/debug_log_queue.hpp"
+#include "debug/debug_log_format.hpp"
+#include "debug/debug_log_queue.hpp"
 
 #include <cstdio>
 #include <string>

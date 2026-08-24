@@ -17,7 +17,7 @@ components.** The only hit-tests we own are against *document* geometry (node bo
 Anything that looks like `if (rect.contains(p))` for a button is a defect, not a design.
 
 Sources: `epaper/main.cpp`, `epaper/input/qtinputfilter.{h,cpp}`, `epaper/input/pen_sample.hpp`,
-`epaper/Main.qml`, `epaper/tabletcanvasitem.cpp`, `epaper/document/hand_touch.hpp`.
+`epaper/drawing/Main.qml`, `epaper/drawing/tabletcanvasitem.cpp`, `epaper/document/hand_touch.hpp`.
 
 ## The stack an event falls through
 

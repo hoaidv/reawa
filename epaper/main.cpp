@@ -9,14 +9,14 @@
 #include <csignal>
 #include <memory>
 
-#include "tabletcanvasitem.h"
-#include "toolcanvasitem.h"
-#include "tabletwindow.h"
+#include "drawing/tabletcanvasitem.h"
+#include "drawing/toolcanvasitem.h"
+#include "drawing/tabletwindow.h"
 #include "epaperbridge.h"
-#include "debuglog/debug_log_ship.h"
-#include "debuglog/ui_stall.hpp"
+#include "debug/debug_log_ship.h"
+#include "debug/ui_stall.hpp"
 #include "connectivity/usb_link.hpp"
-#include "latencyprobe/stub_document.hpp"
+#include "debug/latency_probe.hpp"
 #include "input/qtinputfilter.h"
 
 namespace {

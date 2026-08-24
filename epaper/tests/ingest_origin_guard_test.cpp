@@ -2,7 +2,7 @@
  * STORY-EP-033 / @SRS-EP-01 — origin/stale first-sample predicate.
  * Host test, no Qt.
  */
-#include "ingest_origin_guard.hpp"
+#include "drawing/ingest_origin_guard.hpp"
 
 #include <cstdio>
 

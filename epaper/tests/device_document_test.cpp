@@ -7,7 +7,7 @@
 
 #include "document/device_document.hpp"
 #include "document/ingest_stroke.hpp"
-#include "latencyprobe/stub_document.hpp"
+#include "debug/latency_probe.hpp"
 
 #include <algorithm>
 #include <chrono>

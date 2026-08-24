@@ -6,7 +6,7 @@
 #include "document/connector_warp.hpp"
 #include "document/device_document.hpp"
 #include "document/recognizer_dispatch.hpp"
-#include "latencyprobe/stub_document.hpp"
+#include "debug/latency_probe.hpp"
 
 #include <chrono>
 #include <cmath>

@@ -1,8 +1,8 @@
 #include "tabletcanvasitem.h"
-#include "debuglog/ui_stall.hpp"
+#include "debug/ui_stall.hpp"
 #include "regionsync/strokesync.h"
 #include "epaperbridge.h"
-#include "latencyprobe/stub_document.hpp"
+#include "debug/latency_probe.hpp"
 #include "document/connector_warp.hpp"
 #include "document/recognizer_dispatch.hpp"
 #include "document/recognize_enclose.hpp"
@@ -10,9 +10,9 @@
 #include "document/surround_create.hpp"
 #include "document/manipulate.hpp"
 #include "document/capability.hpp"
-#include "debuglog/debug_log_format.hpp"
+#include "debug/debug_log_format.hpp"
 #include "toolcanvasitem.h"
-#include "toolchip_layout.hpp"
+#include "primary_toolbar.hpp"
 #include "ingest_origin_guard.hpp"
 
 #include <QPainter>

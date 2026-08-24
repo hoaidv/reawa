@@ -24,7 +24,7 @@
 #include "document/viewport_follow.hpp"
 #include "gesture/manipdrag.h"
 #include "input/pen_sample.hpp"
-#include "toolchip_layout.hpp"
+#include "primary_toolbar.hpp"
 
 class StrokeSync;
 class ToolCanvasItem;
