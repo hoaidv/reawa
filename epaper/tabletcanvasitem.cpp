@@ -1,6 +1,6 @@
 #include "tabletcanvasitem.h"
-#include "ui_stall.hpp"
-#include "strokesync.h"
+#include "debuglog/ui_stall.hpp"
+#include "regionsync/strokesync.h"
 #include "epaperbridge.h"
 #include "latencyprobe/stub_document.hpp"
 #include "document/connector_warp.hpp"

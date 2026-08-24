@@ -249,7 +249,7 @@ At a careful ~50 px/s, 3 px ≈ **60 ms** before first ink — already over the
 
 ### Stroke sync
 
-[`strokesync.cpp`](strokesync.cpp) is **inert unless `RM_SYNC_HOST` is set**.
+[`strokesync.cpp`](regionsync/strokesync.cpp) is **inert unless `RM_SYNC_HOST` is set**.
 When enabled, lines are queued and flushed on a deferred `QTimer::singleShot(0)`
 so TCP never blocks the pen hot path.
 

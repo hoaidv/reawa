@@ -14,8 +14,8 @@
 #include "tabletwindow.h"
 #include "epaperbridge.h"
 #include "debuglog/debug_log_ship.h"
+#include "debuglog/ui_stall.hpp"
 #include "connectivity/usb_link.hpp"
-#include "ui_stall.hpp"
 #include "latencyprobe/stub_document.hpp"
 #include "input/qtinputfilter.h"
 

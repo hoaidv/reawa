@@ -12,12 +12,12 @@ qt_add_executable(epaper_bin
     tabletcanvasitem.cpp
     toolcanvasitem.cpp
     tabletwindow.cpp
-    strokesync.cpp
+    regionsync/strokesync.cpp
     epaperbridge.cpp
     debuglog/debug_log_ship.cpp
+    debuglog/ui_stall.cpp
     connectivity/usbgadget.cpp
     connectivity/usb_link.cpp
-    ui_stall.cpp
     input/qtinputfilter.cpp
 )
 qt_add_qml_module(epaper_bin

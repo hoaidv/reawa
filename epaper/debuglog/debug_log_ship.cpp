@@ -5,7 +5,7 @@
 
 #include "debug_log_ship.h"
 #include "debug_log_format.hpp"
-#include "net_retry.hpp"
+#include "connectivity/net_retry.hpp"
 #include "connectivity/usb_link.hpp"
 #include "connectivity/usb_path.hpp"
 

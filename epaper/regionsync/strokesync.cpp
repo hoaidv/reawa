@@ -1,5 +1,5 @@
 #include "strokesync.h"
-#include "net_retry.hpp"
+#include "connectivity/net_retry.hpp"
 #include "connectivity/usb_link.hpp"
 #include "connectivity/usb_path.hpp"
 
