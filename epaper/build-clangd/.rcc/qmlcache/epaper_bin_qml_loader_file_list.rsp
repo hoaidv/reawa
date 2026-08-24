@@ -1,8 +1,0 @@
---resource
-/Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/qmake_epaper.qrc
---resource
-/Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/epaper_bin_raw_qml_0.qrc
---resource
-/Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/epaper_tool_icons.qrc
-/qt/qml/epaper/Main.qml
-/qt/qml/epaper/ResizeKnob.qml

@@ -3,6 +3,11 @@
 .cursor/
 .sandbox/
 
+# epaper: local CMake/clangd artifacts
+epaper/build-clangd/
+epaper/.cache/
+epaper/compile_commands.json
+
 # IPython Notebooks
 .ipynb_checkpoints/
 output/
