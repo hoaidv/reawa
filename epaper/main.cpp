@@ -7,6 +7,7 @@
 #include <QtPlugin>
 
 #include <csignal>
+#include <memory>
 
 #include "tabletcanvasitem.h"
 #include "toolcanvasitem.h"
@@ -68,6 +69,11 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("epaper", 1, 0, "UsbHud", usbLink);
     qmlRegisterSingletonInstance("epaper", 1, 0, "DebugLog", debugShip);
 
+    // Raw input facts for Main.qml, which owns the routing policy that reads them.
+    auto *gestures = new TabletGestures(&app);
+    app.installEventFilter(gestures);
+    qmlRegisterSingletonInstance("epaper", 1, 0, "Input", gestures);
+
     QQmlApplicationEngine engine;
     QObject::connect(
         &engine,
@@ -88,14 +94,23 @@ int main(int argc, char *argv[])
     });
     termPoll->start();
 
-    auto *gestures = new TabletGestures(&app);
-    app.installEventFilter(gestures);
+    // The only wire between raw input and the document: extra pen channels, which
+    // a QML HandlerPoint cannot carry. Everything else the filter knows is read as
+    // a property in Main.qml.
     const auto roots = engine.rootObjects();
     for (QObject *root : roots) {
         if (auto *win = qobject_cast<TabletWindow *>(root)) {
-            QObject::connect(win, &TabletWindow::canvasChanged, gestures,
-                            [gestures](TabletCanvasItem *c) { gestures->setCanvas(c); });
-            gestures->setCanvas(win->canvas());
+            auto conn = std::make_shared<QMetaObject::Connection>();
+            auto bind = [gestures, conn](TabletCanvasItem *c) {
+                if (*conn)
+                    QObject::disconnect(*conn);
+                if (c) {
+                    *conn = QObject::connect(gestures, &TabletGestures::penSample, c,
+                                             &TabletCanvasItem::stashTabletSample);
+                }
+            };
+            QObject::connect(win, &TabletWindow::canvasChanged, gestures, bind);
+            bind(win->canvas());
             break;
         }
     }

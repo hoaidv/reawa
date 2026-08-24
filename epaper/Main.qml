@@ -169,6 +169,29 @@ TabletWindow {
 
     }
 
+    // Facts the pointer handlers above cannot see, and what this app makes of
+    // them. Qt exposes no live contact count to QML (MultiPointHandler publishes
+    // only the min/max it requires), and pen proximity reaches no handler at all,
+    // so the raw input filter reports both and the decisions stay here with the
+    // rest of the routing.
+    Connections {
+        target: Input
+
+        // @implements [SRS-EP-21] pen near outranks hand touch
+        function onPenNearChanged() {
+            if (Input.penNear)
+                drawCanvas.cancelHandTouch()
+        }
+
+        // @implements [SRS-EP-24] two contacts outrank a one-finger manip
+        function onContactCountChanged() {
+            if (Input.contactCount >= 2)
+                drawCanvas.onSecondContact()
+            else if (Input.contactCount === 0)
+                drawCanvas.onContactsCleared()
+        }
+    }
+
     // Trailing orientation-top row: DBG | Follow Infini | USB (UI-EP-07).
     // @implements [SRS-EP-50] FollowToggle sibling of ToolChip
     Rectangle {

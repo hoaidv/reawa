@@ -11,6 +11,8 @@
 #include <QVector>
 #include <QWindow>
 
+using epaper::input::PenSample;
+
 TabletGestures::TabletGestures(QObject *parent)
     : QObject(parent)
 {
@@ -19,42 +21,36 @@ TabletGestures::TabletGestures(QObject *parent)
     m_penIdle->setInterval(600);
     connect(m_penIdle, &QTimer::timeout, this, [this]() {
         if (!m_penDown)
-            m_penNear = false;
+            setPenNear(false);
     });
 }
 
-void TabletGestures::setCanvas(TabletCanvasItem *canvas)
+void TabletGestures::setPenNear(bool isNear)
 {
-    m_canvas = canvas;
+    if (m_penNear == isNear)
+        return;
+    m_penNear = isNear;
+    emit penNearChanged();
 }
 
-void TabletGestures::notePenNear(bool contact)
+void TabletGestures::setContacts(int live)
 {
-    m_penNear = true;
-    if (contact)
-        m_penDown = true;
-    suppressCanvasTouch();
-    m_penIdle->start();
+    if (m_contacts == live)
+        return;
+    m_contacts = live;
+    emit contactCountChanged();
 }
 
 void TabletGestures::notePenLeave()
 {
-    m_penNear = false;
     m_penDown = false;
     m_penIdle->stop();
+    setPenNear(false);
 }
 
-void TabletGestures::suppressCanvasTouch()
+PenSample TabletGestures::channelsFrom(const QTabletEvent *tablet) const
 {
-    if (!m_canvas)
-        return;
-    m_canvas->cancelHandTouch();
-    m_canvas->onContactsCleared();
-}
-
-TabletCanvasItem::IngestChannels TabletGestures::channelsFrom(const QTabletEvent *tablet) const
-{
-    TabletCanvasItem::IngestChannels ch;
+    PenSample ch;
     ch.pressure = tablet->pressure();
     const QPointingDevice *dev = tablet->pointingDevice();
     const auto caps = dev ? dev->capabilities() : QPointingDevice::Capabilities{};
@@ -99,8 +95,9 @@ bool TabletGestures::injectMapped(QObject *watched, QWindow *w, QTabletEvent *ta
 
 /**
  * Contact count, observed without consuming the event. Qt handlers cannot answer
- * this: a passive PointHandler is not told which contact it holds, and a grabbing
- * handler only learns of contacts it wins. The filter sees every point.
+ * this: MultiPointHandler exposes only the min/max it requires, never the live
+ * count, and a passive PointHandler is not told which contact it holds. The
+ * filter sees every point; what a second contact *means* is decided in QML.
  * @implements [SRS-EP-24] second contact outranks a one-finger manip
  */
 void TabletGestures::noteContacts(QTouchEvent *touch)
@@ -130,28 +127,21 @@ void TabletGestures::noteContacts(QTouchEvent *touch)
                                  .arg(live)
                                  .arg(where);
     }
-    if (live == m_contacts)
-        return;
-    m_contacts = live;
-    if (!m_canvas)
-        return;
-    if (live >= 2)
-        m_canvas->onSecondContact();
-    else if (live == 0)
-        m_canvas->onContactsCleared();
+    setContacts(live);
 }
 
 bool TabletGestures::remapPen(QObject *watched, QTabletEvent *tablet)
 {
     auto *w = qobject_cast<QWindow *>(watched);
-    if (!m_canvas || !w || m_injectingMapped)
+    if (!w || m_injectingMapped)
         return false;
 
     const QPointF raw = tablet->position();
-    const QPointF mapped = m_canvas->mapInputToCanvas(raw);
-    // Tilt/rotation/tangential are not on a QML HandlerPoint; park them so the
-    // canvas can pick the full channel set up when Qt delivers the point.
-    m_canvas->stashTabletSample(raw, channelsFrom(tablet));
+    const QPointF mapped = epaper::input::mapPanel(raw, w->width(), w->height());
+    // Tilt/rotation/tangential are not on a QML HandlerPoint. Publish them before
+    // injecting, so the canvas holds the full set when a handler calls back during
+    // the synchronous delivery below.
+    emit penSample(raw, channelsFrom(tablet));
     return injectMapped(watched, w, tablet, mapped);
 }
 
@@ -164,23 +154,13 @@ bool TabletGestures::eventFilter(QObject *watched, QEvent *event)
     case QEvent::TouchCancel:
         // @implements [SRS-EP-21] pen near wins over hand touch
         if (m_penNear || m_penDown) {
-            m_contacts = 0;
-            suppressCanvasTouch();
+            setContacts(0);
             return true;
         }
         noteContacts(static_cast<QTouchEvent *>(event));
         return false;
-    default:
-        break;
-    }
-
-    if (!m_canvas)
-        return false;
-
-    switch (event->type()) {
     case QEvent::TabletEnterProximity:
-        m_penNear = true;
-        suppressCanvasTouch();
+        setPenNear(true);
         return false;
     case QEvent::TabletLeaveProximity:
         notePenLeave();
@@ -189,21 +169,15 @@ bool TabletGestures::eventFilter(QObject *watched, QEvent *event)
     case QEvent::TabletMove:
     case QEvent::TabletRelease: {
         auto *tablet = static_cast<QTabletEvent *>(event);
-        if (event->type() == QEvent::TabletPress) {
-            notePenNear(true);
-        } else if (event->type() == QEvent::TabletRelease) {
+        if (event->type() == QEvent::TabletPress)
+            m_penDown = true;
+        else if (event->type() == QEvent::TabletRelease)
             m_penDown = false;
-            m_penNear = true;
-            m_penIdle->start();
-        } else {
-            // No suppressCanvasTouch() on move: it aborted a live pen manip.
-            m_penNear = true;
+        else
             m_penDown = tablet->pressure() > 0.01;
-            m_penIdle->start();
-        }
-        if (remapPen(watched, tablet))
-            return true;
-        return false;
+        setPenNear(true);
+        m_penIdle->start();
+        return remapPen(watched, tablet);
     }
     // Mouse synthesis is off in main(): swallowing a synth press here would leave
     // it accepted, handing the grab to whatever item sits under the finger.

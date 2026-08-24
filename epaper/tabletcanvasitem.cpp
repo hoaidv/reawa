@@ -251,21 +251,14 @@ void TabletCanvasItem::stampFlushBeacon()
 
 QPointF TabletCanvasItem::mapInputToCanvas(const QPointF &raw) const
 {
-    // Verified Round 19 (RENDERING.md): panel framebuffer is portrait; digitizer
-    // reports landscape-oriented raw coords. Always apply this for local ink —
-    // Infini orientation only changes the sync-frame aspect / world UV, not this.
+    // Shared with the raw input filter, which maps before Qt delivers the point.
     qreal w = width();
     qreal h = height();
     if (w < 2.0 && window())
         w = window()->width();
     if (h < 2.0 && window())
         h = window()->height();
-    w = qMax<qreal>(1.0, w);
-    h = qMax<qreal>(1.0, h);
-
-    const qreal rx = raw.y() * (w / h);
-    const qreal ry = h - raw.x() * (h / w);
-    return QPointF(rx, ry);
+    return epaper::input::mapPanel(raw, w, h);
 }
 
 qreal TabletCanvasItem::ingestPanelHeight() const
@@ -1451,6 +1444,9 @@ void TabletCanvasItem::toggleHandTouch()
 
 void TabletCanvasItem::cancelHandTouch()
 {
+    // Full hand-touch reset, lock included: whoever cancels must not have to know
+    // that a lifted-contact latch exists.
+    m_fingerLockedUntilLift = false;
     if (m_fingerGesture == FingerGesture::TwoFinger) {
         endTwoFingerTouch(); // settles the viewport it was already panning
         return;

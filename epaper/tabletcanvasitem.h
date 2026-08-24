@@ -23,6 +23,7 @@
 #include "document/one_way_sync.hpp"
 #include "document/viewport_follow.hpp"
 #include "gesture/manipdrag.h"
+#include "gesture/pen_sample.hpp"
 #include "toolchip_layout.hpp"
 
 class StrokeSync;
@@ -130,20 +131,7 @@ public:
     void paintToolChrome(QPainter *painter);
 
     /** Digitizer channels reported on this sample (SRS-EP-09). Unset = not reported. */
-    struct IngestChannels {
-        qreal pressure = 0;
-        bool hasTilt = false;
-        qreal tiltX = 0;
-        qreal tiltY = 0;
-        bool hasDistance = false;
-        qreal distance = 0;
-        bool hasTimestamp = false;
-        qreal timestamp = 0;
-        bool hasRotation = false;
-        qreal rotation = 0;
-        bool hasTangential = false;
-        qreal tangential = 0;
-    };
+    using IngestChannels = epaper::input::PenSample;
 
     Q_INVOKABLE void ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure);
     void ingestPoint(QEvent::Type type, const QPointF &pos, const IngestChannels &ch);
@@ -166,7 +154,8 @@ public:
     bool beginTwoFingerTouch(const QPointF &a, const QPointF &b);
     void updateTwoFingerTouch(const QPointF &a, const QPointF &b);
     void endTwoFingerTouch();
-    void cancelHandTouch();
+    /** @implements [SRS-EP-21] pen near outranks hand touch — called from QML */
+    Q_INVOKABLE void cancelHandTouch();
     QString followDirection() const { return m_followDirection; }
     void setFollowDirection(const QString &dir);
     Q_INVOKABLE void tapFollowToggle();

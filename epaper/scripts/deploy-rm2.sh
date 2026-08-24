@@ -10,7 +10,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="$ROOT/build/bin/epaper"
-KEY="${RM_SSH_KEY:-$HOME/Library/Application Support/Reawa/keys/2ff02795-fae7-4587-be4b-e40c94b9a636/id_rsa}"
+KEY="$RM_SSH_KEY"
 HOST="${RM_HOST:-root@10.11.99.1}"
 REMOTE="${RM_REMOTE_PATH:-/home/root/epaper}"
 

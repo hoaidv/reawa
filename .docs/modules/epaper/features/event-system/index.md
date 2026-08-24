@@ -19,7 +19,11 @@ folder records *how the routing that satisfies them is wired, and why each knob 
   tuning knob with the bug it bought, the document gestures at the end of the flow, and the history
   of gotchas
 
-Standing rule for this area: **Qt routes events; we hit-test document geometry only.** A rect
-containment check against a button is a defect. The one place raw events are touched is
-`TabletGestures`, and only for the three things Qt handlers cannot do — pen coordinate mapping,
-rescuing tilt/rotation channels, and counting live contacts.
+Two standing rules for this area:
+
+1. **Qt routes events; we hit-test document geometry only.** A rect containment check against a
+   button is a defect.
+2. **The raw input filter publishes facts; it never issues commands.** `TabletGestures` exists for
+   the three things Qt handlers cannot do — pen coordinate mapping, rescuing tilt/rotation channels,
+   and counting live contacts — and it holds no reference to the canvas. What those facts *mean* is
+   decided in `Main.qml`, beside the handlers.
