@@ -5,3 +5,4 @@
 --resource
 /Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/epaper_tool_icons.qrc
 /qt/qml/epaper/Main.qml
+/qt/qml/epaper/ResizeKnob.qml

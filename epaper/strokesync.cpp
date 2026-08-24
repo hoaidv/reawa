@@ -1,7 +1,7 @@
 #include "strokesync.h"
 #include "net_retry.hpp"
-#include "usb_link.hpp"
-#include "usb_path.hpp"
+#include "connectivity/usb_link.hpp"
+#include "connectivity/usb_path.hpp"
 
 #include <QDebug>
 #include <QJsonDocument>

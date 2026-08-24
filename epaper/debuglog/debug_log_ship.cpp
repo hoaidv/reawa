@@ -6,8 +6,8 @@
 #include "debug_log_ship.h"
 #include "debug_log_format.hpp"
 #include "net_retry.hpp"
-#include "usb_link.hpp"
-#include "usb_path.hpp"
+#include "connectivity/usb_link.hpp"
+#include "connectivity/usb_path.hpp"
 
 #include <QDateTime>
 #include <QJsonDocument>

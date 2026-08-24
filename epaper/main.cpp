@@ -14,10 +14,10 @@
 #include "tabletwindow.h"
 #include "epaperbridge.h"
 #include "debuglog/debug_log_ship.h"
-#include "usb_link.hpp"
+#include "connectivity/usb_link.hpp"
 #include "ui_stall.hpp"
 #include "latencyprobe/stub_document.hpp"
-#include "gesture/tabletgestures.h"
+#include "input/qtinputfilter.h"
 
 namespace {
 
@@ -70,9 +70,9 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("epaper", 1, 0, "DebugLog", debugShip);
 
     // Raw input facts for Main.qml, which owns the routing policy that reads them.
-    auto *gestures = new TabletGestures(&app);
-    app.installEventFilter(gestures);
-    qmlRegisterSingletonInstance("epaper", 1, 0, "Input", gestures);
+    auto *inputFilter = new QtInputFilter(&app);
+    app.installEventFilter(inputFilter);
+    qmlRegisterSingletonInstance("epaper", 1, 0, "Input", inputFilter);
 
     QQmlApplicationEngine engine;
     QObject::connect(
@@ -101,15 +101,15 @@ int main(int argc, char *argv[])
     for (QObject *root : roots) {
         if (auto *win = qobject_cast<TabletWindow *>(root)) {
             auto conn = std::make_shared<QMetaObject::Connection>();
-            auto bind = [gestures, conn](TabletCanvasItem *c) {
+            auto bind = [inputFilter, conn](TabletCanvasItem *c) {
                 if (*conn)
                     QObject::disconnect(*conn);
                 if (c) {
-                    *conn = QObject::connect(gestures, &TabletGestures::penSample, c,
+                    *conn = QObject::connect(inputFilter, &QtInputFilter::penSample, c,
                                              &TabletCanvasItem::stashTabletSample);
                 }
             };
-            QObject::connect(win, &TabletWindow::canvasChanged, gestures, bind);
+            QObject::connect(win, &TabletWindow::canvasChanged, inputFilter, bind);
             bind(win->canvas());
             break;
         }

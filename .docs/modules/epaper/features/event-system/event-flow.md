@@ -16,8 +16,8 @@ Ground rule, and the reason this document exists: **Qt routes events; we do not 
 components.** The only hit-tests we own are against *document* geometry (node boxes, resize knobs).
 Anything that looks like `if (rect.contains(p))` for a button is a defect, not a design.
 
-Sources: `epaper/main.cpp`, `epaper/gesture/tabletgestures.{h,cpp}`, `epaper/Main.qml`,
-`epaper/tabletcanvasitem.cpp`, `epaper/document/hand_touch.hpp`.
+Sources: `epaper/main.cpp`, `epaper/input/qtinputfilter.{h,cpp}`, `epaper/input/pen_sample.hpp`,
+`epaper/Main.qml`, `epaper/tabletcanvasitem.cpp`, `epaper/document/hand_touch.hpp`.
 
 ## The stack an event falls through
 
@@ -34,7 +34,7 @@ flowchart TB
     tab["evdevtablet generic plugin → QTabletEvent, device 'fake tablet'"]
     tch["epaper QPA touch → QTouchEvent, device 'pt_mt', rotate=180:invertx"]
   end
-  filt["TabletGestures — QGuiApplication event filter"]
+  filt["QtInputFilter — QGuiApplication event filter"]
   agent["QQuickDeliveryAgent — hit-test, then grab arbitration"]
   subgraph qml["QML scene, front to back"]
     chrome["z 20–30 chrome — TapHandlers per button"]
@@ -82,14 +82,14 @@ bug waiting for a finger.
 
 | Component | Owns | Explicitly does not own |
 |---|---|---|
-| `TabletGestures` (app-wide `eventFilter`) | Pen coordinate mapping and injection; publishing pen channels, `penNear`, `contactCount`; swallowing touch while the pen is near | Any hit-test, any gesture decision, any chrome knowledge — and **no reference to the canvas** |
+| `QtInputFilter` (app-wide `eventFilter`) | Pen coordinate mapping and injection; publishing pen channels, `penNear`, `contactCount`; swallowing touch while the pen is near, and cancelling the grabs it interrupts | Any hit-test, any gesture decision, any chrome knowledge — and **no reference to the canvas** |
 | `QQuickDeliveryAgent` | Front-to-back hit-test, exclusive/passive grabs, takeover arbitration | Nothing we may second-guess |
 | Chrome `TapHandler`s (z 20–30) | One button's tap, inviolably | Canvas semantics; they only call invokables |
 | `canvasInput` handlers (z 2) | Turning grabs into `onPointer*` / `onPinch*` / `onFingerTap` calls | What the gesture *means* |
 | `Connections { target: Input }` | What a second contact or a nearby pen *means* | Observing input; it only reads published facts |
 | `TabletCanvasItem` | Gesture state machine, **document-space** hit-test, ink, recognizer dispatch, selection, manipulation, viewport | Deciding whether a point was chrome — Qt already answered |
 
-`TabletGestures` is the one place that reads raw events, and it exists for three jobs Qt handlers
+`QtInputFilter` is the one place that reads raw events, and it exists for three jobs Qt handlers
 cannot do:
 
 1. **Pen mapping.** The digitizer reports landscape coordinates for a portrait framebuffer, so every
@@ -124,17 +124,32 @@ would have to reject. The *consequence* of the pen arriving (cancel whatever the
 still QML's call, via `penNear`. Touch is otherwise **observed and passed through** — the filter
 never consumes a finger.
 
+Swallowing alone is not enough when the pen interrupts fingers that are *already down*. A handler
+holding a grab is then starved: it never sees the release, stays `active`, and keeps an exclusive
+grab that Qt only reaps much later. So on the first swallowed event of a takeover — recognised by
+`contactCount > 0`, since the count is zeroed immediately after — the filter sends the window one
+point-less `QEvent::TouchCancel` and lets it back through (`m_injectingCancel`). Qt does the rest:
+`sendTouchCancelEvent` adds every grabbed point, delivers the cancel to each grabber, and clears
+exclusive *and* passive grabs, after which "the next touch event can only be a `TouchBegin`". This is
+grab hygiene only — the canvas-side revert is `cancelHandTouch()`, driven by `penNear`, and it runs
+first, so each handler's deactivation lands on an already-idle state machine and does nothing
+(`endTwoFingerTouch` and `endFingerTouch` both no-op once the gesture is `None`). Note that
+`onCanceled` is deliberately *not* wired to `onPointerCancel()`: `canceled` also fires on ordinary
+takeovers, e.g. every time `pinch` steals the grab from `fingerDrag`, so treating it as "the user
+gave up" would fight `onSecondContact`.
+
 ## Pen: down, move, up
 
 ```mermaid
 sequenceDiagram
   participant K as evdev
-  participant F as TabletGestures
+  participant F as QtInputFilter
   participant A as DeliveryAgent
   participant H as penDrag (z 2)
   participant C as TabletCanvasItem
   K->>F: QTabletEvent raw (landscape)
-  F->>F: penNear = true → QML cancels hand touch, touch now swallowed
+  F->>F: penNear = true → QML cancels hand touch
+  F->>A: TouchCancel if fingers were live, then touch swallowed
   F-->>C: penSample(raw, tilt/rot/dist) → stashTabletSample
   F->>A: inject mapped QTabletEvent, consume raw
   A->>H: press — chrome above declined or is absent
@@ -157,7 +172,7 @@ reversal of an earlier design (gotcha 1): routing pen through QML is *not* what 
 ```mermaid
 sequenceDiagram
   participant K as evdev
-  participant F as TabletGestures
+  participant F as QtInputFilter
   participant A as DeliveryAgent
   participant B as Chrome TapHandler (z 30)
   participant T as fingerTap (z 2)
@@ -202,9 +217,10 @@ These are the ad-hoc adjustments. None is cosmetic; each is load-bearing.
 | Where | Setting | Bought |
 |---|---|---|
 | `main.cpp` | `AA_SynthesizeMouseForUnhandledTouchEvents = false`, `…TabletEvents = false` | No phantom grabs. Synthesis handed the grab to whatever plain item sat under the finger — a `Text` label — and starved the chrome handler above it |
-| `TabletGestures` | Touch observed, `return false` | Handlers still see real touch; the filter is a listener, not a gate |
-| `TabletGestures` | Touch swallowed while pen near/down | Palm rejection at the source, before arbitration can start a hand gesture |
-| `TabletGestures` | `contactCount` counted from `QTouchEvent::points()`, published as a property | A truthful contact count that no QML handler can provide, without the filter deciding what it means |
+| `QtInputFilter` | Touch observed, `return false` | Handlers still see real touch; the filter is a listener, not a gate |
+| `QtInputFilter` | Touch swallowed while pen near/down | Palm rejection at the source, before arbitration can start a hand gesture |
+| `QtInputFilter` | One point-less `TouchCancel` on takeover, when contacts were live | Handlers holding a grab deactivate instead of hanging `active` until Qt reaps them |
+| `QtInputFilter` | `contactCount` counted from `QTouchEvent::points()`, published as a property | A truthful contact count that no QML handler can provide, without the filter deciding what it means |
 | `Main.qml` | `Connections { target: Input }` | The second-contact and pen-near rules sit beside the handlers they arbitrate with, instead of inside the event filter |
 | Chrome `TapHandler` | `gesturePolicy: ReleaseWithinBounds` + `grabPermissions: CanTakeOverFromItems \| ApprovesCancellation` | Exclusive grab on press that **nothing may take** except a cancel. This refusal — not crippled permissions on the canvas side — is what protects buttons |
 | `penDrag` | `grabPermissions: ApprovesTakeOverByAnything` only | Cannot steal a grab a chrome handler already took; pen taps on chrome work |
@@ -334,11 +350,24 @@ it, so the lowest component in the stack decided a product rule ("two contacts o
 included the highest component's header in order to say it. Fixed by demoting the filter to a
 publisher: pen channels leave as a `penSample` signal wired in `main.cpp`, `penNear` and
 `contactCount` became properties on an `Input` singleton, and the rules moved to a `Connections`
-block in `Main.qml`. `epaper::input::PenSample` in `gesture/pen_sample.hpp` is the neutral type that
+block in `Main.qml`. `epaper::input::PenSample` in `input/pen_sample.hpp` is the neutral type that
 lets the include go away, and `mapPanel` moved there too, so the filter and the canvas share one
 remap instead of the filter calling the canvas to borrow it. Behaviour is unchanged by construction:
 the same three facts reach the same three methods, one hop later. *Lesson: the test for a layering
 violation is not "does it call down", it's "does it decide".*
+
+**12. Swallowed touch left grabs dangling.**
+The name `TabletGestures` had outlived the class — after entry 11 it recognised no gestures and
+touched no tablet policy — so it became `QtInputFilter` in `epaper/input/`, leaving `gesture/` to
+`ManipDrag`, which really is a gesture. The behavioural half of the same round: a takeover used to
+swallow touch silently, so a `DragHandler` or `PinchHandler` mid-gesture never learned the fingers
+were gone. It stayed `active` with an exclusive grab until Qt reaped it — and if the pen lifted while
+the fingers were still down, the resumed stream continued the old drag from a stale origin. Fixed by
+sending one point-less `TouchCancel` to the window, which is exactly the case Qt's delivery agent
+documents ("if it has no points, it's probably a `TouchCancel`") and which clears every exclusive and
+passive grab. The canvas needs no new wiring: `cancelHandTouch()` has already reset the state machine
+by then, so the resulting deactivations are no-ops. *Lesson: consuming an event is a promise to
+whoever was waiting for the rest of it.*
 
 ## Debugging this system
 

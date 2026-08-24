@@ -14,5 +14,6 @@
 --resource
 /Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/epaper_tool_icons.qrc
 /Users/howard/Project/reawa/epaper/Main.qml
+/Users/howard/Project/reawa/epaper/ResizeKnob.qml
 --json
 /Users/howard/Project/reawa/epaper/build-clangd/epaper_bin_qmllint.json

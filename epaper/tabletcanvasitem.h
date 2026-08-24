@@ -23,7 +23,7 @@
 #include "document/one_way_sync.hpp"
 #include "document/viewport_follow.hpp"
 #include "gesture/manipdrag.h"
-#include "gesture/pen_sample.hpp"
+#include "input/pen_sample.hpp"
 #include "toolchip_layout.hpp"
 
 class StrokeSync;

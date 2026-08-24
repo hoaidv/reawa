@@ -1,7 +1,7 @@
 /**
  * STORY-EP-034 / STORY-EP-036 — gadget-up vs gadget-down; do not bounce when Infini refused.
  */
-#include "usbgadget.hpp"
+#include "connectivity/usbgadget.hpp"
 
 #include <cstdio>
 #include <cstring>

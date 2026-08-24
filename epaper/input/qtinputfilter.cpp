@@ -1,4 +1,4 @@
-#include "tabletgestures.h"
+#include "qtinputfilter.h"
 
 #include <QCoreApplication>
 #include <QEvent>
@@ -13,7 +13,7 @@
 
 using epaper::input::PenSample;
 
-TabletGestures::TabletGestures(QObject *parent)
+QtInputFilter::QtInputFilter(QObject *parent)
     : QObject(parent)
 {
     m_penIdle = new QTimer(this);
@@ -25,7 +25,7 @@ TabletGestures::TabletGestures(QObject *parent)
     });
 }
 
-void TabletGestures::setPenNear(bool isNear)
+void QtInputFilter::setPenNear(bool isNear)
 {
     if (m_penNear == isNear)
         return;
@@ -33,7 +33,7 @@ void TabletGestures::setPenNear(bool isNear)
     emit penNearChanged();
 }
 
-void TabletGestures::setContacts(int live)
+void QtInputFilter::setContacts(int live)
 {
     if (m_contacts == live)
         return;
@@ -41,14 +41,14 @@ void TabletGestures::setContacts(int live)
     emit contactCountChanged();
 }
 
-void TabletGestures::notePenLeave()
+void QtInputFilter::notePenLeave()
 {
     m_penDown = false;
     m_penIdle->stop();
     setPenNear(false);
 }
 
-PenSample TabletGestures::channelsFrom(const QTabletEvent *tablet) const
+PenSample QtInputFilter::channelsFrom(const QTabletEvent *tablet) const
 {
     PenSample ch;
     ch.pressure = tablet->pressure();
@@ -77,7 +77,7 @@ PenSample TabletGestures::channelsFrom(const QTabletEvent *tablet) const
     return ch;
 }
 
-bool TabletGestures::injectMapped(QObject *watched, QWindow *w, QTabletEvent *tablet,
+bool QtInputFilter::injectMapped(QObject *watched, QWindow *w, QTabletEvent *tablet,
                                  const QPointF &mapped)
 {
     QTabletEvent mappedEv(tablet->type(), tablet->pointingDevice(), mapped,
@@ -100,7 +100,7 @@ bool TabletGestures::injectMapped(QObject *watched, QWindow *w, QTabletEvent *ta
  * filter sees every point; what a second contact *means* is decided in QML.
  * @implements [SRS-EP-24] second contact outranks a one-finger manip
  */
-void TabletGestures::noteContacts(QTouchEvent *touch)
+void QtInputFilter::noteContacts(QTouchEvent *touch)
 {
     int live = 0;
     for (const QEventPoint &p : touch->points()) {
@@ -130,7 +130,31 @@ void TabletGestures::noteContacts(QTouchEvent *touch)
     setContacts(live);
 }
 
-bool TabletGestures::remapPen(QObject *watched, QTabletEvent *tablet)
+/**
+ * Unwind live grabs the Qt way when the pen takes over. Swallowing touch
+ * mid-gesture starves whichever handler holds the grab: it never sees the
+ * release, stays active, and keeps an exclusive grab Qt only reaps later. One
+ * point-less TouchCancel makes QPointingDevicePrivate::sendTouchCancelEvent add
+ * every grabbed point, deliver to each grabber, and clear exclusive *and* passive
+ * grabs — after which "the next touch event can only be a TouchBegin".
+ * @implements [SRS-EP-21] pen near wins over hand touch
+ */
+void QtInputFilter::cancelLiveTouch(QObject *watched, const QTouchEvent *touch)
+{
+    // Nothing on the glass means nothing can be grabbed. This also limits us to one
+    // cancel per takeover: the caller zeroes the count right after.
+    if (m_contacts <= 0)
+        return;
+    auto *w = qobject_cast<QWindow *>(watched);
+    if (!w)
+        return;
+    QTouchEvent cancel(QEvent::TouchCancel, touch->pointingDevice(), touch->modifiers());
+    m_injectingCancel = true;
+    QCoreApplication::sendEvent(w, &cancel);
+    m_injectingCancel = false;
+}
+
+bool QtInputFilter::remapPen(QObject *watched, QTabletEvent *tablet)
 {
     auto *w = qobject_cast<QWindow *>(watched);
     if (!w || m_injectingMapped)
@@ -145,15 +169,19 @@ bool TabletGestures::remapPen(QObject *watched, QTabletEvent *tablet)
     return injectMapped(watched, w, tablet, mapped);
 }
 
-bool TabletGestures::eventFilter(QObject *watched, QEvent *event)
+bool QtInputFilter::eventFilter(QObject *watched, QEvent *event)
 {
     switch (event->type()) {
     case QEvent::TouchBegin:
     case QEvent::TouchUpdate:
     case QEvent::TouchEnd:
     case QEvent::TouchCancel:
+        // Our own cancel, on its way to the handlers that need to hear it.
+        if (m_injectingCancel)
+            return false;
         // @implements [SRS-EP-21] pen near wins over hand touch
         if (m_penNear || m_penDown) {
+            cancelLiveTouch(watched, static_cast<QTouchEvent *>(event));
             setContacts(0);
             return true;
         }

@@ -15,10 +15,10 @@ qt_add_executable(epaper_bin
     strokesync.cpp
     epaperbridge.cpp
     debuglog/debug_log_ship.cpp
-    usbgadget.cpp
-    usb_link.cpp
+    connectivity/usbgadget.cpp
+    connectivity/usb_link.cpp
     ui_stall.cpp
-    gesture/tabletgestures.cpp
+    input/qtinputfilter.cpp
 )
 qt_add_qml_module(epaper_bin
     URI epaper

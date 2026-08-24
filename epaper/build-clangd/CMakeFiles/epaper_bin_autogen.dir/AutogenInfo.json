@@ -7,64 +7,9 @@
 	"CMAKE_LIST_FILES" : 
 	[
 		"/Users/howard/Project/reawa/epaper/CMakeLists.txt",
-		"/opt/homebrew/share/cmake/Modules/CMakeDetermineSystem.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeSystem.cmake.in",
 		"/Users/howard/Project/reawa/epaper/build-clangd/CMakeFiles/4.4.2/CMakeSystem.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeNinjaFindMake.cmake",
 		"/opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake",
 		"/opt/homebrew/share/cmake/Modules/Platform/Darwin-Initialize.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeDetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Platform/Darwin-Determine-CXX.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeCompilerIdDetection.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/ADSP-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/ARMCC-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/ARMClang-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/AppleClang-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Clang-DetermineCompilerInternal.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Borland-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Clang-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Clang-DetermineCompilerInternal.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Compaq-CXX-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Cray-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/CrayClang-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Diab-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Embarcadero-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Fujitsu-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/FujitsuClang-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/GHS-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/GNU-CXX-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/HP-CXX-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/IAR-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/IBMClang-CXX-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Intel-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/IntelLLVM-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/LCC-CXX-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/MSVC-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/NVHPC-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/NVIDIA-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/OpenWatcom-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/OrangeC-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/PGI-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/PathScale-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/PellesC-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Renesas-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/SCO-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/SunPro-CXX-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/TI-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/TIClang-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Tasking-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/VisualAge-CXX-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/Watcom-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/XL-CXX-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/XLClang-CXX-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/zOS-CXX-DetermineCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/Compiler/IBMCPP-CXX-DetermineVersionInternal.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeCXXCompiler.cmake.in",
 		"/Users/howard/Project/reawa/epaper/build-clangd/CMakeFiles/4.4.2/CMakeCXXCompiler.cmake",
 		"/opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInformation.cmake",
 		"/opt/homebrew/share/cmake/Modules/CMakeGenericSystem.cmake",
@@ -82,27 +27,12 @@
 		"/opt/homebrew/share/cmake/Modules/Platform/Apple-Clang-CXX.cmake",
 		"/opt/homebrew/share/cmake/Modules/Platform/Apple-Clang.cmake",
 		"/opt/homebrew/share/cmake/Modules/CMakeCommonLanguageInclude.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeTestCXXCompiler.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeTestCompilerCommon.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake",
-		"/opt/homebrew/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeParseImplicitIncludeInfo.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeParseImplicitLinkInfo.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeParseLibraryArchitecture.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeTestCompilerCommon.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeCXXCompilerABI.cpp",
-		"/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerSupport.cmake",
-		"/opt/homebrew/share/cmake/Modules/Internal/FeatureTesting.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeCXXCompiler.cmake.in",
-		"/Users/howard/Project/reawa/epaper/build-clangd/CMakeFiles/4.4.2/CMakeCXXCompiler.cmake",
 		"/opt/homebrew/share/cmake/Modules/Internal/CMakeCXXLinkerInformation.cmake",
 		"/opt/homebrew/share/cmake/Modules/Internal/CMakeCommonLinkerInformation.cmake",
 		"/opt/homebrew/share/cmake/Modules/Linker/AppleClang-CXX.cmake",
 		"/opt/homebrew/share/cmake/Modules/Linker/AppleClang.cmake",
 		"/opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang-CXX.cmake",
 		"/opt/homebrew/share/cmake/Modules/Platform/Linker/Apple-AppleClang.cmake",
-		"/opt/homebrew/share/cmake/Modules/Internal/CMakeInspectCXXLinker.cmake",
-		"/opt/homebrew/share/cmake/Modules/CMakeCXXCompiler.cmake.in",
 		"/opt/homebrew/opt/qt/lib/cmake/Qt6/Qt6ConfigVersion.cmake",
 		"/opt/homebrew/opt/qt/lib/cmake/Qt6/Qt6ConfigVersionImpl.cmake",
 		"/opt/homebrew/opt/qt/lib/cmake/Qt6/Qt6Config.cmake",
@@ -1656,6 +1586,18 @@
 	"HEADERS" : 
 	[
 		[
+			"/Users/howard/Project/reawa/epaper/connectivity/usb_link.hpp",
+			"MU",
+			"3PL2EUVYPL/moc_usb_link.cpp",
+			null
+		],
+		[
+			"/Users/howard/Project/reawa/epaper/connectivity/usbgadget.hpp",
+			"MU",
+			"3PL2EUVYPL/moc_usbgadget.cpp",
+			null
+		],
+		[
 			"/Users/howard/Project/reawa/epaper/debuglog/debug_log_ship.h",
 			"MU",
 			"NAXN6ZUYD4/moc_debug_log_ship.cpp",
@@ -1668,15 +1610,15 @@
 			null
 		],
 		[
-			"/Users/howard/Project/reawa/epaper/strokesync.h",
+			"/Users/howard/Project/reawa/epaper/input/qtinputfilter.h",
 			"MU",
-			"EWIEGA46WW/moc_strokesync.cpp",
+			"RHTBEVGUKT/moc_qtinputfilter.cpp",
 			null
 		],
 		[
-			"/Users/howard/Project/reawa/epaper/tabletappfilter.h",
+			"/Users/howard/Project/reawa/epaper/strokesync.h",
 			"MU",
-			"EWIEGA46WW/moc_tabletappfilter.cpp",
+			"EWIEGA46WW/moc_strokesync.cpp",
 			null
 		],
 		[
@@ -1701,18 +1643,6 @@
 			"/Users/howard/Project/reawa/epaper/ui_stall.hpp",
 			"MU",
 			"EWIEGA46WW/moc_ui_stall.cpp",
-			null
-		],
-		[
-			"/Users/howard/Project/reawa/epaper/usb_link.hpp",
-			"MU",
-			"EWIEGA46WW/moc_usb_link.cpp",
-			null
-		],
-		[
-			"/Users/howard/Project/reawa/epaper/usbgadget.hpp",
-			"MU",
-			"EWIEGA46WW/moc_usbgadget.cpp",
 			null
 		]
 	],
@@ -1788,6 +1718,7 @@
 		"/Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/qrc_epaper_tool_icons.cpp",
 		"/Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/qrc_qmake_epaper.cpp",
 		"/Users/howard/Project/reawa/epaper/build-clangd/.rcc/qmlcache/epaper_bin_Main_qml.cpp",
+		"/Users/howard/Project/reawa/epaper/build-clangd/.rcc/qmlcache/epaper_bin_ResizeKnob_qml.cpp",
 		"/Users/howard/Project/reawa/epaper/build-clangd/.rcc/qmlcache/epaper_bin_qmlcache_loader.cpp",
 		"/Users/howard/Project/reawa/epaper/build-clangd/epaper_bin_qmltyperegistrations.cpp"
 	],
@@ -1802,20 +1733,32 @@
 	"SOURCES" : 
 	[
 		[
+			"/Users/howard/Project/reawa/epaper/connectivity/usb_link.cpp",
+			"MU",
+			null
+		],
+		[
+			"/Users/howard/Project/reawa/epaper/connectivity/usbgadget.cpp",
+			"MU",
+			null
+		],
+		[
 			"/Users/howard/Project/reawa/epaper/debuglog/debug_log_ship.cpp",
 			"MU",
 			null
 		],
 		[ "/Users/howard/Project/reawa/epaper/epaperbridge.cpp", "MU", null ],
+		[
+			"/Users/howard/Project/reawa/epaper/input/qtinputfilter.cpp",
+			"MU",
+			null
+		],
 		[ "/Users/howard/Project/reawa/epaper/main.cpp", "MU", null ],
 		[ "/Users/howard/Project/reawa/epaper/strokesync.cpp", "MU", null ],
-		[ "/Users/howard/Project/reawa/epaper/tabletappfilter.cpp", "MU", null ],
 		[ "/Users/howard/Project/reawa/epaper/tabletcanvasitem.cpp", "MU", null ],
 		[ "/Users/howard/Project/reawa/epaper/tabletwindow.cpp", "MU", null ],
 		[ "/Users/howard/Project/reawa/epaper/toolcanvasitem.cpp", "MU", null ],
-		[ "/Users/howard/Project/reawa/epaper/ui_stall.cpp", "MU", null ],
-		[ "/Users/howard/Project/reawa/epaper/usb_link.cpp", "MU", null ],
-		[ "/Users/howard/Project/reawa/epaper/usbgadget.cpp", "MU", null ]
+		[ "/Users/howard/Project/reawa/epaper/ui_stall.cpp", "MU", null ]
 	],
 	"UIC_OPTIONS" : [],
 	"UIC_SEARCH_PATHS" : [],
@@ -1825,6 +1768,7 @@
 		"/Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/qrc_epaper_tool_icons.cpp",
 		"/Users/howard/Project/reawa/epaper/build-clangd/.qt/rcc/qrc_qmake_epaper.cpp",
 		"/Users/howard/Project/reawa/epaper/build-clangd/.rcc/qmlcache/epaper_bin_Main_qml.cpp",
+		"/Users/howard/Project/reawa/epaper/build-clangd/.rcc/qmlcache/epaper_bin_ResizeKnob_qml.cpp",
 		"/Users/howard/Project/reawa/epaper/build-clangd/.rcc/qmlcache/epaper_bin_qmlcache_loader.cpp",
 		"/Users/howard/Project/reawa/epaper/build-clangd/epaper_bin_qmltyperegistrations.cpp"
 	],

@@ -25,7 +25,7 @@ class QWindow;
  * @implements [SRS-EP-09] digitizer channels on pen ingest
  * @implements [SRS-EP-21] pen-near cancels hand touch
  */
-class TabletGestures : public QObject
+class QtInputFilter : public QObject
 {
     Q_OBJECT
     /** Live contacts on the glass, 0 while the pen suppresses touch. */
@@ -34,7 +34,7 @@ class TabletGestures : public QObject
     Q_PROPERTY(bool penNear READ penNear NOTIFY penNearChanged)
 
 public:
-    explicit TabletGestures(QObject *parent = nullptr);
+    explicit QtInputFilter(QObject *parent = nullptr);
 
     int contactCount() const { return m_contacts; }
     bool penNear() const { return m_penNear; }
@@ -54,6 +54,7 @@ private:
     void setContacts(int live);
     void notePenLeave();
     void noteContacts(QTouchEvent *touch);
+    void cancelLiveTouch(QObject *watched, const QTouchEvent *touch);
     bool remapPen(QObject *watched, QTabletEvent *tablet);
     bool injectMapped(QObject *watched, QWindow *w, QTabletEvent *tablet, const QPointF &mapped);
     epaper::input::PenSample channelsFrom(const QTabletEvent *tablet) const;
@@ -61,6 +62,7 @@ private:
     bool m_penNear = false;
     bool m_penDown = false;
     bool m_injectingMapped = false;
+    bool m_injectingCancel = false;
     int m_contacts = 0;
     QTimer *m_penIdle = nullptr;
 };

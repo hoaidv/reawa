@@ -23,7 +23,7 @@ Two standing rules for this area:
 
 1. **Qt routes events; we hit-test document geometry only.** A rect containment check against a
    button is a defect.
-2. **The raw input filter publishes facts; it never issues commands.** `TabletGestures` exists for
+2. **The raw input filter publishes facts; it never issues commands.** `QtInputFilter` exists for
    the three things Qt handlers cannot do — pen coordinate mapping, rescuing tilt/rotation channels,
    and counting live contacts — and it holds no reference to the canvas. What those facts *mean* is
    decided in `Main.qml`, beside the handlers.
