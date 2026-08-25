@@ -1000,20 +1000,49 @@ void TabletCanvasItem::ensureLocalDrawingRegion()
     applyFrameIntent(m_frame.ensureLocalDrawingRegion());
 }
 
-void TabletCanvasItem::applyLocalFingerPan(const PanelPt &canvasPos)
+void TabletCanvasItem::applyFingerIntent(const epaper::fingergesture::FingerResult &r,
+                                         const PanelPt &panel)
+{
+    using epaper::fingergesture::FingerIntent;
+    using epaper::fingergesture::has;
+    if (has(r.intent, FingerIntent::ArmSelFreeform))
+        armTool(QStringLiteral("sel_freeform"));
+    if (has(r.intent, FingerIntent::BeginHandleResize))
+        tryBeginHandleAtPanel(panel, epaper::handtouch::kFingerHandleHitDu);
+    if (has(r.intent, FingerIntent::BeginSelectMove))
+        beginSelectionGesture(panel);
+    if (has(r.intent, FingerIntent::UpdateSelection))
+        updateSelectionGesture(panel);
+    if (has(r.intent, FingerIntent::ApplyCameraRegion) && r.hasRegion)
+        applyFrameIntent(m_frame.applyDrawingRegion(r.region, false));
+    if (has(r.intent, FingerIntent::PublishViewportLive))
+        maybePublishLocalViewport(false);
+    if (has(r.intent, FingerIntent::PublishViewportSettle))
+        maybePublishLocalViewport(true);
+    if (has(r.intent, FingerIntent::ScheduleRasterizeLive))
+        scheduleVectorRasterize(false);
+    if (has(r.intent, FingerIntent::ScheduleRasterizeSettle))
+        scheduleVectorRasterize(true);
+    // Clear before RefreshChrome — empty-tap deselect packs both bits.
+    if (has(r.intent, FingerIntent::ClearSelection)) {
+        clearSelection();
+        m_selection.gesture = epaper::selection::Gesture::None;
+    }
+    if (has(r.intent, FingerIntent::RefreshChrome))
+        refreshSelectionChrome();
+    if (has(r.intent, FingerIntent::EndSelectionGesture))
+        endSelectionGesture();
+    if (has(r.intent, FingerIntent::AbortManip))
+        abortFingerManip();
+    // LockUntilLift is already stored on m_finger by the machine.
+    Q_UNUSED(FingerIntent::LockUntilLift);
+}
+
+void TabletCanvasItem::worldThroughPanOrigin(const PanelPt &panel, double *wx, double *wy) const
 {
     using epaper::handtouch::mapUvToWorld;
-    using epaper::handtouch::panKeepWorldUnderFinger;
-    ensureLocalDrawingRegion();
-    // The contact is mapped through the *origin* region, not the live one.
-    const FrameUv uv = panelToFrameUv(canvasPos);
-    double nowX = 0;
-    double nowY = 0;
-    mapUvToWorld(m_fingerPanOrigin.box(), uv.u, uv.v, &nowX, &nowY);
-    applyFrameIntent(m_frame.applyDrawingRegion(
-        panKeepWorldUnderFinger(m_fingerPanOrigin.box(), m_fingerDownWorld.x, m_fingerDownWorld.y,
-                                nowX, nowY),
-        false));
+    const FrameUv uv = panelToFrameUv(panel);
+    mapUvToWorld(m_finger.panOrigin.box(), uv.u, uv.v, wx, wy);
 }
 
 void TabletCanvasItem::maybePublishLocalViewport(bool settle)
@@ -1054,121 +1083,72 @@ void TabletCanvasItem::maybePublishLocalViewport(bool settle)
 bool TabletCanvasItem::beginFingerTouch(const PanelPt &canvasPos)
 {
     using namespace epaper::handtouch;
-    if (!m_handTouchArmed)
+    using namespace epaper::fingergesture;
+    if (!m_finger.armed)
         return false;
-    m_fingerGesture = FingerGesture::None;
-    m_fingerDownPanel = canvasPos;
     const bool knob = handleIndexAtPanel(canvasPos, kFingerHandleHitDu) >= 0;
-    const HitKind hit = classifyHit(false, knob, fingerHitsBox(canvasPos));
-    const FingerAction act = actionOnDown(hit);
+    const bool box = fingerHitsBox(canvasPos);
     qInfo().noquote() << QStringLiteral("[hand] down (%1,%2) knob=%3 box=%4")
                              .arg(int(canvasPos.x()))
                              .arg(int(canvasPos.y()))
                              .arg(knob ? 1 : 0)
-                             .arg(hit == HitKind::Box ? 1 : 0);
+                             .arg(box ? 1 : 0);
 
-    if (act == FingerAction::Resize) {
-        // @implements [SRS-EP-21] knob wins over box-move
-        m_fingerGesture = FingerGesture::Resize;
-        tryBeginHandleAtPanel(canvasPos, kFingerHandleHitDu);
-        return true;
-    }
-    if (act == FingerAction::SelectMove) {
-        // @implements [SRS-EP-23] finger-down on box → sel_freeform
-        armTool(QStringLiteral("sel_freeform"));
-        m_fingerGesture = FingerGesture::Move;
-        beginSelectionGesture(canvasPos);
-        return true;
-    }
-    m_fingerGesture = FingerGesture::EmptyPending;
     ensureLocalDrawingRegion();
-    m_fingerPanOrigin = m_frame.drawingRegion;
-    m_fingerDownWorld = panelToWorld(canvasPos);
+    const FingerResult r =
+        m_finger.begin(canvasPos.x(), canvasPos.y(), knob, box, m_frame.drawingRegion,
+                       panelToWorld(canvasPos));
+    if (!r.accepted)
+        return false;
+    applyFingerIntent(r, canvasPos);
     return true;
 }
 
 void TabletCanvasItem::updateFingerTouch(const PanelPt &canvasPos, int fingerCount)
 {
-    using namespace epaper::handtouch;
-    if (m_fingerGesture == FingerGesture::None || m_fingerGesture == FingerGesture::Chip
-        || m_fingerGesture == FingerGesture::TwoFinger)
+    using namespace epaper::fingergesture;
+    if (m_finger.ignoresOneFingerUpdate())
         return;
-    if (m_fingerGesture == FingerGesture::Move || m_fingerGesture == FingerGesture::Resize) {
+    if (m_finger.isLiveManip()) {
         updateSelectionGesture(canvasPos);
         return;
     }
-    if (fingerCount >= 2)
-        return;
-    const double dx = canvasPos.x() - m_fingerDownPanel.x();
-    const double dy = canvasPos.y() - m_fingerDownPanel.y();
-    if (m_fingerGesture == FingerGesture::EmptyPending) {
-        if (actionOnEmptyMove(travelDu(dx, dy)) != FingerAction::LocalPan)
-            return;
-        // @implements [SRS-EP-21] no pan while following Infini
-        const LocalNav nav = onLocalNav(followEnum());
-        if (nav.blocked)
-            return;
-        m_fingerGesture = FingerGesture::EmptyPan;
+    double nowX = 0;
+    double nowY = 0;
+    worldThroughPanOrigin(canvasPos, &nowX, &nowY);
+    const Kind before = m_finger.gesture;
+    bool previewDue = !m_fingerPanClock.isValid()
+        || m_fingerPanClock.elapsed() >= kSelectionGhostMinIntervalMs;
+    // First frame after palm-travel promote must publish (clock was idle on pending).
+    if (before == Kind::EmptyPending)
+        previewDue = true;
+    const FingerResult r = m_finger.update(canvasPos.x(), canvasPos.y(), fingerCount, followEnum(),
+                                           previewDue, nowX, nowY);
+    if (before == Kind::EmptyPending && m_finger.gesture == Kind::EmptyPan) {
         m_fingerPanClock.invalidate();
-        // Pan origin stays at touch-down: panKeepWorldUnderFinger is the contract,
-        // so the content catches up with the finger the moment palm travel clears.
         qInfo().noquote() << QStringLiteral("[hand] pan promote at (%1,%2)")
                                  .arg(int(canvasPos.x()))
                                  .arg(int(canvasPos.y()));
     }
-    if (m_fingerGesture != FingerGesture::EmptyPan)
-        return;
-    applyLocalFingerPan(canvasPos);
-    if (!m_fingerPanClock.isValid() || m_fingerPanClock.elapsed() >= kSelectionGhostMinIntervalMs) {
+    if (has(r.intent, FingerIntent::PublishViewportLive))
         m_fingerPanClock.restart();
-        maybePublishLocalViewport(false);
-        scheduleVectorRasterize(false);
-        refreshSelectionChrome();
-    }
+    applyFingerIntent(r, canvasPos);
 }
 
 void TabletCanvasItem::endFingerTouch(const PanelPt &canvasPos)
 {
-    const FingerGesture g = m_fingerGesture;
-    m_fingerGesture = FingerGesture::None;
-    // Travel here against kPalmTravelDu (178) says whether a swipe that felt long
-    // enough to pan actually moved the centroid that far.
+    using namespace epaper::fingergesture;
+    const Kind g = m_finger.gesture;
     qInfo().noquote() << QStringLiteral("[hand] up gesture=%1 travel=%2")
                              .arg(int(g))
                              .arg(int(epaper::handtouch::travelDu(
-                                 canvasPos.x() - m_fingerDownPanel.x(),
-                                 canvasPos.y() - m_fingerDownPanel.y())));
-   
-    if (g == FingerGesture::Move || g == FingerGesture::Resize) {
-        endSelectionGesture();
-        return;
-    }
-    if (g == FingerGesture::EmptyPan) {
-        applyLocalFingerPan(canvasPos);
-        maybePublishLocalViewport(true);
-        scheduleVectorRasterize(true);
-        refreshSelectionChrome();
-        return;
-    }
-    if (g == FingerGesture::TwoFinger) {
-        applyLocalTwoFinger(m_twoA, m_twoB);
-        maybePublishLocalViewport(true);
-        scheduleVectorRasterize(true);
-        refreshSelectionChrome();
-        return;
-    }
-    if (g == FingerGesture::EmptyPending) {
-        // @implements [SRS-EP-21] empty tap deselects
-        using namespace epaper::handtouch;
-        const double dx = canvasPos.x() - m_fingerDownPanel.x();
-        const double dy = canvasPos.y() - m_fingerDownPanel.y();
-        if (emptyTapClearsSelection(travelDu(dx, dy))) {
-            clearSelection();
-            m_selection.gesture = epaper::selection::Gesture::None;
-            refreshSelectionChrome();
-        }
-        return;
-    }
+                                 canvasPos.x() - m_finger.downPanel.x,
+                                 canvasPos.y() - m_finger.downPanel.y)));
+
+    double nowX = 0;
+    double nowY = 0;
+    worldThroughPanOrigin(canvasPos, &nowX, &nowY);
+    applyFingerIntent(m_finger.end(canvasPos.x(), canvasPos.y(), nowX, nowY), canvasPos);
 }
 
 /**
@@ -1190,7 +1170,7 @@ void TabletCanvasItem::abortFingerManip()
         m_selection.gesture = epaper::selection::Gesture::None;
     }
     m_liveDirtyPrev = QRectF();
-    m_fingerGesture = FingerGesture::None;
+    m_finger.gesture = epaper::fingergesture::Kind::None;
 }
 
 epaper::handtouch::TwoFingerContacts TabletCanvasItem::uvPair(const PanelPt &a, const PanelPt &b) const
@@ -1200,63 +1180,37 @@ epaper::handtouch::TwoFingerContacts TabletCanvasItem::uvPair(const PanelPt &a, 
     return epaper::handtouch::TwoFingerContacts{ua.u, ua.v, ub.u, ub.v};
 }
 
-void TabletCanvasItem::applyLocalTwoFinger(const PanelPt &a, const PanelPt &b)
-{
-    using epaper::handtouch::applyTwoFingerPanPinch;
-    ensureLocalDrawingRegion();
-    m_twoA = a;
-    m_twoB = b;
-    applyFrameIntent(m_frame.applyDrawingRegion(
-        applyTwoFingerPanPinch(m_fingerPanOrigin.box(), m_twoOriginContacts, uvPair(a, b)), false));
-}
-
 bool TabletCanvasItem::beginTwoFingerTouch(const PanelPt &a, const PanelPt &b)
 {
-    using namespace epaper::handtouch;
-    if (m_fingerGesture == FingerGesture::Move || m_fingerGesture == FingerGesture::Resize
-        || m_fingerGesture == FingerGesture::Chip)
-        return false;
+    using namespace epaper::fingergesture;
     ensureLocalDrawingRegion();
-    // @implements [SRS-EP-24] no pinch while following Infini
-    const LocalNav nav = onLocalNav(followEnum());
-    if (nav.blocked)
+    const FingerResult r =
+        m_finger.beginTwo(a.x(), a.y(), b.x(), b.y(), m_frame.drawingRegion, uvPair(a, b),
+                          followEnum());
+    if (!r.accepted)
         return false;
-    m_fingerPanOrigin = m_frame.drawingRegion;
-    m_twoOriginContacts = uvPair(a, b);
-    m_fingerGesture = FingerGesture::TwoFinger;
     m_fingerPanClock.invalidate();
-    applyLocalTwoFinger(a, b);
-    maybePublishLocalViewport(false);
-    scheduleVectorRasterize(false);
-    refreshSelectionChrome();
+    applyFingerIntent(r);
     return true;
 }
 
 void TabletCanvasItem::updateTwoFingerTouch(const PanelPt &a, const PanelPt &b)
 {
-    if (m_fingerGesture != FingerGesture::TwoFinger)
+    using namespace epaper::fingergesture;
+    if (!m_finger.isTwoFinger())
         return;
-    applyLocalTwoFinger(a, b);
-    if (!m_fingerPanClock.isValid() || m_fingerPanClock.elapsed() >= kSelectionGhostMinIntervalMs) {
+    const bool previewDue = !m_fingerPanClock.isValid()
+        || m_fingerPanClock.elapsed() >= kSelectionGhostMinIntervalMs;
+    const FingerResult r =
+        m_finger.updateTwo(a.x(), a.y(), b.x(), b.y(), uvPair(a, b), previewDue);
+    if (previewDue && has(r.intent, FingerIntent::PublishViewportLive))
         m_fingerPanClock.restart();
-        maybePublishLocalViewport(false);
-        scheduleVectorRasterize(false);
-        refreshSelectionChrome();
-    }
+    applyFingerIntent(r);
 }
 
 void TabletCanvasItem::endTwoFingerTouch()
 {
-    if (m_fingerGesture != FingerGesture::TwoFinger)
-        return;
-    m_fingerGesture = FingerGesture::None;
-    // The finger still on glass would otherwise re-arm as a fresh one-finger
-    // gesture the moment the pinch handler lets go of it.
-    m_fingerLockedUntilLift = true;
-    applyLocalTwoFinger(m_twoA, m_twoB);
-    maybePublishLocalViewport(true);
-    scheduleVectorRasterize(true);
-    refreshSelectionChrome();
+    applyFingerIntent(m_finger.endTwo());
 }
 
 void TabletCanvasItem::toggleDebugLog()
@@ -1275,27 +1229,23 @@ void TabletCanvasItem::toggleDebugLog()
 void TabletCanvasItem::toggleHandTouch()
 {
     // @implements [SRS-EP-22] btn.hand_touch kill-switch
-    m_handTouchArmed = !m_handTouchArmed;
-    if (!m_handTouchArmed)
+    m_finger.setArmed(!m_finger.armed);
+    if (!m_finger.armed)
         cancelHandTouch();
     emit handTouchArmedChanged();
-    qInfo().noquote() << (m_handTouchArmed ? QStringLiteral("[hand] toggle on")
-                                           : QStringLiteral("[hand] toggle off"));
+    qInfo().noquote() << (m_finger.armed ? QStringLiteral("[hand] toggle on")
+                                         : QStringLiteral("[hand] toggle off"));
 }
 
 void TabletCanvasItem::cancelHandTouch()
 {
     // Full hand-touch reset, lock included: whoever cancels must not have to know
     // that a lifted-contact latch exists.
-    m_fingerLockedUntilLift = false;
-    if (m_fingerGesture == FingerGesture::TwoFinger) {
-        endTwoFingerTouch(); // settles the viewport it was already panning
+    if (m_finger.isTwoFinger()) {
+        endTwoFingerTouch(); // settles the viewport; leaves lock-until-lift set
         return;
     }
-    const FingerGesture g = m_fingerGesture;
-    m_fingerGesture = FingerGesture::None;
-    if (g == FingerGesture::Move || g == FingerGesture::Resize || m_manip.active)
-        endSelectionGesture();
+    applyFingerIntent(m_finger.cancel(m_manip.active));
 }
 
 void TabletCanvasItem::requestUndo()
@@ -1675,7 +1625,7 @@ void TabletCanvasItem::beginHandleDrag(int handleIndex, WorldPt world)
         showManipUnavailable(wb);
         return;
     }
-    m_fingerGesture = FingerGesture::Resize;
+    m_finger.gesture = epaper::fingergesture::Kind::Resize;
     startLiveManip(selected, handle, world);
 }
 
@@ -1742,14 +1692,14 @@ void TabletCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen
         ingestMappedTablet(QEvent::TabletPress, panel, raw, ch);
         return;
     }
-    if (m_fingerLockedUntilLift)
+    if (m_finger.lockedUntilLift)
         return;
     beginFingerTouch(panel);
 }
 
 void TabletCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen)
 {
-    if (m_fingerGesture == FingerGesture::TwoFinger)
+    if (m_finger.isTwoFinger())
         return;
     const PanelPt panel(x, y);
     if (pen) {
@@ -1773,11 +1723,11 @@ void TabletCanvasItem::onPointerEnd(qreal x, qreal y, bool pen)
         return;
     }
     // PinchHandler owns two-finger; the one-finger handler deactivates on takeover.
-    if (m_fingerGesture == FingerGesture::TwoFinger)
+    if (m_finger.isTwoFinger())
         return;
     // Cleared by the contact counter, not here: a finger still on glass after a
     // pinch must not re-arm just because the drag handler cycled.
-    if (m_fingerLockedUntilLift)
+    if (m_finger.lockedUntilLift)
         return;
     endFingerTouch(panel);
 }
@@ -1789,7 +1739,7 @@ void TabletCanvasItem::onPointerEnd(qreal x, qreal y, bool pen)
  */
 void TabletCanvasItem::onFingerTap(qreal x, qreal y)
 {
-    if (m_fingerLockedUntilLift)
+    if (m_finger.lockedUntilLift)
         return;
     const PanelPt panel(x, y);
     beginFingerTouch(panel);
@@ -1804,7 +1754,7 @@ void TabletCanvasItem::onPointerCancel()
         endSelectionGesture();
     cancelHandTouch();
     m_stashValid = false;
-    m_fingerLockedUntilLift = false;
+    m_finger.lockedUntilLift = false;
 }
 
 /**
@@ -1814,19 +1764,14 @@ void TabletCanvasItem::onPointerCancel()
  */
 void TabletCanvasItem::onSecondContact()
 {
-    const bool manip = m_fingerGesture == FingerGesture::Move
-        || m_fingerGesture == FingerGesture::Resize || m_manip.active;
-    if (manip)
-        abortFingerManip();
-    if (m_fingerGesture != FingerGesture::TwoFinger)
-        m_fingerGesture = FingerGesture::None;
-    m_fingerLockedUntilLift = true;
+    const bool manip = m_finger.isLiveManip() || m_manip.active;
+    applyFingerIntent(m_finger.secondContact(m_manip.active));
     qInfo().noquote() << QStringLiteral("[hand] second contact manip=%1").arg(manip ? 1 : 0);
 }
 
 void TabletCanvasItem::onContactsCleared()
 {
-    m_fingerLockedUntilLift = false;
+    m_finger.contactsCleared();
 }
 
 void TabletCanvasItem::onPinchStart(qreal x, qreal y, qreal scale)
@@ -1834,14 +1779,13 @@ void TabletCanvasItem::onPinchStart(qreal x, qreal y, qreal scale)
     // Two fingers are always navigation, whatever sits under them: the one-finger
     // handler owns the first contact and may already have grabbed a node.
     // @implements [SRS-EP-24] PinchHandler two-finger pan pinch
-    if (!m_handTouchArmed || m_fingerGesture == FingerGesture::Chip) {
+    if (!m_finger.armed || m_finger.gesture == epaper::fingergesture::Kind::Chip) {
         m_pinchIgnore = true;
         return;
     }
-    if (m_fingerGesture == FingerGesture::Move || m_fingerGesture == FingerGesture::Resize
-        || m_manip.active)
+    if (m_finger.isLiveManip() || m_manip.active)
         abortFingerManip();
-    m_fingerGesture = FingerGesture::None;
+    m_finger.clearGestureForPinch();
     m_pinchArm = 80.0;
     m_pinchScale0 = scale > 0.01 ? scale : 1.0;
     m_pinchIgnore = !beginTwoFingerTouch(pinchArmPoint(x, y, scale, true),

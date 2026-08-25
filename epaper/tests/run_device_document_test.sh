@@ -45,3 +45,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/selection_session_test.cpp -o /tmp/se
 /tmp/selection_session_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/manip_session_test.cpp -o /tmp/manip_session_test
 /tmp/manip_session_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/finger_gesture_machine_test.cpp -o /tmp/finger_gesture_machine_test
+/tmp/finger_gesture_machine_test

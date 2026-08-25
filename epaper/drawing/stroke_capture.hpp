@@ -12,8 +12,6 @@
 #include "ingest_origin_guard.hpp"
 
 #include <algorithm>
-#include <cmath>
-#include <cstdint>
 #include <string>
 #include <vector>
 

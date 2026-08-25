@@ -22,6 +22,7 @@
 #include "document/manipulate.hpp"
 #include "document/one_way_sync.hpp"
 #include "document/viewport_follow.hpp"
+#include "finger_gesture_machine.hpp"
 #include "input/pen_sample.hpp"
 #include "manip_session.hpp"
 #include "primary_toolbar.hpp"
@@ -425,8 +426,6 @@ private:
     RawPt m_stashRaw;
     bool m_stashValid = false;
 
-    bool m_fingerLockedUntilLift = false;
-
     bool m_pinchIgnore = false;
     qreal m_pinchArm = 80.0;
     qreal m_pinchScale0 = 1.0;
@@ -434,19 +433,21 @@ private:
 /**
  * =================================================================================================
  * Hand touch
- * 
- * Cycles: 
- *      beginFingerTouch → updateFingerTouch → endFingerTouch; 
- *      beginTwoFingerTouch → updateTwoFingerTouch → endTwoFingerTouch; 
+ *
+ * Owns m_finger (FingerGestureMachine). Mutators return FingerIntent;
+ * applyFingerIntent() alone performs Qt/document/camera effects.
+ *
+ * Cycles:
+ *      beginFingerTouch → updateFingerTouch → endFingerTouch;
+ *      beginTwoFingerTouch → updateTwoFingerTouch → endTwoFingerTouch;
  *      cancelHandTouch as the escape hatch
  * =================================================================================================
  */
 
 public:
-    bool handTouchArmed() const { return m_handTouchArmed; }
+    bool handTouchArmed() const { return m_finger.armed; }
     Q_INVOKABLE void toggleHandTouch();
     Q_INVOKABLE void cancelHandTouch();
-
 
     /**
      * Capacitive one-finger path (STORY-EP-038). Knob / box / empty palm vs pan.
@@ -468,26 +469,16 @@ public:
 signals:
     void handTouchArmedChanged();
 
-
 private:
-
-    enum class FingerGesture { 
-        None, Chip, Move, Resize, EmptyPending, EmptyPan, TwoFinger 
-    } m_fingerGesture = FingerGesture::None;
-
+    void applyFingerIntent(const epaper::fingergesture::FingerResult &r,
+                           const PanelPt &panel = PanelPt());
     bool fingerHitsBox(const PanelPt &canvasPos) const;
-    void applyLocalFingerPan(const PanelPt &canvasPos);
-    void applyLocalTwoFinger(const PanelPt &a, const PanelPt &b);
     epaper::handtouch::TwoFingerContacts uvPair(const PanelPt &a, const PanelPt &b) const;
+    /** Contact mapped through pan-origin region (one-finger pan contract). */
+    void worldThroughPanOrigin(const PanelPt &panel, double *wx, double *wy) const;
 
-    bool m_handTouchArmed = true;
-    PanelPt m_fingerDownPanel;
-    WorldPt m_fingerDownWorld;
-    WorldAabb m_fingerPanOrigin;
+    epaper::fingergesture::FingerGestureMachine m_finger;
     QElapsedTimer m_fingerPanClock;
-    PanelPt m_twoA;
-    PanelPt m_twoB;
-    epaper::handtouch::TwoFingerContacts m_twoOriginContacts{};
 
     Q_PROPERTY(bool handTouchArmed READ handTouchArmed NOTIFY handTouchArmedChanged)
 
