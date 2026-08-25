@@ -62,11 +62,42 @@ public:
     /** Digitizer channels reported on this sample (SRS-EP-09). Unset = not reported. */
     using IngestChannels = epaper::input::PenSample;
 
+    /**
+     * Coordinate spaces.
+     *
+     * Panel is Qt's own space (canvas item pixels), so it stays a plain QPointF and
+     * drops straight into QPainter, QRectF and QLineF; the alias is documentation
+     * only and enforces nothing on its own. World and raw are distinct types, which
+     * is what does the enforcing: neither converts to QPointF implicitly, so a bare
+     * QPointF is panel by construction and the other two cannot leak into it.
+     */
+    using PanelPt = QPointF;
+
+    /** Document world position. Fields, to match SmartBounds/InkSample in document/. */
+    struct WorldPt {
+        double x = 0;
+        double y = 0;
+
+        /**
+         * Explicit hatch for modules that still carry world points as QPointF
+         * (gesture/manipdrag). Greppable on purpose — each use is a place the
+         * space stops being checked.
+         */
+        QPointF q() const { return {x, y}; }
+        static WorldPt from(const QPointF &p) { return {p.x(), p.y()}; }
+    };
+
+    /** Digitizer position, before mapPanel() rotates it into panel space. */
+    struct RawPt {
+        qreal x = 0;
+        qreal y = 0;
+    };
+
 private:
     struct Point {
-        QPointF pos;
+        PanelPt pos;
         qreal pressure;
-        QPointF raw;
+        RawPt raw;
         bool hasTilt = false;
         qreal tiltX = 0;
         qreal tiltY = 0;
@@ -80,12 +111,37 @@ private:
         qreal tangential = 0;
     };
 
+    /** Camera region in world space, plus "has the camera been established yet". */
     struct WorldAabb {
         double minX = 0;
         double minY = 0;
         double maxX = 0;
         double maxY = 0;
         bool valid = false;
+
+        bool nonEmpty() const { return maxX > minX && maxY > minY; }
+
+        /**
+         * Geometry alone, for the pure hand-touch helpers — those carry no validity
+         * flag. Named both ways so no caller hand-rolls a positional 4-double init.
+         * setBox() marks the camera established; override valid after it when the
+         * geometry is only conditionally trustworthy.
+         */
+        epaper::handtouch::WorldAabb box() const { return {minX, minY, maxX, maxY}; }
+        void setBox(const epaper::handtouch::WorldAabb &b)
+        {
+            minX = b.minX;
+            minY = b.minY;
+            maxX = b.maxX;
+            maxY = b.maxY;
+            valid = true;
+        }
+    };
+
+    /** Normalized 0..1 position inside the sync frame, with orientation applied. */
+    struct FrameUv {
+        double u = 0;
+        double v = 0;
     };
 
 /**
@@ -112,10 +168,11 @@ private:
  */
 
 public:
-    QPointF mapInputToCanvas(const QPointF &raw) const;
+    /** Digitizer → panel. Distinct types, so the mapped point cannot be remapped. */
+    PanelPt mapInputToCanvas(RawPt raw) const;
 
     /** Panel (canvas item) → document world. */
-    Q_INVOKABLE QPointF panelToWorld(const QPointF &panel) const;
+    WorldPt panelToWorld(const PanelPt &panel) const;
 
 protected:
 private:
@@ -123,9 +180,16 @@ private:
     bool orientationLandscape() const;
     bool orientationInvertX() const;
     bool orientationInvertY() const;
-    void panelToFrameUv(double localX, double localY, double *u, double *v) const;
-    void frameUvToPanel(double u, double v, double *x, double *y) const;
-    QPointF worldToPanel(double wx, double wy) const;
+    /** Panel ⇄ frame-uv. Distinct types both ways: the two are not interchangeable. */
+    FrameUv panelToFrameUv(const PanelPt &panel) const;
+    PanelPt frameUvToPanel(FrameUv uv) const;
+    /**
+     * Loose doubles, because nearly every caller feeds fields straight out of a
+     * DocNode or SmartBounds and never holds a WorldPt. The overload is for those
+     * that do.
+     */
+    PanelPt worldToPanel(double wx, double wy) const;
+    PanelPt worldToPanel(WorldPt w) const { return worldToPanel(w.x, w.y); }
     double panelScale() const;
     QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const;
     bool viewportZoomedOut() const;
@@ -210,11 +274,15 @@ public:
     int strokeCount() const { return m_strokeCount; }
     QPointF lastPoint() const { return m_lastPoint; }
 
+    /**
+     * @p pos is raw, not panel — it is QPointF because Q_INVOKABLE marshals through
+     * moc, which cannot carry RawPt. Converted on entry.
+     */
     Q_INVOKABLE void ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure);
     void ingestPoint(QEvent::Type type, const QPointF &pos, const IngestChannels &ch);
 
-    void ingestMappedTablet(QEvent::Type type, const QPointF &canvasPos,
-        const QPointF &rawPos, const IngestChannels &ch);
+    void ingestMappedTablet(QEvent::Type type, const PanelPt &canvasPos, RawPt rawPos,
+        const IngestChannels &ch);
         
     std::string ingestDumpText() const;
 
@@ -222,10 +290,10 @@ signals:
     void strokeCountChanged();
 
 private:
-    Point makePoint(const QPointF &canvasPos, const IngestChannels &ch) const;
-    void applyContactPress(const QPointF &canvasPos, const IngestChannels &ch);
-    void beginStroke(const QPointF &canvasPos, const IngestChannels &ch);
-    void appendPoint(const QPointF &canvasPos, const IngestChannels &ch);
+    Point makePoint(const PanelPt &canvasPos, const IngestChannels &ch) const;
+    void applyContactPress(const PanelPt &canvasPos, const IngestChannels &ch);
+    void beginStroke(const PanelPt &canvasPos, const IngestChannels &ch);
+    void appendPoint(const PanelPt &canvasPos, const IngestChannels &ch);
     void endStroke();
     void ingestCurrentStroke();
     qreal worldStrokeWidth(qreal pressure) const;
@@ -238,8 +306,8 @@ private:
     QString m_activeStrokeId;
     int m_strokeSeq = 0;
     int m_strokeCount = 0;
-    QPointF m_lastPoint;
-    QPointF m_lastRaw;
+    PanelPt m_lastPoint;
+    RawPt m_lastRaw;
     qreal m_activeWorldStrokeWidth = 2.5;
     /** @fix [STORY-EP-033] wait for a non-origin sample after a stale Press. */
     bool m_awaitingPlausiblePress = false;
@@ -375,6 +443,11 @@ private:
  */
 
 public:
+    /**
+     * Slot bound to QtInputFilter::penSample, so the parameter is the signal's
+     * QPointF; it is raw, and converted at the boundary rather than in input/,
+     * which must not depend on a type nested in this class.
+     */
     void stashTabletSample(const QPointF &raw, const IngestChannels &ch);
      
     /**
@@ -396,17 +469,17 @@ public:
     Q_INVOKABLE void onPinchEnd();
 
 private:
-    QPointF pinchArmPoint(qreal x, qreal y, qreal scale, bool positive) const;
+    PanelPt pinchArmPoint(qreal x, qreal y, qreal scale, bool positive) const;
 
     /**
      * Channels for this contact: the stashed QTabletEvent sample when one is valid,
      * otherwise bare defaults. Writes the matching raw point through @p raw.
      */
-    IngestChannels stashedChannels(const QPointF &panel, QPointF *raw) const;
+    IngestChannels stashedChannels(const PanelPt &panel, RawPt *raw) const;
 
     /** Last QTabletEvent sample — PointHandler only exposes pressure. */
     IngestChannels m_stashTablet;
-    QPointF m_stashRaw;
+    RawPt m_stashRaw;
     bool m_stashValid = false;
 
     bool m_fingerLockedUntilLift = false;
@@ -436,17 +509,17 @@ public:
      * Capacitive one-finger path (STORY-EP-038). Knob / box / empty palm vs pan.
      * @implements [SRS-EP-21] one-finger canvas hit
      */
-    bool beginFingerTouch(const QPointF &canvasPos);
-    void updateFingerTouch(const QPointF &canvasPos, int fingerCount);
-    void endFingerTouch(const QPointF &canvasPos);
+    bool beginFingerTouch(const PanelPt &canvasPos);
+    void updateFingerTouch(const PanelPt &canvasPos, int fingerCount);
+    void endFingerTouch(const PanelPt &canvasPos);
 
     /**
      * Two-finger local pan/pinch (STORY-EP-039). A one-finger manip already in
      * flight is reverted, not blocking: two contacts always mean navigate.
      * @implements [SRS-EP-24] two-finger canvas pan pinch
      */
-    bool beginTwoFingerTouch(const QPointF &a, const QPointF &b);
-    void updateTwoFingerTouch(const QPointF &a, const QPointF &b);
+    bool beginTwoFingerTouch(const PanelPt &a, const PanelPt &b);
+    void updateTwoFingerTouch(const PanelPt &a, const PanelPt &b);
     void endTwoFingerTouch();
 
 signals:
@@ -459,18 +532,18 @@ private:
         None, Chip, Move, Resize, EmptyPending, EmptyPan, TwoFinger 
     } m_fingerGesture = FingerGesture::None;
 
-    bool fingerHitsBox(const QPointF &canvasPos) const;
-    void applyLocalFingerPan(const QPointF &canvasPos);
-    void applyLocalTwoFinger(const QPointF &a, const QPointF &b);
-    epaper::handtouch::TwoFingerContacts uvPair(const QPointF &a, const QPointF &b) const;
+    bool fingerHitsBox(const PanelPt &canvasPos) const;
+    void applyLocalFingerPan(const PanelPt &canvasPos);
+    void applyLocalTwoFinger(const PanelPt &a, const PanelPt &b);
+    epaper::handtouch::TwoFingerContacts uvPair(const PanelPt &a, const PanelPt &b) const;
 
     bool m_handTouchArmed = true;
-    QPointF m_fingerDownPanel;
-    QPointF m_fingerDownWorld;
+    PanelPt m_fingerDownPanel;
+    WorldPt m_fingerDownWorld;
     WorldAabb m_fingerPanOrigin;
     QElapsedTimer m_fingerPanClock;
-    QPointF m_twoA;
-    QPointF m_twoB;
+    PanelPt m_twoA;
+    PanelPt m_twoB;
     epaper::handtouch::TwoFingerContacts m_twoOriginContacts{};
 
     Q_PROPERTY(bool handTouchArmed READ handTouchArmed NOTIFY handTouchArmedChanged)
@@ -493,7 +566,7 @@ public:
     void abortFingerManip();
 
     /** @implements [SRS-EP-11] handle drag in world space */
-    void beginHandleDrag(int handleIndex, const QPointF &world);
+    void beginHandleDrag(int handleIndex, WorldPt world);
 
     Q_INVOKABLE void tapModeChip();
 
@@ -507,7 +580,7 @@ private:
 
     /** Rest-pose connector polylines in panel space — CanvasLayer origin hole (stroke, not AABB). */
     struct OriginConnStroke {
-        QVector<QPointF> panel;
+        QVector<PanelPt> panel;
         qreal width = 4;
     };
 
@@ -519,28 +592,28 @@ private:
     /** Replace the selection; the first id becomes the pickable. Leaves m_drag alone. */
     void setSelection(const std::vector<std::string> &ids);
 
-    QString hitLocalSmartGroup(const QPointF &world) const;
+    QString hitLocalSmartGroup(WorldPt world) const;
 
     // Cycle A
-    void beginSelectionGesture(const QPointF &canvasPos);
-    void updateSelectionGesture(const QPointF &canvasPos);
+    void beginSelectionGesture(const PanelPt &canvasPos);
+    void updateSelectionGesture(const PanelPt &canvasPos);
     void endSelectionGesture();
 
     // Cycle B
-    void beginMarqueeOrLasso(const QPointF &canvasPos);
+    void beginMarqueeOrLasso(const PanelPt &canvasPos);
     void finishMarqueeOrLasso();
 
     // Cycle C
     void startLiveManip(const epaper::document::DocNode *subject,
-        epaper::document::ResizeHandle handle, const QPointF &world);
-    void applyDragWorld(const QPointF &world);
+        epaper::document::ResizeHandle handle, WorldPt world);
+    void applyDragWorld(WorldPt world);
     void redrawLiveManipRegion();
     void commitLiveManip();
     // void abortFingerManip() is public
 
     // Cycle D
-    int handleIndexAtPanel(const QPointF &panel, double hitDu) const;
-    bool tryBeginHandleAtPanel(const QPointF &panel, double hitDu);
+    int handleIndexAtPanel(const PanelPt &panel, double hitDu) const;
+    bool tryBeginHandleAtPanel(const PanelPt &panel, double hitDu);
     // void beginHandleDrag(...) is public
 
     void captureOriginConnectorPunches(const std::string &sgId);
@@ -551,9 +624,9 @@ private:
     SelGesture m_selGesture = SelGesture::None;
     QStringList m_selectedIds;
     QString m_selectedPickableId;
-    QVector<QPointF> m_lassoPanel;
-    QPointF m_marqueeStartPanel;
-    QPointF m_marqueeEndPanel;
+    QVector<PanelPt> m_lassoPanel;
+    PanelPt m_marqueeStartPanel;
+    PanelPt m_marqueeEndPanel;
     
     epaper::gesture::ManipDrag m_drag;
     QRectF m_liveDirtyPrev;
