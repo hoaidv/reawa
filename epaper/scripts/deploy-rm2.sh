@@ -29,9 +29,10 @@ Options:
   -h, --help  Show this help
 
 Env:
-  RM_HOST          default root@10.11.99.1
-  RM_SSH_KEY       path to device SSH private key
-  RM_REMOTE_PATH   default /home/root/epaper
+  RM_HOST              default root@10.11.99.1
+  RM_SSH_KEY           path to device SSH private key
+  RM_SSH_KNOWN_HOSTS   per-machine host-key file (default ~/.ssh/reawa_rm_known_hosts)
+  RM_REMOTE_PATH       default /home/root/epaper
 
 App env forwarded to the device when set locally:
   RM_SYNC_HOST     macOS USB IP for stroke sync + debug (e.g. 10.11.99.12).
@@ -67,12 +68,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# @fix [STORY-EP-034] SSH client keepalives — detect dead path without unplug
+# @implements [SRS-RW-10] Per-machine known_hosts — learn 10.11.99.1 once; no /dev/null spam
+# @implements [STORY-EP-034] SSH client keepalives — detect dead path without unplug
+KNOWN_HOSTS="${RM_SSH_KNOWN_HOSTS:-$HOME/.ssh/reawa_rm_known_hosts}"
+mkdir -p "$(dirname "$KNOWN_HOSTS")"
+: >>"$KNOWN_HOSTS"
+
 SSH_OPTS=(
   -i "$KEY"
-  -o StrictHostKeyChecking=no
-  -o UserKnownHostsFile=/dev/null
+  -o StrictHostKeyChecking=accept-new
+  -o UserKnownHostsFile="$KNOWN_HOSTS"
   -o GlobalKnownHostsFile=/dev/null
+  -o LogLevel=ERROR
   -o ConnectTimeout=8
   -o ServerAliveInterval=15
   -o ServerAliveCountMax=4

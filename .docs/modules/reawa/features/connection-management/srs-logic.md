@@ -48,8 +48,9 @@ JSON uses snake_case keys: `region_x`, `snapped_window_ref`, etc. RM2 aspect: `2
 - `ensureKeyPair(...)`: 3072-bit RSA via `/usr/bin/ssh-keygen`.
 - `setupKey(...)`: temporary `SSH_ASKPASS` helper **appends** this machine's public key to device `authorized_keys` if the exact line is absent. It must not truncate, rewrite, or replace the file — several Macs may share one RM2.
 - After first successful setup, subsequent connects use key only.
-- USB Ethernet always uses `10.11.99.1`; host-key checks against a shared `known_hosts` are not reliable across machines or tablet reinstalls. Clients use `StrictHostKeyChecking=no` and `UserKnownHostsFile=/dev/null` (key auth still required).
-- Epaper deploy (`epaper/scripts/deploy-rm2.sh`) resolves `RM_SSH_KEY` or any `~/Library/Application Support/Reawa/keys/*/id_rsa`, then appends that key's `.pub` the same way.
+- USB Ethernet always uses `10.11.99.1`. Do not share one `known_hosts` across developer machines or tablet reinstalls — each client keeps its own store. Key auth is still required.
+- Epaper deploy (`epaper/scripts/deploy-rm2.sh`): `StrictHostKeyChecking=accept-new` and `UserKnownHostsFile` → `RM_SSH_KNOWN_HOSTS` (default `~/.ssh/reawa_rm_known_hosts`), isolated from the global known_hosts file. After the tablet host key is learned once, OpenSSH must not re-print “Permanently added” on every hop. On host-key rotation (reflash), delete that file’s `10.11.99.1` line (or the file) and reconnect. Resolves `RM_SSH_KEY` or any `~/Library/Application Support/Reawa/keys/*/id_rsa`, then appends that key's `.pub` the same way (append-only `authorized_keys`).
+- Reawa app clients that cannot yet use a dedicated known_hosts file may still use `StrictHostKeyChecking=no` with `UserKnownHostsFile=/dev/null` for non-interactive first connect.
 
 ## [SRS-RW-11] Single active connection
 

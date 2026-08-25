@@ -37,6 +37,8 @@ See [TOOLCHAIN.md](TOOLCHAIN.md) for SDK installer setup.
 Deploy picks a working key under `~/Library/Application Support/Reawa/keys/*/id_rsa`
 (or `RM_SSH_KEY`). It **appends** this Mac's `.pub` to the tablet `authorized_keys`
 and never replaces that file, so other machines keep access ([SRS-RW-10]).
+Host keys go in `~/.ssh/reawa_rm_known_hosts` (or `RM_SSH_KNOWN_HOSTS`) so SSH does not
+re-learn `10.11.99.1` on every hop. After a tablet reflash, remove that entry and redeploy.
 
 Optional env, forwarded to the device by `deploy-rm2.sh` when set locally:
 
