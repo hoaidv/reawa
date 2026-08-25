@@ -722,8 +722,8 @@ void ToolCanvasItem::applyFingerIntent(const epaper::fingergesture::FingerResult
 {
     using epaper::fingergesture::FingerIntent;
     using epaper::fingergesture::has;
-    if (has(r.intent, FingerIntent::ArmSelFreeform))
-        m_surface->armTool(QStringLiteral("sel_freeform"));
+    if (has(r.intent, FingerIntent::ArmSelFreeform) && m_session)
+        m_session->setExclusiveTool(QStringLiteral("sel_freeform"));
     if (has(r.intent, FingerIntent::BeginHandleResize))
         tryBeginHandleAtPanel(panel, epaper::handtouch::kFingerHandleHitDu);
     if (has(r.intent, FingerIntent::BeginSelectMove))
@@ -883,8 +883,8 @@ void ToolCanvasItem::applyManipIntent(const epaper::manip::ManipResult &r, bool 
     if (has(r.intent, ManipIntent::RefreshAllConnectors)
         && has(r.intent, ManipIntent::CommitTransform))
         refreshAllConnectorWarps(doc());
-    if (has(r.intent, ManipIntent::ScheduleRasterize))
-        m_surface->scheduleDocumentRasterize(true);
+    if (has(r.intent, ManipIntent::ScheduleRasterize) && m_session)
+        m_session->noteDocumentMutated();
     if (has(r.intent, ManipIntent::UpdatePunch)) {
         const QRectF punch =
             m_originPanelRect.united(m_selectionChromeDirty).united(m_originConnPunch);
@@ -957,7 +957,8 @@ void ToolCanvasItem::encloseSelection()
     m_encloseRefuseReason.clear();
     m_selection.gesture = epaper::selection::Gesture::None;
     refreshSelectionChrome();
-    m_surface->scheduleDocumentRasterize(true);
+    if (m_session)
+        m_session->noteDocumentMutated();
     m_surface->notifyHistory();
     m_surface->flushWire();
 }
@@ -1058,7 +1059,8 @@ void ToolCanvasItem::tapModeChip()
     static int seq = 0;
     doc().commitOp(makeSetInkScaleModeOp(std::string("ism-") + std::to_string(++seq),
                                               selected->id, next));
-    m_surface->scheduleDocumentRasterize(true);
+    if (m_session)
+        m_session->noteDocumentMutated();
     refreshSelectionChrome();
     m_surface->notifyHistory();
     m_surface->flushWire();

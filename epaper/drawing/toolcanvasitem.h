@@ -96,8 +96,9 @@ protected:
  * =================================================================================================
  * Interaction API for TabletCanvas
  *
- * Session/surface wiring plus actions Tablet must request (selection clear, cancel, punch snapshot).
- * Doc/camera refresh: listen to CanvasSession NOTIFY — not Tablet calling onDocumentMutated().
+ * Session/surface wiring plus actions Tablet must request (selection clear, cancel, punch).
+ * Doc/camera refresh: listen to CanvasSession NOTIFY — not Tablet calling onDocumentOrCameraChanged.
+ * Selection gestures stay private; only Tool routes pen/finger into them.
  * =================================================================================================
  */
 
@@ -109,22 +110,18 @@ public:
     TabletCanvasItem *surface() const { return m_surface; }
 
     void clearSelection();
-    void cancelInteraction();
+    Q_INVOKABLE void cancelInteraction();
     bool liveManipActive() const;
-    OriginPunchSnapshot originPunch() const;
 
-    void onDocumentOrCameraChanged();
-    bool selectionGestureActive() const { return m_selection.active(); }
-    bool selectionToolArmed() const { return isSelectionTool(); }
-    void beginSelectionGesture(const PanelPt &canvasPos);
-    void updateSelectionGesture(const PanelPt &canvasPos);
-    void endSelectionGesture();
-    bool tryBeginHandleAtPanel(const PanelPt &panel, double hitDu);
+    // TODO Need other approach to hide the manipulating document node
+    OriginPunchSnapshot originPunch() const;
 
 signals:
     void surfaceChanged();
 
 private:
+    void onDocumentOrCameraChanged();
+
     QString exclusiveTool() const;
     epaper::document::DeviceDocument &doc();
     const epaper::document::DeviceDocument &doc() const;
@@ -263,12 +260,19 @@ signals:
 
 private:
     bool isSelectionTool() const;
+    bool selectionToolArmed() const { return isSelectionTool(); }
+    bool selectionGestureActive() const { return m_selection.active(); }
     void setSelection(const std::vector<std::string> &ids);
 
     QString hitLocalSmartGroup(WorldPt world) const;
 
     void applySelectionIntent(const epaper::selection::SelectionResult &r);
     void applyManipIntent(const epaper::manip::ManipResult &r, bool restoreOrigin = false);
+
+    void beginSelectionGesture(const PanelPt &canvasPos);
+    void updateSelectionGesture(const PanelPt &canvasPos);
+    void endSelectionGesture();
+    bool tryBeginHandleAtPanel(const PanelPt &panel, double hitDu);
 
     void beginMarqueeOrLasso(const PanelPt &canvasPos);
     void finishMarqueeOrLasso();

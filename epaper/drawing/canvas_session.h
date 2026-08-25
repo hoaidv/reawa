@@ -43,6 +43,8 @@ public:
 
     void applyCamera(const epaper::handtouch::WorldAabb &region, bool markValid);
     void noteDocumentMutated();
+    /** Emit cameraChanged when frame was mutated outside applyCamera (e.g. applyFrameIntent). */
+    void noteCameraChanged();
     void setFollowDirection(const QString &id);
     void syncFollowDirectionFromSession();
 

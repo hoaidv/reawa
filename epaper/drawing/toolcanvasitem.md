@@ -124,7 +124,7 @@ Stylus with `sel_rect` / `sel_freeform`. Handled entirely on Tool — no Tablet 
 Capacitive tap with hand-touch armed:
 
 `onFingerTap` (or short drag) → `beginFingerTouch` / `endFingerTouch` →
-`FingerGestureMachine` → `applyFingerIntent` → may `armTool(sel_freeform)`,
+`FingerGestureMachine` → `applyFingerIntent` → may `setExclusiveTool(sel_freeform)`,
 `beginSelectionGesture`, `clearSelection`, `refreshSelectionChrome`.
 
 ### Finger move / resize / marquee
@@ -145,8 +145,8 @@ Release: `endFingerTouch` → settle pan or `endSelectionGesture`.
 `applyCameraRegion`. Aborts one-finger manip first.
 
 ### Pen near / second finger
-`Main.qml` → `cancelHandTouch` / `onSecondContact` so navigation outranks an
-in-flight one-finger manip without DragHandler.
+`Main.qml` → `cancelHandTouch` + `cancelInteraction` / `onSecondContact` so
+navigation outranks an in-flight one-finger manip without DragHandler.
 
 ## Shared vs separate
 

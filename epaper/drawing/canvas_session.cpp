@@ -48,6 +48,11 @@ void CanvasSession::noteDocumentMutated()
     emit documentMutated();
 }
 
+void CanvasSession::noteCameraChanged()
+{
+    emit cameraChanged();
+}
+
 void CanvasSession::setFollowDirection(const QString &id)
 {
     if (m_followDirection == id)

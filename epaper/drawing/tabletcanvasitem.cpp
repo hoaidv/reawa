@@ -155,11 +155,18 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
 
     connect(&m_session, &CanvasSession::cameraChanged, this, [this]() {
         scheduleVectorRasterize(false);
-        if (m_tool)
-            m_tool->onDocumentOrCameraChanged();
     });
     connect(&m_session, &CanvasSession::documentMutated, this, [this]() {
         scheduleVectorRasterize(true);
+    });
+    connect(&m_session, &CanvasSession::exclusiveToolChanged, this, [this]() {
+        const bool hadHighlight = !m_highlightInkIds.empty();
+        clearMembershipHighlight();
+        if (hadHighlight && !m_stroke.active)
+            scheduleVectorRasterize(true);
+        emit toolModeChanged();
+        m_debugInfo = QStringLiteral("tool=%1").arg(toolMode());
+        emit debugChanged();
     });
     connect(&m_session, &CanvasSession::followChanged, this, &TabletCanvasItem::followChanged);
     connect(&m_session, &CanvasSession::recogChanged, this, &TabletCanvasItem::recogChanged);
@@ -267,16 +274,16 @@ void TabletCanvasItem::syncFramePanelSize() const
     m_session.frame.setPanelSize(double(w), double(h));
 }
 
-/** Camera/orientation intent → ToolChip rect refresh. */
+/** Camera/orientation intent → ToolChip + session cameraChanged (Tool listens). */
 void TabletCanvasItem::applyFrameIntent(epaper::canvasframe::FrameIntent intent)
 {
     using epaper::canvasframe::FrameIntent;
     using epaper::canvasframe::has;
     if (has(intent, FrameIntent::OrientationChanged))
         updateToolChipRect();
-    // CameraChanged: callers schedule rasterize / chrome refresh themselves —
-    // those depend on settle flags and gesture context the frame does not know.
-    Q_UNUSED(FrameIntent::CameraChanged);
+    // Emit for Tool chrome; callers may still schedule settle-sharp rasterize.
+    if (has(intent, FrameIntent::CameraChanged) || has(intent, FrameIntent::OrientationChanged))
+        m_session.noteCameraChanged();
 }
 
 /** Panel → normalized UV inside the sync frame. */
@@ -506,8 +513,9 @@ void TabletCanvasItem::stampFlushBeacon()
  * =================================================================================================
  * Device document and undo history
  *
- * Undo/redo mutate m_session.document then ask Tool to prune selection chrome.
- * notifyHistory lives on the Surface API so Tool can emit after its own commits.
+ * Undo/redo mutate m_session.document then noteDocumentMutated (Tablet rasterize +
+ * Tool prune/chrome via documentMutated). notifyHistory is also on the Surface API
+ * so Tool can emit after its own commits.
  * =================================================================================================
  */
 
@@ -523,26 +531,16 @@ void TabletCanvasItem::requestRedo()
     applyHistoryRestore(false);
 }
 
-/** Undo/redo op, prune selection, rasterize, flush wire. */
+/** Undo/redo op, membership clear, documentMutated, flush wire. */
 void TabletCanvasItem::applyHistoryRestore(bool isUndo)
 {
     using namespace epaper::document;
     const UndoResult r = isUndo ? m_session.document.undo() : m_session.document.redo();
     (void)r;
-    pruneSelectionAfterHistory();
     clearMembershipHighlight();
     notifyHistory();
-    scheduleVectorRasterize(true);
-    if (m_tool)
-        m_tool->onDocumentOrCameraChanged();
+    m_session.noteDocumentMutated();
     flushOneWayWire();
-}
-
-/** Drop selection ids that no longer exist in the doc. */
-void TabletCanvasItem::pruneSelectionAfterHistory()
-{
-    if (m_tool)
-        m_tool->onDocumentOrCameraChanged();
 }
 
 
@@ -1215,22 +1213,10 @@ void TabletCanvasItem::collectSmartGroupInkIds(const epaper::document::DocNode &
  * =================================================================================================
  */
 
-/** Exclusive tool change on session chip + chrome refresh. */
+/** Exclusive tool change on session chip (exclusiveToolChanged does the rest). */
 void TabletCanvasItem::setToolMode(const QString &mode)
 {
-    if (!m_session.setExclusiveTool(mode))
-        return;
-    const bool hadHighlight = !m_highlightInkIds.empty();
-    m_toolMode = m_session.exclusiveTool();
-    clearMembershipHighlight();
-    if (hadHighlight && !m_stroke.active)
-        scheduleVectorRasterize(true);
-    emit toolModeChanged();
-    m_debugInfo = QStringLiteral("tool=%1").arg(m_toolMode);
-    emit debugChanged();
-    // @fix residual knobs / scale chip when leaving sel_* (QML chrome is not ToolCanvas)
-    if (m_tool)
-        m_tool->onDocumentOrCameraChanged();
+    (void)m_session.setExclusiveTool(mode);
 }
 
 /** ToolChip tap → setToolMode. */
@@ -1510,7 +1496,7 @@ void TabletCanvasItem::stashTabletSample(const QPointF &raw, const IngestChannel
 void TabletCanvasItem::tapFollowToggle()
 {
     m_session.follow.connected = m_sync && m_sync->isConnected();
-    m_session.follow.exclusiveTool = m_toolMode.toStdString();
+    m_session.follow.exclusiveTool = toolMode().toStdString();
     const auto r = m_session.follow.tapToggle();
     m_session.setFollowDirection(QString::fromLatin1(epaper::handtouch::followId(m_session.follow.direction)));
     emit followChanged();
@@ -1538,9 +1524,8 @@ void TabletCanvasItem::applyViewport(const QJsonObject &obj)
     qInfo() << "[sync] viewport seq" << m_viewportSeq << "orientation"
             << QString::fromStdString(m_session.frame.orientation) << "settle" << settle << "ink"
             << m_session.document.inkCount();
+    // Soft path already ran via cameraChanged; settle wants a sharp pass.
     scheduleVectorRasterize(settle);
-    if (m_tool)
-        m_tool->onDocumentOrCameraChanged();
 }
 
 /** Map cached Infini viewport into local camera. */

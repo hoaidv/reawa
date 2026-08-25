@@ -202,7 +202,7 @@ private:
  * =================================================================================================
  * Device document and undo history
  * 
- * Cycle: requestUndo/requestRedo → applyHistoryRestore → pruneSelectionAfterHistory → notifyHistory
+ * Cycle: requestUndo/requestRedo → applyHistoryRestore → notifyHistory → noteDocumentMutated
  * =================================================================================================
  */
 
@@ -218,7 +218,6 @@ signals:
 
 private:
     void applyHistoryRestore(bool isUndo);
-    void pruneSelectionAfterHistory();
 
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
@@ -344,7 +343,7 @@ private:
 public:
 
 
-    QString toolMode() const { return m_toolMode; }
+    QString toolMode() const { return m_session.exclusiveTool(); }
     void setToolMode(const QString &mode);
     Q_INVOKABLE void armTool(const QString &mode);  
     
@@ -364,7 +363,6 @@ signals:
 
 private: 
 
-    QString m_toolMode = QStringLiteral("pen");
     QString m_lastStrokeLatch;
     
     Q_PROPERTY(QString toolMode READ toolMode WRITE setToolMode NOTIFY toolModeChanged)

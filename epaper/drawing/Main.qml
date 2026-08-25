@@ -64,8 +64,10 @@ TabletWindow {
 
         // @implements [SRS-EP-21] pen near outranks hand touch
         function onPenNearChanged() {
-            if (Input.penNear)
+            if (Input.penNear) {
                 toolCanvas.cancelHandTouch()
+                toolCanvas.cancelInteraction()
+            }
         }
 
         // @implements [SRS-EP-24] two contacts outrank a one-finger manip
