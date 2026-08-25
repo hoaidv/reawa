@@ -323,14 +323,14 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
         // @implements [SRS-EP-07] Selection armed → no stroke, no Ink node
         if (m_strokeActive)
             appendPoint(canvasPos, bounded);
-        else if (m_selectionGesture)
+        else if (selectionGestureActive())
             updateSelectionGesture(canvasPos);
         break;
     case QEvent::TabletRelease:
     case QEvent::MouseButtonRelease:
         if (m_strokeActive)
             endStroke();
-        else if (m_selectionGesture)
+        else if (selectionGestureActive())
             endSelectionGesture();
         break;
     default:
@@ -380,13 +380,13 @@ void TabletCanvasItem::ingestMappedTablet(QEvent::Type type, const QPointF &canv
     case QEvent::TabletMove:
         if (m_strokeActive)
             appendPoint(canvasPos, bounded);
-        else if (m_selectionGesture)
+        else if (selectionGestureActive())
             updateSelectionGesture(canvasPos);
         break;
     case QEvent::TabletRelease:
         if (m_strokeActive)
             endStroke();
-        else if (m_selectionGesture)
+        else if (selectionGestureActive())
             endSelectionGesture();
         break;
     default:
@@ -464,8 +464,7 @@ void TabletCanvasItem::paint(QPainter *painter)
     ensureImage();
     m_paintCount.fetchAndAddRelaxed(1);
     painter->drawImage(0, 0, m_image);
-    if (m_selectionGesture
-        && (m_selGesture == SelGesture::Move || m_selGesture == SelGesture::Resize)
+    if ((m_selGesture == SelGesture::Move || m_selGesture == SelGesture::Resize)
         && !m_originPanelRect.isEmpty()) {
         // Punch only the original box — not origin∪live (that wipes a vertical strip).
         painter->fillRect(m_originPanelRect, Qt::white);
@@ -1267,11 +1266,8 @@ void TabletCanvasItem::endFingerTouch(const QPointF &canvasPos)
         const double dx = canvasPos.x() - m_fingerDownPanel.x();
         const double dy = canvasPos.y() - m_fingerDownPanel.y();
         if (emptyTapClearsSelection(travelDu(dx, dy))) {
-            m_selectedIds.clear();
-            m_selectedPickableId.clear();
-            m_drag.clearNodeId();
+            clearSelection();
             m_selGesture = SelGesture::None;
-            m_selectionGesture = false;
             refreshSelectionChrome();
         }
         return;
@@ -1295,7 +1291,6 @@ void TabletCanvasItem::abortFingerManip()
         m_drag.reset();
         refreshAllConnectorWarps(m_document);
     }
-    m_selectionGesture = false;
     m_selGesture = SelGesture::None;
     const QRectF punch = m_originPanelRect.united(m_selectionChromeDirty).united(m_originConnPunch);
     m_originPanelRect = QRectF();
@@ -1517,6 +1512,24 @@ bool TabletCanvasItem::isSelectionTool() const
     return m_toolMode == QLatin1String("sel_rect") || m_toolMode == QLatin1String("sel_freeform");
 }
 
+void TabletCanvasItem::clearSelection()
+{
+    m_selectedIds.clear();
+    m_selectedPickableId.clear();
+    m_drag.clearNodeId();
+}
+
+void TabletCanvasItem::setSelection(const std::vector<std::string> &ids)
+{
+    m_selectedIds.clear();
+    for (const auto &id : ids)
+        m_selectedIds.append(QString::fromStdString(id));
+    if (!m_selectedIds.isEmpty())
+        m_selectedPickableId = m_selectedIds.first();
+    else
+        m_selectedPickableId.clear();
+}
+
 QString TabletCanvasItem::hitLocalSmartGroup(const QPointF &world) const
 {
     using namespace epaper::document;
@@ -1614,14 +1627,11 @@ void TabletCanvasItem::encloseSelection()
     qInfo().noquote() << QString::fromStdString(line);
     m_debugInfo = QString::fromStdString(line);
     emit debugChanged();
-    m_selectedIds.clear();
-    m_selectedPickableId.clear();
-    m_drag.clearNodeId();
+    clearSelection();
     m_encloseVisible = false;
     m_encloseCtaRect = QRectF();
     m_encloseRefuseReason.clear();
     m_selGesture = SelGesture::None;
-    m_selectionGesture = false;
     refreshSelectionChrome();
     scheduleVectorRasterize(true);
     notifyHistory();
@@ -1631,7 +1641,6 @@ void TabletCanvasItem::encloseSelection()
 void TabletCanvasItem::beginMarqueeOrLasso(const QPointF &canvasPos)
 {
     m_drag.reset();
-    m_selectionGesture = true;
     m_marqueeStartPanel = canvasPos;
     m_marqueeEndPanel = canvasPos;
     m_lassoPanel.clear();
@@ -1654,9 +1663,10 @@ void TabletCanvasItem::finishMarqueeOrLasso()
     using namespace epaper::document;
     if (m_toolCanvas)
         m_toolCanvas->setStrokeWaveform(false);
-    m_selectionGesture = false;
+    // Latch the kind: the gesture stays active until this call resolves it.
+    const SelGesture kind = m_selGesture;
     qreal gestureSize = QLineF(m_marqueeStartPanel, m_marqueeEndPanel).length();
-    if (m_selGesture == SelGesture::Lasso && m_lassoPanel.size() >= 2) {
+    if (kind == SelGesture::Lasso && m_lassoPanel.size() >= 2) {
         qreal pathLen = 0;
         QRectF bb(m_lassoPanel.first(), m_lassoPanel.first());
         for (int i = 1; i < m_lassoPanel.size(); ++i) {
@@ -1666,8 +1676,8 @@ void TabletCanvasItem::finishMarqueeOrLasso()
         gestureSize = std::max(pathLen, QLineF(bb.topLeft(), bb.bottomRight()).length());
     }
     if (gestureSize < 8.0) {
-        m_selectedIds.clear();
-        m_selectedPickableId.clear();
+        // m_drag was reset when the marquee began, so the drag clear is a no-op here.
+        clearSelection();
         m_selGesture = SelGesture::None;
         m_lassoPanel.clear();
         m_debugInfo = QStringLiteral("sel=0 (tap)");
@@ -1676,7 +1686,7 @@ void TabletCanvasItem::finishMarqueeOrLasso()
         return;
     }
     std::vector<std::string> ids;
-    if (m_selGesture == SelGesture::Lasso) {
+    if (kind == SelGesture::Lasso) {
         std::vector<InkSample> poly;
         poly.reserve(size_t(m_lassoPanel.size()));
         for (const QPointF &p : m_lassoPanel) {
@@ -1699,13 +1709,7 @@ void TabletCanvasItem::finishMarqueeOrLasso()
     }
     m_lassoPanel.clear();
     m_selGesture = SelGesture::None;
-    m_selectedIds.clear();
-    for (const auto &id : ids)
-        m_selectedIds.append(QString::fromStdString(id));
-    if (!m_selectedIds.isEmpty())
-        m_selectedPickableId = m_selectedIds.first();
-    else
-        m_selectedPickableId.clear();
+    setSelection(ids);
     m_debugInfo = m_selectedIds.isEmpty()
         ? QStringLiteral("sel=0 (no nodes ≥80% inside)")
         : QStringLiteral("sel=%1 %2").arg(m_selectedIds.size()).arg(m_selectedIds.join(QLatin1Char(',')));
@@ -1720,7 +1724,6 @@ void TabletCanvasItem::startLiveManip(const epaper::document::DocNode *subject,
     m_selectedPickableId = QString::fromStdString(subject->id);
     m_selectedIds = QStringList{m_selectedPickableId};
     m_drag.begin(m_selectedPickableId, handle, world, subject->transform, subject->smartBounds);
-    m_selectionGesture = true;
     m_selGesture = handle == ResizeHandle::None ? SelGesture::Move : SelGesture::Resize;
     m_document.beginGesture();
     m_selectionGhostClock.invalidate();
@@ -1827,18 +1830,26 @@ void TabletCanvasItem::stashTabletSample(const QPointF &raw, const IngestChannel
     m_stashValid = true;
 }
 
+TabletCanvasItem::IngestChannels TabletCanvasItem::stashedChannels(const QPointF &panel,
+                                                                   QPointF *raw) const
+{
+    IngestChannels ch;
+    *raw = panel;
+    if (m_stashValid) {
+        ch = m_stashTablet;
+        *raw = m_stashRaw;
+    }
+    return ch;
+}
+
 void TabletCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen)
 {
     // Qt already decided this point is not chrome — no rect hit-test here.
     // @implements [SRS-EP-04] canvas pointer entry
     const QPointF panel(x, y);
     if (pen) {
-        IngestChannels ch;
-        QPointF raw = panel;
-        if (m_stashValid) {
-            ch = m_stashTablet;
-            raw = m_stashRaw;
-        }
+        QPointF raw;
+        IngestChannels ch = stashedChannels(panel, &raw);
         ch.pressure = pressure;
         ingestMappedTablet(QEvent::TabletPress, panel, raw, ch);
         return;
@@ -1854,12 +1865,8 @@ void TabletCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen)
         return;
     const QPointF panel(x, y);
     if (pen) {
-        IngestChannels ch;
-        QPointF raw = panel;
-        if (m_stashValid) {
-            ch = m_stashTablet;
-            raw = m_stashRaw;
-        }
+        QPointF raw;
+        IngestChannels ch = stashedChannels(panel, &raw);
         ch.pressure = pressure;
         ingestMappedTablet(QEvent::TabletMove, panel, raw, ch);
         return;
@@ -1871,12 +1878,8 @@ void TabletCanvasItem::onPointerEnd(qreal x, qreal y, bool pen)
 {
     const QPointF panel(x, y);
     if (pen) {
-        IngestChannels ch;
-        QPointF raw = panel;
-        if (m_stashValid) {
-            ch = m_stashTablet;
-            raw = m_stashRaw;
-        }
+        QPointF raw;
+        const IngestChannels ch = stashedChannels(panel, &raw);
         ingestMappedTablet(QEvent::TabletRelease, panel, raw, ch);
         m_stashValid = false;
         return;
@@ -1909,7 +1912,7 @@ void TabletCanvasItem::onPointerCancel()
 {
     if (m_strokeActive)
         endStroke();
-    else if (m_selectionGesture)
+    else if (selectionGestureActive())
         endSelectionGesture();
     cancelHandTouch();
     m_stashValid = false;
@@ -2034,7 +2037,7 @@ void TabletCanvasItem::beginSelectionGesture(const QPointF &canvasPos)
 void TabletCanvasItem::updateSelectionGesture(const QPointF &canvasPos)
 {
     using namespace epaper::document;
-    if (!m_selectionGesture)
+    if (!selectionGestureActive())
         return;
     if (m_selGesture == SelGesture::Marquee) {
         const QRectF next = QRectF(m_marqueeStartPanel, canvasPos).normalized();
@@ -2102,7 +2105,6 @@ void TabletCanvasItem::commitLiveManip()
         || qHypot(m_drag.liveT().scaleX - m_drag.originT().scaleX,
                   m_drag.liveT().scaleY - m_drag.originT().scaleY) > 0.01
         || std::abs(m_drag.liveB().width - m_drag.originB().width) > 0.5;
-    m_selectionGesture = false;
     m_selGesture = SelGesture::None;
     const QRectF punch = m_originPanelRect.united(m_selectionChromeDirty).united(m_originConnPunch);
     m_originPanelRect = QRectF();
@@ -2137,7 +2139,7 @@ void TabletCanvasItem::commitLiveManip()
 
 void TabletCanvasItem::endSelectionGesture()
 {
-    if (!m_selectionGesture)
+    if (!selectionGestureActive())
         return;
     if (m_selGesture == SelGesture::Marquee || m_selGesture == SelGesture::Lasso) {
         finishMarqueeOrLasso();
@@ -2147,7 +2149,6 @@ void TabletCanvasItem::endSelectionGesture()
         commitLiveManip();
         return;
     }
-    m_selectionGesture = false;
     m_selGesture = SelGesture::None;
 }
 
@@ -2275,7 +2276,7 @@ void TabletCanvasItem::paintToolChrome(QPainter *painter)
         return;
     }
 
-    if (m_selectedIds.isEmpty() && m_selectedPickableId.isEmpty() && !m_selectionGesture) {
+    if (m_selectedIds.isEmpty() && m_selectedPickableId.isEmpty() && !selectionGestureActive()) {
         painter->restore();
         return;
     }

@@ -398,6 +398,12 @@ public:
 private:
     QPointF pinchArmPoint(qreal x, qreal y, qreal scale, bool positive) const;
 
+    /**
+     * Channels for this contact: the stashed QTabletEvent sample when one is valid,
+     * otherwise bare defaults. Writes the matching raw point through @p raw.
+     */
+    IngestChannels stashedChannels(const QPointF &panel, QPointF *raw) const;
+
     /** Last QTabletEvent sample — PointHandler only exposes pressure. */
     IngestChannels m_stashTablet;
     QPointF m_stashRaw;
@@ -505,6 +511,14 @@ private:
         qreal width = 4;
     };
 
+    /** Single source of truth for "a selection gesture is in flight". */
+    bool selectionGestureActive() const { return m_selGesture != SelGesture::None; }
+
+    /** User-initiated deselect. Not for host reconciliation or history pruning. */
+    void clearSelection();
+    /** Replace the selection; the first id becomes the pickable. Leaves m_drag alone. */
+    void setSelection(const std::vector<std::string> &ids);
+
     QString hitLocalSmartGroup(const QPointF &world) const;
 
     // Cycle A
@@ -535,7 +549,6 @@ private:
 
 
     SelGesture m_selGesture = SelGesture::None;
-    bool m_selectionGesture = false;
     QStringList m_selectedIds;
     QString m_selectedPickableId;
     QVector<QPointF> m_lassoPanel;
