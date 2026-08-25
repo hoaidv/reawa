@@ -1001,12 +1001,13 @@ void ToolCanvasItem::startLiveManip(const epaper::document::DocNode *subject,
     m_liveDirtyPrev = QRectF();
     m_selectionChromeDirty = QRectF();
     SmartBounds originWorld;
-    if (boundsOf(*subject, originWorld))
+    if (boundsOf(*subject, originWorld)) {
         m_originPanelRect = worldBoundsToPanel(originWorld).adjusted(-8, -8, 8, 8);
         if (m_surface)
             m_surface->notifyOriginPunch(m_originPanelRect);
-    else
+    } else {
         m_originPanelRect = QRectF();
+    }
     applyManipIntent(r);
 }
 
