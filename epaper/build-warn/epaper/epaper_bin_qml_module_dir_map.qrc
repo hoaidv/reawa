@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/">
+    <file alias="/qt/qml/epaper">/workspace/epaper/build-warn/epaper</file>
+
+  </qresource>
+</RCC>

@@ -17,16 +17,14 @@
 #include <vector>
 
 #include "canvas_frame.hpp"
+#include "canvas_session.h"
 #include "document/device_document.hpp"
 #include "document/hand_touch.hpp"
 #include "document/manipulate.hpp"
 #include "document/one_way_sync.hpp"
 #include "document/viewport_follow.hpp"
-#include "finger_gesture_machine.hpp"
 #include "input/pen_sample.hpp"
-#include "manip_session.hpp"
 #include "primary_toolbar.hpp"
-#include "selection_session.hpp"
 #include "stroke_capture.hpp"
 
 class StrokeSync;
@@ -122,9 +120,19 @@ private:
 
 /**
  * =================================================================================================
+ * Canvas session — shared document / frame / chip / follow
+ * =================================================================================================
+ */
+
+public:
+    CanvasSession *session() { return &m_session; }
+    const CanvasSession *session() const { return &m_session; }
+
+/**
+ * =================================================================================================
  * Canvas frame — orientation, camera region, transforms
  *
- * Owns m_frame. Mutators return FrameIntent; applyFrameIntent() is the only place
+ * Uses m_session.frame. Mutators return FrameIntent; applyFrameIntent() is the only place
  * that turns those into Qt effects.
  * =================================================================================================
  */
@@ -142,9 +150,9 @@ private:
     void syncFramePanelSize() const;
     void applyFrameIntent(epaper::canvasframe::FrameIntent intent);
 
-    bool orientationLandscape() const { return m_frame.landscape(); }
-    bool orientationInvertX() const { return m_frame.invertX(); }
-    bool orientationInvertY() const { return m_frame.invertY(); }
+    bool orientationLandscape() const { return m_session.frame.landscape(); }
+    bool orientationInvertX() const { return m_session.frame.invertX(); }
+    bool orientationInvertY() const { return m_session.frame.invertY(); }
     FrameUv panelToFrameUv(const PanelPt &panel) const;
     PanelPt frameUvToPanel(FrameUv uv) const;
     PanelPt worldToPanel(double wx, double wy) const;
@@ -153,9 +161,8 @@ private:
     QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const;
     bool viewportZoomedOut() const;
     bool lodOkPanel(const epaper::document::SmartBounds &wb) const;
-    void ensureLocalDrawingRegion();
 
-    epaper::canvasframe::CanvasFrame m_frame;
+    CanvasSession m_session;
 
 /**
  * =================================================================================================
@@ -202,8 +209,8 @@ private:
 
  
 public:
-    bool canUndo() const { return m_document.undoDepth() > 0; }
-    bool canRedo() const { return m_document.redoDepth() > 0; }
+    bool canUndo() const { return m_session.document.undoDepth() > 0; }
+    bool canRedo() const { return m_session.document.redoDepth() > 0; }
     Q_INVOKABLE void requestUndo();
     Q_INVOKABLE void requestRedo();
 
@@ -213,9 +220,7 @@ signals:
 private:
     void applyHistoryRestore(bool isUndo);
     void pruneSelectionAfterHistory();
-    void notifyHistory();
 
-    epaper::document::DeviceDocument m_document;
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY historyChanged)
     Q_PROPERTY(bool canRedo READ canRedo NOTIFY historyChanged)
 
@@ -303,10 +308,7 @@ private:
 
 private: 
 
-    qreal connectorPanelStrokeWidth(const epaper::document::DocNode &conn) const;
     void drawWarpedConnector(QPainter &p, const epaper::document::DocNode &conn);
-    QRectF warpedConnectorPanelRect(const epaper::document::DocNode &conn) const;
-    QRectF boundConnectorsPanelUnion(const std::string &sgId) const;
 
 /**
  * =================================================================================================
@@ -347,9 +349,9 @@ public:
     void setToolMode(const QString &mode);
     Q_INVOKABLE void armTool(const QString &mode);  
     
-    bool recogInkBoxArmed() const { return m_chip.recogInkBox; }
-    bool recogConnectorArmed() const { return m_chip.recogConnector; }
-    bool recogTogglesDimmed() const { return m_chip.recogDimmed(); }
+    bool recogInkBoxArmed() const { return m_session.chip.recogInkBox; }
+    bool recogConnectorArmed() const { return m_session.chip.recogConnector; }
+    bool recogTogglesDimmed() const { return m_session.chip.recogDimmed(); }
     
     Q_INVOKABLE void toggleRecogInkBox();
     Q_INVOKABLE void toggleRecogConnector();
@@ -363,9 +365,6 @@ signals:
 
 private: 
 
-    bool isSelectionTool() const;
-
-    epaper::toolchip::ChipModel m_chip;
     QString m_toolMode = QStringLiteral("pen");
     QString m_lastStrokeLatch;
     
@@ -376,259 +375,56 @@ private:
     Q_PROPERTY(QString lastStrokeLatch READ lastStrokeLatch NOTIFY lastStrokeLatchChanged)
     
     
+
 /**
  * =================================================================================================
- * Pointer routing and contact arbitration
- * 
- * Cycles: 
- *      onPointerStart → onPointerMove → onPointerEnd | onPointerCancel;
- *      onPinchStart → onPinchUpdate → onPinchEnd
+ * Surface API for ToolCanvas
  * =================================================================================================
  */
 
 public:
-    /**
-     * Slot bound to QtInputFilter::penSample, so the parameter is the signal's
-     * QPointF; it is raw, and converted at the boundary rather than in input/,
-     * which must not depend on a type nested in this class.
-     */
-    void stashTabletSample(const QPointF &raw, const IngestChannels &ch);
-     
-    /**
-     * Qt DragHandler / PinchHandler canvas entry. Qt owns the hit-test and the
-     * grab; these only carry an already-arbitrated point into the document.
-     * @implements [SRS-EP-04] Qt pointer routing
-     */
-    Q_INVOKABLE void onPointerStart(qreal x, qreal y, qreal pressure, bool pen);
-    Q_INVOKABLE void onPointerMove(qreal x, qreal y, qreal pressure, bool pen);
-    Q_INVOKABLE void onPointerEnd(qreal x, qreal y, bool pen);
-    Q_INVOKABLE void onPointerCancel();
+    void setInteractionTool(ToolCanvasItem *tool);
+    ToolCanvasItem *interactionTool() const { return m_tool; }
 
-    /** A finger pressed and released without travelling — select or deselect. */
-    Q_INVOKABLE void onFingerTap(qreal x, qreal y);
-    Q_INVOKABLE void onSecondContact();
-    Q_INVOKABLE void onContactsCleared();
-    Q_INVOKABLE void onPinchStart(qreal x, qreal y, qreal scale);
-    Q_INVOKABLE void onPinchUpdate(qreal x, qreal y, qreal scale);
-    Q_INVOKABLE void onPinchEnd();
+    void ingestPen(QEvent::Type type, const PanelPt &canvasPos, RawPt rawPos,
+                   const IngestChannels &ch);
+    IngestChannels stashedChannels(const PanelPt &panel, RawPt *raw) const;
+    void clearStash();
+    bool strokeActive() const { return m_stroke.active; }
+    void cancelActiveStroke();
+
+    void scheduleDocumentRasterize(bool sharp);
+    void notifyOriginPunch(const QRectF &panelRect);
+    void publishManipPreview(const std::string &nodeId,
+                             const epaper::document::SmartTransform &liveT,
+                             const epaper::document::SmartBounds *liveB);
+    void flushWire();
+    void notifyHistory();
+    void maybePublishLocalViewport(bool settle);
+    void ensureLocalDrawingRegion();
+    void setInteractionDebug(const QString &info);
+    void paintDocumentSubtree(QPainter &painter, const std::string &nodeId);
+    bool lodOkWorld(const epaper::document::SmartBounds &wb) const;
+    QRectF boundConnectorsPanelUnion(const std::string &sgId) const;
+    qreal connectorPanelStrokeWidth(const epaper::document::DocNode &conn) const;
+    QRectF warpedConnectorPanelRect(const epaper::document::DocNode &conn) const;
 
 private:
-    PanelPt pinchArmPoint(qreal x, qreal y, qreal scale, bool positive) const;
+    ToolCanvasItem *m_tool = nullptr;
 
-    /**
-     * Channels for this contact: the stashed QTabletEvent sample when one is valid,
-     * otherwise bare defaults. Writes the matching raw point through @p raw.
-     */
-    IngestChannels stashedChannels(const PanelPt &panel, RawPt *raw) const;
+/**
+ * =================================================================================================
+ * Pointer sample stash (digitizer → Tool routes via Surface ingestPen)
+ * =================================================================================================
+ */
 
-    /** Last QTabletEvent sample — PointHandler only exposes pressure. */
+public:
+    void stashTabletSample(const QPointF &raw, const IngestChannels &ch);
+
+private:
     IngestChannels m_stashTablet;
     RawPt m_stashRaw;
     bool m_stashValid = false;
-
-    bool m_pinchIgnore = false;
-    qreal m_pinchArm = 80.0;
-    qreal m_pinchScale0 = 1.0;
-
-/**
- * =================================================================================================
- * Hand touch
- *
- * Owns m_finger (FingerGestureMachine). Mutators return FingerIntent;
- * applyFingerIntent() alone performs Qt/document/camera effects.
- *
- * Cycles:
- *      beginFingerTouch → updateFingerTouch → endFingerTouch;
- *      beginTwoFingerTouch → updateTwoFingerTouch → endTwoFingerTouch;
- *      cancelHandTouch as the escape hatch
- * =================================================================================================
- */
-
-public:
-    bool handTouchArmed() const { return m_finger.armed; }
-    Q_INVOKABLE void toggleHandTouch();
-    Q_INVOKABLE void cancelHandTouch();
-
-    /**
-     * Capacitive one-finger path (STORY-EP-038). Knob / box / empty palm vs pan.
-     * @implements [SRS-EP-21] one-finger canvas hit
-     */
-    bool beginFingerTouch(const PanelPt &canvasPos);
-    void updateFingerTouch(const PanelPt &canvasPos, int fingerCount);
-    void endFingerTouch(const PanelPt &canvasPos);
-
-    /**
-     * Two-finger local pan/pinch (STORY-EP-039). A one-finger manip already in
-     * flight is reverted, not blocking: two contacts always mean navigate.
-     * @implements [SRS-EP-24] two-finger canvas pan pinch
-     */
-    bool beginTwoFingerTouch(const PanelPt &a, const PanelPt &b);
-    void updateTwoFingerTouch(const PanelPt &a, const PanelPt &b);
-    void endTwoFingerTouch();
-
-signals:
-    void handTouchArmedChanged();
-
-private:
-    void applyFingerIntent(const epaper::fingergesture::FingerResult &r,
-                           const PanelPt &panel = PanelPt());
-    bool fingerHitsBox(const PanelPt &canvasPos) const;
-    epaper::handtouch::TwoFingerContacts uvPair(const PanelPt &a, const PanelPt &b) const;
-    /** Contact mapped through pan-origin region (one-finger pan contract). */
-    void worldThroughPanOrigin(const PanelPt &panel, double *wx, double *wy) const;
-
-    epaper::fingergesture::FingerGestureMachine m_finger;
-    QElapsedTimer m_fingerPanClock;
-
-    Q_PROPERTY(bool handTouchArmed READ handTouchArmed NOTIFY handTouchArmedChanged)
-
-/**
- * =================================================================================================
- * Selection and direct manipulation
- *
- * Owns m_selection (SelectionSession) and m_manip (ManipSession). Mutators return
- * intents; applySelectionIntent / applyManipIntent alone perform Qt/document effects.
- *
- * Sub-cycle A — gesture: beginSelectionGesture → updateSelectionGesture → endSelectionGesture
- * Sub-cycle B — marquee/lasso: beginMarqueeOrLasso → finishMarqueeOrLasso
- * Sub-cycle C — live manip: startLiveManip → applyDragWorld → redrawLiveManipRegion → commitLiveManip | abortFingerManip
- * Sub-cycle D — handle entry: handleIndexAtPanel → tryBeginHandleAtPanel → beginHandleDrag
- *
- * =================================================================================================
- */
-
-public:
-
-    Q_INVOKABLE void encloseSelection();
-    void abortFingerManip();
-
-    /** @implements [SRS-EP-11] handle drag in world space */
-    void beginHandleDrag(int handleIndex, WorldPt world);
-
-    Q_INVOKABLE void tapModeChip();
-
-    QString manipulationUnavailable() const { return m_manipUnavailable; }
-    QRectF manipulationUnavailableRect() const { return m_manipUnavailableRect; }
-        
-private:
-    /** Rest-pose connector polylines in panel space — CanvasLayer origin hole (stroke, not AABB). */
-    struct OriginConnStroke {
-        QVector<PanelPt> panel;
-        qreal width = 4;
-    };
-
-    bool selectionGestureActive() const { return m_selection.active(); }
-
-    void clearSelection();
-    void setSelection(const std::vector<std::string> &ids);
-
-    QString hitLocalSmartGroup(WorldPt world) const;
-
-    void applySelectionIntent(const epaper::selection::SelectionResult &r);
-    void applyManipIntent(const epaper::manip::ManipResult &r, bool restoreOrigin = false);
-
-    void beginSelectionGesture(const PanelPt &canvasPos);
-    void updateSelectionGesture(const PanelPt &canvasPos);
-    void endSelectionGesture();
-
-    void beginMarqueeOrLasso(const PanelPt &canvasPos);
-    void finishMarqueeOrLasso();
-
-    void startLiveManip(const epaper::document::DocNode *subject,
-        epaper::document::ResizeHandle handle, WorldPt world);
-    void applyDragWorld(WorldPt world);
-    void redrawLiveManipRegion();
-    void commitLiveManip();
-
-    int handleIndexAtPanel(const PanelPt &panel, double hitDu) const;
-    bool tryBeginHandleAtPanel(const PanelPt &panel, double hitDu);
-
-    void captureOriginConnectorPunches(const std::string &sgId);
-    void showManipUnavailable(const epaper::document::SmartBounds &wb);
-    void sendManipPreviewToInfini();
-
-    epaper::selection::SelectionSession m_selection;
-    epaper::manip::ManipSession m_manip;
-
-    QRectF m_liveDirtyPrev;
-    QRectF m_originPanelRect;
-    QRectF m_originConnPunch;
-    QVector<OriginConnStroke> m_originConnStrokes;
-
-    QElapsedTimer m_selectionGhostClock;
-
-    int m_toolIntentSeq = 0;
-
-    QString m_manipUnavailable;
-    QRectF m_manipUnavailableRect;
-
-    static constexpr qint64 kSelectionGhostMinIntervalMs = 200;
-    static constexpr double kMinMarqueeGesture = 8.0;
-
-    Q_PROPERTY(QString manipulationUnavailable READ manipulationUnavailable NOTIFY selectionChromeChanged)
-    Q_PROPERTY(QRectF manipulationUnavailableRect READ manipulationUnavailableRect NOTIFY selectionChromeChanged)
-
-/**
- * =================================================================================================
- * Selection chrome and ToolCanvas overlay
- *
- * Cycle: refreshSelectionChrome → damageToolChrome/damageToolChromeSegment → paintToolChrome
- * =================================================================================================
- */
-
-public:
-
-    void bindToolCanvas(class ToolCanvasItem *overlay);
-    /** @implements [SRS-EP-12] ToolCanvasLayer stroke chrome (no document blit) */
-    void paintToolChrome(QPainter *painter);
-
-    QRectF encloseCtaRect() const { return m_encloseCtaRect; }
-    bool encloseVisible() const { return m_encloseVisible; }
-    QString encloseRefuseReason() const { return m_encloseRefuseReason; }
-    QRectF selectionBoundsRect() const { return m_selectionBoundsRect; }
-    int handleCount() const { return m_handleCount; }
-    qreal handleSize() const { return m_handleSize; }
-    bool modeChipVisible() const { return m_modeChipVisible; }
-    QString modeChipLabel() const { return m_modeChipLabel; }
-    QRectF modeChipRectProp() const { return m_modeChipRect; }
-
-signals:
-    void selectionChromeChanged();
-    
-private:
-
-    void refreshSelectionChrome();
-    void damageToolChrome(const QRectF &next);
-    void damageToolChromeSegment(const QRectF &seg);
-    void syncToolCanvasPresence();
-    void paintLiveManipOnToolCanvas(QPainter *painter);
-    
-    ToolCanvasItem *m_toolCanvas = nullptr;
-    QRectF m_toolChromePrev;
-    
-    /** Last panel-space chrome rect — dirty region for soft update during drag. */
-    QRectF m_selectionChromeDirty;
-    QRectF m_selectionBoundsRect;
-    int m_handleCount = 0;
-    qreal m_handleSize = 16.0;
-
-    bool m_modeChipVisible = false;
-    QString m_modeChipLabel;
-    QRectF m_modeChipRect;
-
-    QRectF m_encloseCtaRect;
-    bool m_encloseVisible = false;
-    QString m_encloseRefuseReason;
-
-    Q_PROPERTY(QRectF encloseCtaRect READ encloseCtaRect NOTIFY selectionChromeChanged)
-    Q_PROPERTY(bool encloseVisible READ encloseVisible NOTIFY selectionChromeChanged)
-    Q_PROPERTY(QString encloseRefuseReason READ encloseRefuseReason NOTIFY selectionChromeChanged)
-    Q_PROPERTY(QRectF selectionBoundsRect READ selectionBoundsRect NOTIFY selectionChromeChanged)
-    Q_PROPERTY(int handleCount READ handleCount NOTIFY selectionChromeChanged)
-    Q_PROPERTY(qreal handleSize READ handleSize NOTIFY selectionChromeChanged)
-    Q_PROPERTY(bool modeChipVisible READ modeChipVisible NOTIFY selectionChromeChanged)
-    Q_PROPERTY(QString modeChipLabel READ modeChipLabel NOTIFY selectionChromeChanged)
-    Q_PROPERTY(QRectF modeChipRect READ modeChipRectProp NOTIFY selectionChromeChanged)
 
 /**
  * =================================================================================================
@@ -644,10 +440,10 @@ public:
     int viewportUpCount() const { return m_viewportUpCount; }
 
     /** @implements [SRS-EP-21] pen near outranks hand touch — called from QML */
-    QString followDirection() const { return m_followDirection; }
+    QString followDirection() const { return m_session.followDirection(); }
     
-    bool followPressed() const { return m_follow.ariaPressed(); }
-    bool followUnavailable() const { return m_follow.ariaDisabled(); }
+    bool followPressed() const { return m_session.follow.ariaPressed(); }
+    bool followUnavailable() const { return m_session.follow.ariaDisabled(); }
     Q_INVOKABLE void tapFollowToggle();
 
 signals:
@@ -656,7 +452,6 @@ signals:
         
 private:
     void applyViewport(const QJsonObject &obj);
-    void maybePublishLocalViewport(bool settle);
     void applyFollowCamera();
     void flushFollowOutbound();
     void cacheInfiniViewport(const QJsonObject &obj);
@@ -666,8 +461,6 @@ private:
     /** Reawa-style gut pose; legacy "portrait"/"landscape" normalized on ingest. */
     int m_viewportSeq = 0;
     int m_viewportUpCount = 0;
-    epaper::follow::FollowSession m_follow;
-    QString m_followDirection = QStringLiteral("none");
 
     Q_PROPERTY(QString followDirection READ followDirection NOTIFY followChanged)
     Q_PROPERTY(bool followPressed READ followPressed NOTIFY followChanged)

@@ -1,0 +1,52 @@
+{
+    "classes": [
+        {
+            "className": "StrokeSync",
+            "lineNumber": 15,
+            "object": true,
+            "qualifiedClassName": "StrokeSync",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "obj",
+                            "type": "QJsonObject"
+                        }
+                    ],
+                    "index": 0,
+                    "name": "hostMessage",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 1,
+                    "name": "socketConnected",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 2,
+                    "name": "socketDisconnected",
+                    "returnType": "void"
+                }
+            ],
+            "slots": [
+                {
+                    "access": "public",
+                    "index": 3,
+                    "name": "armReconnect",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "strokesync.h",
+    "outputRevision": 68
+}

@@ -1,0 +1,66 @@
+{
+    "classes": [
+        {
+            "className": "UsbLinkWorker",
+            "lineNumber": 87,
+            "object": true,
+            "qualifiedClassName": "epaper::UsbLinkWorker",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "status",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "debug",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "linkState",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 0,
+                    "name": "hud",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 1,
+                    "name": "recoverApps",
+                    "returnType": "void"
+                }
+            ],
+            "slots": [
+                {
+                    "access": "public",
+                    "index": 2,
+                    "name": "start",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 3,
+                    "name": "recover",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 4,
+                    "name": "refresh",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "usb_link.cpp",
+    "outputRevision": 68
+}

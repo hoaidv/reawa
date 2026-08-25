@@ -1,0 +1,11 @@
+/workspace/epaper/build-warn/epaper_bin_autogen/include/../3PL2EUVYPL/moc_usb_link.cpp.json
+/workspace/epaper/build-warn/epaper_bin_autogen/include/../D63VJVGFMQ/moc_strokesync.cpp.json
+/workspace/epaper/build-warn/epaper_bin_autogen/include/../EWIEGA46WW/moc_epaperbridge.cpp.json
+/workspace/epaper/build-warn/epaper_bin_autogen/include/../RHTBEVGUKT/moc_qtinputfilter.cpp.json
+/workspace/epaper/build-warn/epaper_bin_autogen/include/../U7HF7WGTV7/moc_canvas_session.cpp.json
+/workspace/epaper/build-warn/epaper_bin_autogen/include/../U7HF7WGTV7/moc_tabletcanvasitem.cpp.json
+/workspace/epaper/build-warn/epaper_bin_autogen/include/../U7HF7WGTV7/moc_tabletwindow.cpp.json
+/workspace/epaper/build-warn/epaper_bin_autogen/include/../U7HF7WGTV7/moc_toolcanvasitem.cpp.json
+/workspace/epaper/build-warn/epaper_bin_autogen/include/../UDMV7I2CG3/moc_debug_log_ship.cpp.json
+/workspace/epaper/build-warn/epaper_bin_autogen/include/debug_log_ship.moc.json
+/workspace/epaper/build-warn/epaper_bin_autogen/include/usb_link.moc.json

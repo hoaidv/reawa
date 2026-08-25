@@ -1,0 +1,397 @@
+{
+    "classes": [
+        {
+            "className": "ToolCanvasItem",
+            "lineNumber": 44,
+            "methods": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "pressure",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "pen",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 3,
+                    "name": "onPointerStart",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "pressure",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "pen",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 4,
+                    "name": "onPointerMove",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "pen",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 5,
+                    "name": "onPointerEnd",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 6,
+                    "name": "onPointerCancel",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        }
+                    ],
+                    "index": 7,
+                    "name": "onFingerTap",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 8,
+                    "name": "onSecondContact",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 9,
+                    "name": "onContactsCleared",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "scale",
+                            "type": "qreal"
+                        }
+                    ],
+                    "index": 10,
+                    "name": "onPinchStart",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "scale",
+                            "type": "qreal"
+                        }
+                    ],
+                    "index": 11,
+                    "name": "onPinchUpdate",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 12,
+                    "name": "onPinchEnd",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 13,
+                    "name": "toggleHandTouch",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 14,
+                    "name": "cancelHandTouch",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 15,
+                    "name": "encloseSelection",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 16,
+                    "name": "tapModeChip",
+                    "returnType": "void"
+                }
+            ],
+            "object": true,
+            "properties": [
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 0,
+                    "name": "surface",
+                    "notify": "surfaceChanged",
+                    "read": "surface",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "TabletCanvasItem*",
+                    "user": false,
+                    "write": "setSurface"
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 1,
+                    "name": "handTouchArmed",
+                    "notify": "handTouchArmedChanged",
+                    "read": "handTouchArmed",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 2,
+                    "name": "encloseCtaRect",
+                    "notify": "selectionChromeChanged",
+                    "read": "encloseCtaRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 3,
+                    "name": "encloseVisible",
+                    "notify": "selectionChromeChanged",
+                    "read": "encloseVisible",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 4,
+                    "name": "encloseRefuseReason",
+                    "notify": "selectionChromeChanged",
+                    "read": "encloseRefuseReason",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 5,
+                    "name": "selectionBoundsRect",
+                    "notify": "selectionChromeChanged",
+                    "read": "selectionBoundsRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 6,
+                    "name": "handleCount",
+                    "notify": "selectionChromeChanged",
+                    "read": "handleCount",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 7,
+                    "name": "handleSize",
+                    "notify": "selectionChromeChanged",
+                    "read": "handleSize",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "qreal",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 8,
+                    "name": "modeChipVisible",
+                    "notify": "selectionChromeChanged",
+                    "read": "modeChipVisible",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 9,
+                    "name": "modeChipLabel",
+                    "notify": "selectionChromeChanged",
+                    "read": "modeChipLabel",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 10,
+                    "name": "modeChipRect",
+                    "notify": "selectionChromeChanged",
+                    "read": "modeChipRectProp",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 11,
+                    "name": "manipulationUnavailable",
+                    "notify": "selectionChromeChanged",
+                    "read": "manipulationUnavailable",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 12,
+                    "name": "manipulationUnavailableRect",
+                    "notify": "selectionChromeChanged",
+                    "read": "manipulationUnavailableRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                }
+            ],
+            "qualifiedClassName": "ToolCanvasItem",
+            "signals": [
+                {
+                    "access": "public",
+                    "index": 0,
+                    "name": "surfaceChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 1,
+                    "name": "handTouchArmedChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 2,
+                    "name": "selectionChromeChanged",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QQuickPaintedItem"
+                }
+            ]
+        }
+    ],
+    "inputFile": "toolcanvasitem.h",
+    "outputRevision": 68
+}

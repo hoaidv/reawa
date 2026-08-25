@@ -1,0 +1,118 @@
+{
+    "classes": [
+        {
+            "className": "UsbLink",
+            "lineNumber": 15,
+            "methods": [
+                {
+                    "access": "public",
+                    "index": 4,
+                    "name": "recoverInfini",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 5,
+                    "name": "refreshHud",
+                    "returnType": "void"
+                }
+            ],
+            "object": true,
+            "properties": [
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 0,
+                    "name": "status",
+                    "notify": "hudChanged",
+                    "read": "status",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 1,
+                    "name": "debugLine",
+                    "notify": "hudChanged",
+                    "read": "debugLine",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 2,
+                    "name": "linkState",
+                    "notify": "hudChanged",
+                    "read": "linkState",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                }
+            ],
+            "qualifiedClassName": "epaper::UsbLink",
+            "signals": [
+                {
+                    "access": "public",
+                    "index": 0,
+                    "name": "hudChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 1,
+                    "name": "requestAppReconnect",
+                    "returnType": "void"
+                }
+            ],
+            "slots": [
+                {
+                    "access": "private",
+                    "arguments": [
+                        {
+                            "name": "status",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "debug",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "linkState",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 2,
+                    "name": "onHud",
+                    "returnType": "void"
+                },
+                {
+                    "access": "private",
+                    "index": 3,
+                    "name": "onRecoverApps",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "usb_link.hpp",
+    "outputRevision": 68
+}

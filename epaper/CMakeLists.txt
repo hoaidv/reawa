@@ -9,6 +9,7 @@ qt_standard_project_setup(REQUIRES 6.5)
 
 qt_add_executable(epaper_bin
     main.cpp
+    drawing/canvas_session.cpp
     drawing/tabletcanvasitem.cpp
     drawing/toolcanvasitem.cpp
     drawing/tabletwindow.cpp
@@ -22,10 +23,11 @@ qt_add_executable(epaper_bin
 )
 set_source_files_properties(drawing/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 set_source_files_properties(drawing/ResizeKnob.qml PROPERTIES QT_RESOURCE_ALIAS ResizeKnob.qml)
+set_source_files_properties(drawing/ToolCanvas.qml PROPERTIES QT_RESOURCE_ALIAS ToolCanvas.qml)
 qt_add_qml_module(epaper_bin
     URI epaper
     VERSION 1.0
-    QML_FILES drawing/Main.qml drawing/ResizeKnob.qml
+    QML_FILES drawing/Main.qml drawing/ResizeKnob.qml drawing/ToolCanvas.qml
 )
 
 # Designer icons (rasterized from .plan/.../system/assets/icon-epaper-*.svg)
