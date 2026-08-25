@@ -5,7 +5,8 @@ document ink, rasterize, and the sync wire. They share one `CanvasSession`; Tool
 calls Tablet only through the Surface API.
 
 Input enters through `ToolCanvas.qml` handlers (and a few `Input` Connections in
-`Main.qml`), not through Tablet.
+`Main.qml`). **Tool decides** whether a stylus sample is selection/handle work or
+ink; only ink is forwarded with `ingestPen`.
 
 ```mermaid
 flowchart TB
@@ -14,7 +15,7 @@ flowchart TB
     IN["Input filter<br/>penNear, contactCount"]
   end
 
-  subgraph entry [Pointer entry — pen and finger]
+  subgraph entry [Pointer entry]
     PS[onPointerStart / Move / End]
     PC[onPointerCancel]
     FT[onFingerTap]
@@ -22,28 +23,38 @@ flowchart TB
     SC[onSecondContact / onContactsCleared]
   end
 
-  subgraph branch [Branch by device]
-    PEN["Surface ingestPen<br/>Tablet stroke / selection press"]
-    F1[begin / update / end FingerTouch]
-    F2[begin / update / end TwoFingerTouch]
+  subgraph penBranch [Pen branch — decided on Tool]
+    PH[tryBeginHandleAtPanel]
+    PSEL[selectionToolArmed / selectionGestureActive]
+    IP["Surface ingestPen<br/>ink only"]
   end
 
-  subgraph machine [Gesture machines]
+  subgraph fingerPath [Finger path — hand touch]
+    F1[begin / update / end FingerTouch]
+    F2[begin / update / end TwoFingerTouch]
     FG[FingerGestureMachine]
-    SS[SelectionSession]
-    MS[ManipSession]
+    AFI[applyFingerIntent]
+  end
+
+  subgraph shared [Shared selection / manip on Tool]
+    BSG[beginSelectionGesture]
+    USG[updateSelectionGesture]
+    ESG[endSelectionGesture]
+    SLM[startLiveManip / beginHandleDrag]
+    ADW[applyDragWorld]
+    BML[beginMarqueeOrLasso / finish…]
   end
 
   subgraph sinks [Intent sinks]
-    AFI[applyFingerIntent]
     ASI[applySelectionIntent]
     AMI[applyManipIntent]
   end
 
   subgraph out [Outcomes]
-    CHROME["Selection chrome<br/>refresh / damage / paint"]
-    SURF["Tablet Surface API<br/>rasterize, punch, wire, ingest"]
-    SESS["CanvasSession<br/>document / camera / chip"]
+    CHROME[Selection chrome paint / Q_PROPERTY]
+    SURF[Tablet Surface — rasterize punch wire]
+    SESS[CanvasSession]
+    INK[Tablet beginStroke / appendPoint]
   end
 
   DH --> PS
@@ -52,61 +63,112 @@ flowchart TB
   IN --> SC
   IN --> PC
 
-  PS -->|pen| PEN
+  PS -->|pen press| PH
+  PH -->|hit| SLM
+  PH -->|miss| PSEL
+  PSEL -->|sel tool| BSG
+  PSEL -->|pen tool| IP
+  PS -->|pen move + gesture| USG
+  PS -->|pen move + ink| IP
+  PS -->|pen end + gesture| ESG
+  PS -->|pen end + ink| IP
+  IP --> INK
+
   PS -->|finger| F1
   FT --> F1
   PIN --> F2
   SC --> AFI
-
   F1 --> FG
   F2 --> FG
   FG --> AFI
+  AFI --> BSG
+  AFI --> SLM
+  AFI --> BML
+  AFI --> SESS
+  AFI --> SURF
 
-  AFI -->|select / move / resize| SS
-  AFI -->|manip abort| MS
-  AFI -->|camera / viewport| SESS
-  AFI -->|rasterize / publish| SURF
-
-  SS --> ASI
-  MS --> AMI
+  BSG --> SLM
+  BSG --> BML
+  USG --> ADW
+  USG --> ASI
+  ESG --> AMI
+  ESG --> BML
+  SLM --> AMI
+  ADW --> AMI
   ASI --> CHROME
   AMI --> CHROME
   AMI --> SURF
   AMI --> SESS
-  PEN --> SURF
-  CHROME --> SURF
 ```
 
-## Use cases
+## Normal paths
 
-### Pen ink
-User draws with the stylus. `onPointerStart/Move/End` see `pen=true` and call
-`TabletCanvasItem::ingestPen`. Tool does not run the finger machine. Live ink and
-`append_ink` stay on Tablet.
+### Pen ink (pen tool)
+Stylus with exclusive tool `pen` (and no active selection gesture):
+
+`onPointer*(pen)` → `ingestPen` → `ingestMappedTablet` → `applyContactPress` →
+`beginStroke` / `appendPoint` / `endStroke`.
+
+Tablet ingest is **ink-only**. Stash + origin guard stay on that path.
+
+### Pen marquee / lasso / pick-move (selection tool)
+Stylus with `sel_rect` / `sel_freeform`. Handled entirely on Tool — no Tablet hop:
+
+| Phase | Call chain |
+|---|---|
+| Press | `onPointerStart(pen)` → `tryBeginHandleAtPanel` **or** `beginSelectionGesture` → `startLiveManip` / `beginMarqueeOrLasso` |
+| Drag | `onPointerMove(pen)` → `updateSelectionGesture` → marquee/lasso update **or** `applyDragWorld` |
+| Release | `onPointerEnd(pen)` → `endSelectionGesture` → `finishMarqueeOrLasso` / `commitLiveManip` |
 
 ### Finger select / deselect
-User taps a SmartGroup (or empty canvas) with hand-touch armed. `onFingerTap` or
-finger drag runs `beginFingerTouch` → `endFingerTouch`. `FingerGestureMachine`
-returns intents; `applyFingerIntent` may force `sel_freeform`, start a selection
-gesture, clear selection, and refresh chrome. Knobs/enclose update via
-`refreshSelectionChrome` → QML properties.
+Capacitive tap with hand-touch armed:
 
-### Finger move / resize
-User grabs a selected box or a knob. Press resolves to live manip
-(`startLiveManip` / `beginHandleDrag`). Moves go
-`updateFingerTouch` → `updateSelectionGesture` → `applyDragWorld` →
-`applyManipIntent`. Tablet punches the origin hole (`notifyOriginPunch`); Tool
-paints the live ghost; Infini gets `publishManipPreview`.
+`onFingerTap` (or short drag) → `beginFingerTouch` / `endFingerTouch` →
+`FingerGestureMachine` → `applyFingerIntent` → may `armTool(sel_freeform)`,
+`beginSelectionGesture`, `clearSelection`, `refreshSelectionChrome`.
 
-### Marquee / lasso
-Empty press in a selection tool starts `beginMarqueeOrLasso`. Drag updates the
-overlay path; release runs `finishMarqueeOrLasso` → selection set → chrome.
+### Finger move / resize / marquee
+Armed finger drag:
+
+`onPointerStart(finger)` → `beginFingerTouch` → machine intents →
+`beginSelectionGesture` / handle resize / marquee.
+
+While locked to live manip or marquee:
+
+`onPointerMove(finger)` → `updateFingerTouch` → (if live manip)
+`updateSelectionGesture` → `applyDragWorld`.
+
+Release: `endFingerTouch` → settle pan or `endSelectionGesture`.
 
 ### Two-finger pan / pinch
-`PinchHandler` drives `onPinch*`. One-finger manip is aborted; `FingerGestureMachine`
-two-finger path updates the camera through `applyCameraRegion` on the session.
-Tablet rasterizes because it listens to `cameraChanged`.
+`PinchHandler` → `onPinch*` → `begin/update/endTwoFingerTouch` → camera via
+`applyCameraRegion`. Aborts one-finger manip first.
 
 ### Pen near / second finger
-`Main.qml` Connections call `cancelHandTouch` or `onSecondContact` so navigation
-outranks an in-flight one-finger manip without going through DragHandler.
+`Main.qml` → `cancelHandTouch` / `onSecondContact` so navigation outranks an
+in-flight one-finger manip without DragHandler.
+
+## Shared vs separate
+
+### Same selection pipeline, two entry doors
+`beginSelectionGesture` / `updateSelectionGesture` / `endSelectionGesture` are
+shared. **Who calls them**:
+
+- **Finger:** pointer → finger machine → `applyFingerIntent` → selection API.
+- **Pen:** pointer → handle/selection branch on Tool → selection API directly.
+
+No Tool → Tablet → Tool round trip for selection.
+
+### Pen never uses `updateFingerTouch`
+Pen selection moves call `updateSelectionGesture` from `onPointerMove`. Finger
+live-manip moves still go `updateFingerTouch` → (machine) → `updateSelectionGesture`.
+
+### Handle hit on both devices
+Press: pen and finger both can call `tryBeginHandleAtPanel` (different hit sizes:
+`kHandleHitDu` vs `kFingerHandleHitDu`). After that, pen continues via
+`onPointerMove(pen)`; finger via `updateFingerTouch`.
+
+### Ink vs selection is decided on Tool press
+`onPointerStart(pen)` order: handle → selection tool → else `ingestPen`. Once a
+selection gesture is active, move/end stay on Tool even if the exclusive tool
+changes mid-gesture until `endSelectionGesture`.

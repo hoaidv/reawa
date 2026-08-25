@@ -377,12 +377,12 @@ epaper::handtouch::FollowDirection ToolCanvasItem::followEnum() const
  * =================================================================================================
  * Pointer routing and contact arbitration
  *
- * ToolCanvas.qml DragHandler/PinchHandler/TapHandler call these. Pen samples go to Surface
- * ingestPen (stash supplies full channels); fingers go to hand-touch.
+ * ToolCanvas.qml DragHandler/PinchHandler/TapHandler call these. Pen: Tool decides
+ * selection vs ink; only ink goes to Surface ingestPen. Fingers go to hand-touch.
  * =================================================================================================
  */
 
-/** Stylus → Surface ingestPen; finger → beginFingerTouch. */
+/** Stylus → selection on Tool or Surface ingestPen; finger → beginFingerTouch. */
 void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen)
 {
     // Qt already decided this point is not chrome — no rect hit-test here.
@@ -391,6 +391,13 @@ void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen)
         return;
     const PanelPt panel(x, y);
     if (pen) {
+        // Handle / selection stay on Tool; only ink uses Tablet ingest.
+        if (tryBeginHandleAtPanel(panel, epaper::document::kHandleHitDu))
+            return;
+        if (selectionToolArmed()) {
+            beginSelectionGesture(panel);
+            return;
+        }
         TabletCanvasItem::RawPt raw;
         IngestChannels ch = m_surface->stashedChannels(panel, &raw);
         ch.pressure = pressure;
@@ -411,6 +418,10 @@ void ToolCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen)
         return;
     const PanelPt panel(x, y);
     if (pen) {
+        if (selectionGestureActive()) {
+            updateSelectionGesture(panel);
+            return;
+        }
         TabletCanvasItem::RawPt raw;
         IngestChannels ch = m_surface->stashedChannels(panel, &raw);
         ch.pressure = pressure;
@@ -427,6 +438,11 @@ void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen)
         return;
     const PanelPt panel(x, y);
     if (pen) {
+        if (selectionGestureActive()) {
+            endSelectionGesture();
+            m_surface->clearStash();
+            return;
+        }
         TabletCanvasItem::RawPt raw;
         const IngestChannels ch = m_surface->stashedChannels(panel, &raw);
         m_surface->ingestPen(QEvent::TabletRelease, panel, raw, ch);

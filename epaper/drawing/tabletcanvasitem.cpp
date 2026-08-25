@@ -551,8 +551,8 @@ void TabletCanvasItem::pruneSelectionAfterHistory()
  * Pen stroke capture and ingest
  *
  * Digitizer samples enter via ingestPoint / ingestMappedTablet (also Surface ingestPen).
- * StrokeCapture owns the stroke; applyContactPress may hand off to Tool for selection-tool
- * presses.
+ * StrokeCapture owns the stroke. Selection/handle presses are decided on Tool before
+ * ingestPen; this path is ink only.
  * =================================================================================================
  */
 
@@ -606,19 +606,13 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
     case QEvent::TabletMove:
     case QEvent::MouseMove:
         // @implements [SRS-EP-10] mid-stroke tool switch does not change the latch
-        // @implements [SRS-EP-04] selection mode never inks (STORY-EP-007)
-        // @implements [SRS-EP-07] Selection armed → no stroke, no Ink node
         if (m_stroke.active)
             appendPoint(canvasPos, bounded);
-        else if (m_tool && m_tool->selectionGestureActive())
-            m_tool->updateSelectionGesture(canvasPos);
         break;
     case QEvent::TabletRelease:
     case QEvent::MouseButtonRelease:
         if (m_stroke.active)
             endStroke();
-        else if (m_tool && m_tool->selectionGestureActive())
-            m_tool->endSelectionGesture();
         break;
     default:
         break;
@@ -663,14 +657,10 @@ void TabletCanvasItem::ingestMappedTablet(QEvent::Type type, const PanelPt &canv
     case QEvent::TabletMove:
         if (m_stroke.active)
             appendPoint(canvasPos, bounded);
-        else if (m_tool && m_tool->selectionGestureActive())
-            m_tool->updateSelectionGesture(canvasPos);
         break;
     case QEvent::TabletRelease:
         if (m_stroke.active)
             endStroke();
-        else if (m_tool && m_tool->selectionGestureActive())
-            m_tool->endSelectionGesture();
         break;
     default:
         break;
@@ -775,15 +765,9 @@ void TabletCanvasItem::applyStrokeIntent(const epaper::strokecapture::StrokeResu
         m_session.chip.penUp();
 }
 
-/** Pen-down: Tool handle/selection first, else beginStroke. */
+/** Pen-down for ink only — Tool already branched selection/handle away. */
 void TabletCanvasItem::applyContactPress(const PanelPt &canvasPos, const IngestChannels &ch)
 {
-    if (m_tool && m_tool->tryBeginHandleAtPanel(canvasPos, epaper::document::kHandleHitDu))
-        return;
-    if (m_tool && m_tool->selectionToolArmed()) {
-        m_tool->beginSelectionGesture(canvasPos);
-        return;
-    }
     beginStroke(canvasPos, ch);
 }
 
