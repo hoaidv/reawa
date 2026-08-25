@@ -17,6 +17,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "canvas_frame.hpp"
 #include "document/device_document.hpp"
 #include "document/hand_touch.hpp"
 #include "document/manipulate.hpp"
@@ -67,31 +68,26 @@ public:
      *
      * Panel is Qt's own space (canvas item pixels), so it stays a plain QPointF and
      * drops straight into QPainter, QRectF and QLineF; the alias is documentation
-     * only and enforces nothing on its own. World and raw are distinct types, which
-     * is what does the enforcing: neither converts to QPointF implicitly, so a bare
-     * QPointF is panel by construction and the other two cannot leak into it.
+     * only and enforces nothing on its own. World / frame-uv live in CanvasFrame
+     * (double PODs). Raw is distinct here. Neither World nor Raw converts to
+     * QPointF implicitly, so a bare QPointF is panel by construction.
      */
     using PanelPt = QPointF;
-
-    /** Document world position. Fields, to match SmartBounds/InkSample in document/. */
-    struct WorldPt {
-        double x = 0;
-        double y = 0;
-
-        /**
-         * Explicit hatch for modules that still carry world points as QPointF
-         * (gesture/manipdrag). Greppable on purpose — each use is a place the
-         * space stops being checked.
-         */
-        QPointF q() const { return {x, y}; }
-        static WorldPt from(const QPointF &p) { return {p.x(), p.y()}; }
-    };
+    using WorldPt = epaper::canvasframe::WorldPt;
+    using FrameUv = epaper::canvasframe::FrameUv;
+    using WorldAabb = epaper::canvasframe::WorldAabb;
 
     /** Digitizer position, before mapPanel() rotates it into panel space. */
     struct RawPt {
         qreal x = 0;
         qreal y = 0;
     };
+
+    /**
+     * Hatch for modules that still carry world points as QPointF (gesture/manipdrag).
+     * Greppable on purpose — each use is a place the space stops being checked.
+     */
+    static QPointF worldQ(WorldPt w) { return QPointF(w.x, w.y); }
 
 private:
     struct Point {
@@ -109,39 +105,6 @@ private:
         qreal rotation = 0;
         bool hasTangential = false;
         qreal tangential = 0;
-    };
-
-    /** Camera region in world space, plus "has the camera been established yet". */
-    struct WorldAabb {
-        double minX = 0;
-        double minY = 0;
-        double maxX = 0;
-        double maxY = 0;
-        bool valid = false;
-
-        bool nonEmpty() const { return maxX > minX && maxY > minY; }
-
-        /**
-         * Geometry alone, for the pure hand-touch helpers — those carry no validity
-         * flag. Named both ways so no caller hand-rolls a positional 4-double init.
-         * setBox() marks the camera established; override valid after it when the
-         * geometry is only conditionally trustworthy.
-         */
-        epaper::handtouch::WorldAabb box() const { return {minX, minY, maxX, maxY}; }
-        void setBox(const epaper::handtouch::WorldAabb &b)
-        {
-            minX = b.minX;
-            minY = b.minY;
-            maxX = b.maxX;
-            maxY = b.maxY;
-            valid = true;
-        }
-    };
-
-    /** Normalized 0..1 position inside the sync frame, with orientation applied. */
-    struct FrameUv {
-        double u = 0;
-        double v = 0;
     };
 
 /**
@@ -164,6 +127,9 @@ private:
 /**
  * =================================================================================================
  * Canvas frame — orientation, camera region, transforms
+ *
+ * Owns m_frame. Mutators return FrameIntent; applyFrameIntent() is the only place
+ * that turns those into Qt effects.
  * =================================================================================================
  */
 
@@ -177,17 +143,14 @@ public:
 protected:
 private:
     qreal ingestPanelHeight() const;
-    bool orientationLandscape() const;
-    bool orientationInvertX() const;
-    bool orientationInvertY() const;
-    /** Panel ⇄ frame-uv. Distinct types both ways: the two are not interchangeable. */
+    void syncFramePanelSize() const;
+    void applyFrameIntent(epaper::canvasframe::FrameIntent intent);
+
+    bool orientationLandscape() const { return m_frame.landscape(); }
+    bool orientationInvertX() const { return m_frame.invertX(); }
+    bool orientationInvertY() const { return m_frame.invertY(); }
     FrameUv panelToFrameUv(const PanelPt &panel) const;
     PanelPt frameUvToPanel(FrameUv uv) const;
-    /**
-     * Loose doubles, because nearly every caller feeds fields straight out of a
-     * DocNode or SmartBounds and never holds a WorldPt. The overload is for those
-     * that do.
-     */
     PanelPt worldToPanel(double wx, double wy) const;
     PanelPt worldToPanel(WorldPt w) const { return worldToPanel(w.x, w.y); }
     double panelScale() const;
@@ -196,8 +159,7 @@ private:
     bool lodOkPanel(const epaper::document::SmartBounds &wb) const;
     void ensureLocalDrawingRegion();
 
-    QString m_orientation = QStringLiteral("gutToLeft");
-    WorldAabb m_drawingRegion;
+    epaper::canvasframe::CanvasFrame m_frame;
 
 /**
  * =================================================================================================

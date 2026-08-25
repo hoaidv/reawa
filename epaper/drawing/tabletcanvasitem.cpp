@@ -67,17 +67,6 @@ constexpr int kFlushBeaconX = 200;
 constexpr int kFlushBeaconY = 60;
 constexpr int kFlushBeaconSize = 60;
 
-QString normalizeOrientation(const QString &raw)
-{
-    if (raw == QLatin1String("portrait") || raw == QLatin1String("gutToLeft"))
-        return QStringLiteral("gutToLeft");
-    if (raw == QLatin1String("landscape") || raw == QLatin1String("gutOnTop"))
-        return QStringLiteral("gutOnTop");
-    if (raw == QLatin1String("gutAtBottom") || raw == QLatin1String("gutToRight"))
-        return raw;
-    return QStringLiteral("gutToLeft");
-}
-
 /** RM_DOC_PROBE=1 — ingest-path stub only; never read from paint(). */
 bool g_docProbe = false;
 
@@ -169,6 +158,7 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
 void TabletCanvasItem::componentComplete()
 {
     QQuickPaintedItem::componentComplete();
+    syncFramePanelSize();
     qInfo() << "[ink] componentComplete size" << size()
             << "visible" << isVisible()
             << "opacity" << opacity()
@@ -189,6 +179,7 @@ void TabletCanvasItem::componentComplete()
 void TabletCanvasItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
 {
     QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
+    syncFramePanelSize();
     qInfo() << "[ink] geometryChange" << oldGeometry << "->" << newGeometry;
     if (newGeometry.size() != oldGeometry.size()
         && newGeometry.width() > 1.0 && newGeometry.height() > 1.0) {
@@ -962,21 +953,21 @@ void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
 void TabletCanvasItem::applyViewport(const QJsonObject &obj)
 {
     m_viewportSeq = obj.value(QStringLiteral("seq")).toInt(m_viewportSeq);
+    using epaper::canvasframe::FrameIntent;
+    FrameIntent intent = FrameIntent::None;
     const QString orient = obj.value(QStringLiteral("orientation")).toString();
-    if (!orient.isEmpty()) {
-        m_orientation = normalizeOrientation(orient);
-        updateToolChipRect();
-    }
+    if (!orient.isEmpty())
+        intent |= m_frame.setOrientation(orient.toStdString());
 
     const QJsonObject dr = obj.value(QStringLiteral("drawingRegion")).toObject();
-    if (!dr.isEmpty()) {
-        m_drawingRegion.setBox(aabbFromJson(dr));
-        m_drawingRegion.valid = m_drawingRegion.nonEmpty();
-    }
+    if (!dr.isEmpty())
+        intent |= m_frame.applyDrawingRegion(aabbFromJson(dr), true);
 
+    applyFrameIntent(intent);
     const bool settle = obj.value(QStringLiteral("settle")).toBool(false);
-    qInfo() << "[sync] viewport seq" << m_viewportSeq << "orientation" << m_orientation
-            << "settle" << settle << "ink" << m_document.inkCount();
+    qInfo() << "[sync] viewport seq" << m_viewportSeq << "orientation"
+            << QString::fromStdString(m_frame.orientation) << "settle" << settle << "ink"
+            << m_document.inkCount();
     scheduleVectorRasterize(settle);
     refreshSelectionChrome();
 }
@@ -1046,8 +1037,7 @@ void TabletCanvasItem::applyFollowCamera()
     m_follow.applyInfiniViewportIfFollowing();
     if (m_follow.direction != epaper::handtouch::FollowDirection::InfiniToEpaper)
         return;
-    m_drawingRegion.setBox(m_follow.localCamera);
-    m_drawingRegion.valid = m_drawingRegion.nonEmpty();
+    applyFrameIntent(m_frame.applyDrawingRegion(m_follow.localCamera, true));
     scheduleVectorRasterize(true);
 }
 
@@ -1080,15 +1070,8 @@ bool TabletCanvasItem::fingerHitsBox(const PanelPt &canvasPos) const
 
 void TabletCanvasItem::ensureLocalDrawingRegion()
 {
-    if (m_drawingRegion.valid)
-        return;
-    const double w = qMax(1.0, double(width()));
-    const double h = qMax(1.0, double(height()));
-    m_drawingRegion.minX = 0;
-    m_drawingRegion.minY = 0;
-    m_drawingRegion.maxX = w;
-    m_drawingRegion.maxY = h;
-    m_drawingRegion.valid = true;
+    syncFramePanelSize();
+    applyFrameIntent(m_frame.ensureLocalDrawingRegion());
 }
 
 void TabletCanvasItem::applyLocalFingerPan(const PanelPt &canvasPos)
@@ -1101,8 +1084,10 @@ void TabletCanvasItem::applyLocalFingerPan(const PanelPt &canvasPos)
     double nowX = 0;
     double nowY = 0;
     mapUvToWorld(m_fingerPanOrigin.box(), uv.u, uv.v, &nowX, &nowY);
-    m_drawingRegion.setBox(panKeepWorldUnderFinger(m_fingerPanOrigin.box(), m_fingerDownWorld.x,
-                                                   m_fingerDownWorld.y, nowX, nowY));
+    applyFrameIntent(m_frame.applyDrawingRegion(
+        panKeepWorldUnderFinger(m_fingerPanOrigin.box(), m_fingerDownWorld.x, m_fingerDownWorld.y,
+                                nowX, nowY),
+        false));
 }
 
 void TabletCanvasItem::maybePublishLocalViewport(bool settle)
@@ -1115,20 +1100,20 @@ void TabletCanvasItem::maybePublishLocalViewport(bool settle)
     if (!m_sync || !m_sync->isConnected())
         return;
     QJsonObject dr;
-    dr.insert(QStringLiteral("minX"), m_drawingRegion.minX);
-    dr.insert(QStringLiteral("minY"), m_drawingRegion.minY);
-    dr.insert(QStringLiteral("maxX"), m_drawingRegion.maxX);
-    dr.insert(QStringLiteral("maxY"), m_drawingRegion.maxY);
+    dr.insert(QStringLiteral("minX"), m_frame.drawingRegion.minX);
+    dr.insert(QStringLiteral("minY"), m_frame.drawingRegion.minY);
+    dr.insert(QStringLiteral("maxX"), m_frame.drawingRegion.maxX);
+    dr.insert(QStringLiteral("maxY"), m_frame.drawingRegion.maxY);
     double sx = 1.0;
     double sy = 1.0;
     const double iw = qMax(1.0, double(width()));
     const double ih = qMax(1.0, double(height()));
-    uniformScaleOf({0, 0, iw, ih}, m_drawingRegion.box(), &sx, &sy);
+    uniformScaleOf({0, 0, iw, ih}, m_frame.drawingRegion.box(), &sx, &sy);
     QJsonObject o;
     o.insert(QStringLiteral("type"), QStringLiteral("viewport"));
     o.insert(QStringLiteral("source"), QStringLiteral("epaper"));
     o.insert(QStringLiteral("seq"), ++m_viewportSeq);
-    o.insert(QStringLiteral("orientation"), m_orientation);
+    o.insert(QStringLiteral("orientation"), QString::fromStdString(m_frame.orientation));
     o.insert(QStringLiteral("settle"), settle);
     o.insert(QStringLiteral("scale"), sx);
     Q_UNUSED(sy);
@@ -1171,7 +1156,7 @@ bool TabletCanvasItem::beginFingerTouch(const PanelPt &canvasPos)
     }
     m_fingerGesture = FingerGesture::EmptyPending;
     ensureLocalDrawingRegion();
-    m_fingerPanOrigin = m_drawingRegion;
+    m_fingerPanOrigin = m_frame.drawingRegion;
     m_fingerDownWorld = panelToWorld(canvasPos);
     return true;
 }
@@ -1303,8 +1288,8 @@ void TabletCanvasItem::applyLocalTwoFinger(const PanelPt &a, const PanelPt &b)
     ensureLocalDrawingRegion();
     m_twoA = a;
     m_twoB = b;
-    m_drawingRegion.setBox(
-        applyTwoFingerPanPinch(m_fingerPanOrigin.box(), m_twoOriginContacts, uvPair(a, b)));
+    applyFrameIntent(m_frame.applyDrawingRegion(
+        applyTwoFingerPanPinch(m_fingerPanOrigin.box(), m_twoOriginContacts, uvPair(a, b)), false));
 }
 
 bool TabletCanvasItem::beginTwoFingerTouch(const PanelPt &a, const PanelPt &b)
@@ -1318,7 +1303,7 @@ bool TabletCanvasItem::beginTwoFingerTouch(const PanelPt &a, const PanelPt &b)
     const LocalNav nav = onLocalNav(followEnum());
     if (nav.blocked)
         return false;
-    m_fingerPanOrigin = m_drawingRegion;
+    m_fingerPanOrigin = m_frame.drawingRegion;
     m_twoOriginContacts = uvPair(a, b);
     m_fingerGesture = FingerGesture::TwoFinger;
     m_fingerPanClock.invalidate();
@@ -1446,7 +1431,7 @@ void TabletCanvasItem::updateToolChipRect()
     const qreal chipW = epaper::toolchip::chipWidth();
     const qreal inset = 8.0;
     qreal top = inset;
-    if (m_orientation == QLatin1String("gutOnTop"))
+    if (m_frame.orientation == "gutOnTop")
         top = height() - inset - chipH;
     const qreal left = (width() - chipW) * 0.5;
     const QRectF next(left, top, chipW, chipH);
@@ -1454,7 +1439,7 @@ void TabletCanvasItem::updateToolChipRect()
         m_toolChipRect = next;
         emit toolChipRectChanged();
     }
-    const bool gutOnTop = m_orientation == QLatin1String("gutOnTop");
+    const bool gutOnTop = m_frame.orientation == "gutOnTop";
     const auto fr = epaper::follow::followToggleRect(width(), height(), gutOnTop);
     const auto ur = epaper::follow::usbLinkRect(width(), height(), gutOnTop);
     const auto dr = epaper::follow::debugToggleRect(width(), height(), gutOnTop);
@@ -1701,7 +1686,7 @@ void TabletCanvasItem::startLiveManip(const epaper::document::DocNode *subject,
     using namespace epaper::document;
     m_selectedPickableId = QString::fromStdString(subject->id);
     m_selectedIds = QStringList{m_selectedPickableId};
-    m_drag.begin(m_selectedPickableId, handle, world.q(), subject->transform, subject->smartBounds);
+    m_drag.begin(m_selectedPickableId, handle, worldQ(world), subject->transform, subject->smartBounds);
     m_selGesture = handle == ResizeHandle::None ? SelGesture::Move : SelGesture::Resize;
     m_document.beginGesture();
     m_selectionGhostClock.invalidate();
@@ -1724,7 +1709,7 @@ void TabletCanvasItem::applyDragWorld(WorldPt world)
     if (!m_drag.active())
         return;
     epaper::UiStallSection stall("applyDragWorld");
-    m_drag.setCurrentWorld(world.q());
+    m_drag.setCurrentWorld(worldQ(world));
     // Not panel: ManipDrag reports a world-space delta, and a delta is not a WorldPt.
     const QPointF dWorld = m_drag.deltaWorld();
     SmartTransform liveT = m_drag.originT();
@@ -2333,62 +2318,54 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
     });
 }
 
-bool TabletCanvasItem::orientationLandscape() const
+void TabletCanvasItem::syncFramePanelSize() const
 {
-    return m_orientation == QLatin1String("gutOnTop")
-        || m_orientation == QLatin1String("gutAtBottom")
-        || m_orientation == QLatin1String("landscape");
+    qreal w = width();
+    qreal h = height();
+    if (w < 2.0 && window())
+        w = window()->width();
+    if (h < 2.0 && window())
+        h = window()->height();
+    m_frame.setPanelSize(double(w), double(h));
 }
 
-bool TabletCanvasItem::orientationInvertX() const
+void TabletCanvasItem::applyFrameIntent(epaper::canvasframe::FrameIntent intent)
 {
-    return m_orientation == QLatin1String("gutAtBottom")
-        || m_orientation == QLatin1String("gutToRight");
-}
-
-bool TabletCanvasItem::orientationInvertY() const
-{
-    return m_orientation == QLatin1String("gutAtBottom")
-        || m_orientation == QLatin1String("gutToRight");
+    using epaper::canvasframe::FrameIntent;
+    using epaper::canvasframe::has;
+    if (has(intent, FrameIntent::OrientationChanged))
+        updateToolChipRect();
+    // CameraChanged: callers schedule rasterize / chrome refresh themselves —
+    // those depend on settle flags and gesture context the frame does not know.
+    Q_UNUSED(FrameIntent::CameraChanged);
 }
 
 double TabletCanvasItem::panelScale() const
 {
-    if (!m_drawingRegion.valid)
-        return 1.0;
-    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
-    if (rw <= 0.0)
-        return 1.0;
-    return width() / rw;
+    syncFramePanelSize();
+    return m_frame.panelScale();
 }
 
 QRectF TabletCanvasItem::worldBoundsToPanel(const epaper::document::SmartBounds &wb) const
 {
-    const PanelPt tl = worldToPanel(wb.x, wb.y);
-    const PanelPt br = worldToPanel(wb.x + wb.width, wb.y + wb.height);
-    return QRectF(tl, br).normalized();
+    syncFramePanelSize();
+    epaper::canvasframe::PanelPt tl;
+    epaper::canvasframe::PanelPt br;
+    m_frame.worldBoundsToPanel(wb.x, wb.y, wb.width, wb.height, &tl, &br);
+    return QRectF(QPointF(tl.x, tl.y), QPointF(br.x, br.y)).normalized();
 }
 
 bool TabletCanvasItem::lodOkPanel(const epaper::document::SmartBounds &wb) const
 {
     // @implements [SRS-EP-11] LOD only when zoomed out; scale ≥ 1.0 always manipulable
-    if (!viewportZoomedOut())
-        return true;
-    const QRectF r = worldBoundsToPanel(wb);
-    return epaper::document::lodAllowsPanel(r.width(), r.height());
+    syncFramePanelSize();
+    return m_frame.lodOkPanel(wb.x, wb.y, wb.width, wb.height);
 }
 
 bool TabletCanvasItem::viewportZoomedOut() const
 {
-    if (!m_drawingRegion.valid)
-        return false;
-    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
-    const double rh = m_drawingRegion.maxY - m_drawingRegion.minY;
-    if (rw <= 0.0 || rh <= 0.0)
-        return false;
-    const double sx = width() / rw;
-    const double sy = height() / rh;
-    return std::min(sx, sy) < 1.0 - 1e-6;
+    syncFramePanelSize();
+    return m_frame.viewportZoomedOut();
 }
 
 void TabletCanvasItem::showManipUnavailable(const epaper::document::SmartBounds &wb)
@@ -2416,61 +2393,28 @@ qreal TabletCanvasItem::worldStrokeWidth(qreal pressure) const
 
 TabletCanvasItem::FrameUv TabletCanvasItem::panelToFrameUv(const PanelPt &panel) const
 {
-    const qreal pw = qMax<qreal>(1.0, width());
-    const qreal ph = qMax<qreal>(1.0, height());
-    double nx = 0;
-    double ny = 0;
-    if (orientationLandscape()) {
-        nx = 1.0 - panel.y() / ph;
-        ny = panel.x() / pw;
-    } else {
-        nx = panel.x() / pw;
-        ny = panel.y() / ph;
-    }
-    if (orientationInvertX())
-        nx = 1.0 - nx;
-    if (orientationInvertY())
-        ny = 1.0 - ny;
-    return FrameUv{nx, ny};
+    syncFramePanelSize();
+    return m_frame.panelToFrameUv({panel.x(), panel.y()});
 }
 
 TabletCanvasItem::PanelPt TabletCanvasItem::frameUvToPanel(FrameUv uv) const
 {
-    const qreal pw = qMax<qreal>(1.0, width());
-    const qreal ph = qMax<qreal>(1.0, height());
-    double nx = uv.u;
-    double ny = uv.v;
-    if (orientationInvertX())
-        nx = 1.0 - nx;
-    if (orientationInvertY())
-        ny = 1.0 - ny;
-    if (orientationLandscape())
-        return PanelPt(ny * pw, (1.0 - nx) * ph);
-    return PanelPt(nx * pw, ny * ph);
+    syncFramePanelSize();
+    const auto p = m_frame.frameUvToPanel(uv);
+    return PanelPt(p.x, p.y);
 }
 
 TabletCanvasItem::PanelPt TabletCanvasItem::worldToPanel(double wx, double wy) const
 {
-    // No camera yet: world doubles as panel, mirroring panelToWorld's identity.
-    if (!m_drawingRegion.valid)
-        return PanelPt(wx, wy);
-    const double rw = m_drawingRegion.maxX - m_drawingRegion.minX;
-    const double rh = m_drawingRegion.maxY - m_drawingRegion.minY;
-    if (rw <= 0 || rh <= 0)
-        return PanelPt();
-    return frameUvToPanel(
-        FrameUv{(wx - m_drawingRegion.minX) / rw, (wy - m_drawingRegion.minY) / rh});
+    syncFramePanelSize();
+    const auto p = m_frame.worldToPanel(wx, wy);
+    return PanelPt(p.x, p.y);
 }
 
 TabletCanvasItem::WorldPt TabletCanvasItem::panelToWorld(const PanelPt &panel) const
 {
-    // No camera yet: panel doubles as world, which is why the identity is explicit.
-    if (!m_drawingRegion.valid)
-        return WorldPt{panel.x(), panel.y()};
-    const FrameUv uv = panelToFrameUv(panel);
-    WorldPt w;
-    epaper::handtouch::mapUvToWorld(m_drawingRegion.box(), uv.u, uv.v, &w.x, &w.y);
-    return w;
+    syncFramePanelSize();
+    return m_frame.panelToWorld({panel.x(), panel.y()});
 }
 
 void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode &node,
@@ -2484,7 +2428,7 @@ void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode 
         return;
 
     const qreal worldSw = node.style.strokeWidth;
-    const double rw = m_drawingRegion.valid ? (m_drawingRegion.maxX - m_drawingRegion.minX)
+    const double rw = m_frame.drawingRegion.valid ? (m_frame.drawingRegion.maxX - m_frame.drawingRegion.minX)
                                             : qMax(1.0, double(width()));
     const double sPanel = width() / qMax(1e-6, rw);
     qreal mul = 1.0;

@@ -37,3 +37,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/hand_touch_test.cpp -o /tmp/hand_touc
 /tmp/hand_touch_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/viewport_follow_test.cpp -o /tmp/viewport_follow_test
 /tmp/viewport_follow_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/canvas_frame_test.cpp -o /tmp/canvas_frame_test
+/tmp/canvas_frame_test
