@@ -5,6 +5,7 @@
 
 # epaper: local CMake/clangd artifacts
 epaper/build-clangd/
+epaper/build-warn/
 epaper/.cache/
 epaper/compile_commands.json
 
