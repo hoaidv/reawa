@@ -61,6 +61,7 @@ qt_add_resources(epaper_bin "epaper_tool_icons"
 )
 
 target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network Threads::Threads ${CMAKE_DL_LIBS})
+target_compile_options(epaper_bin PRIVATE -Wno-psabi)
 set_target_properties(epaper_bin PROPERTIES
     OUTPUT_NAME epaper
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"

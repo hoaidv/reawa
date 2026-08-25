@@ -136,7 +136,7 @@ public:
     Q_INVOKABLE void ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure);
     void ingestPoint(QEvent::Type type, const QPointF &pos, const IngestChannels &ch);
     Q_INVOKABLE void armTool(const QString &mode);
-    int documentInkCount() const;
+    
     std::string ingestDumpText() const;
     /**
      * Capacitive one-finger path (STORY-EP-038). Knob / box / empty palm vs pan.
@@ -157,7 +157,7 @@ public:
     /** @implements [SRS-EP-21] pen near outranks hand touch — called from QML */
     Q_INVOKABLE void cancelHandTouch();
     QString followDirection() const { return m_followDirection; }
-    void setFollowDirection(const QString &dir);
+    
     Q_INVOKABLE void tapFollowToggle();
     int viewportUpCount() const { return m_viewportUpCount; }
 
@@ -170,8 +170,7 @@ public:
     Q_INVOKABLE QPointF panelToWorld(const QPointF &panel) const;
     /** @implements [SRS-EP-11] handle drag in world space */
     void beginHandleDrag(int handleIndex, const QPointF &world);
-    void updateHandleDrag(const QPointF &world);
-    void endHandleDrag();
+    
     Q_INVOKABLE void tapModeChip();
     /**
      * Qt DragHandler / PinchHandler canvas entry. Qt owns the hit-test and the
@@ -203,7 +202,7 @@ signals:
     void handTouchArmedChanged();
     void followChanged();
     void historyChanged();
-    void pickablesChanged();
+    
     void selectionChromeChanged();
     void segmentDrawn(qreal x1, qreal y1, qreal x2, qreal y2, qreal lineWidth);
 
@@ -257,14 +256,14 @@ private:
     void syncBegin();
     void syncPoint(const Point &pt);
     void syncEnd();
-    void syncToolIntent(const QJsonObject &obj);
+    
     void flushOneWayWire();
     void sendManipPreviewToInfini();
     void onHostMessage(const QJsonObject &obj);
     void applyViewport(const QJsonObject &obj);
-    void applyDocSnapshot(const QJsonObject &obj);
+    
     void updateToolChipRect();
-    void emitViewportFollow();
+    
     void flushFollowOutbound();
     void applyFollowCamera();
     void cacheInfiniViewport(const QJsonObject &obj);
@@ -273,7 +272,7 @@ private:
     void finishMarqueeOrLasso();
     void refreshSelectionChrome();
     QString hitLocalSmartGroup(const QPointF &world) const;
-    QString hitPickable(const QPointF &world) const;
+    
     void beginSelectionGesture(const QPointF &canvasPos);
     void startLiveManip(const epaper::document::DocNode *subject,
                         epaper::document::ResizeHandle handle, const QPointF &world);
@@ -293,7 +292,7 @@ private:
     void damageToolChromeSegment(const QRectF &seg);
     void syncToolCanvasPresence();
     void paintLiveManipOnToolCanvas(QPainter *painter);
-    QRectF pickablePanelRect(const QString &id, double dxWorld = 0, double dyWorld = 0) const;
+    
     void applyHistoryRestore(bool isUndo);
     void pruneSelectionAfterHistory();
     void notifyHistory();
@@ -378,12 +377,12 @@ private:
     std::vector<std::int64_t> m_ingestNs;
     int m_ingestApplied = 0;
     int m_ingestRejected = 0;
-    bool m_loggedRetiredSnapshot = false;
-    QJsonArray m_pickables;
+    
+    // QJsonArray m_pickables;
     epaper::toolchip::ChipModel m_chip;
     QString m_toolMode = QStringLiteral("pen");
     /** Exclusive tool latched at pen-down (SRS-EP-04 / SRS-EP-10). */
-    QString m_strokeArmedTool;
+    
     QString m_lastStrokeLatch;
     bool m_needEncloseRasterize = false;
     /** @implements [SRS-EP-12] UI-EP-06 enclose pulse + last-join highlight (CHL-0020) */

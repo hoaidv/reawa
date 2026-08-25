@@ -440,11 +440,6 @@ void TabletCanvasItem::applyContactPress(const QPointF &canvasPos, const IngestC
         beginStroke(canvasPos, ch);
 }
 
-int TabletCanvasItem::documentInkCount() const
-{
-    return m_document.inkCount();
-}
-
 std::string TabletCanvasItem::ingestDumpText() const
 {
     using epaper::latencyprobe::nsToUs;
@@ -589,7 +584,7 @@ void TabletCanvasItem::beginStroke(const QPointF &canvasPos, const IngestChannel
     m_document.beginGesture();
     // @implements [SRS-EP-04] latch exclusive tool and both toggles at pen-down
     m_chip.latchPenDown();
-    m_strokeArmedTool = QString::fromStdString(m_chip.latchedTool);
+    
     const QString latch = QString::fromStdString(m_chip.dispatchTuple());
     if (m_lastStrokeLatch != latch) {
         m_lastStrokeLatch = latch;
@@ -979,19 +974,6 @@ void TabletCanvasItem::applyViewport(const QJsonObject &obj)
     refreshSelectionChrome();
 }
 
-void TabletCanvasItem::applyDocSnapshot(const QJsonObject &obj)
-{
-    Q_UNUSED(obj);
-    // @implements [SRS-EP-07] 0 inbound peer pictures as a paint source
-    // Full inbound classification / handshake is STORY-EP-020; this story must not
-    // rasterize a peer snapshot over the local tree.
-    if (!m_loggedRetiredSnapshot) {
-        m_loggedRetiredSnapshot = true;
-        qInfo() << "[sync] reject retired doc_snapshot; paint stays on local tree ink"
-                << m_document.inkCount();
-    }
-}
-
 void TabletCanvasItem::setToolMode(const QString &mode)
 {
     if (!m_chip.setExclusive(mode.toStdString()))
@@ -1002,9 +984,7 @@ void TabletCanvasItem::setToolMode(const QString &mode)
     if (hadHighlight && !m_strokeActive)
         scheduleVectorRasterize(true);
     emit toolModeChanged();
-    m_debugInfo = QStringLiteral("tool=%1 pickables=%2")
-                      .arg(m_toolMode)
-                      .arg(m_pickables.size());
+    m_debugInfo = QStringLiteral("tool=%1").arg(m_toolMode);
     emit debugChanged();
     // @fix residual knobs / scale chip when leaving sel_* (QML chrome is not ToolCanvas)
     refreshSelectionChrome();
@@ -1029,14 +1009,6 @@ void TabletCanvasItem::toggleRecogConnector()
     emit recogChanged();
 }
 
-void TabletCanvasItem::setFollowDirection(const QString &dir)
-{
-    const auto parsed = epaper::handtouch::parseFollow(dir.toStdString());
-    m_follow.direction = parsed;
-    m_followDirection = QString::fromLatin1(epaper::handtouch::followId(parsed));
-    emit followChanged();
-}
-
 void TabletCanvasItem::tapFollowToggle()
 {
     m_follow.connected = m_sync && m_sync->isConnected();
@@ -1047,13 +1019,6 @@ void TabletCanvasItem::tapFollowToggle()
     flushFollowOutbound();
     if (r.appliedInfiniViewport)
         applyFollowCamera();
-}
-
-void TabletCanvasItem::emitViewportFollow()
-{
-    m_follow.connected = m_sync && m_sync->isConnected();
-    m_follow.emitFollow();
-    flushFollowOutbound();
 }
 
 void TabletCanvasItem::flushFollowOutbound()
@@ -1748,22 +1713,6 @@ void TabletCanvasItem::finishMarqueeOrLasso()
     refreshSelectionChrome();
 }
 
-QString TabletCanvasItem::hitPickable(const QPointF &world) const
-{
-    // Topmost = last in array (SRS-EP-04).
-    for (int i = m_pickables.size() - 1; i >= 0; --i) {
-        const QJsonObject p = m_pickables.at(i).toObject();
-        const QJsonObject b = p.value(QStringLiteral("bounds")).toObject();
-        const double minX = b.value(QStringLiteral("minX")).toDouble();
-        const double minY = b.value(QStringLiteral("minY")).toDouble();
-        const double maxX = b.value(QStringLiteral("maxX")).toDouble();
-        const double maxY = b.value(QStringLiteral("maxY")).toDouble();
-        if (world.x() >= minX && world.x() <= maxX && world.y() >= minY && world.y() <= maxY)
-            return p.value(QStringLiteral("id")).toString();
-    }
-    return {};
-}
-
 void TabletCanvasItem::startLiveManip(const epaper::document::DocNode *subject,
                                      epaper::document::ResizeHandle handle, const QPointF &world)
 {
@@ -1841,16 +1790,6 @@ void TabletCanvasItem::beginHandleDrag(int handleIndex, const QPointF &world)
     }
     m_fingerGesture = FingerGesture::Resize;
     startLiveManip(selected, handle, world);
-}
-
-void TabletCanvasItem::updateHandleDrag(const QPointF &world)
-{
-    applyDragWorld(world);
-}
-
-void TabletCanvasItem::endHandleDrag()
-{
-    endSelectionGesture();
 }
 
 void TabletCanvasItem::tapModeChip()
@@ -2212,26 +2151,6 @@ void TabletCanvasItem::endSelectionGesture()
     m_selGesture = SelGesture::None;
 }
 
-QRectF TabletCanvasItem::pickablePanelRect(const QString &id, double dxWorld, double dyWorld) const
-{
-    if (id.isEmpty() || !m_drawingRegion.valid)
-        return {};
-    for (const QJsonValue &v : m_pickables) {
-        const QJsonObject p = v.toObject();
-        if (p.value(QStringLiteral("id")).toString() != id)
-            continue;
-        const QJsonObject b = p.value(QStringLiteral("bounds")).toObject();
-        const double minX = b.value(QStringLiteral("minX")).toDouble() + dxWorld;
-        const double minY = b.value(QStringLiteral("minY")).toDouble() + dyWorld;
-        const double maxX = b.value(QStringLiteral("maxX")).toDouble() + dxWorld;
-        const double maxY = b.value(QStringLiteral("maxY")).toDouble() + dyWorld;
-        const QPointF tl = worldToPanel(minX, minY);
-        const QPointF br = worldToPanel(maxX, maxY);
-        return QRectF(tl, br).normalized();
-    }
-    return {};
-}
-
 void TabletCanvasItem::bindToolCanvas(ToolCanvasItem *overlay)
 {
     m_toolCanvas = overlay;
@@ -2383,11 +2302,6 @@ void TabletCanvasItem::paintToolChrome(QPainter *painter)
     painter->setPen(dotted);
     painter->drawRect(r);
     painter->restore();
-}
-
-void TabletCanvasItem::syncToolIntent(const QJsonObject &obj)
-{
-    m_sync->sendLine(QJsonDocument(obj).toJson(QJsonDocument::Compact));
 }
 
 void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
