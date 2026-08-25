@@ -26,6 +26,7 @@
 #include "gesture/manipdrag.h"
 #include "input/pen_sample.hpp"
 #include "primary_toolbar.hpp"
+#include "stroke_capture.hpp"
 
 class StrokeSync;
 class ToolCanvasItem;
@@ -233,8 +234,8 @@ private:
  * =================================================================================================
  */
 public:
-    int strokeCount() const { return m_strokeCount; }
-    QPointF lastPoint() const { return m_lastPoint; }
+    int strokeCount() const { return m_stroke.strokeCount; }
+    QPointF lastPoint() const { return PanelPt(m_stroke.lastPanelX, m_stroke.lastPanelY); }
 
     /**
      * @p pos is raw, not panel — it is QPointF because Q_INVOKABLE marshals through
@@ -252,35 +253,21 @@ signals:
     void strokeCountChanged();
 
 private:
-    Point makePoint(const PanelPt &canvasPos, const IngestChannels &ch) const;
+    Point makePoint(const epaper::strokecapture::Sample &s) const;
+    epaper::strokecapture::Channels toChannels(const IngestChannels &ch) const;
+    void applyStrokeIntent(const epaper::strokecapture::StrokeResult &r);
     void applyContactPress(const PanelPt &canvasPos, const IngestChannels &ch);
     void beginStroke(const PanelPt &canvasPos, const IngestChannels &ch);
     void appendPoint(const PanelPt &canvasPos, const IngestChannels &ch);
     void endStroke();
-    void ingestCurrentStroke();
+    void ingestCurrentStroke(const epaper::document::FinishedStroke &stroke);
     qreal worldStrokeWidth(qreal pressure) const;
 
-    
-    QVector<Point> m_current;
-    Point m_lastEmitted{};
-    bool m_hasEmitted = false;
-    bool m_strokeActive = false;
-    QString m_activeStrokeId;
-    int m_strokeSeq = 0;
-    int m_strokeCount = 0;
-    PanelPt m_lastPoint;
-    RawPt m_lastRaw;
-    qreal m_activeWorldStrokeWidth = 2.5;
-    /** @fix [STORY-EP-033] wait for a non-origin sample after a stale Press. */
-    bool m_awaitingPlausiblePress = false;
-    /** True after stroke_begin went to Infini — origin starts must not preview. */
-    bool m_strokePreviewSent = false;
+    epaper::strokecapture::StrokeCapture m_stroke;
     bool m_needEncloseRasterize = false;
     std::vector<std::int64_t> m_ingestNs;
     int m_ingestApplied = 0;
     int m_ingestRejected = 0;
-    static constexpr qreal kBaseWorldStroke = 2.5;
-    
 
     Q_PROPERTY(int strokeCount READ strokeCount NOTIFY strokeCountChanged)
     Q_PROPERTY(QPointF lastPoint READ lastPoint NOTIFY debugChanged)

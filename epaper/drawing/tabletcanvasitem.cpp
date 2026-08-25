@@ -288,19 +288,15 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
     // Q_INVOKABLE, so the wire type stays QPointF; it is raw and named so here.
     const RawPt raw{pos.x(), pos.y()};
     const PanelPt canvasPos = mapInputToCanvas(raw);
-    m_lastPoint = canvasPos;
-    m_lastRaw = raw;
+    m_stroke.setPanelHeight(double(ingestPanelHeight()));
+    m_stroke.noteContact(canvasPos.x(), canvasPos.y(), raw.x, raw.y);
 
     const bool isPress = (type == QEvent::TabletPress || type == QEvent::MouseButtonPress);
     const bool isMove = (type == QEvent::TabletMove || type == QEvent::MouseMove);
     const bool isRelease = (type == QEvent::TabletRelease || type == QEvent::MouseButtonRelease);
-    const qreal panelH = ingestPanelHeight();
-    const bool stale = epaper::ingest::isStaleOriginSample(
-        double(raw.x), double(raw.y), double(canvasPos.x()), double(canvasPos.y()),
-        double(panelH));
+    const bool stale = m_stroke.sampleStale(canvasPos.x(), canvasPos.y(), raw.x, raw.y);
     // @fix [STORY-EP-033] reject origin/stale first sample on pen-down
-    const auto guard = epaper::ingest::decideOriginPress(
-        isPress, isMove, isRelease, stale, &m_awaitingPlausiblePress);
+    const auto guard = m_stroke.guardContact(isPress, isMove, isRelease, stale);
     if (guard == epaper::ingest::OriginGuardAction::Discard
         || guard == epaper::ingest::OriginGuardAction::DropContact) {
         return;
@@ -325,14 +321,14 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
         // @implements [SRS-EP-10] mid-stroke tool switch does not change the latch
         // @implements [SRS-EP-04] selection mode never inks (STORY-EP-007)
         // @implements [SRS-EP-07] Selection armed → no stroke, no Ink node
-        if (m_strokeActive)
+        if (m_stroke.active)
             appendPoint(canvasPos, bounded);
         else if (selectionGestureActive())
             updateSelectionGesture(canvasPos);
         break;
     case QEvent::TabletRelease:
     case QEvent::MouseButtonRelease:
-        if (m_strokeActive)
+        if (m_stroke.active)
             endStroke();
         else if (selectionGestureActive())
             endSelectionGesture();
@@ -350,19 +346,14 @@ void TabletCanvasItem::ingestMappedTablet(QEvent::Type type, const PanelPt &canv
     const qreal p = qBound<qreal>(0.0, ch.pressure, 1.0);
     IngestChannels bounded = ch;
     bounded.pressure = p;
-    m_lastPoint = canvasPos;
-    m_lastRaw = rawPos;
+    m_stroke.setPanelHeight(double(ingestPanelHeight()));
+    m_stroke.noteContact(canvasPos.x(), canvasPos.y(), rawPos.x, rawPos.y);
 
     const bool isPress = (type == QEvent::TabletPress);
     const bool isMove = (type == QEvent::TabletMove);
     const bool isRelease = (type == QEvent::TabletRelease);
-    const qreal panelH = ingestPanelHeight();
-    const bool stale = epaper::ingest::isStaleOriginSample(
-        double(rawPos.x), double(rawPos.y),
-        double(canvasPos.x()), double(canvasPos.y()),
-        double(panelH));
-    const auto guard = epaper::ingest::decideOriginPress(
-        isPress, isMove, isRelease, stale, &m_awaitingPlausiblePress);
+    const bool stale = m_stroke.sampleStale(canvasPos.x(), canvasPos.y(), rawPos.x, rawPos.y);
+    const auto guard = m_stroke.guardContact(isPress, isMove, isRelease, stale);
     if (guard == epaper::ingest::OriginGuardAction::Discard
         || guard == epaper::ingest::OriginGuardAction::DropContact) {
         return;
@@ -382,13 +373,13 @@ void TabletCanvasItem::ingestMappedTablet(QEvent::Type type, const PanelPt &canv
 
     switch (type) {
     case QEvent::TabletMove:
-        if (m_strokeActive)
+        if (m_stroke.active)
             appendPoint(canvasPos, bounded);
         else if (selectionGestureActive())
             updateSelectionGesture(canvasPos);
         break;
     case QEvent::TabletRelease:
-        if (m_strokeActive)
+        if (m_stroke.active)
             endStroke();
         else if (selectionGestureActive())
             endSelectionGesture();
@@ -559,150 +550,112 @@ void TabletCanvasItem::flushPending()
     }
 }
 
-TabletCanvasItem::Point TabletCanvasItem::makePoint(const PanelPt &canvasPos, const IngestChannels &ch) const
+TabletCanvasItem::Point TabletCanvasItem::makePoint(const epaper::strokecapture::Sample &s) const
 {
     Point pt;
-    pt.pos = canvasPos;
-    pt.pressure = ch.pressure;
-    pt.raw = m_lastRaw;
-    pt.hasTilt = ch.hasTilt;
-    pt.tiltX = ch.tiltX;
-    pt.tiltY = ch.tiltY;
-    pt.hasDistance = ch.hasDistance;
-    pt.distance = ch.distance;
-    pt.hasTimestamp = ch.hasTimestamp;
-    pt.timestamp = ch.timestamp;
-    pt.hasRotation = ch.hasRotation;
-    pt.rotation = ch.rotation;
-    pt.hasTangential = ch.hasTangential;
-    pt.tangential = ch.tangential;
+    pt.pos = PanelPt(s.panelX, s.panelY);
+    pt.pressure = s.ch.pressure;
+    pt.raw = RawPt{qreal(s.rawX), qreal(s.rawY)};
+    pt.hasTilt = s.ch.hasTilt;
+    pt.tiltX = s.ch.tiltX;
+    pt.tiltY = s.ch.tiltY;
+    pt.hasDistance = s.ch.hasDistance;
+    pt.distance = s.ch.distance;
+    pt.hasTimestamp = s.ch.hasTimestamp;
+    pt.timestamp = s.ch.timestamp;
+    pt.hasRotation = s.ch.hasRotation;
+    pt.rotation = s.ch.rotation;
+    pt.hasTangential = s.ch.hasTangential;
+    pt.tangential = s.ch.tangential;
     return pt;
+}
+
+epaper::strokecapture::Channels TabletCanvasItem::toChannels(const IngestChannels &ch) const
+{
+    epaper::strokecapture::Channels c;
+    c.pressure = ch.pressure;
+    c.hasTilt = ch.hasTilt;
+    c.tiltX = ch.tiltX;
+    c.tiltY = ch.tiltY;
+    c.hasDistance = ch.hasDistance;
+    c.distance = ch.distance;
+    c.hasTimestamp = ch.hasTimestamp;
+    c.timestamp = ch.timestamp;
+    c.hasRotation = ch.hasRotation;
+    c.rotation = ch.rotation;
+    c.hasTangential = ch.hasTangential;
+    c.tangential = ch.tangential;
+    return c;
+}
+
+void TabletCanvasItem::applyStrokeIntent(const epaper::strokecapture::StrokeResult &r)
+{
+    using epaper::strokecapture::StrokeIntent;
+    using epaper::strokecapture::has;
+    if (has(r.intent, StrokeIntent::CancelSettle))
+        ++m_settleFollowUpToken;
+    if (has(r.intent, StrokeIntent::BeginGesture))
+        m_document.beginGesture();
+    if (has(r.intent, StrokeIntent::LatchChip)) {
+        m_chip.latchPenDown();
+        const QString latch = QString::fromStdString(m_chip.dispatchTuple());
+        if (m_lastStrokeLatch != latch) {
+            m_lastStrokeLatch = latch;
+            emit lastStrokeLatchChanged();
+        }
+    }
+    if (has(r.intent, StrokeIntent::PreviewBegin))
+        syncBegin();
+    if (has(r.intent, StrokeIntent::PreviewPoint) && r.hasPreviewSample)
+        syncPoint(makePoint(r.previewSample));
+    if (has(r.intent, StrokeIntent::EmitSegment) && r.hasSegment)
+        emitSegment(makePoint(r.segmentFrom), makePoint(r.segmentTo));
+    if (has(r.intent, StrokeIntent::PreviewEnd))
+        syncEnd();
+    if (has(r.intent, StrokeIntent::StrokeCountChanged))
+        emit strokeCountChanged();
+    // Pixels before ingest — SRS-EP-07 / EP-13.
+    if (has(r.intent, StrokeIntent::FlushInk))
+        flushPending();
+    if (has(r.intent, StrokeIntent::IngestReady) && r.hasFinished)
+        ingestCurrentStroke(r.finished);
+    if (has(r.intent, StrokeIntent::AbortGesture))
+        m_document.abortGesture();
+    if (has(r.intent, StrokeIntent::NotifyHistory))
+        notifyHistory();
+    if (has(r.intent, StrokeIntent::FlushWire))
+        flushOneWayWire();
+    if (has(r.intent, StrokeIntent::ChipPenUp))
+        m_chip.penUp();
 }
 
 void TabletCanvasItem::beginStroke(const PanelPt &canvasPos, const IngestChannels &ch)
 {
-    // Cancel pending settle follow-up so it cannot white-clear mid-stroke.
-    ++m_settleFollowUpToken;
-    // @implements [SRS-EP-07] stroke is one undo gesture from pen-down
-    m_document.beginGesture();
-    // @implements [SRS-EP-04] latch exclusive tool and both toggles at pen-down
-    m_chip.latchPenDown();
-    
-    const QString latch = QString::fromStdString(m_chip.dispatchTuple());
-    if (m_lastStrokeLatch != latch) {
-        m_lastStrokeLatch = latch;
-        emit lastStrokeLatchChanged();
-    }
-
-    m_current.clear();
-    m_activeStrokeId = QStringLiteral("s-%1").arg(++m_strokeSeq);
-    m_activeWorldStrokeWidth = worldStrokeWidth(ch.pressure);
-    m_current.append(makePoint(canvasPos, ch));
-    m_lastEmitted = m_current.last();
-    m_hasEmitted = false;
-    m_strokeActive = true;
+    m_stroke.setPanelHeight(double(ingestPanelHeight()));
     m_pendingDirty = QRectF();
     m_flushClock.restart();
-    m_strokePreviewSent = false;
-
-    // @fix [STORY-EP-033] do not stamp a speckle at digitizer origin, and do not
-    // preview it to Infini (stroke_begin/point is device→desktop, not the reverse).
-    if (epaper::ingest::isStaleOriginSample(double(m_lastRaw.x), double(m_lastRaw.y),
-                                           double(canvasPos.x()), double(canvasPos.y()),
-                                           double(ingestPanelHeight()))) {
-        m_hasEmitted = false;
-        return;
-    }
-
-    syncBegin();
-    syncPoint(m_current.last());
-    m_strokePreviewSent = true;
-
-    emitSegment(m_lastEmitted, m_lastEmitted);
-    m_hasEmitted = true;
-    flushPending();
+    applyStrokeIntent(m_stroke.begin(canvasPos.x(), canvasPos.y(), toChannels(ch)));
 }
 
 void TabletCanvasItem::appendPoint(const PanelPt &canvasPos, const IngestChannels &ch)
 {
-    if (!m_strokeActive || m_current.isEmpty()) {
+    if (!m_stroke.active || m_stroke.current.empty()) {
         beginStroke(canvasPos, ch);
         return;
     }
-
-    const qreal panelH = ingestPanelHeight();
-    // Origin sample after a real press (tip → bottom-left) must not be appended.
-    if (epaper::ingest::isStaleOriginSample(
-            double(m_lastRaw.x), double(m_lastRaw.y), double(canvasPos.x()),
-            double(canvasPos.y()), double(panelH))) {
-        return;
-    }
-
-    if (m_current.size() == 1
-        && epaper::ingest::isImplausibleOriginJump(
-            double(m_current.first().pos.x()), double(m_current.first().pos.y()),
-            double(canvasPos.x()), double(canvasPos.y()), double(panelH))) {
-        // @fix [STORY-EP-033] replace stale origin start; do not emit the diagonal
-        m_current[0] = makePoint(canvasPos, ch);
-        m_lastEmitted = m_current[0];
-        if (!m_strokePreviewSent) {
-            syncBegin();
-            m_strokePreviewSent = true;
-        }
-        syncPoint(m_current[0]);
-        emitSegment(m_lastEmitted, m_lastEmitted);
-        m_hasEmitted = true;
-        flushPending();
-        return;
-    }
-
-    Point next = makePoint(canvasPos, ch);
-    m_current.append(next);
-    if (!m_strokePreviewSent) {
-        syncBegin();
-        m_strokePreviewSent = true;
-    }
-    syncPoint(next);
-
-    emitSegment(m_lastEmitted, next);
-    m_lastEmitted = next;
-
-    if (!m_hasEmitted || m_flushClock.elapsed() >= kFlushIntervalMs) {
-        m_hasEmitted = true;
-        flushPending();
-    }
+    m_stroke.setPanelHeight(double(ingestPanelHeight()));
+    const bool flushDue = m_flushClock.elapsed() >= kFlushIntervalMs;
+    applyStrokeIntent(
+        m_stroke.append(canvasPos.x(), canvasPos.y(), toChannels(ch), flushDue));
 }
 
 void TabletCanvasItem::endStroke()
 {
-    if (!m_strokeActive)
+    if (!m_stroke.active)
         return;
 
     epaper::UiStallSection stall("endStroke");
-    if (m_current.size() >= 2) {
-        const Point &last = m_current.last();
-        if (last.pos != m_lastEmitted.pos)
-            emitSegment(m_lastEmitted, last);
-        ++m_strokeCount;
-        emit strokeCountChanged();
-        syncEnd();
-    }
-
-    // Pixels first — ingestion must not sit between a sample and its pixel (SRS-EP-07 / EP-13).
-    flushPending();
-
-    if (m_current.size() >= 2)
-        ingestCurrentStroke();
-    // Safety net: commitOp already ended a successful gesture; this aborts an empty one.
-    m_document.abortGesture();
-    notifyHistory();
-    flushOneWayWire();
-
-    m_current.clear();
-    m_hasEmitted = false;
-    m_strokeActive = false;
-    m_strokePreviewSent = false;
-    m_chip.penUp();
+    applyStrokeIntent(m_stroke.end());
 
     // Rasterize after enclose so group-local ink is visible (not in paint()).
     if (m_needEncloseRasterize) {
@@ -722,8 +675,8 @@ void TabletCanvasItem::endStroke()
     // Status text is refreshed between strokes only: during a stroke it would
     // add a second damage region per flush.
     m_debugInfo = QStringLiteral("(%1,%2) sz=%3x%4 flush=%5 paint=%6 ink=%7")
-                      .arg(int(m_lastPoint.x()))
-                      .arg(int(m_lastPoint.y()))
+                      .arg(int(m_stroke.lastPanelX))
+                      .arg(int(m_stroke.lastPanelY))
                       .arg(int(width()))
                       .arg(int(height()))
                       .arg(m_flushCount)
@@ -735,34 +688,11 @@ void TabletCanvasItem::endStroke()
 /** @implements [SRS-EP-07] finished stroke → append_ink at pen-up */
 /** @implements [SRS-EP-10] ADR-0022 closure-first dispatch (one [recog] line) */
 /** @implements [SRS-EP-15] [ink] / [enclose] log sources after ingest */
-void TabletCanvasItem::ingestCurrentStroke()
+void TabletCanvasItem::ingestCurrentStroke(const epaper::document::FinishedStroke &stroke)
 {
     using namespace epaper::document;
-    FinishedStroke stroke;
-    stroke.id = m_activeStrokeId.toStdString();
-    stroke.strokeWidthWorld = double(m_activeWorldStrokeWidth);
-    stroke.samples.reserve(size_t(m_current.size()));
-    for (int i = 0; i < m_current.size(); ++i) {
-        const Point &pt = m_current.at(i);
-        DigitizerSample d;
-        d.panelX = pt.pos.x();
-        d.panelY = pt.pos.y();
-        d.pressure = pt.pressure;
-        if (pt.hasTilt) {
-            d.tiltX = pt.tiltX;
-            d.tiltY = pt.tiltY;
-        }
-        if (pt.hasDistance)
-            d.distance = pt.distance;
-        if (pt.hasTimestamp)
-            d.timestamp = pt.timestamp;
-        d.t = double(i);
-        if (pt.hasRotation)
-            d.extras.emplace("rotation", JsonValue::number(double(pt.rotation)));
-        if (pt.hasTangential)
-            d.extras.emplace("tangentialPressure", JsonValue::number(double(pt.tangential)));
-        stroke.samples.push_back(std::move(d));
-    }
+    if (stroke.samples.size() < 2)
+        return;
     const PanelToWorld map = [this](double px, double py, double *wx, double *wy) {
         const WorldPt w = panelToWorld(PanelPt(px, py));
         *wx = w.x;
@@ -853,7 +783,7 @@ void TabletCanvasItem::ingestCurrentStroke()
 void TabletCanvasItem::syncBegin()
 {
     // @implements [SRS-EP-08] stroke_begin without intent
-    m_oneWay.beginPreviewStroke(m_activeStrokeId.toStdString());
+    m_oneWay.beginPreviewStroke(m_stroke.activeStrokeId);
     flushOneWayWire();
 }
 
@@ -862,13 +792,13 @@ void TabletCanvasItem::syncPoint(const Point &pt)
     // @implements [SRS-EP-02] live preview in world — same space as append_ink
     ensureLocalDrawingRegion();
     const WorldPt world = panelToWorld(pt.pos);
-    m_oneWay.previewStrokePoint(m_activeStrokeId.toStdString(), world.x, world.y, pt.pressure);
+    m_oneWay.previewStrokePoint(m_stroke.activeStrokeId, world.x, world.y, pt.pressure);
     flushOneWayWire();
 }
 
 void TabletCanvasItem::syncEnd()
 {
-    m_oneWay.endPreviewStroke(m_activeStrokeId.toStdString());
+    m_oneWay.endPreviewStroke(m_stroke.activeStrokeId);
     flushOneWayWire();
 }
 
@@ -979,7 +909,7 @@ void TabletCanvasItem::setToolMode(const QString &mode)
     const bool hadHighlight = !m_highlightInkIds.empty();
     m_toolMode = QString::fromStdString(m_chip.exclusive);
     clearMembershipHighlight();
-    if (hadHighlight && !m_strokeActive)
+    if (hadHighlight && !m_stroke.active)
         scheduleVectorRasterize(true);
     emit toolModeChanged();
     m_debugInfo = QStringLiteral("tool=%1").arg(m_toolMode);
@@ -1878,7 +1808,7 @@ void TabletCanvasItem::onFingerTap(qreal x, qreal y)
 
 void TabletCanvasItem::onPointerCancel()
 {
-    if (m_strokeActive)
+    if (m_stroke.active)
         endStroke();
     else if (selectionGestureActive())
         endSelectionGesture();
@@ -2277,7 +2207,7 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
 {
     // Never full-redraw while the pen is down — white clear would erase live ink
     // and stall the GUI thread so later strokes miss the panel.
-    if (m_strokeActive) {
+    if (m_stroke.active) {
         if (sharp)
             m_rasterizeDeferredSharp = true;
         else if (!m_rasterizeDeferredSharp)
@@ -2300,7 +2230,7 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
         m_rasterizeSharp = false;
         const int token = ++m_settleFollowUpToken;
         QTimer::singleShot(int(kSettleFollowUpMs), this, [this, token]() {
-            if (token != m_settleFollowUpToken || m_strokeActive)
+            if (token != m_settleFollowUpToken || m_stroke.active)
                 return;
             rasterizeVectors(true);
         });
@@ -2308,7 +2238,7 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
     }
     m_rasterizePending = true;
     QTimer::singleShot(int(kRefreshMinIntervalMs), this, [this]() {
-        if (!m_rasterizePending || m_strokeActive)
+        if (!m_rasterizePending || m_stroke.active)
             return;
         m_rasterizePending = false;
         const bool doSharp = m_rasterizeSharp || m_rasterizeDeferredSharp;
@@ -2386,9 +2316,8 @@ void TabletCanvasItem::showManipUnavailable(const epaper::document::SmartBounds 
 
 qreal TabletCanvasItem::worldStrokeWidth(qreal pressure) const
 {
-    const qreal p = qBound<qreal>(0.0, pressure, 1.0);
-    // Match Infini demo ink (~2.5 world) with light pressure modulation.
-    return kBaseWorldStroke * (0.7 + 0.3 * p);
+    return qreal(epaper::strokecapture::worldStrokeWidth(double(pressure),
+                                                         epaper::strokecapture::StrokeCapture::kBaseWorldStroke));
 }
 
 TabletCanvasItem::FrameUv TabletCanvasItem::panelToFrameUv(const PanelPt &panel) const
@@ -2656,7 +2585,7 @@ void TabletCanvasItem::beginRecogWidthBlink(const std::vector<std::string> &inkI
             return;
         m_blinkInkIds.clear();
         m_blinkWidthMul = 1.0;
-        if (!m_strokeActive)
+        if (!m_stroke.active)
             rasterizeVectors(true);
     });
 }

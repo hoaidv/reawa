@@ -39,3 +39,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/viewport_follow_test.cpp -o /tmp/view
 /tmp/viewport_follow_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/canvas_frame_test.cpp -o /tmp/canvas_frame_test
 /tmp/canvas_frame_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/stroke_capture_test.cpp -o /tmp/stroke_capture_test
+/tmp/stroke_capture_test
