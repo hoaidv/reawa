@@ -20,7 +20,6 @@
 #include "canvas_session.h"
 #include "document/device_document.hpp"
 #include "document/hand_touch.hpp"
-#include "document/manipulate.hpp"
 #include "document/one_way_sync.hpp"
 #include "document/viewport_follow.hpp"
 #include "input/pen_sample.hpp"

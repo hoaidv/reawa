@@ -7,9 +7,7 @@
 #include "document/recognizer_dispatch.hpp"
 #include "document/recognize_enclose.hpp"
 #include "document/membership.hpp"
-#include "document/surround_create.hpp"
 #include "document/manipulate.hpp"
-#include "document/capability.hpp"
 #include "debug/debug_log_format.hpp"
 #include "toolcanvasitem.h"
 #include "primary_toolbar.hpp"
@@ -28,7 +26,6 @@
 #include <QTimer>
 #include <QDebug>
 #include <QSizeF>
-#include <algorithm>
 #include <cstdio>
 #include <string>
 #include <unordered_set>
@@ -104,6 +101,16 @@ epaper::handtouch::WorldAabb aabbFromJson(const QJsonObject &dr)
 
 } // namespace
 
+/**
+ * =================================================================================================
+ * Construction and Qt item lifecycle
+ *
+ * Ctor wires StrokeSync, CanvasSession NOTIFY → rasterize/chrome, and ToolChip layout.
+ * geometryChange keeps panel size and Pen-mode region in sync with the QQuickItem.
+ * =================================================================================================
+ */
+
+/** Owns session, one-way sync, and session→rasterize connections. */
 TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     : QQuickPaintedItem(parent)
     , m_sync(new StrokeSync(this))
@@ -158,6 +165,22 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     connect(&m_session, &CanvasSession::recogChanged, this, &TabletCanvasItem::recogChanged);
 }
 
+/** On resize: sync frame panel size, ToolChip layout, and Pen-mode region. */
+void TabletCanvasItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
+{
+    QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
+    syncFramePanelSize();
+    qInfo() << "[ink] geometryChange" << oldGeometry << "->" << newGeometry;
+    if (newGeometry.size() != oldGeometry.size()
+        && newGeometry.width() > 1.0 && newGeometry.height() > 1.0) {
+        ensureImage();
+        updateToolChipRect();
+        EpaperBridge::instance()->attachPenModeRegion(this);
+        update();
+    }
+}
+
+/** First layout pass + optional RM_DOC_PROBE synth ingest. */
 void TabletCanvasItem::componentComplete()
 {
     QQuickPaintedItem::componentComplete();
@@ -179,20 +202,7 @@ void TabletCanvasItem::componentComplete()
     }
 }
 
-void TabletCanvasItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
-{
-    QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
-    syncFramePanelSize();
-    qInfo() << "[ink] geometryChange" << oldGeometry << "->" << newGeometry;
-    if (newGeometry.size() != oldGeometry.size()
-        && newGeometry.width() > 1.0 && newGeometry.height() > 1.0) {
-        ensureImage();
-        updateToolChipRect();
-        EpaperBridge::instance()->attachPenModeRegion(this);
-        update();
-    }
-}
-
+/** Logs first few scene-graph updates for ink bring-up. */
 QSGNode *TabletCanvasItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *data)
 {
     QSGNode *node = QQuickPaintedItem::updatePaintNode(oldNode, data);
@@ -206,6 +216,173 @@ QSGNode *TabletCanvasItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData
     return node;
 }
 
+
+/**
+ * =================================================================================================
+ * Canvas frame — orientation, camera region, transforms
+ *
+ * All panel↔world math goes through m_session.frame. applyFrameIntent is the only place
+ * FrameIntent becomes ToolChip re-layout (and related Qt effects).
+ * =================================================================================================
+ */
+
+/** Digitizer raw → panel via frame orientation. */
+TabletCanvasItem::PanelPt TabletCanvasItem::mapInputToCanvas(RawPt raw) const
+{
+    // Shared with the raw input filter, which maps before Qt delivers the point.
+    qreal w = width();
+    qreal h = height();
+    if (w < 2.0 && window())
+        w = window()->width();
+    if (h < 2.0 && window())
+        h = window()->height();
+    return epaper::input::mapPanel(QPointF(raw.x, raw.y), w, h);
+}
+
+/** Panel pixel → document world through the current camera. */
+TabletCanvasItem::WorldPt TabletCanvasItem::panelToWorld(const PanelPt &panel) const
+{
+    syncFramePanelSize();
+    return m_session.frame.panelToWorld({panel.x(), panel.y()});
+}
+
+/** Panel height used by StrokeCapture sample spacing. */
+qreal TabletCanvasItem::ingestPanelHeight() const
+{
+    qreal h = height();
+    if (h < 2.0 && window())
+        h = window()->height();
+    return qMax<qreal>(1.0, h);
+}
+
+/** Push QQuickItem size into CanvasFrame before transforms. */
+void TabletCanvasItem::syncFramePanelSize() const
+{
+    qreal w = width();
+    qreal h = height();
+    if (w < 2.0 && window())
+        w = window()->width();
+    if (h < 2.0 && window())
+        h = window()->height();
+    m_session.frame.setPanelSize(double(w), double(h));
+}
+
+/** Camera/orientation intent → ToolChip rect refresh. */
+void TabletCanvasItem::applyFrameIntent(epaper::canvasframe::FrameIntent intent)
+{
+    using epaper::canvasframe::FrameIntent;
+    using epaper::canvasframe::has;
+    if (has(intent, FrameIntent::OrientationChanged))
+        updateToolChipRect();
+    // CameraChanged: callers schedule rasterize / chrome refresh themselves —
+    // those depend on settle flags and gesture context the frame does not know.
+    Q_UNUSED(FrameIntent::CameraChanged);
+}
+
+/** Panel → normalized UV inside the sync frame. */
+TabletCanvasItem::FrameUv TabletCanvasItem::panelToFrameUv(const PanelPt &panel) const
+{
+    syncFramePanelSize();
+    return m_session.frame.panelToFrameUv({panel.x(), panel.y()});
+}
+
+/** UV → panel (follow / two-finger helpers). */
+TabletCanvasItem::PanelPt TabletCanvasItem::frameUvToPanel(FrameUv uv) const
+{
+    syncFramePanelSize();
+    const auto p = m_session.frame.frameUvToPanel(uv);
+    return PanelPt(p.x, p.y);
+}
+
+/** Document world → panel pixel. */
+TabletCanvasItem::PanelPt TabletCanvasItem::worldToPanel(double wx, double wy) const
+{
+    syncFramePanelSize();
+    const auto p = m_session.frame.worldToPanel(wx, wy);
+    return PanelPt(p.x, p.y);
+}
+
+/** World units per panel pixel (stroke width, LOD). */
+double TabletCanvasItem::panelScale() const
+{
+    syncFramePanelSize();
+    return m_session.frame.panelScale();
+}
+
+/** SmartBounds AABB → panel QRectF. */
+QRectF TabletCanvasItem::worldBoundsToPanel(const epaper::document::SmartBounds &wb) const
+{
+    syncFramePanelSize();
+    epaper::canvasframe::PanelPt tl;
+    epaper::canvasframe::PanelPt br;
+    m_session.frame.worldBoundsToPanel(wb.x, wb.y, wb.width, wb.height, &tl, &br);
+    return QRectF(QPointF(tl.x, tl.y), QPointF(br.x, br.y)).normalized();
+}
+
+/** True when LOD may refuse manip. */
+bool TabletCanvasItem::viewportZoomedOut() const
+{
+    syncFramePanelSize();
+    return m_session.frame.viewportZoomedOut();
+}
+
+/** Whether a world AABB is large enough on panel for manip. */
+bool TabletCanvasItem::lodOkPanel(const epaper::document::SmartBounds &wb) const
+{
+    // @implements [SRS-EP-11] LOD only when zoomed out; scale ≥ 1.0 always manipulable
+    syncFramePanelSize();
+    return m_session.frame.lodOkPanel(wb.x, wb.y, wb.width, wb.height);
+}
+
+
+/**
+ * =================================================================================================
+ * Panel raster surface
+ *
+ * Live ink stamps into m_image; paint() blits it and, during live manip, punches the
+ * origin hole from ToolCanvas Interaction API. flushPending coalesces dirty rects to the
+ * e-ink path.
+ * =================================================================================================
+ */
+
+/** Blit ink buffer; white-hole punch when Tool reports live manip. */
+void TabletCanvasItem::paint(QPainter *painter)
+{
+    if (!m_paintsInk)
+        return;
+
+    // SRS-EP-13: do not hit-test or time the stub document here.
+    ensureImage();
+    m_paintCount.fetchAndAddRelaxed(1);
+    painter->drawImage(0, 0, m_image);
+    if (m_tool && m_tool->liveManipActive()) {
+        const OriginPunchSnapshot punch = m_tool->originPunch();
+        if (!punch.panelRect.isEmpty()) {
+            // Punch only the original box — not origin∪live (that wipes a vertical strip).
+            painter->fillRect(punch.panelRect, Qt::white);
+            // Connector origin hole: thick white stroke along the rest-pose polyline.
+            // [SRS-EP-18] [CHL-0018]
+            if (!punch.connStrokes.isEmpty()) {
+                painter->save();
+                painter->setRenderHint(QPainter::Antialiasing, false);
+                painter->setBrush(Qt::NoBrush);
+                for (const OriginConnStroke &st : punch.connStrokes) {
+                    if (st.panel.size() < 2)
+                        continue;
+                    QPen erase(Qt::white);
+                    erase.setWidthF(st.width + 16.0);
+                    erase.setCapStyle(Qt::RoundCap);
+                    erase.setJoinStyle(Qt::RoundJoin);
+                    painter->setPen(erase);
+                    painter->drawPolyline(st.panel.constData(), st.panel.size());
+                }
+                painter->restore();
+            }
+        }
+    }
+}
+
+/** Allocate/clear the panel QImage to item size. */
 void TabletCanvasItem::ensureImage()
 {
     if (!m_paintsInk)
@@ -226,6 +403,75 @@ void TabletCanvasItem::ensureImage()
     stampStaticBeacon();
 }
 
+/** Draw one ink segment into m_image. */
+void TabletCanvasItem::paintSegment(const Point &from, const Point &to, qreal lineWidth)
+{
+    ensureImage();
+    if (m_image.isNull())
+        return;
+
+    QPainter p(&m_image);
+    p.setRenderHint(QPainter::Antialiasing, false);
+    QPen pen(Qt::black);
+    pen.setWidthF(lineWidth);
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    p.setPen(pen);
+    if (from.pos == to.pos)
+        p.drawPoint(from.pos);
+    else
+        p.drawLine(from.pos, to.pos);
+}
+
+/** Paint or emit segmentDrawn (pool mode); dirty + flush. */
+void TabletCanvasItem::emitSegment(const Point &from, const Point &to)
+{
+    // ADR-0012: live ink uses world width × current panel scale (matches zoomed vectors).
+    const qreal worldW = worldStrokeWidth(from.pressure);
+    const qreal lineW = qMax<qreal>(1.0, worldW * panelScale());
+
+    if (m_paintsInk)
+        paintSegment(from, to, lineW);
+    else
+        emit segmentDrawn(from.pos.x(), from.pos.y(), to.pos.x(), to.pos.y(), lineW);
+
+    const qreal pad = lineW * 0.5 + 8.0;
+    const QRectF rf = QRectF(from.pos, to.pos).normalized().adjusted(-pad, -pad, pad, pad);
+    m_pendingDirty = m_pendingDirty.isNull() ? rf : m_pendingDirty.united(rf);
+}
+
+/** Coalesce dirty rects and swapBuffers / beacon. */
+void TabletCanvasItem::flushPending()
+{
+    if (m_pendingDirty.isNull())
+        return;
+
+    EpaperBridge::instance()->traceFlush();
+    ++m_flushCount;
+    stampFlushBeacon();
+
+    const QRect local = m_pendingDirty.toAlignedRect();
+    m_pendingDirty = QRectF();
+    m_flushClock.restart();
+
+    if (m_paintsInk)
+        update(local);
+
+    if (qEnvironmentVariableIsSet("RM_EP_SWAP")) {
+        if (auto *win = window()) {
+            const QRect scene = mapRectToScene(QRectF(local)).toAlignedRect();
+            QObject::connect(
+                win,
+                &QQuickWindow::afterRendering,
+                this,
+                [scene]() { EpaperBridge::instance()->swapPen(scene); },
+                static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection));
+            win->update();
+        }
+    }
+}
+
+/** EXP beacon: fixed rect for render-path timing. */
 void TabletCanvasItem::stampStaticBeacon()
 {
     if (!m_beacons || m_image.isNull())
@@ -238,6 +484,7 @@ void TabletCanvasItem::stampStaticBeacon()
     p.fillRect(kStaticBeaconX + 30, kStaticBeaconY + 30, kStaticBeaconSize - 60, kStaticBeaconSize - 60, Qt::white);
 }
 
+/** EXP beacon: marks a flush cycle. */
 void TabletCanvasItem::stampFlushBeacon()
 {
     if (!m_beacons || m_image.isNull())
@@ -254,26 +501,62 @@ void TabletCanvasItem::stampFlushBeacon()
     m_pendingDirty = m_pendingDirty.isNull() ? r : m_pendingDirty.united(r);
 }
 
-TabletCanvasItem::PanelPt TabletCanvasItem::mapInputToCanvas(RawPt raw) const
+
+/**
+ * =================================================================================================
+ * Device document and undo history
+ *
+ * Undo/redo mutate m_session.document then ask Tool to prune selection chrome.
+ * notifyHistory lives on the Surface API so Tool can emit after its own commits.
+ * =================================================================================================
+ */
+
+/** QML undo control → applyHistoryRestore(true). */
+void TabletCanvasItem::requestUndo()
 {
-    // Shared with the raw input filter, which maps before Qt delivers the point.
-    qreal w = width();
-    qreal h = height();
-    if (w < 2.0 && window())
-        w = window()->width();
-    if (h < 2.0 && window())
-        h = window()->height();
-    return epaper::input::mapPanel(QPointF(raw.x, raw.y), w, h);
+    applyHistoryRestore(true);
 }
 
-qreal TabletCanvasItem::ingestPanelHeight() const
+/** QML redo control → applyHistoryRestore(false). */
+void TabletCanvasItem::requestRedo()
 {
-    qreal h = height();
-    if (h < 2.0 && window())
-        h = window()->height();
-    return qMax<qreal>(1.0, h);
+    applyHistoryRestore(false);
 }
 
+/** Undo/redo op, prune selection, rasterize, flush wire. */
+void TabletCanvasItem::applyHistoryRestore(bool isUndo)
+{
+    using namespace epaper::document;
+    const UndoResult r = isUndo ? m_session.document.undo() : m_session.document.redo();
+    (void)r;
+    pruneSelectionAfterHistory();
+    clearMembershipHighlight();
+    notifyHistory();
+    scheduleVectorRasterize(true);
+    if (m_tool)
+        m_tool->onDocumentOrCameraChanged();
+    flushOneWayWire();
+}
+
+/** Drop selection ids that no longer exist in the doc. */
+void TabletCanvasItem::pruneSelectionAfterHistory()
+{
+    if (m_tool)
+        m_tool->onDocumentOrCameraChanged();
+}
+
+
+/**
+ * =================================================================================================
+ * Pen stroke capture and ingest
+ *
+ * Digitizer samples enter via ingestPoint / ingestMappedTablet (also Surface ingestPen).
+ * StrokeCapture owns the stroke; applyContactPress may hand off to Tool for selection-tool
+ * presses.
+ * =================================================================================================
+ */
+
+/** Q_INVOKABLE raw point with pressure only. */
 void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure)
 {
     IngestChannels ch;
@@ -281,6 +564,7 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal 
     ingestPoint(type, pos, ch);
 }
 
+/** Raw point + full PenSample channels. */
 void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const IngestChannels &ch)
 {
     EpaperBridge::instance()->traceArrival();
@@ -341,6 +625,7 @@ void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const 
     }
 }
 
+/** Already-mapped panel sample: guard → press/move/release. */
 void TabletCanvasItem::ingestMappedTablet(QEvent::Type type, const PanelPt &canvasPos,
                                           RawPt rawPos, const IngestChannels &ch)
 {
@@ -392,18 +677,7 @@ void TabletCanvasItem::ingestMappedTablet(QEvent::Type type, const PanelPt &canv
     }
 }
 
-
-void TabletCanvasItem::applyContactPress(const PanelPt &canvasPos, const IngestChannels &ch)
-{
-    if (m_tool && m_tool->tryBeginHandleAtPanel(canvasPos, epaper::document::kHandleHitDu))
-        return;
-    if (m_tool && m_tool->selectionToolArmed()) {
-        m_tool->beginSelectionGesture(canvasPos);
-        return;
-    }
-    beginStroke(canvasPos, ch);
-}
-
+/** Latency probe summary for doc-ingest harness. */
 std::string TabletCanvasItem::ingestDumpText() const
 {
     using epaper::latencyprobe::nsToUs;
@@ -419,107 +693,7 @@ std::string TabletCanvasItem::ingestDumpText() const
     return std::string(buf);
 }
 
-void TabletCanvasItem::paint(QPainter *painter)
-{
-    if (!m_paintsInk)
-        return;
-
-    // SRS-EP-13: do not hit-test or time the stub document here.
-    ensureImage();
-    m_paintCount.fetchAndAddRelaxed(1);
-    painter->drawImage(0, 0, m_image);
-    if (m_tool && m_tool->liveManipActive()) {
-        const OriginPunchSnapshot punch = m_tool->originPunch();
-        if (!punch.panelRect.isEmpty()) {
-            // Punch only the original box — not origin∪live (that wipes a vertical strip).
-            painter->fillRect(punch.panelRect, Qt::white);
-            // Connector origin hole: thick white stroke along the rest-pose polyline.
-            // [SRS-EP-18] [CHL-0018]
-            if (!punch.connStrokes.isEmpty()) {
-                painter->save();
-                painter->setRenderHint(QPainter::Antialiasing, false);
-                painter->setBrush(Qt::NoBrush);
-                for (const OriginConnStroke &st : punch.connStrokes) {
-                    if (st.panel.size() < 2)
-                        continue;
-                    QPen erase(Qt::white);
-                    erase.setWidthF(st.width + 16.0);
-                    erase.setCapStyle(Qt::RoundCap);
-                    erase.setJoinStyle(Qt::RoundJoin);
-                    painter->setPen(erase);
-                    painter->drawPolyline(st.panel.constData(), st.panel.size());
-                }
-                painter->restore();
-            }
-        }
-    }
-}
-
-void TabletCanvasItem::paintSegment(const Point &from, const Point &to, qreal lineWidth)
-{
-    ensureImage();
-    if (m_image.isNull())
-        return;
-
-    QPainter p(&m_image);
-    p.setRenderHint(QPainter::Antialiasing, false);
-    QPen pen(Qt::black);
-    pen.setWidthF(lineWidth);
-    pen.setCapStyle(Qt::RoundCap);
-    pen.setJoinStyle(Qt::RoundJoin);
-    p.setPen(pen);
-    if (from.pos == to.pos)
-        p.drawPoint(from.pos);
-    else
-        p.drawLine(from.pos, to.pos);
-}
-
-void TabletCanvasItem::emitSegment(const Point &from, const Point &to)
-{
-    // ADR-0012: live ink uses world width × current panel scale (matches zoomed vectors).
-    const qreal worldW = worldStrokeWidth(from.pressure);
-    const qreal lineW = qMax<qreal>(1.0, worldW * panelScale());
-
-    if (m_paintsInk)
-        paintSegment(from, to, lineW);
-    else
-        emit segmentDrawn(from.pos.x(), from.pos.y(), to.pos.x(), to.pos.y(), lineW);
-
-    const qreal pad = lineW * 0.5 + 8.0;
-    const QRectF rf = QRectF(from.pos, to.pos).normalized().adjusted(-pad, -pad, pad, pad);
-    m_pendingDirty = m_pendingDirty.isNull() ? rf : m_pendingDirty.united(rf);
-}
-
-void TabletCanvasItem::flushPending()
-{
-    if (m_pendingDirty.isNull())
-        return;
-
-    EpaperBridge::instance()->traceFlush();
-    ++m_flushCount;
-    stampFlushBeacon();
-
-    const QRect local = m_pendingDirty.toAlignedRect();
-    m_pendingDirty = QRectF();
-    m_flushClock.restart();
-
-    if (m_paintsInk)
-        update(local);
-
-    if (qEnvironmentVariableIsSet("RM_EP_SWAP")) {
-        if (auto *win = window()) {
-            const QRect scene = mapRectToScene(QRectF(local)).toAlignedRect();
-            QObject::connect(
-                win,
-                &QQuickWindow::afterRendering,
-                this,
-                [scene]() { EpaperBridge::instance()->swapPen(scene); },
-                static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection));
-            win->update();
-        }
-    }
-}
-
+/** StrokeCapture sample → local Point for sync/paint. */
 TabletCanvasItem::Point TabletCanvasItem::makePoint(const epaper::strokecapture::Sample &s) const
 {
     Point pt;
@@ -540,6 +714,7 @@ TabletCanvasItem::Point TabletCanvasItem::makePoint(const epaper::strokecapture:
     return pt;
 }
 
+/** PenSample → StrokeCapture channel POD. */
 epaper::strokecapture::Channels TabletCanvasItem::toChannels(const IngestChannels &ch) const
 {
     epaper::strokecapture::Channels c;
@@ -558,6 +733,7 @@ epaper::strokecapture::Channels TabletCanvasItem::toChannels(const IngestChannel
     return c;
 }
 
+/** StrokeCapture result → begin/append/end + latch/debug. */
 void TabletCanvasItem::applyStrokeIntent(const epaper::strokecapture::StrokeResult &r)
 {
     using epaper::strokecapture::StrokeIntent;
@@ -599,6 +775,19 @@ void TabletCanvasItem::applyStrokeIntent(const epaper::strokecapture::StrokeResu
         m_session.chip.penUp();
 }
 
+/** Pen-down: Tool handle/selection first, else beginStroke. */
+void TabletCanvasItem::applyContactPress(const PanelPt &canvasPos, const IngestChannels &ch)
+{
+    if (m_tool && m_tool->tryBeginHandleAtPanel(canvasPos, epaper::document::kHandleHitDu))
+        return;
+    if (m_tool && m_tool->selectionToolArmed()) {
+        m_tool->beginSelectionGesture(canvasPos);
+        return;
+    }
+    beginStroke(canvasPos, ch);
+}
+
+/** Start StrokeCapture + syncBegin. */
 void TabletCanvasItem::beginStroke(const PanelPt &canvasPos, const IngestChannels &ch)
 {
     m_stroke.setPanelHeight(double(ingestPanelHeight()));
@@ -607,6 +796,7 @@ void TabletCanvasItem::beginStroke(const PanelPt &canvasPos, const IngestChannel
     applyStrokeIntent(m_stroke.begin(canvasPos.x(), canvasPos.y(), toChannels(ch)));
 }
 
+/** Mid-stroke sample + syncPoint. */
 void TabletCanvasItem::appendPoint(const PanelPt &canvasPos, const IngestChannels &ch)
 {
     if (!m_stroke.active || m_stroke.current.empty()) {
@@ -618,6 +808,7 @@ void TabletCanvasItem::appendPoint(const PanelPt &canvasPos, const IngestChannel
         m_stroke.append(canvasPos.x(), canvasPos.y(), toChannels(ch), flushDue));
 }
 
+/** Finish stroke, ingestCurrentStroke, deferred rasterize. */
 void TabletCanvasItem::endStroke()
 {
     if (!m_stroke.active)
@@ -654,9 +845,7 @@ void TabletCanvasItem::endStroke()
     emit debugChanged();
 }
 
-/** @implements [SRS-EP-07] finished stroke → append_ink at pen-up */
-/** @implements [SRS-EP-10] ADR-0022 closure-first dispatch (one [recog] line) */
-/** @implements [SRS-EP-15] [ink] / [enclose] log sources after ingest */
+/** append_ink + recog dispatch; may schedule enclose rasterize. */
 void TabletCanvasItem::ingestCurrentStroke(const epaper::document::FinishedStroke &stroke)
 {
     using namespace epaper::document;
@@ -749,346 +938,24 @@ void TabletCanvasItem::ingestCurrentStroke(const epaper::document::FinishedStrok
     }
 }
 
-void TabletCanvasItem::syncBegin()
+/** Pressure → world stroke width. */
+qreal TabletCanvasItem::worldStrokeWidth(qreal pressure) const
 {
-    // @implements [SRS-EP-08] stroke_begin without intent
-    m_oneWay.beginPreviewStroke(m_stroke.activeStrokeId);
-    flushOneWayWire();
-}
-
-void TabletCanvasItem::syncPoint(const Point &pt)
-{
-    // @implements [SRS-EP-02] live preview in world — same space as append_ink
-    ensureLocalDrawingRegion();
-    const WorldPt world = panelToWorld(pt.pos);
-    m_oneWay.previewStrokePoint(m_stroke.activeStrokeId, world.x, world.y, pt.pressure);
-    flushOneWayWire();
-}
-
-void TabletCanvasItem::syncEnd()
-{
-    m_oneWay.endPreviewStroke(m_stroke.activeStrokeId);
-    flushOneWayWire();
-}
-
-void TabletCanvasItem::flushOneWayWire()
-{
-    m_oneWay.onLocalCommit();
-    if (!m_sync->isConnected())
-        return;
-    for (const std::string &line : m_oneWay.takeOutbound())
-        m_sync->sendLine(QByteArray::fromStdString(line));
-}
-
-/** @fix [STORY-IN-032] live pose to Infini without a committed doc_change seq */
-
-void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
-{
-    epaper::UiStallSection stall("onHostMessage");
-    const QString inboundType = obj.value(QStringLiteral("type")).toString();
-    if (inboundType == QLatin1String("viewport_follow")) {
-        const QByteArray raw = QJsonDocument(obj).toJson(QJsonDocument::Compact);
-        const auto msg = epaper::follow::parseViewportFollowLine(
-            std::string(raw.constData(), static_cast<size_t>(raw.size())));
-        if (m_session.follow.adoptInbound(msg)) {
-            m_session.setFollowDirection(QString::fromLatin1(epaper::handtouch::followId(m_session.follow.direction)));
-            emit followChanged();
-            if (m_session.follow.epaperFollowOn())
-                applyFollowCamera();
-        }
-        m_oneWay.handleInboundLine(std::string(raw.constData(), static_cast<size_t>(raw.size())));
-        flushOneWayWire();
-        return;
-    }
-    if (inboundType != QLatin1String("viewport"))
-        qInfo() << "[sync] inbound" << inboundType << "live" << m_oneWay.epochLive()
-                << "handshake" << m_oneWay.handshakeInFlight();
-    const QByteArray raw = QJsonDocument(obj).toJson(QJsonDocument::Compact);
-    m_oneWay.handleInboundLine(std::string(raw.constData(), static_cast<size_t>(raw.size())));
-    if (m_oneWay.viewportApplied() > 0 && inboundType == QLatin1String("viewport")) {
-        cacheInfiniViewport(obj);
-        // @implements [SRS-EP-21] apply Infini viewport only while following
-        if (epaper::handtouch::shouldApplyInboundViewport(followEnum()))
-            applyViewport(obj);
-        else
-            qInfo() << "[sync] ignore inbound viewport follow=" << m_session.followDirection();
-    }
-    if (m_session.document.selectionId() == std::nullopt)
-        if (m_tool)
-            m_tool->clearSelection();
-    flushOneWayWire();
-    if (obj.value(QStringLiteral("type")).toString() == QLatin1String("doc_load")
-        && m_oneWay.epochLive())
-        scheduleVectorRasterize(true);
-}
-
-void TabletCanvasItem::applyViewport(const QJsonObject &obj)
-{
-    m_viewportSeq = obj.value(QStringLiteral("seq")).toInt(m_viewportSeq);
-    using epaper::canvasframe::FrameIntent;
-    FrameIntent intent = FrameIntent::None;
-    const QString orient = obj.value(QStringLiteral("orientation")).toString();
-    if (!orient.isEmpty())
-        intent |= m_session.frame.setOrientation(orient.toStdString());
-
-    const QJsonObject dr = obj.value(QStringLiteral("drawingRegion")).toObject();
-    if (!dr.isEmpty())
-        intent |= m_session.frame.applyDrawingRegion(aabbFromJson(dr), true);
-
-    applyFrameIntent(intent);
-    const bool settle = obj.value(QStringLiteral("settle")).toBool(false);
-    qInfo() << "[sync] viewport seq" << m_viewportSeq << "orientation"
-            << QString::fromStdString(m_session.frame.orientation) << "settle" << settle << "ink"
-            << m_session.document.inkCount();
-    scheduleVectorRasterize(settle);
-    if (m_tool)
-        m_tool->onDocumentOrCameraChanged();
-}
-
-void TabletCanvasItem::setToolMode(const QString &mode)
-{
-    if (!m_session.setExclusiveTool(mode))
-        return;
-    const bool hadHighlight = !m_highlightInkIds.empty();
-    m_toolMode = m_session.exclusiveTool();
-    clearMembershipHighlight();
-    if (hadHighlight && !m_stroke.active)
-        scheduleVectorRasterize(true);
-    emit toolModeChanged();
-    m_debugInfo = QStringLiteral("tool=%1").arg(m_toolMode);
-    emit debugChanged();
-    // @fix residual knobs / scale chip when leaving sel_* (QML chrome is not ToolCanvas)
-    if (m_tool)
-        m_tool->onDocumentOrCameraChanged();
-}
-
-void TabletCanvasItem::armTool(const QString &mode)
-{
-    setToolMode(mode);
-}
-
-void TabletCanvasItem::toggleRecogInkBox()
-{
-    m_session.flipRecogInkBox();
-}
-
-void TabletCanvasItem::toggleRecogConnector()
-{
-    m_session.flipRecogConnector();
-}
-
-void TabletCanvasItem::tapFollowToggle()
-{
-    m_session.follow.connected = m_sync && m_sync->isConnected();
-    m_session.follow.exclusiveTool = m_toolMode.toStdString();
-    const auto r = m_session.follow.tapToggle();
-    m_session.setFollowDirection(QString::fromLatin1(epaper::handtouch::followId(m_session.follow.direction)));
-    emit followChanged();
-    flushFollowOutbound();
-    if (r.appliedInfiniViewport)
-        applyFollowCamera();
-}
-
-void TabletCanvasItem::flushFollowOutbound()
-{
-    if (!m_sync || !m_sync->isConnected()) {
-        m_session.follow.outbound.clear();
-        return;
-    }
-    for (const std::string &line : m_session.follow.outbound)
-        m_sync->sendLine(QByteArray::fromStdString(line));
-    m_session.follow.outbound.clear();
-}
-
-void TabletCanvasItem::applyFollowCamera()
-{
-    if (!m_session.follow.mapApplied && !m_session.follow.hasInfiniViewport)
-        return;
-    m_session.follow.applyInfiniViewportIfFollowing();
-    if (m_session.follow.direction != epaper::handtouch::FollowDirection::InfiniToEpaper)
-        return;
-    applyFrameIntent(m_session.frame.applyDrawingRegion(m_session.follow.localCamera, true));
-    scheduleVectorRasterize(true);
-}
-
-void TabletCanvasItem::cacheInfiniViewport(const QJsonObject &obj)
-{
-    const QJsonObject dr = obj.value(QStringLiteral("drawingRegion")).toObject();
-    if (dr.isEmpty())
-        return;
-    m_session.follow.cacheInfiniViewport(aabbFromJson(dr));
-}
-
-epaper::handtouch::FollowDirection TabletCanvasItem::followEnum() const
-{
-    return epaper::handtouch::parseFollow(m_session.followDirection().toStdString());
+    return qreal(epaper::strokecapture::worldStrokeWidth(double(pressure),
+                                                         epaper::strokecapture::StrokeCapture::kBaseWorldStroke));
 }
 
 
-void TabletCanvasItem::ensureLocalDrawingRegion()
-{
-    syncFramePanelSize();
-    applyFrameIntent(m_session.frame.ensureLocalDrawingRegion());
-}
+/**
+ * =================================================================================================
+ * Rasterize scheduling and document tree paint
+ *
+ * scheduleVectorRasterize queues a soft/sharp redraw of vectors into m_image. Skipped
+ * while a stroke is active so live ink is not wiped.
+ * =================================================================================================
+ */
 
-
-void TabletCanvasItem::maybePublishLocalViewport(bool settle)
-{
-    using epaper::handtouch::shouldPublishViewport;
-    using epaper::handtouch::uniformScaleOf;
-    if (!shouldPublishViewport(followEnum()))
-        return;
-    ++m_viewportUpCount;
-    if (!m_sync || !m_sync->isConnected())
-        return;
-    QJsonObject dr;
-    dr.insert(QStringLiteral("minX"), m_session.frame.drawingRegion.minX);
-    dr.insert(QStringLiteral("minY"), m_session.frame.drawingRegion.minY);
-    dr.insert(QStringLiteral("maxX"), m_session.frame.drawingRegion.maxX);
-    dr.insert(QStringLiteral("maxY"), m_session.frame.drawingRegion.maxY);
-    double sx = 1.0;
-    double sy = 1.0;
-    const double iw = qMax(1.0, double(width()));
-    const double ih = qMax(1.0, double(height()));
-    uniformScaleOf({0, 0, iw, ih}, m_session.frame.drawingRegion.box(), &sx, &sy);
-    QJsonObject o;
-    o.insert(QStringLiteral("type"), QStringLiteral("viewport"));
-    o.insert(QStringLiteral("source"), QStringLiteral("epaper"));
-    o.insert(QStringLiteral("seq"), ++m_viewportSeq);
-    o.insert(QStringLiteral("orientation"), QString::fromStdString(m_session.frame.orientation));
-    o.insert(QStringLiteral("settle"), settle);
-    o.insert(QStringLiteral("scale"), sx);
-    Q_UNUSED(sy);
-    QJsonObject tr;
-    tr.insert(QStringLiteral("x"), 0);
-    tr.insert(QStringLiteral("y"), 0);
-    o.insert(QStringLiteral("translate"), tr);
-    o.insert(QStringLiteral("drawingRegion"), dr);
-    m_sync->sendLine(QJsonDocument(o).toJson(QJsonDocument::Compact));
-}
-
-
-void TabletCanvasItem::toggleDebugLog()
-{
-    m_debugLogVisible = !m_debugLogVisible;
-    emit debugLogVisibleChanged();
-    // Says whether a missed DBG tap never reached the handler or only failed to paint.
-    qInfo().noquote() << QStringLiteral("[chrome] dbg toggle %1 rect=%2,%3 %4x%5")
-                             .arg(m_debugLogVisible ? "on" : "off")
-                             .arg(int(m_debugToggleRect.x()))
-                             .arg(int(m_debugToggleRect.y()))
-                             .arg(int(m_debugToggleRect.width()))
-                             .arg(int(m_debugToggleRect.height()));
-}
-
-
-void TabletCanvasItem::requestUndo()
-{
-    applyHistoryRestore(true);
-}
-
-void TabletCanvasItem::requestRedo()
-{
-    applyHistoryRestore(false);
-}
-
-void TabletCanvasItem::applyHistoryRestore(bool isUndo)
-{
-    using namespace epaper::document;
-    const UndoResult r = isUndo ? m_session.document.undo() : m_session.document.redo();
-    (void)r;
-    pruneSelectionAfterHistory();
-    clearMembershipHighlight();
-    notifyHistory();
-    scheduleVectorRasterize(true);
-    if (m_tool)
-        m_tool->onDocumentOrCameraChanged();
-    flushOneWayWire();
-}
-
-void TabletCanvasItem::pruneSelectionAfterHistory()
-{
-    if (m_tool)
-        m_tool->onDocumentOrCameraChanged();
-}
-
-void TabletCanvasItem::notifyHistory()
-{
-    emit historyChanged();
-}
-
-void TabletCanvasItem::updateToolChipRect()
-{
-    // UI-EP-04 + ADR-0021: 3 exclusive tools + 12 px publish + 2 toggles + Undo/Redo.
-    // @implements [SRS-EP-05] floating ToolChip hit bounds (64×64 tiles, CHL-0019)
-    const qreal chipH = epaper::toolchip::kHeight;
-    const qreal chipW = epaper::toolchip::chipWidth();
-    const qreal inset = 8.0;
-    qreal top = inset;
-    if (m_session.frame.orientation == "gutOnTop")
-        top = height() - inset - chipH;
-    const qreal left = (width() - chipW) * 0.5;
-    const QRectF next(left, top, chipW, chipH);
-    if (next != m_toolChipRect) {
-        m_toolChipRect = next;
-        emit toolChipRectChanged();
-    }
-    const bool gutOnTop = m_session.frame.orientation == "gutOnTop";
-    const auto fr = epaper::follow::followToggleRect(width(), height(), gutOnTop);
-    const auto ur = epaper::follow::usbLinkRect(width(), height(), gutOnTop);
-    const auto dr = epaper::follow::debugToggleRect(width(), height(), gutOnTop);
-    const auto lr = epaper::follow::debugLogRect(width(), height(), gutOnTop);
-    const QRectF followNext = panelToQ(fr);
-    const QRectF usbNext = panelToQ(ur);
-    const QRectF debugNext = panelToQ(dr);
-    const QRectF logNext = panelToQ(lr);
-    const QRectF handNext = QRectF(next.x() + epaper::toolchip::kPublish, next.y(),
-                                   epaper::toolchip::kTile, epaper::toolchip::kHeight);
-    if (followNext != m_followToggleRect || usbNext != m_usbLinkRect
-        || debugNext != m_debugToggleRect || handNext != m_handTouchToggleRect
-        || logNext != m_debugLogRect) {
-        m_followToggleRect = followNext;
-        m_usbLinkRect = usbNext;
-        m_debugToggleRect = debugNext;
-        m_handTouchToggleRect = handNext;
-        m_debugLogRect = logNext;
-        emit trailingChromeChanged();
-        auto fmt = [](const QRectF &r) {
-            return QStringLiteral("%1,%2 %3x%4")
-                .arg(int(r.x())).arg(int(r.y())).arg(int(r.width())).arg(int(r.height()));
-        };
-        qInfo().noquote() << QStringLiteral("[chrome] rects panel=%1x%2 chip=%3 dbg=%4 follow=%5 usb=%6")
-                                 .arg(int(width())).arg(int(height()))
-                                 .arg(fmt(m_toolChipRect), fmt(m_debugToggleRect),
-                                      fmt(m_followToggleRect), fmt(m_usbLinkRect));
-    }
-}
-
-
-
-void TabletCanvasItem::stashTabletSample(const QPointF &raw, const IngestChannels &ch)
-{
-    m_stashRaw = RawPt{raw.x(), raw.y()};
-    m_stashTablet = ch;
-    m_stashValid = true;
-}
-
-TabletCanvasItem::IngestChannels TabletCanvasItem::stashedChannels(const PanelPt &panel,
-                                                                   RawPt *raw) const
-{
-    IngestChannels ch;
-    // No stashed sample: the panel point stands in for a raw one. Only the origin
-    // guard reads it, and it compares raw against panel, so the two agreeing is
-    // benign — but it is a substitution, hence the explicit cast across spaces.
-    *raw = RawPt{panel.x(), panel.y()};
-    if (m_stashValid) {
-        ch = m_stashTablet;
-        *raw = m_stashRaw;
-    }
-    return ch;
-}
-
-
+/** Queue soft/sharp vector refresh (defer if pen down). */
 void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
 {
     // Never full-redraw while the pen is down — white clear would erase live ink
@@ -1134,89 +1001,64 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
     });
 }
 
-void TabletCanvasItem::syncFramePanelSize() const
+/** Clear image and paint the local doc tree ∩ camera. */
+void TabletCanvasItem::rasterizeVectors(bool sharp)
 {
-    qreal w = width();
-    qreal h = height();
-    if (w < 2.0 && window())
-        w = window()->width();
-    if (h < 2.0 && window())
-        h = window()->height();
-    m_session.frame.setPanelSize(double(w), double(h));
+    epaper::UiStallSection stall("rasterizeVectors");
+    using epaper::document::refreshAllConnectorWarps;
+    refreshAllConnectorWarps(m_session.document);
+    if (!m_paintsInk)
+        return;
+    ensureImage();
+    if (m_image.isNull())
+        return;
+
+    QPainter p(&m_image);
+    // Full white clear + local-tree redraw. Never an inbound peer picture (SRS-EP-07).
+    p.fillRect(m_image.rect(), Qt::white);
+    p.setRenderHint(QPainter::Antialiasing, sharp);
+    drawTree(p, m_session.document.rootChildren, nullptr);
+    p.end();
+
+    stampStaticBeacon();
+    m_refreshClock.restart();
+    // Full-rect update. Pen-mode swap only when explicitly requested (RM_EP_SWAP) —
+    // unconditional swap after every settle starved the stroke path on device.
+    update(m_image.rect());
+    if (sharp && qEnvironmentVariableIsSet("RM_EP_SWAP")) {
+        if (auto *win = window()) {
+            const QRect scene = mapRectToScene(QRectF(m_image.rect())).toAlignedRect();
+            QObject::connect(
+                win,
+                &QQuickWindow::afterRendering,
+                this,
+                [scene]() { EpaperBridge::instance()->swapPen(scene); },
+                static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection));
+            win->update();
+        }
+    }
+    qInfo() << "[sync] vector rasterize ink" << m_session.document.inkCount() << "nodes"
+            << m_session.document.nodeCount() << "sharp" << sharp << "seq" << m_viewportSeq;
 }
 
-void TabletCanvasItem::applyFrameIntent(epaper::canvasframe::FrameIntent intent)
+/** Recursive paint of DocNode children. */
+void TabletCanvasItem::drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
+                                const epaper::document::DocNode *smartParent)
 {
-    using epaper::canvasframe::FrameIntent;
-    using epaper::canvasframe::has;
-    if (has(intent, FrameIntent::OrientationChanged))
-        updateToolChipRect();
-    // CameraChanged: callers schedule rasterize / chrome refresh themselves —
-    // those depend on settle flags and gesture context the frame does not know.
-    Q_UNUSED(FrameIntent::CameraChanged);
+    using epaper::document::NodeKind;
+    for (const auto &node : nodes) {
+        if (node.kind == NodeKind::SmartGroup)
+            drawTree(p, node.children, &node);
+        else if (node.kind == NodeKind::Frame || node.kind == NodeKind::Group)
+            drawTree(p, node.children, nullptr);
+        else if (node.kind == NodeKind::Connector)
+            drawWarpedConnector(p, node);
+        else
+            drawDocNode(p, node, smartParent);
+    }
 }
 
-double TabletCanvasItem::panelScale() const
-{
-    syncFramePanelSize();
-    return m_session.frame.panelScale();
-}
-
-QRectF TabletCanvasItem::worldBoundsToPanel(const epaper::document::SmartBounds &wb) const
-{
-    syncFramePanelSize();
-    epaper::canvasframe::PanelPt tl;
-    epaper::canvasframe::PanelPt br;
-    m_session.frame.worldBoundsToPanel(wb.x, wb.y, wb.width, wb.height, &tl, &br);
-    return QRectF(QPointF(tl.x, tl.y), QPointF(br.x, br.y)).normalized();
-}
-
-bool TabletCanvasItem::lodOkPanel(const epaper::document::SmartBounds &wb) const
-{
-    // @implements [SRS-EP-11] LOD only when zoomed out; scale ≥ 1.0 always manipulable
-    syncFramePanelSize();
-    return m_session.frame.lodOkPanel(wb.x, wb.y, wb.width, wb.height);
-}
-
-bool TabletCanvasItem::viewportZoomedOut() const
-{
-    syncFramePanelSize();
-    return m_session.frame.viewportZoomedOut();
-}
-
-
-qreal TabletCanvasItem::worldStrokeWidth(qreal pressure) const
-{
-    return qreal(epaper::strokecapture::worldStrokeWidth(double(pressure),
-                                                         epaper::strokecapture::StrokeCapture::kBaseWorldStroke));
-}
-
-TabletCanvasItem::FrameUv TabletCanvasItem::panelToFrameUv(const PanelPt &panel) const
-{
-    syncFramePanelSize();
-    return m_session.frame.panelToFrameUv({panel.x(), panel.y()});
-}
-
-TabletCanvasItem::PanelPt TabletCanvasItem::frameUvToPanel(FrameUv uv) const
-{
-    syncFramePanelSize();
-    const auto p = m_session.frame.frameUvToPanel(uv);
-    return PanelPt(p.x, p.y);
-}
-
-TabletCanvasItem::PanelPt TabletCanvasItem::worldToPanel(double wx, double wy) const
-{
-    syncFramePanelSize();
-    const auto p = m_session.frame.worldToPanel(wx, wy);
-    return PanelPt(p.x, p.y);
-}
-
-TabletCanvasItem::WorldPt TabletCanvasItem::panelToWorld(const PanelPt &panel) const
-{
-    syncFramePanelSize();
-    return m_session.frame.panelToWorld({panel.x(), panel.y()});
-}
-
+/** Paint one ink / SmartGroup / connector node. */
 void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode &node,
                                    const epaper::document::DocNode *smartParent)
 {
@@ -1285,16 +1127,17 @@ void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode 
     }
 }
 
-qreal TabletCanvasItem::connectorPanelStrokeWidth(const epaper::document::DocNode &conn) const
-{
-    double worldSw = conn.style.strokeWidth;
-    if (worldSw <= 0.0 && !conn.children.empty())
-        worldSw = conn.children.front().style.strokeWidth;
-    if (worldSw <= 0.0)
-        worldSw = 2.0;
-    return qMax<qreal>(1.0, worldSw * panelScale());
-}
 
+/**
+ * =================================================================================================
+ * Connector ink rendering
+ *
+ * Warped connector polylines for document paint. Panel AABB helpers used by Tool via
+ * Surface API are declared there; drawWarpedConnector stays on the paint path.
+ * =================================================================================================
+ */
+
+/** Stroke a connector’s warpedSamples in panel space. */
 void TabletCanvasItem::drawWarpedConnector(QPainter &p, const epaper::document::DocNode &conn)
 {
     if (conn.warpedSamples.size() < 2)
@@ -1313,112 +1156,16 @@ void TabletCanvasItem::drawWarpedConnector(QPainter &p, const epaper::document::
 }
 
 
-QRectF TabletCanvasItem::warpedConnectorPanelRect(const epaper::document::DocNode &conn) const
-{
-    if (conn.warpedSamples.empty())
-        return {};
-    // @fix [STORY-EP-031] 0×0 QRectF is empty; united() never grew the connector AABB
-    const PanelPt p0 = worldToPanel(conn.warpedSamples[0].x, conn.warpedSamples[0].y);
-    qreal minX = p0.x();
-    qreal maxX = p0.x();
-    qreal minY = p0.y();
-    qreal maxY = p0.y();
-    for (const auto &s : conn.warpedSamples) {
-        const PanelPt p = worldToPanel(s.x, s.y);
-        minX = qMin(minX, p.x());
-        maxX = qMax(maxX, p.x());
-        minY = qMin(minY, p.y());
-        maxY = qMax(maxY, p.y());
-    }
-    return QRectF(PanelPt(minX, minY), PanelPt(maxX, maxY)).normalized().adjusted(-16, -16, 16, 16);
-}
+/**
+ * =================================================================================================
+ * Recognizer feedback
+ *
+ * Temporary ink-width blink and membership highlight after enclose / join. Timers
+ * self-expire via m_blinkToken so stale callbacks no-op.
+ * =================================================================================================
+ */
 
-QRectF TabletCanvasItem::boundConnectorsPanelUnion(const std::string &sgId) const
-{
-    QRectF u;
-    for (const auto &node : m_session.document.rootChildren) {
-        if (node.kind != epaper::document::NodeKind::Connector)
-            continue;
-        if (node.fromNodeId != sgId && node.toNodeId != sgId)
-            continue;
-        const QRectF r = warpedConnectorPanelRect(node);
-        u = u.isEmpty() ? r : u.united(r);
-    }
-    return u;
-}
-
-void TabletCanvasItem::drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
-                                const epaper::document::DocNode *smartParent)
-{
-    using epaper::document::NodeKind;
-    for (const auto &node : nodes) {
-        if (node.kind == NodeKind::SmartGroup)
-            drawTree(p, node.children, &node);
-        else if (node.kind == NodeKind::Frame || node.kind == NodeKind::Group)
-            drawTree(p, node.children, nullptr);
-        else if (node.kind == NodeKind::Connector)
-            drawWarpedConnector(p, node);
-        else
-            drawDocNode(p, node, smartParent);
-    }
-}
-
-void TabletCanvasItem::rasterizeVectors(bool sharp)
-{
-    epaper::UiStallSection stall("rasterizeVectors");
-    using epaper::document::refreshAllConnectorWarps;
-    refreshAllConnectorWarps(m_session.document);
-    if (!m_paintsInk)
-        return;
-    ensureImage();
-    if (m_image.isNull())
-        return;
-
-    QPainter p(&m_image);
-    // Full white clear + local-tree redraw. Never an inbound peer picture (SRS-EP-07).
-    p.fillRect(m_image.rect(), Qt::white);
-    p.setRenderHint(QPainter::Antialiasing, sharp);
-    drawTree(p, m_session.document.rootChildren, nullptr);
-    p.end();
-
-    stampStaticBeacon();
-    m_refreshClock.restart();
-    // Full-rect update. Pen-mode swap only when explicitly requested (RM_EP_SWAP) —
-    // unconditional swap after every settle starved the stroke path on device.
-    update(m_image.rect());
-    if (sharp && qEnvironmentVariableIsSet("RM_EP_SWAP")) {
-        if (auto *win = window()) {
-            const QRect scene = mapRectToScene(QRectF(m_image.rect())).toAlignedRect();
-            QObject::connect(
-                win,
-                &QQuickWindow::afterRendering,
-                this,
-                [scene]() { EpaperBridge::instance()->swapPen(scene); },
-                static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection));
-            win->update();
-        }
-    }
-    qInfo() << "[sync] vector rasterize ink" << m_session.document.inkCount() << "nodes"
-            << m_session.document.nodeCount() << "sharp" << sharp << "seq" << m_viewportSeq;
-}
-
-void TabletCanvasItem::collectSmartGroupInkIds(const epaper::document::DocNode &sg, bool boundaryOnly,
-                                               std::vector<std::string> *out) const
-{
-    using epaper::document::NodeKind;
-    if (!out)
-        return;
-    for (const auto &c : sg.children) {
-        if (c.kind != NodeKind::Ink)
-            continue;
-        const std::string role = c.role ? *c.role : std::string("content");
-        if (boundaryOnly && role != "boundary")
-            continue;
-        out->push_back(c.id);
-    }
-}
-
-/** @implements [SRS-EP-12] enclose one-shot width pulse (UI-EP-06 / CHL-0020) */
+/** Pulse ink width for listed ink ids, then clear. */
 void TabletCanvasItem::beginRecogWidthBlink(const std::vector<std::string> &inkIds)
 {
     if (inkIds.empty())
@@ -1439,7 +1186,7 @@ void TabletCanvasItem::beginRecogWidthBlink(const std::vector<std::string> &inkI
     });
 }
 
-/** @implements [SRS-EP-12] last-join membership highlight, no blink (UI-EP-06) */
+/** Mark boundary inks for UI-EP-06 highlight. */
 bool TabletCanvasItem::setMembershipHighlight(const std::vector<std::string> &boundaryInkIds)
 {
     std::unordered_set<std::string> next;
@@ -1451,49 +1198,141 @@ bool TabletCanvasItem::setMembershipHighlight(const std::vector<std::string> &bo
     return true;
 }
 
+/** Clear membership highlight set. */
 void TabletCanvasItem::clearMembershipHighlight()
 {
     m_highlightInkIds.clear();
 }
 
+/** Gather ink ids under a SmartGroup (boundary or all). */
+void TabletCanvasItem::collectSmartGroupInkIds(const epaper::document::DocNode &sg, bool boundaryOnly,
+                                               std::vector<std::string> *out) const
+{
+    using epaper::document::NodeKind;
+    if (!out)
+        return;
+    for (const auto &c : sg.children) {
+        if (c.kind != NodeKind::Ink)
+            continue;
+        const std::string role = c.role ? *c.role : std::string("content");
+        if (boundaryOnly && role != "boundary")
+            continue;
+        out->push_back(c.id);
+    }
+}
 
-// ---------------------------------------------------------------------------
-// Surface API for ToolCanvas
-// ---------------------------------------------------------------------------
 
+/**
+ * =================================================================================================
+ * Tool modes / ToolChip
+ *
+ * QML ToolChip calls armTool / recog toggles. setToolMode updates ChipModel on the session
+ * and refreshes Tool selection chrome when leaving sel_*.
+ * =================================================================================================
+ */
+
+/** Exclusive tool change on session chip + chrome refresh. */
+void TabletCanvasItem::setToolMode(const QString &mode)
+{
+    if (!m_session.setExclusiveTool(mode))
+        return;
+    const bool hadHighlight = !m_highlightInkIds.empty();
+    m_toolMode = m_session.exclusiveTool();
+    clearMembershipHighlight();
+    if (hadHighlight && !m_stroke.active)
+        scheduleVectorRasterize(true);
+    emit toolModeChanged();
+    m_debugInfo = QStringLiteral("tool=%1").arg(m_toolMode);
+    emit debugChanged();
+    // @fix residual knobs / scale chip when leaving sel_* (QML chrome is not ToolCanvas)
+    if (m_tool)
+        m_tool->onDocumentOrCameraChanged();
+}
+
+/** ToolChip tap → setToolMode. */
+void TabletCanvasItem::armTool(const QString &mode)
+{
+    setToolMode(mode);
+}
+
+/** Flip ink-box recog arm on session chip. */
+void TabletCanvasItem::toggleRecogInkBox()
+{
+    m_session.flipRecogInkBox();
+}
+
+/** Flip connector recog arm on session chip. */
+void TabletCanvasItem::toggleRecogConnector()
+{
+    m_session.flipRecogConnector();
+}
+
+
+/**
+ * =================================================================================================
+ * Surface API for ToolCanvas
+ *
+ * Only entry points Tool may call. Intention methods mutate doc/ink/sync or expose
+ * read-only geometry helpers; no chrome getters.
+ * =================================================================================================
+ */
+
+/** Wire ToolCanvas peer for punch/selection handoff. */
 void TabletCanvasItem::setInteractionTool(ToolCanvasItem *tool)
 {
     m_tool = tool;
 }
 
+/** Tool-routed stylus sample → ingestMappedTablet. */
 void TabletCanvasItem::ingestPen(QEvent::Type type, const PanelPt &canvasPos, RawPt rawPos,
                                 const IngestChannels &ch)
 {
     ingestMappedTablet(type, canvasPos, rawPos, ch);
 }
 
+/** Last QTabletEvent sample for PointHandler pressure path. */
+TabletCanvasItem::IngestChannels TabletCanvasItem::stashedChannels(const PanelPt &panel,
+                                                                   RawPt *raw) const
+{
+    IngestChannels ch;
+    // No stashed sample: the panel point stands in for a raw one. Only the origin
+    // guard reads it, and it compares raw against panel, so the two agreeing is
+    // benign — but it is a substitution, hence the explicit cast across spaces.
+    *raw = RawPt{panel.x(), panel.y()};
+    if (m_stashValid) {
+        ch = m_stashTablet;
+        *raw = m_stashRaw;
+    }
+    return ch;
+}
+
+/** Invalidate stashed digitizer sample after pen-up. */
 void TabletCanvasItem::clearStash()
 {
     m_stashValid = false;
 }
 
+/** Abort in-flight stroke (pointer cancel). */
 void TabletCanvasItem::cancelActiveStroke()
 {
     if (m_stroke.active)
         endStroke();
 }
 
+/** Surface name for scheduleVectorRasterize. */
 void TabletCanvasItem::scheduleDocumentRasterize(bool sharp)
 {
     scheduleVectorRasterize(sharp);
 }
 
+/** Dirty Tablet panel under live-manip origin hole. */
 void TabletCanvasItem::notifyOriginPunch(const QRectF &panelRect)
 {
     if (!panelRect.isEmpty())
         update(panelRect.toAlignedRect().adjusted(-8, -8, 8, 8));
 }
 
+/** One-way manip_preview JSON to Infini. */
 void TabletCanvasItem::publishManipPreview(const std::string &nodeId,
                                            const epaper::document::SmartTransform &liveT,
                                            const epaper::document::SmartBounds *liveB)
@@ -1523,17 +1362,69 @@ void TabletCanvasItem::publishManipPreview(const std::string &nodeId,
     m_sync->sendLine(QJsonDocument(o).toJson(QJsonDocument::Compact));
 }
 
+/** Surface name for flushOneWayWire. */
 void TabletCanvasItem::flushWire()
 {
     flushOneWayWire();
 }
 
+/** Emit canUndo/canRedo after Tool commits a doc op. */
+void TabletCanvasItem::notifyHistory()
+{
+    emit historyChanged();
+}
+
+/** Outbound viewport while Epaper→Infini follow is on. */
+void TabletCanvasItem::maybePublishLocalViewport(bool settle)
+{
+    using epaper::handtouch::shouldPublishViewport;
+    using epaper::handtouch::uniformScaleOf;
+    if (!shouldPublishViewport(followEnum()))
+        return;
+    ++m_viewportUpCount;
+    if (!m_sync || !m_sync->isConnected())
+        return;
+    QJsonObject dr;
+    dr.insert(QStringLiteral("minX"), m_session.frame.drawingRegion.minX);
+    dr.insert(QStringLiteral("minY"), m_session.frame.drawingRegion.minY);
+    dr.insert(QStringLiteral("maxX"), m_session.frame.drawingRegion.maxX);
+    dr.insert(QStringLiteral("maxY"), m_session.frame.drawingRegion.maxY);
+    double sx = 1.0;
+    double sy = 1.0;
+    const double iw = qMax(1.0, double(width()));
+    const double ih = qMax(1.0, double(height()));
+    uniformScaleOf({0, 0, iw, ih}, m_session.frame.drawingRegion.box(), &sx, &sy);
+    QJsonObject o;
+    o.insert(QStringLiteral("type"), QStringLiteral("viewport"));
+    o.insert(QStringLiteral("source"), QStringLiteral("epaper"));
+    o.insert(QStringLiteral("seq"), ++m_viewportSeq);
+    o.insert(QStringLiteral("orientation"), QString::fromStdString(m_session.frame.orientation));
+    o.insert(QStringLiteral("settle"), settle);
+    o.insert(QStringLiteral("scale"), sx);
+    Q_UNUSED(sy);
+    QJsonObject tr;
+    tr.insert(QStringLiteral("x"), 0);
+    tr.insert(QStringLiteral("y"), 0);
+    o.insert(QStringLiteral("translate"), tr);
+    o.insert(QStringLiteral("drawingRegion"), dr);
+    m_sync->sendLine(QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
+/** Bootstrap camera AABB if none yet. */
+void TabletCanvasItem::ensureLocalDrawingRegion()
+{
+    syncFramePanelSize();
+    applyFrameIntent(m_session.frame.ensureLocalDrawingRegion());
+}
+
+/** Tool-facing debug string → debugInfo property. */
 void TabletCanvasItem::setInteractionDebug(const QString &info)
 {
     m_debugInfo = info;
     emit debugChanged();
 }
 
+/** Live manip ghost: paint SmartGroup + bound connectors. */
 void TabletCanvasItem::paintDocumentSubtree(QPainter &painter, const std::string &nodeId)
 {
     using namespace epaper::document;
@@ -1550,8 +1441,328 @@ void TabletCanvasItem::paintDocumentSubtree(QPainter &painter, const std::string
     }
 }
 
+/** Surface name for lodOkPanel. */
 bool TabletCanvasItem::lodOkWorld(const epaper::document::SmartBounds &wb) const
 {
     return lodOkPanel(wb);
+}
+
+/** Panel union of connectors bound to a SmartGroup. */
+QRectF TabletCanvasItem::boundConnectorsPanelUnion(const std::string &sgId) const
+{
+    QRectF u;
+    for (const auto &node : m_session.document.rootChildren) {
+        if (node.kind != epaper::document::NodeKind::Connector)
+            continue;
+        if (node.fromNodeId != sgId && node.toNodeId != sgId)
+            continue;
+        const QRectF r = warpedConnectorPanelRect(node);
+        u = u.isEmpty() ? r : u.united(r);
+    }
+    return u;
+}
+
+/** Panel stroke width for a connector node. */
+qreal TabletCanvasItem::connectorPanelStrokeWidth(const epaper::document::DocNode &conn) const
+{
+    double worldSw = conn.style.strokeWidth;
+    if (worldSw <= 0.0 && !conn.children.empty())
+        worldSw = conn.children.front().style.strokeWidth;
+    if (worldSw <= 0.0)
+        worldSw = 2.0;
+    return qMax<qreal>(1.0, worldSw * panelScale());
+}
+
+/** Panel AABB of a connector’s warped polyline. */
+QRectF TabletCanvasItem::warpedConnectorPanelRect(const epaper::document::DocNode &conn) const
+{
+    if (conn.warpedSamples.empty())
+        return {};
+    // @fix [STORY-EP-031] 0×0 QRectF is empty; united() never grew the connector AABB
+    const PanelPt p0 = worldToPanel(conn.warpedSamples[0].x, conn.warpedSamples[0].y);
+    qreal minX = p0.x();
+    qreal maxX = p0.x();
+    qreal minY = p0.y();
+    qreal maxY = p0.y();
+    for (const auto &s : conn.warpedSamples) {
+        const PanelPt p = worldToPanel(s.x, s.y);
+        minX = qMin(minX, p.x());
+        maxX = qMax(maxX, p.x());
+        minY = qMin(minY, p.y());
+        maxY = qMax(maxY, p.y());
+    }
+    return QRectF(PanelPt(minX, minY), PanelPt(maxX, maxY)).normalized().adjusted(-16, -16, 16, 16);
+}
+
+
+/**
+ * =================================================================================================
+ * Pointer sample stash
+ *
+ * QtInputFilter pushes full digitizer channels here; Tool’s DragHandler only sees
+ * pressure, so Surface ingestPen reads the stash.
+ * =================================================================================================
+ */
+
+/** Cache raw + PenSample from the input filter. */
+void TabletCanvasItem::stashTabletSample(const QPointF &raw, const IngestChannels &ch)
+{
+    m_stashRaw = RawPt{raw.x(), raw.y()};
+    m_stashTablet = ch;
+    m_stashValid = true;
+}
+
+
+/**
+ * =================================================================================================
+ * Region sync and viewport follow
+ *
+ * Inbound viewport from Infini applies camera when follow allows. Outbound publish is
+ * maybePublishLocalViewport (Surface). Follow toggle lives in Main.qml on drawCanvas.
+ * =================================================================================================
+ */
+
+/** Cycle follow direction; may apply Infini camera. */
+void TabletCanvasItem::tapFollowToggle()
+{
+    m_session.follow.connected = m_sync && m_sync->isConnected();
+    m_session.follow.exclusiveTool = m_toolMode.toStdString();
+    const auto r = m_session.follow.tapToggle();
+    m_session.setFollowDirection(QString::fromLatin1(epaper::handtouch::followId(m_session.follow.direction)));
+    emit followChanged();
+    flushFollowOutbound();
+    if (r.appliedInfiniViewport)
+        applyFollowCamera();
+}
+
+/** Inbound viewport JSON → orientation + drawingRegion. */
+void TabletCanvasItem::applyViewport(const QJsonObject &obj)
+{
+    m_viewportSeq = obj.value(QStringLiteral("seq")).toInt(m_viewportSeq);
+    using epaper::canvasframe::FrameIntent;
+    FrameIntent intent = FrameIntent::None;
+    const QString orient = obj.value(QStringLiteral("orientation")).toString();
+    if (!orient.isEmpty())
+        intent |= m_session.frame.setOrientation(orient.toStdString());
+
+    const QJsonObject dr = obj.value(QStringLiteral("drawingRegion")).toObject();
+    if (!dr.isEmpty())
+        intent |= m_session.frame.applyDrawingRegion(aabbFromJson(dr), true);
+
+    applyFrameIntent(intent);
+    const bool settle = obj.value(QStringLiteral("settle")).toBool(false);
+    qInfo() << "[sync] viewport seq" << m_viewportSeq << "orientation"
+            << QString::fromStdString(m_session.frame.orientation) << "settle" << settle << "ink"
+            << m_session.document.inkCount();
+    scheduleVectorRasterize(settle);
+    if (m_tool)
+        m_tool->onDocumentOrCameraChanged();
+}
+
+/** Map cached Infini viewport into local camera. */
+void TabletCanvasItem::applyFollowCamera()
+{
+    if (!m_session.follow.mapApplied && !m_session.follow.hasInfiniViewport)
+        return;
+    m_session.follow.applyInfiniViewportIfFollowing();
+    if (m_session.follow.direction != epaper::handtouch::FollowDirection::InfiniToEpaper)
+        return;
+    applyFrameIntent(m_session.frame.applyDrawingRegion(m_session.follow.localCamera, true));
+    scheduleVectorRasterize(true);
+}
+
+/** Send follow-session outbound lines on the wire. */
+void TabletCanvasItem::flushFollowOutbound()
+{
+    if (!m_sync || !m_sync->isConnected()) {
+        m_session.follow.outbound.clear();
+        return;
+    }
+    for (const std::string &line : m_session.follow.outbound)
+        m_sync->sendLine(QByteArray::fromStdString(line));
+    m_session.follow.outbound.clear();
+}
+
+/** Remember last Infini drawingRegion for follow-on. */
+void TabletCanvasItem::cacheInfiniViewport(const QJsonObject &obj)
+{
+    const QJsonObject dr = obj.value(QStringLiteral("drawingRegion")).toObject();
+    if (dr.isEmpty())
+        return;
+    m_session.follow.cacheInfiniViewport(aabbFromJson(dr));
+}
+
+/** Session followDirection string → FollowDirection enum. */
+epaper::handtouch::FollowDirection TabletCanvasItem::followEnum() const
+{
+    return epaper::handtouch::parseFollow(m_session.followDirection().toStdString());
+}
+
+
+/**
+ * =================================================================================================
+ * One-way sync wire
+ *
+ * Pen strokes publish begin/point/end through OneWaySyncSession. onHostMessage handles
+ * handshake, viewport, and doc_load; clears Tool selection when host says none.
+ * =================================================================================================
+ */
+
+/** Open an outbound stroke on the one-way session. */
+void TabletCanvasItem::syncBegin()
+{
+    // @implements [SRS-EP-08] stroke_begin without intent
+    m_oneWay.beginPreviewStroke(m_stroke.activeStrokeId);
+    flushOneWayWire();
+}
+
+/** Append a stroke point to the outbound buffer. */
+void TabletCanvasItem::syncPoint(const Point &pt)
+{
+    // @implements [SRS-EP-02] live preview in world — same space as append_ink
+    ensureLocalDrawingRegion();
+    const WorldPt world = panelToWorld(pt.pos);
+    m_oneWay.previewStrokePoint(m_stroke.activeStrokeId, world.x, world.y, pt.pressure);
+    flushOneWayWire();
+}
+
+/** Close the outbound stroke. */
+void TabletCanvasItem::syncEnd()
+{
+    m_oneWay.endPreviewStroke(m_stroke.activeStrokeId);
+    flushOneWayWire();
+}
+
+/** Drain session outbound lines to StrokeSync. */
+void TabletCanvasItem::flushOneWayWire()
+{
+    m_oneWay.onLocalCommit();
+    if (!m_sync->isConnected())
+        return;
+    for (const std::string &line : m_oneWay.takeOutbound())
+        m_sync->sendLine(QByteArray::fromStdString(line));
+}
+
+/** Inbound JSON: follow, viewport, doc sync, selection clear. */
+void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
+{
+    epaper::UiStallSection stall("onHostMessage");
+    const QString inboundType = obj.value(QStringLiteral("type")).toString();
+    if (inboundType == QLatin1String("viewport_follow")) {
+        const QByteArray raw = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+        const auto msg = epaper::follow::parseViewportFollowLine(
+            std::string(raw.constData(), static_cast<size_t>(raw.size())));
+        if (m_session.follow.adoptInbound(msg)) {
+            m_session.setFollowDirection(QString::fromLatin1(epaper::handtouch::followId(m_session.follow.direction)));
+            emit followChanged();
+            if (m_session.follow.epaperFollowOn())
+                applyFollowCamera();
+        }
+        m_oneWay.handleInboundLine(std::string(raw.constData(), static_cast<size_t>(raw.size())));
+        flushOneWayWire();
+        return;
+    }
+    if (inboundType != QLatin1String("viewport"))
+        qInfo() << "[sync] inbound" << inboundType << "live" << m_oneWay.epochLive()
+                << "handshake" << m_oneWay.handshakeInFlight();
+    const QByteArray raw = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+    m_oneWay.handleInboundLine(std::string(raw.constData(), static_cast<size_t>(raw.size())));
+    if (m_oneWay.viewportApplied() > 0 && inboundType == QLatin1String("viewport")) {
+        cacheInfiniViewport(obj);
+        // @implements [SRS-EP-21] apply Infini viewport only while following
+        if (epaper::handtouch::shouldApplyInboundViewport(followEnum()))
+            applyViewport(obj);
+        else
+            qInfo() << "[sync] ignore inbound viewport follow=" << m_session.followDirection();
+    }
+    if (m_session.document.selectionId() == std::nullopt)
+        if (m_tool)
+            m_tool->clearSelection();
+    flushOneWayWire();
+    if (obj.value(QStringLiteral("type")).toString() == QLatin1String("doc_load")
+        && m_oneWay.epochLive())
+        scheduleVectorRasterize(true);
+}
+
+
+/**
+ * =================================================================================================
+ * Chrome layout
+ *
+ * Fixed orientation-top slots for ToolChip, Follow, USB, DBG, hand-touch. Main.qml binds
+ * rect properties; interaction stays on ToolCanvas.
+ * =================================================================================================
+ */
+
+/** Recompute chrome rects from panel size + orientation. */
+void TabletCanvasItem::updateToolChipRect()
+{
+    // UI-EP-04 + ADR-0021: 3 exclusive tools + 12 px publish + 2 toggles + Undo/Redo.
+    // @implements [SRS-EP-05] floating ToolChip hit bounds (64×64 tiles, CHL-0019)
+    const qreal chipH = epaper::toolchip::kHeight;
+    const qreal chipW = epaper::toolchip::chipWidth();
+    const qreal inset = 8.0;
+    qreal top = inset;
+    if (m_session.frame.orientation == "gutOnTop")
+        top = height() - inset - chipH;
+    const qreal left = (width() - chipW) * 0.5;
+    const QRectF next(left, top, chipW, chipH);
+    if (next != m_toolChipRect) {
+        m_toolChipRect = next;
+        emit toolChipRectChanged();
+    }
+    const bool gutOnTop = m_session.frame.orientation == "gutOnTop";
+    const auto fr = epaper::follow::followToggleRect(width(), height(), gutOnTop);
+    const auto ur = epaper::follow::usbLinkRect(width(), height(), gutOnTop);
+    const auto dr = epaper::follow::debugToggleRect(width(), height(), gutOnTop);
+    const auto lr = epaper::follow::debugLogRect(width(), height(), gutOnTop);
+    const QRectF followNext = panelToQ(fr);
+    const QRectF usbNext = panelToQ(ur);
+    const QRectF debugNext = panelToQ(dr);
+    const QRectF logNext = panelToQ(lr);
+    const QRectF handNext = QRectF(next.x() + epaper::toolchip::kPublish, next.y(),
+                                   epaper::toolchip::kTile, epaper::toolchip::kHeight);
+    if (followNext != m_followToggleRect || usbNext != m_usbLinkRect
+        || debugNext != m_debugToggleRect || handNext != m_handTouchToggleRect
+        || logNext != m_debugLogRect) {
+        m_followToggleRect = followNext;
+        m_usbLinkRect = usbNext;
+        m_debugToggleRect = debugNext;
+        m_handTouchToggleRect = handNext;
+        m_debugLogRect = logNext;
+        emit trailingChromeChanged();
+        auto fmt = [](const QRectF &r) {
+            return QStringLiteral("%1,%2 %3x%4")
+                .arg(int(r.x())).arg(int(r.y())).arg(int(r.width())).arg(int(r.height()));
+        };
+        qInfo().noquote() << QStringLiteral("[chrome] rects panel=%1x%2 chip=%3 dbg=%4 follow=%5 usb=%6")
+                                 .arg(int(width())).arg(int(height()))
+                                 .arg(fmt(m_toolChipRect), fmt(m_debugToggleRect),
+                                      fmt(m_followToggleRect), fmt(m_usbLinkRect));
+    }
+}
+
+
+/**
+ * =================================================================================================
+ * Debug and diagnostics
+ *
+ * DBG toggle and debugInfo string shown in Main.qml. Interaction debug text is written
+ * through Surface setInteractionDebug.
+ * =================================================================================================
+ */
+
+/** Show/hide the on-device debug log panel. */
+void TabletCanvasItem::toggleDebugLog()
+{
+    m_debugLogVisible = !m_debugLogVisible;
+    emit debugLogVisibleChanged();
+    // Says whether a missed DBG tap never reached the handler or only failed to paint.
+    qInfo().noquote() << QStringLiteral("[chrome] dbg toggle %1 rect=%2,%3 %4x%5")
+                             .arg(m_debugLogVisible ? "on" : "off")
+                             .arg(int(m_debugToggleRect.x()))
+                             .arg(int(m_debugToggleRect.y()))
+                             .arg(int(m_debugToggleRect.width()))
+                             .arg(int(m_debugToggleRect.height()));
 }
 

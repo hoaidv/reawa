@@ -58,6 +58,12 @@ class ToolCanvasItem : public QQuickPaintedItem
     Q_PROPERTY(QString manipulationUnavailable READ manipulationUnavailable NOTIFY selectionChromeChanged)
     Q_PROPERTY(QRectF manipulationUnavailableRect READ manipulationUnavailableRect NOTIFY selectionChromeChanged)
 
+/**
+ * =================================================================================================
+ * Types
+ * =================================================================================================
+ */
+
 public:
     using PanelPt = QPointF;
     using WorldPt = epaper::canvasframe::WorldPt;
@@ -70,13 +76,32 @@ public:
         qreal y = 0;
     };
 
+/**
+ * =================================================================================================
+ * Construction and Qt item lifecycle
+ * =================================================================================================
+ */
+
+public:
     explicit ToolCanvasItem(QQuickItem *parent = nullptr);
 
-    /**
-     * =================================================================================================
-     * Interaction API for TabletCanvas
-     * =================================================================================================
-     */
+    void paint(QPainter *painter) override;
+    void setStrokeWaveform(bool penInFlight);
+
+protected:
+    void componentComplete() override;
+    void geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) override;
+
+/**
+ * =================================================================================================
+ * Interaction API for TabletCanvas
+ *
+ * Session/surface wiring plus actions Tablet must request (selection clear, cancel, punch snapshot).
+ * Doc/camera refresh: listen to CanvasSession NOTIFY — not Tablet calling onDocumentMutated().
+ * =================================================================================================
+ */
+
+public:
     void setSession(CanvasSession *session);
     CanvasSession *session() const { return m_session; }
 
@@ -96,11 +121,53 @@ public:
     void endSelectionGesture();
     bool tryBeginHandleAtPanel(const PanelPt &panel, double hitDu);
 
-    void paint(QPainter *painter) override;
-    void setStrokeWaveform(bool penInFlight);
+signals:
+    void surfaceChanged();
 
+private:
+    epaper::document::DeviceDocument &doc();
+    const epaper::document::DeviceDocument &doc() const;
+    epaper::canvasframe::CanvasFrame &frame();
+    const epaper::canvasframe::CanvasFrame &frame() const;
+    epaper::toolchip::ChipModel &chip();
+    epaper::follow::FollowSession &follow();
+
+    CanvasSession *m_session = nullptr;
+    TabletCanvasItem *m_surface = nullptr;
+    QMetaObject::Connection m_docConn;
+    QMetaObject::Connection m_camConn;
+    QMetaObject::Connection m_toolConn;
+
+/**
+ * =================================================================================================
+ * Canvas frame helpers (via session)
+ * =================================================================================================
+ */
+
+private:
+    void applyCameraRegion(const epaper::handtouch::WorldAabb &region, bool markValid);
+    void syncPanelSize() const;
+    WorldPt panelToWorld(const PanelPt &panel) const;
+    PanelPt worldToPanel(double wx, double wy) const;
+    PanelPt worldToPanel(WorldPt w) const { return worldToPanel(w.x, w.y); }
+    FrameUv panelToFrameUv(const PanelPt &panel) const;
+    QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const;
+    bool lodOkPanel(const epaper::document::SmartBounds &wb) const;
+    epaper::handtouch::FollowDirection followEnum() const;
+
+/**
+ * =================================================================================================
+ * Pointer routing and contact arbitration
+ *
+ * Cycles:
+ *      onPointerStart → onPointerMove → onPointerEnd | onPointerCancel;
+ *      onPinchStart → onPinchUpdate → onPinchEnd
+ * =================================================================================================
+ */
+
+public:
     /**
-     * Qt DragHandler / PinchHandler canvas entry.
+     * Qt DragHandler / PinchHandler canvas entry (ToolCanvas.qml).
      * @implements [SRS-EP-04] Qt pointer routing
      */
     Q_INVOKABLE void onPointerStart(qreal x, qreal y, qreal pressure, bool pen);
@@ -114,71 +181,101 @@ public:
     Q_INVOKABLE void onPinchUpdate(qreal x, qreal y, qreal scale);
     Q_INVOKABLE void onPinchEnd();
 
+private:
+    PanelPt pinchArmPoint(qreal x, qreal y, qreal scale, bool positive) const;
+
+    bool m_pinchIgnore = false;
+    qreal m_pinchArm = 80.0;
+    qreal m_pinchScale0 = 1.0;
+
+/**
+ * =================================================================================================
+ * Hand touch
+ *
+ * Owns m_finger (FingerGestureMachine). Mutators return FingerIntent;
+ * applyFingerIntent() alone performs session/Surface effects.
+ *
+ * Cycles:
+ *      beginFingerTouch → updateFingerTouch → endFingerTouch;
+ *      beginTwoFingerTouch → updateTwoFingerTouch → endTwoFingerTouch;
+ *      cancelHandTouch as the escape hatch
+ * =================================================================================================
+ */
+
+public:
     bool handTouchArmed() const { return m_finger.armed; }
     Q_INVOKABLE void toggleHandTouch();
     Q_INVOKABLE void cancelHandTouch();
 
+    /**
+     * Capacitive one-finger path (STORY-EP-038). Knob / box / empty palm vs pan.
+     * @implements [SRS-EP-21] one-finger canvas hit
+     */
     bool beginFingerTouch(const PanelPt &canvasPos);
     void updateFingerTouch(const PanelPt &canvasPos, int fingerCount);
     void endFingerTouch(const PanelPt &canvasPos);
+
+    /**
+     * Two-finger local pan/pinch (STORY-EP-039).
+     * @implements [SRS-EP-24] two-finger canvas pan pinch
+     */
     bool beginTwoFingerTouch(const PanelPt &a, const PanelPt &b);
     void updateTwoFingerTouch(const PanelPt &a, const PanelPt &b);
     void endTwoFingerTouch();
 
+signals:
+    void handTouchArmedChanged();
+
+private:
+    void applyFingerIntent(const epaper::fingergesture::FingerResult &r,
+                           const PanelPt &panel = PanelPt());
+    bool fingerHitsBox(const PanelPt &canvasPos) const;
+    epaper::handtouch::TwoFingerContacts uvPair(const PanelPt &a, const PanelPt &b) const;
+    void worldThroughPanOrigin(const PanelPt &panel, double *wx, double *wy) const;
+
+    epaper::fingergesture::FingerGestureMachine m_finger;
+    QElapsedTimer m_fingerPanClock;
+
+/**
+ * =================================================================================================
+ * Selection and direct manipulation
+ *
+ * Owns m_selection (SelectionSession) and m_manip (ManipSession). Mutators return
+ * intents; applySelectionIntent / applyManipIntent alone perform session/Surface effects.
+ *
+ * Sub-cycle A — gesture: beginSelectionGesture → updateSelectionGesture → endSelectionGesture
+ * Sub-cycle B — marquee/lasso: beginMarqueeOrLasso → finishMarqueeOrLasso
+ * Sub-cycle C — live manip: startLiveManip → applyDragWorld → redrawLiveManipRegion → commitLiveManip | abortFingerManip
+ * Sub-cycle D — handle entry: handleIndexAtPanel → tryBeginHandleAtPanel → beginHandleDrag
+ * =================================================================================================
+ */
+
+public:
     Q_INVOKABLE void encloseSelection();
     void abortFingerManip();
+    /** @implements [SRS-EP-11] handle drag in world space */
     void beginHandleDrag(int handleIndex, WorldPt world);
     Q_INVOKABLE void tapModeChip();
 
     QString manipulationUnavailable() const { return m_manipUnavailable; }
     QRectF manipulationUnavailableRect() const { return m_manipUnavailableRect; }
 
-    QRectF encloseCtaRect() const { return m_encloseCtaRect; }
-    bool encloseVisible() const { return m_encloseVisible; }
-    QString encloseRefuseReason() const { return m_encloseRefuseReason; }
-    QRectF selectionBoundsRect() const { return m_selectionBoundsRect; }
-    int handleCount() const { return m_handleCount; }
-    qreal handleSize() const { return m_handleSize; }
-    bool modeChipVisible() const { return m_modeChipVisible; }
-    QString modeChipLabel() const { return m_modeChipLabel; }
-    QRectF modeChipRectProp() const { return m_modeChipRect; }
-
 signals:
-    void surfaceChanged();
-    void handTouchArmedChanged();
     void selectionChromeChanged();
 
-protected:
-    void componentComplete() override;
-    void geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) override;
-
 private:
-    epaper::document::DeviceDocument &doc();
-    const epaper::document::DeviceDocument &doc() const;
-    epaper::canvasframe::CanvasFrame &frame();
-    const epaper::canvasframe::CanvasFrame &frame() const;
-    epaper::toolchip::ChipModel &chip();
-    epaper::follow::FollowSession &follow();
-
-    void applyCameraRegion(const epaper::handtouch::WorldAabb &region, bool markValid);
-    void syncPanelSize() const;
-    WorldPt panelToWorld(const PanelPt &panel) const;
-    PanelPt worldToPanel(double wx, double wy) const;
-    PanelPt worldToPanel(WorldPt w) const { return worldToPanel(w.x, w.y); }
-    FrameUv panelToFrameUv(const PanelPt &panel) const;
-    QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const;
-    bool lodOkPanel(const epaper::document::SmartBounds &wb) const;
-
     bool isSelectionTool() const;
     QString exclusiveTool() const;
     void setSelection(const std::vector<std::string> &ids);
+
+    QString hitLocalSmartGroup(WorldPt world) const;
+
     void applySelectionIntent(const epaper::selection::SelectionResult &r);
     void applyManipIntent(const epaper::manip::ManipResult &r, bool restoreOrigin = false);
-    void applyFingerIntent(const epaper::fingergesture::FingerResult &r,
-                           const PanelPt &panel = PanelPt());
 
     void beginMarqueeOrLasso(const PanelPt &canvasPos);
     void finishMarqueeOrLasso();
+
     void startLiveManip(const epaper::document::DocNode *subject,
                         epaper::document::ResizeHandle handle, WorldPt world);
     void applyDragWorld(WorldPt world);
@@ -186,32 +283,10 @@ private:
     void commitLiveManip();
 
     int handleIndexAtPanel(const PanelPt &panel, double hitDu) const;
+
     void captureOriginConnectorPunches(const std::string &sgId);
     void showManipUnavailable(const epaper::document::SmartBounds &wb);
     void sendManipPreviewToInfini();
-
-    QString hitLocalSmartGroup(WorldPt world) const;
-    bool fingerHitsBox(const PanelPt &canvasPos) const;
-    epaper::handtouch::TwoFingerContacts uvPair(const PanelPt &a, const PanelPt &b) const;
-    void worldThroughPanOrigin(const PanelPt &panel, double *wx, double *wy) const;
-    PanelPt pinchArmPoint(qreal x, qreal y, qreal scale, bool positive) const;
-    epaper::handtouch::FollowDirection followEnum() const;
-
-    void refreshSelectionChrome();
-    void damageToolChrome(const QRectF &next);
-    void damageToolChromeSegment(const QRectF &seg);
-    void syncToolCanvasPresence();
-    void paintLiveManipOnToolCanvas(QPainter *painter);
-    void paintToolChrome(QPainter *painter);
-
-    CanvasSession *m_session = nullptr;
-    TabletCanvasItem *m_surface = nullptr;
-    QMetaObject::Connection m_docConn;
-    QMetaObject::Connection m_camConn;
-    QMetaObject::Connection m_toolConn;
-
-    epaper::fingergesture::FingerGestureMachine m_finger;
-    QElapsedTimer m_fingerPanClock;
 
     epaper::selection::SelectionSession m_selection;
     epaper::manip::ManipSession m_manip;
@@ -227,9 +302,35 @@ private:
     QString m_manipUnavailable;
     QRectF m_manipUnavailableRect;
 
-    bool m_pinchIgnore = false;
-    qreal m_pinchArm = 80.0;
-    qreal m_pinchScale0 = 1.0;
+    static constexpr qint64 kSelectionGhostMinIntervalMs = 200;
+    static constexpr double kMinMarqueeGesture = 8.0;
+
+/**
+ * =================================================================================================
+ * Selection chrome overlay
+ *
+ * Cycle: refreshSelectionChrome → damageToolChrome/damageToolChromeSegment → paintToolChrome
+ * =================================================================================================
+ */
+
+public:
+    QRectF encloseCtaRect() const { return m_encloseCtaRect; }
+    bool encloseVisible() const { return m_encloseVisible; }
+    QString encloseRefuseReason() const { return m_encloseRefuseReason; }
+    QRectF selectionBoundsRect() const { return m_selectionBoundsRect; }
+    int handleCount() const { return m_handleCount; }
+    qreal handleSize() const { return m_handleSize; }
+    bool modeChipVisible() const { return m_modeChipVisible; }
+    QString modeChipLabel() const { return m_modeChipLabel; }
+    QRectF modeChipRectProp() const { return m_modeChipRect; }
+
+private:
+    void refreshSelectionChrome();
+    void damageToolChrome(const QRectF &next);
+    void damageToolChromeSegment(const QRectF &seg);
+    void syncToolCanvasPresence();
+    void paintLiveManipOnToolCanvas(QPainter *painter);
+    void paintToolChrome(QPainter *painter);
 
     QRectF m_toolChromePrev;
     QRectF m_selectionChromeDirty;
@@ -242,7 +343,4 @@ private:
     QRectF m_encloseCtaRect;
     bool m_encloseVisible = false;
     QString m_encloseRefuseReason;
-
-    static constexpr qint64 kSelectionGhostMinIntervalMs = 200;
-    static constexpr double kMinMarqueeGesture = 8.0;
 };
