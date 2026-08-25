@@ -1,0 +1,826 @@
+{
+    "classes": [
+        {
+            "className": "TabletCanvasItem",
+            "lineNumber": 50,
+            "methods": [
+                {
+                    "access": "public",
+                    "index": 13,
+                    "name": "requestUndo",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 14,
+                    "name": "requestRedo",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "type",
+                            "type": "QEvent::Type"
+                        },
+                        {
+                            "name": "pos",
+                            "type": "QPointF"
+                        },
+                        {
+                            "name": "pressure",
+                            "type": "qreal"
+                        }
+                    ],
+                    "index": 15,
+                    "name": "ingestPoint",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "mode",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 16,
+                    "name": "armTool",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 17,
+                    "name": "toggleRecogInkBox",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 18,
+                    "name": "toggleRecogConnector",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "pressure",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "pen",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 19,
+                    "name": "onPointerStart",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "pressure",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "pen",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 20,
+                    "name": "onPointerMove",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "pen",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 21,
+                    "name": "onPointerEnd",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 22,
+                    "name": "onPointerCancel",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        }
+                    ],
+                    "index": 23,
+                    "name": "onFingerTap",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 24,
+                    "name": "onSecondContact",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 25,
+                    "name": "onContactsCleared",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "scale",
+                            "type": "qreal"
+                        }
+                    ],
+                    "index": 26,
+                    "name": "onPinchStart",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "scale",
+                            "type": "qreal"
+                        }
+                    ],
+                    "index": 27,
+                    "name": "onPinchUpdate",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 28,
+                    "name": "onPinchEnd",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 29,
+                    "name": "toggleHandTouch",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 30,
+                    "name": "cancelHandTouch",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 31,
+                    "name": "encloseSelection",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 32,
+                    "name": "tapModeChip",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 33,
+                    "name": "tapFollowToggle",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 34,
+                    "name": "toggleDebugLog",
+                    "returnType": "void"
+                }
+            ],
+            "object": true,
+            "properties": [
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 0,
+                    "name": "paintsInk",
+                    "read": "paintsInk",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 1,
+                    "name": "debugInfo",
+                    "notify": "debugChanged",
+                    "read": "debugInfo",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 2,
+                    "name": "debugLogVisible",
+                    "notify": "debugLogVisibleChanged",
+                    "read": "debugLogVisible",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 3,
+                    "name": "canUndo",
+                    "notify": "historyChanged",
+                    "read": "canUndo",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 4,
+                    "name": "canRedo",
+                    "notify": "historyChanged",
+                    "read": "canRedo",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 5,
+                    "name": "strokeCount",
+                    "notify": "strokeCountChanged",
+                    "read": "strokeCount",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 6,
+                    "name": "lastPoint",
+                    "notify": "debugChanged",
+                    "read": "lastPoint",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QPointF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 7,
+                    "name": "toolMode",
+                    "notify": "toolModeChanged",
+                    "read": "toolMode",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "write": "setToolMode"
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 8,
+                    "name": "recogInkBoxArmed",
+                    "notify": "recogChanged",
+                    "read": "recogInkBoxArmed",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 9,
+                    "name": "recogConnectorArmed",
+                    "notify": "recogChanged",
+                    "read": "recogConnectorArmed",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 10,
+                    "name": "recogTogglesDimmed",
+                    "notify": "toolModeChanged",
+                    "read": "recogTogglesDimmed",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 11,
+                    "name": "lastStrokeLatch",
+                    "notify": "lastStrokeLatchChanged",
+                    "read": "lastStrokeLatch",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 12,
+                    "name": "handTouchArmed",
+                    "notify": "handTouchArmedChanged",
+                    "read": "handTouchArmed",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 13,
+                    "name": "manipulationUnavailable",
+                    "notify": "selectionChromeChanged",
+                    "read": "manipulationUnavailable",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 14,
+                    "name": "manipulationUnavailableRect",
+                    "notify": "selectionChromeChanged",
+                    "read": "manipulationUnavailableRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 15,
+                    "name": "encloseCtaRect",
+                    "notify": "selectionChromeChanged",
+                    "read": "encloseCtaRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 16,
+                    "name": "encloseVisible",
+                    "notify": "selectionChromeChanged",
+                    "read": "encloseVisible",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 17,
+                    "name": "encloseRefuseReason",
+                    "notify": "selectionChromeChanged",
+                    "read": "encloseRefuseReason",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 18,
+                    "name": "selectionBoundsRect",
+                    "notify": "selectionChromeChanged",
+                    "read": "selectionBoundsRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 19,
+                    "name": "handleCount",
+                    "notify": "selectionChromeChanged",
+                    "read": "handleCount",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 20,
+                    "name": "handleSize",
+                    "notify": "selectionChromeChanged",
+                    "read": "handleSize",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "qreal",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 21,
+                    "name": "modeChipVisible",
+                    "notify": "selectionChromeChanged",
+                    "read": "modeChipVisible",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 22,
+                    "name": "modeChipLabel",
+                    "notify": "selectionChromeChanged",
+                    "read": "modeChipLabel",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 23,
+                    "name": "modeChipRect",
+                    "notify": "selectionChromeChanged",
+                    "read": "modeChipRectProp",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 24,
+                    "name": "followDirection",
+                    "notify": "followChanged",
+                    "read": "followDirection",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 25,
+                    "name": "followPressed",
+                    "notify": "followChanged",
+                    "read": "followPressed",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 26,
+                    "name": "followUnavailable",
+                    "notify": "followChanged",
+                    "read": "followUnavailable",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 27,
+                    "name": "toolChipRect",
+                    "notify": "toolChipRectChanged",
+                    "read": "toolChipRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 28,
+                    "name": "followToggleRect",
+                    "notify": "trailingChromeChanged",
+                    "read": "followToggleRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 29,
+                    "name": "usbLinkRect",
+                    "notify": "trailingChromeChanged",
+                    "read": "usbLinkRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 30,
+                    "name": "debugToggleRect",
+                    "notify": "trailingChromeChanged",
+                    "read": "debugToggleRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 31,
+                    "name": "handTouchToggleRect",
+                    "notify": "trailingChromeChanged",
+                    "read": "handTouchToggleRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 32,
+                    "name": "debugLogRect",
+                    "notify": "trailingChromeChanged",
+                    "read": "debugLogRect",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QRectF",
+                    "user": false
+                }
+            ],
+            "qualifiedClassName": "TabletCanvasItem",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "x1",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y1",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "x2",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "y2",
+                            "type": "qreal"
+                        },
+                        {
+                            "name": "lineWidth",
+                            "type": "qreal"
+                        }
+                    ],
+                    "index": 0,
+                    "name": "segmentDrawn",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 1,
+                    "name": "historyChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 2,
+                    "name": "strokeCountChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 3,
+                    "name": "toolModeChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 4,
+                    "name": "recogChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 5,
+                    "name": "lastStrokeLatchChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 6,
+                    "name": "handTouchArmedChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 7,
+                    "name": "selectionChromeChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 8,
+                    "name": "followChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 9,
+                    "name": "toolChipRectChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 10,
+                    "name": "trailingChromeChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 11,
+                    "name": "debugChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 12,
+                    "name": "debugLogVisibleChanged",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QQuickPaintedItem"
+                }
+            ]
+        }
+    ],
+    "inputFile": "tabletcanvasitem.h",
+    "outputRevision": 68
+}

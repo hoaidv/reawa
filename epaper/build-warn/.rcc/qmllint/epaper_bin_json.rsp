@@ -1,0 +1,15 @@
+--bare
+-I
+/workspace/epaper/build-warn
+-I
+/opt/remarkable-sdk/sysroots/cortexa7hf-neon-remarkable-linux-gnueabi/usr/lib/qml
+--resource
+/workspace/epaper/build-warn/.qt/rcc/qmake_epaper.qrc
+--resource
+/workspace/epaper/build-warn/.qt/rcc/epaper_bin_raw_qml_0.qrc
+--resource
+/workspace/epaper/build-warn/.qt/rcc/epaper_tool_icons.qrc
+/workspace/epaper/drawing/Main.qml
+/workspace/epaper/drawing/ResizeKnob.qml
+--json
+/workspace/epaper/build-warn/epaper_bin_qmllint.json

@@ -11,7 +11,6 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QString>
-#include <QStringList>
 #include <cstdint>
 #include <string>
 #include <unordered_set>
@@ -23,9 +22,10 @@
 #include "document/manipulate.hpp"
 #include "document/one_way_sync.hpp"
 #include "document/viewport_follow.hpp"
-#include "gesture/manipdrag.h"
 #include "input/pen_sample.hpp"
+#include "manip_session.hpp"
 #include "primary_toolbar.hpp"
+#include "selection_session.hpp"
 #include "stroke_capture.hpp"
 
 class StrokeSync;
@@ -83,12 +83,6 @@ public:
         qreal x = 0;
         qreal y = 0;
     };
-
-    /**
-     * Hatch for modules that still carry world points as QPointF (gesture/manipdrag).
-     * Greppable on purpose — each use is a place the space stops being checked.
-     */
-    static QPointF worldQ(WorldPt w) { return QPointF(w.x, w.y); }
 
 private:
     struct Point {
@@ -500,12 +494,15 @@ private:
 /**
  * =================================================================================================
  * Selection and direct manipulation
- * 
+ *
+ * Owns m_selection (SelectionSession) and m_manip (ManipSession). Mutators return
+ * intents; applySelectionIntent / applyManipIntent alone perform Qt/document effects.
+ *
  * Sub-cycle A — gesture: beginSelectionGesture → updateSelectionGesture → endSelectionGesture
  * Sub-cycle B — marquee/lasso: beginMarqueeOrLasso → finishMarqueeOrLasso
  * Sub-cycle C — live manip: startLiveManip → applyDragWorld → redrawLiveManipRegion → commitLiveManip | abortFingerManip
  * Sub-cycle D — handle entry: handleIndexAtPanel → tryBeginHandleAtPanel → beginHandleDrag
- * 
+ *
  * =================================================================================================
  */
 
@@ -523,61 +520,45 @@ public:
     QRectF manipulationUnavailableRect() const { return m_manipUnavailableRect; }
         
 private:
-
-
-    enum class SelGesture { None, Move, Resize, Marquee, Lasso };
-
     /** Rest-pose connector polylines in panel space — CanvasLayer origin hole (stroke, not AABB). */
     struct OriginConnStroke {
         QVector<PanelPt> panel;
         qreal width = 4;
     };
 
-    /** Single source of truth for "a selection gesture is in flight". */
-    bool selectionGestureActive() const { return m_selGesture != SelGesture::None; }
+    bool selectionGestureActive() const { return m_selection.active(); }
 
-    /** User-initiated deselect. Not for host reconciliation or history pruning. */
     void clearSelection();
-    /** Replace the selection; the first id becomes the pickable. Leaves m_drag alone. */
     void setSelection(const std::vector<std::string> &ids);
 
     QString hitLocalSmartGroup(WorldPt world) const;
 
-    // Cycle A
+    void applySelectionIntent(const epaper::selection::SelectionResult &r);
+    void applyManipIntent(const epaper::manip::ManipResult &r, bool restoreOrigin = false);
+
     void beginSelectionGesture(const PanelPt &canvasPos);
     void updateSelectionGesture(const PanelPt &canvasPos);
     void endSelectionGesture();
 
-    // Cycle B
     void beginMarqueeOrLasso(const PanelPt &canvasPos);
     void finishMarqueeOrLasso();
 
-    // Cycle C
     void startLiveManip(const epaper::document::DocNode *subject,
         epaper::document::ResizeHandle handle, WorldPt world);
     void applyDragWorld(WorldPt world);
     void redrawLiveManipRegion();
     void commitLiveManip();
-    // void abortFingerManip() is public
 
-    // Cycle D
     int handleIndexAtPanel(const PanelPt &panel, double hitDu) const;
     bool tryBeginHandleAtPanel(const PanelPt &panel, double hitDu);
-    // void beginHandleDrag(...) is public
 
     void captureOriginConnectorPunches(const std::string &sgId);
     void showManipUnavailable(const epaper::document::SmartBounds &wb);
     void sendManipPreviewToInfini();
 
+    epaper::selection::SelectionSession m_selection;
+    epaper::manip::ManipSession m_manip;
 
-    SelGesture m_selGesture = SelGesture::None;
-    QStringList m_selectedIds;
-    QString m_selectedPickableId;
-    QVector<PanelPt> m_lassoPanel;
-    PanelPt m_marqueeStartPanel;
-    PanelPt m_marqueeEndPanel;
-    
-    epaper::gesture::ManipDrag m_drag;
     QRectF m_liveDirtyPrev;
     QRectF m_originPanelRect;
     QRectF m_originConnPunch;
@@ -591,6 +572,7 @@ private:
     QRectF m_manipUnavailableRect;
 
     static constexpr qint64 kSelectionGhostMinIntervalMs = 200;
+    static constexpr double kMinMarqueeGesture = 8.0;
 
     Q_PROPERTY(QString manipulationUnavailable READ manipulationUnavailable NOTIFY selectionChromeChanged)
     Q_PROPERTY(QRectF manipulationUnavailableRect READ manipulationUnavailableRect NOTIFY selectionChromeChanged)

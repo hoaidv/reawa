@@ -1,0 +1,78 @@
+{
+    "classes": [
+        {
+            "className": "QtInputFilter",
+            "lineNumber": 28,
+            "object": true,
+            "properties": [
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 0,
+                    "name": "contactCount",
+                    "notify": "contactCountChanged",
+                    "read": "contactCount",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 1,
+                    "name": "penNear",
+                    "notify": "penNearChanged",
+                    "read": "penNear",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false
+                }
+            ],
+            "qualifiedClassName": "QtInputFilter",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "raw",
+                            "type": "QPointF"
+                        },
+                        {
+                            "name": "channels",
+                            "type": "epaper::input::PenSample"
+                        }
+                    ],
+                    "index": 0,
+                    "name": "penSample",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 1,
+                    "name": "contactCountChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 2,
+                    "name": "penNearChanged",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "qtinputfilter.h",
+    "outputRevision": 68
+}

@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/qt/qml/epaper/">
+    <file alias="Main.qml">/workspace/epaper/drawing/Main.qml</file>
+    <file alias="ResizeKnob.qml">/workspace/epaper/drawing/ResizeKnob.qml</file>
+  </qresource>
+</RCC>
+

@@ -1,6 +1,9 @@
 #pragma once
 
 /**
+ * DEPRECATED — superseded by drawing/manip_session.hpp (Phase 3, Qt-free).
+ * Kept for reference; TabletCanvasItem no longer includes this header.
+ *
  * Live move/resize session in world space.
  * Canvas calls begin / setCurrentWorld / setLive / reset — not field poking.
  * @implements [SRS-EP-11] selection hit-test move resize
