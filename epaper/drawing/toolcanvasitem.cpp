@@ -71,13 +71,12 @@ void ToolCanvasItem::componentComplete()
     }
 }
 
-/** Re-attach Mono region and sync frame panel size on resize. */
+/** Re-attach Mono region on resize (panel size is owned by Tablet → session.frame). */
 void ToolCanvasItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
 {
     QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
     if (newGeometry.size() != oldGeometry.size()) {
         EpaperBridge::instance()->attachMonoModeRegion(this);
-        syncPanelSize();
     }
 }
 
@@ -169,6 +168,13 @@ OriginPunchSnapshot ToolCanvasItem::originPunch() const
     return s;
 }
 
+/** Current exclusive tool id from the session chip. */
+QString ToolCanvasItem::exclusiveTool() const
+{
+    return m_session ? m_session->exclusiveTool() : QStringLiteral("pen");
+}
+
+
 /** Session document reference for intention code. */
 epaper::document::DeviceDocument &ToolCanvasItem::doc()
 {
@@ -197,25 +203,6 @@ const epaper::canvasframe::CanvasFrame &ToolCanvasItem::frame() const
     return m_session->frame;
 }
 
-/** Session ChipModel (exclusive tool / recog). */
-epaper::toolchip::ChipModel &ToolCanvasItem::chip()
-{
-    Q_ASSERT(m_session);
-    return m_session->chip;
-}
-
-/** Session FollowSession. */
-epaper::follow::FollowSession &ToolCanvasItem::follow()
-{
-    Q_ASSERT(m_session);
-    return m_session->follow;
-}
-
-/** Current exclusive tool id from the session chip. */
-QString ToolCanvasItem::exclusiveTool() const
-{
-    return m_session ? m_session->exclusiveTool() : QStringLiteral("pen");
-}
 
 /** Drop selection + manip node (sync inbound / enclose success). */
 void ToolCanvasItem::clearSelection()
@@ -326,8 +313,8 @@ void ToolCanvasItem::endSelectionGesture()
  * =================================================================================================
  * Canvas frame helpers (via session)
  *
- * Transforms use m_session->frame with panel size from this item. Camera writes go through
- * applyCameraRegion so Tablet rasterize listens on cameraChanged.
+ * Panel size lives on session.frame (Tablet syncFramePanelSize is the writer). Camera
+ * writes go through applyCameraRegion so Tablet rasterize listens on cameraChanged.
  * =================================================================================================
  */
 
@@ -339,18 +326,10 @@ void ToolCanvasItem::applyCameraRegion(const epaper::handtouch::WorldAabb &regio
     m_session->applyCamera(region, markValid);
 }
 
-/** Push item width/height into CanvasFrame. */
-void ToolCanvasItem::syncPanelSize() const
-{
-    if (!m_session)
-        return;
-    m_session->frame.setPanelSize(double(width()), double(height()));
-}
-
 /** Panel → world for hit-tests and manip. */
 ToolCanvasItem::WorldPt ToolCanvasItem::panelToWorld(const PanelPt &panel) const
 {
-    syncPanelSize();
+    Q_ASSERT(m_session);
     const auto w = frame().panelToWorld({panel.x(), panel.y()});
     return {w.x, w.y};
 }
@@ -358,7 +337,7 @@ ToolCanvasItem::WorldPt ToolCanvasItem::panelToWorld(const PanelPt &panel) const
 /** World → panel for chrome and punches. */
 ToolCanvasItem::PanelPt ToolCanvasItem::worldToPanel(double wx, double wy) const
 {
-    syncPanelSize();
+    Q_ASSERT(m_session);
     const auto p = frame().worldToPanel(wx, wy);
     return PanelPt(p.x, p.y);
 }
@@ -366,14 +345,14 @@ ToolCanvasItem::PanelPt ToolCanvasItem::worldToPanel(double wx, double wy) const
 /** Panel → UV for one-finger pan through pan-origin. */
 ToolCanvasItem::FrameUv ToolCanvasItem::panelToFrameUv(const PanelPt &panel) const
 {
-    syncPanelSize();
+    Q_ASSERT(m_session);
     return frame().panelToFrameUv({panel.x(), panel.y()});
 }
 
 /** SmartBounds → panel QRectF. */
 QRectF ToolCanvasItem::worldBoundsToPanel(const epaper::document::SmartBounds &wb) const
 {
-    syncPanelSize();
+    Q_ASSERT(m_session);
     epaper::canvasframe::PanelPt tl, br;
     frame().worldBoundsToPanel(wb.x, wb.y, wb.width, wb.height, &tl, &br);
     return QRectF(QPointF(tl.x, tl.y), QPointF(br.x, br.y)).normalized();
@@ -382,7 +361,7 @@ QRectF ToolCanvasItem::worldBoundsToPanel(const epaper::document::SmartBounds &w
 /** Gate manip when the box is too small on screen. */
 bool ToolCanvasItem::lodOkPanel(const epaper::document::SmartBounds &wb) const
 {
-    syncPanelSize();
+    Q_ASSERT(m_session);
     return frame().lodOkPanel(wb.x, wb.y, wb.width, wb.height);
 }
 

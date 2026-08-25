@@ -125,12 +125,11 @@ signals:
     void surfaceChanged();
 
 private:
+    QString exclusiveTool() const;
     epaper::document::DeviceDocument &doc();
     const epaper::document::DeviceDocument &doc() const;
     epaper::canvasframe::CanvasFrame &frame();
     const epaper::canvasframe::CanvasFrame &frame() const;
-    epaper::toolchip::ChipModel &chip();
-    epaper::follow::FollowSession &follow();
 
     CanvasSession *m_session = nullptr;
     TabletCanvasItem *m_surface = nullptr;
@@ -146,7 +145,6 @@ private:
 
 private:
     void applyCameraRegion(const epaper::handtouch::WorldAabb &region, bool markValid);
-    void syncPanelSize() const;
     WorldPt panelToWorld(const PanelPt &panel) const;
     PanelPt worldToPanel(double wx, double wy) const;
     PanelPt worldToPanel(WorldPt w) const { return worldToPanel(w.x, w.y); }
@@ -265,7 +263,6 @@ signals:
 
 private:
     bool isSelectionTool() const;
-    QString exclusiveTool() const;
     void setSelection(const std::vector<std::string> &ids);
 
     QString hitLocalSmartGroup(WorldPt world) const;
