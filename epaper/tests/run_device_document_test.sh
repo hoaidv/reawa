@@ -47,3 +47,5 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/manip_session_test.cpp -o /tmp/manip_
 /tmp/manip_session_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/finger_gesture_machine_test.cpp -o /tmp/finger_gesture_machine_test
 /tmp/finger_gesture_machine_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. rendering/rendering.cpp tests/rendering_test.cpp -o /tmp/rendering_test
+/tmp/rendering_test

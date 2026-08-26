@@ -7,10 +7,10 @@
 #include "document/recognizer_dispatch.hpp"
 #include "document/recognize_enclose.hpp"
 #include "document/membership.hpp"
-#include "document/manipulate.hpp"
 #include "debug/debug_log_format.hpp"
 #include "primary_toolbar.hpp"
 #include "ingest_origin_guard.hpp"
+#include "rendering/rendering.hpp"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -26,6 +26,7 @@
 #include <QDebug>
 #include <QSizeF>
 #include <cstdio>
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -151,6 +152,7 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     helloRetry->start();
     m_sync->connectToMac();
     updateToolChipRect();
+    m_renderer.setAlgorithm(std::make_unique<epaper::render::HierarchyCullAlgorithm>());
 
     connect(&m_session, &CanvasSession::cameraChanged, this, [this]() {
         scheduleVectorRasterize(false);
@@ -980,7 +982,7 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
     });
 }
 
-/** Clear image and paint the local doc tree ∩ camera. */
+/** Clear image and paint the local doc tree ∩ camera via DocumentRenderer. */
 void TabletCanvasItem::rasterizeVectors(bool sharp)
 {
     epaper::UiStallSection stall("rasterizeVectors");
@@ -992,12 +994,73 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
     if (m_image.isNull())
         return;
 
-    QPainter p(&m_image);
-    // Full white clear + local-tree redraw. Never an inbound peer picture (SRS-EP-07).
-    p.fillRect(m_image.rect(), Qt::white);
-    p.setRenderHint(QPainter::Antialiasing, sharp);
-    drawTree(p, m_session.document.rootChildren, nullptr);
-    p.end();
+    syncFramePanelSize();
+
+    struct QImagePixelSink : epaper::render::IPixelSink {
+        QImage *image = nullptr;
+        QPainter painter;
+        explicit QImagePixelSink(QImage *img)
+            : image(img)
+        {
+        }
+        void begin(bool sharpFlag) override
+        {
+            if (!image || image->isNull())
+                return;
+            painter.begin(image);
+            painter.setRenderHint(QPainter::Antialiasing, sharpFlag);
+        }
+        void clearFull() override
+        {
+            if (!image)
+                return;
+            painter.fillRect(image->rect(), Qt::white);
+        }
+        void clearRect(double x, double y, double w, double h) override
+        {
+            painter.fillRect(QRectF(x, y, w, h), Qt::white);
+        }
+        void drawPolyline(const epaper::render::PanelPolyline &poly) override
+        {
+            if (poly.pts.size() < 2)
+                return;
+            QPen pen(Qt::black);
+            pen.setWidthF(poly.width);
+            pen.setCapStyle(Qt::RoundCap);
+            pen.setJoinStyle(Qt::RoundJoin);
+            painter.setPen(pen);
+            painter.setBrush(Qt::NoBrush);
+            QPainterPath path;
+            path.moveTo(poly.pts[0].first, poly.pts[0].second);
+            for (size_t i = 1; i < poly.pts.size(); ++i)
+                path.lineTo(poly.pts[i].first, poly.pts[i].second);
+            painter.drawPath(path);
+        }
+        void end() override
+        {
+            if (painter.isActive())
+                painter.end();
+        }
+    };
+
+    epaper::render::FrameProjector proj;
+    proj.frame = &m_session.frame;
+
+    epaper::render::RenderRequest req;
+    req.sharp = sharp;
+    req.mode = epaper::render::RenderRequest::BufferMode::FullClear;
+    req.worldClip = proj.drawingWorldClip();
+    if (m_blinkWidthMul > 1.0) {
+        for (const auto &id : m_blinkInkIds)
+            req.styles[id] = epaper::render::StyleOverride{double(m_blinkWidthMul)};
+    }
+    for (const auto &id : m_highlightInkIds) {
+        auto &st = req.styles[id];
+        st.widthMul = std::max(st.widthMul, 2.0);
+    }
+
+    QImagePixelSink sink(&m_image);
+    m_renderer.render(m_session.document, proj, req, sink);
 
     stampStaticBeacon();
     m_refreshClock.restart();

@@ -13,6 +13,7 @@ qt_add_executable(epaper_bin
     drawing/tabletcanvasitem.cpp
     drawing/toolcanvasitem.cpp
     drawing/tabletwindow.cpp
+    rendering/rendering.cpp
     regionsync/strokesync.cpp
     epaperbridge.cpp
     debug/debug_log_ship.cpp

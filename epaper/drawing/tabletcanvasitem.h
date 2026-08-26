@@ -24,6 +24,7 @@
 #include "document/viewport_follow.hpp"
 #include "input/pen_sample.hpp"
 #include "primary_toolbar.hpp"
+#include "rendering/rendering.hpp"
 #include "stroke_capture.hpp"
 
 class StrokeSync;
@@ -275,7 +276,7 @@ private:
  * =================================================================================================
  * Rasterize scheduling and document tree paint
  * 
- * Cycle: scheduleVectorRasterize → rasterizeVectors → drawTree → drawDocNode
+ * Cycle: scheduleVectorRasterize → rasterizeVectors → DocumentRenderer
  * =================================================================================================
  */
 
@@ -283,6 +284,7 @@ private:
 
     void scheduleVectorRasterize(bool sharp);
     void rasterizeVectors(bool sharp);
+    /** ToolCanvas live-manip ghost still paints via QPainter helpers. */
     void drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
         const epaper::document::DocNode *smartParent);
     void drawDocNode(QPainter &p, const epaper::document::DocNode &node,
@@ -293,6 +295,7 @@ private:
     /** Deferred sharp refresh queued while a stroke was in flight. */
     bool m_rasterizeDeferredSharp = false;
     int m_settleFollowUpToken = 0;
+    epaper::render::DocumentRenderer m_renderer;
 
     QElapsedTimer m_refreshClock;
     static constexpr qint64 kRefreshMinIntervalMs = 250;
