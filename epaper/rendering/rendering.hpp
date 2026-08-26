@@ -80,7 +80,7 @@ public:
                        const RenderRequest &req, IPixelSink &sink) = 0;
 };
 
-/** DFS paint — Θ(N) visit. Parity with legacy Tablet drawTree. */
+/** DFS paint — Θ(N) visit. */
 class FlatWalkAlgorithm : public IRenderAlgorithm {
 public:
     std::size_t lastVisitCount() const override { return m_visits; }
@@ -102,6 +102,10 @@ private:
     std::size_t m_visits = 0;
 };
 
+/** Ink/primitive ids under a SmartGroup plus bound root connectors — for live-manip suppress. */
+void collectManipSuppressIds(const document::DeviceDocument &doc, const std::string &sgId,
+                             std::unordered_set<std::string> *out);
+
 class DocumentRenderer {
 public:
     void setAlgorithm(std::unique_ptr<IRenderAlgorithm> alg);
@@ -110,6 +114,10 @@ public:
 
     void render(const document::DeviceDocument &doc, const FrameProjector &proj,
                 const RenderRequest &req, IPixelSink &sink);
+
+    /** SmartGroup children + bound connectors — ToolCanvas live-manip ghost. */
+    void renderSubtree(const document::DeviceDocument &doc, const FrameProjector &proj,
+                       const RenderRequest &req, const std::string &rootId, IPixelSink &sink);
 
 private:
     std::unique_ptr<IRenderAlgorithm> m_alg;

@@ -10,7 +10,7 @@
 #include "debug/debug_log_format.hpp"
 #include "primary_toolbar.hpp"
 #include "ingest_origin_guard.hpp"
-#include "rendering/rendering.hpp"
+#include "rendering/rendering_qt.hpp"
 
 #include <QPainter>
 #include <QPainterPath>
@@ -347,13 +347,13 @@ bool TabletCanvasItem::lodOkPanel(const epaper::document::SmartBounds &wb) const
  * =================================================================================================
  * Panel raster surface
  *
- * Live ink stamps into m_image; paint() blits it and, during live manip, punches the
- * origin hole from CanvasSession::liveManipOrigin. flushPending coalesces dirty rects to the
- * e-ink path.
+ * Live ink stamps into m_image; paint() blits it. During live manip the manipulated subtree is
+ * omitted via session suppressIds at rasterize time; ToolCanvas paints the live ghost.
+ * flushPending coalesces dirty rects to the e-ink path.
  * =================================================================================================
  */
 
-/** Blit ink buffer; white-hole punch from session liveManipOrigin during live manip. */
+/** Blit ink buffer. */
 void TabletCanvasItem::paint(QPainter *painter)
 {
     if (!m_paintsInk)
@@ -363,29 +363,6 @@ void TabletCanvasItem::paint(QPainter *painter)
     ensureImage();
     m_paintCount.fetchAndAddRelaxed(1);
     painter->drawImage(0, 0, m_image);
-    const auto &origin = m_session.liveManipOrigin();
-    if (origin && !origin->panelRect.isEmpty()) {
-        // Punch only the original box — not origin∪live (that wipes a vertical strip).
-        painter->fillRect(origin->panelRect, Qt::white);
-        // Connector origin hole: thick white stroke along the rest-pose polyline.
-        // [SRS-EP-18] [CHL-0018]
-        if (!origin->connStrokes.isEmpty()) {
-            painter->save();
-            painter->setRenderHint(QPainter::Antialiasing, false);
-            painter->setBrush(Qt::NoBrush);
-            for (const OriginConnStroke &st : origin->connStrokes) {
-                if (st.panel.size() < 2)
-                    continue;
-                QPen erase(Qt::white);
-                erase.setWidthF(st.width + 16.0);
-                erase.setCapStyle(Qt::RoundCap);
-                erase.setJoinStyle(Qt::RoundJoin);
-                painter->setPen(erase);
-                painter->drawPolyline(st.panel.constData(), st.panel.size());
-            }
-            painter->restore();
-        }
-    }
 }
 
 /** Allocate/clear the panel QImage to item size. */
@@ -996,53 +973,6 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
 
     syncFramePanelSize();
 
-    struct QImagePixelSink : epaper::render::IPixelSink {
-        QImage *image = nullptr;
-        QPainter painter;
-        explicit QImagePixelSink(QImage *img)
-            : image(img)
-        {
-        }
-        void begin(bool sharpFlag) override
-        {
-            if (!image || image->isNull())
-                return;
-            painter.begin(image);
-            painter.setRenderHint(QPainter::Antialiasing, sharpFlag);
-        }
-        void clearFull() override
-        {
-            if (!image)
-                return;
-            painter.fillRect(image->rect(), Qt::white);
-        }
-        void clearRect(double x, double y, double w, double h) override
-        {
-            painter.fillRect(QRectF(x, y, w, h), Qt::white);
-        }
-        void drawPolyline(const epaper::render::PanelPolyline &poly) override
-        {
-            if (poly.pts.size() < 2)
-                return;
-            QPen pen(Qt::black);
-            pen.setWidthF(poly.width);
-            pen.setCapStyle(Qt::RoundCap);
-            pen.setJoinStyle(Qt::RoundJoin);
-            painter.setPen(pen);
-            painter.setBrush(Qt::NoBrush);
-            QPainterPath path;
-            path.moveTo(poly.pts[0].first, poly.pts[0].second);
-            for (size_t i = 1; i < poly.pts.size(); ++i)
-                path.lineTo(poly.pts[i].first, poly.pts[i].second);
-            painter.drawPath(path);
-        }
-        void end() override
-        {
-            if (painter.isActive())
-                painter.end();
-        }
-    };
-
     epaper::render::FrameProjector proj;
     proj.frame = &m_session.frame;
 
@@ -1050,6 +980,8 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
     req.sharp = sharp;
     req.mode = epaper::render::RenderRequest::BufferMode::FullClear;
     req.worldClip = proj.drawingWorldClip();
+    for (const auto &id : m_session.liveManipSuppressIds())
+        req.suppressIds.insert(id);
     if (m_blinkWidthMul > 1.0) {
         for (const auto &id : m_blinkInkIds)
             req.styles[id] = epaper::render::StyleOverride{double(m_blinkWidthMul)};
@@ -1059,7 +991,7 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
         st.widthMul = std::max(st.widthMul, 2.0);
     }
 
-    QImagePixelSink sink(&m_image);
+    epaper::render::QImagePixelSink sink(&m_image);
     m_renderer.render(m_session.document, proj, req, sink);
 
     stampStaticBeacon();
@@ -1083,119 +1015,13 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
             << m_session.document.nodeCount() << "sharp" << sharp << "seq" << m_viewportSeq;
 }
 
-/** Recursive paint of DocNode children. */
-void TabletCanvasItem::drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
-                                const epaper::document::DocNode *smartParent)
-{
-    using epaper::document::NodeKind;
-    for (const auto &node : nodes) {
-        if (node.kind == NodeKind::SmartGroup)
-            drawTree(p, node.children, &node);
-        else if (node.kind == NodeKind::Frame || node.kind == NodeKind::Group)
-            drawTree(p, node.children, nullptr);
-        else if (node.kind == NodeKind::Connector)
-            drawWarpedConnector(p, node);
-        else
-            drawDocNode(p, node, smartParent);
-    }
-}
-
-/** Paint one ink / SmartGroup / connector node. */
-void TabletCanvasItem::drawDocNode(QPainter &p, const epaper::document::DocNode &node,
-                                   const epaper::document::DocNode *smartParent)
-{
-    using epaper::document::NodeKind;
-    using epaper::document::PrimitiveKind;
-    using epaper::document::inkSamplesMin;
-    using epaper::document::smartLocalToWorld;
-    if (node.kind != NodeKind::Ink && node.kind != NodeKind::Primitive)
-        return;
-
-    const qreal worldSw = node.style.strokeWidth;
-    const double rw = m_session.frame.drawingRegion.valid ? (m_session.frame.drawingRegion.maxX - m_session.frame.drawingRegion.minX)
-                                            : qMax(1.0, double(width()));
-    const double sPanel = width() / qMax(1e-6, rw);
-    qreal mul = 1.0;
-    if ((m_blinkWidthMul > 1.0 && m_blinkInkIds.count(node.id)) || m_highlightInkIds.count(node.id))
-        mul = 2.0;
-    const qreal lineW = qMax<qreal>(1.0, worldSw * sPanel * mul);
-
-    QPen pen(Qt::black);
-    pen.setWidthF(lineW);
-    pen.setCapStyle(Qt::RoundCap);
-    pen.setJoinStyle(Qt::RoundJoin);
-    p.setPen(pen);
-    p.setBrush(Qt::NoBrush);
-
-    if (node.kind == NodeKind::Ink) {
-        if (int(node.samples.size()) < 2)
-            return;
-        const std::string role = node.role ? *node.role : std::string("content");
-        epaper::document::Vec2 contentMin{};
-        const epaper::document::Vec2 *minPtr = nullptr;
-        if (smartParent && role == "content" && smartParent->inkScaleMode == "fixedInk") {
-            contentMin = epaper::document::inkSamplesMin(node.samples);
-            minPtr = &contentMin;
-        }
-        auto toPanel = [&](double x, double y) {
-            if (smartParent) {
-                const auto w = smartLocalToWorld(x, y, *smartParent, role, node.layoutOffset, minPtr);
-                return worldToPanel(w.x, w.y);
-            }
-            return worldToPanel(x, y);
-        };
-        QPainterPath path;
-        path.moveTo(toPanel(node.samples[0].x, node.samples[0].y));
-        for (size_t i = 1; i < node.samples.size(); ++i)
-            path.lineTo(toPanel(node.samples[i].x, node.samples[i].y));
-        p.drawPath(path);
-        return;
-    }
-
-    if (node.geomKind == PrimitiveKind::Line) {
-        p.drawLine(worldToPanel(node.x1, node.y1), worldToPanel(node.x2, node.y2));
-        return;
-    }
-    if (node.geomKind == PrimitiveKind::Rect) {
-        const PanelPt tl = worldToPanel(node.gx, node.gy);
-        const PanelPt br = worldToPanel(node.gx + node.gw, node.gy + node.gh);
-        p.drawRect(QRectF(tl, br).normalized());
-        return;
-    }
-    if (node.geomKind == PrimitiveKind::Ellipse) {
-        const PanelPt c = worldToPanel(node.cx, node.cy);
-        const PanelPt e = worldToPanel(node.cx + node.rx, node.cy + node.ry);
-        p.drawEllipse(c, qAbs(e.x() - c.x()), qAbs(e.y() - c.y()));
-    }
-}
-
-
 /**
  * =================================================================================================
  * Connector ink rendering
  *
- * Warped connector polylines for document paint. Panel AABB helpers used by Tool via
- * Surface API are declared there; drawWarpedConnector stays on the paint path.
+ * Warped connector panel helpers for Tool via Surface API.
  * =================================================================================================
  */
-
-/** Stroke a connector’s warpedSamples in panel space. */
-void TabletCanvasItem::drawWarpedConnector(QPainter &p, const epaper::document::DocNode &conn)
-{
-    if (conn.warpedSamples.size() < 2)
-        return;
-    QPen pen(Qt::black);
-    pen.setWidthF(connectorPanelStrokeWidth(conn));
-    pen.setCapStyle(Qt::RoundCap);
-    pen.setJoinStyle(Qt::RoundJoin);
-    p.setPen(pen);
-    p.setBrush(Qt::NoBrush);
-    QPainterPath path;
-    path.moveTo(worldToPanel(conn.warpedSamples[0].x, conn.warpedSamples[0].y));
-    for (size_t i = 1; i < conn.warpedSamples.size(); ++i)
-        path.lineTo(worldToPanel(conn.warpedSamples[i].x, conn.warpedSamples[i].y));
-    p.drawPath(path);
-}
 
 
 /**
@@ -1349,13 +1175,6 @@ void TabletCanvasItem::scheduleDocumentRasterize(bool sharp)
     scheduleVectorRasterize(sharp);
 }
 
-/** Dirty Tablet panel under live-manip origin hole. */
-void TabletCanvasItem::notifyOriginPunch(const QRectF &panelRect)
-{
-    if (!panelRect.isEmpty())
-        update(panelRect.toAlignedRect().adjusted(-8, -8, 8, 8));
-}
-
 /** One-way manip_preview JSON to Infini. */
 void TabletCanvasItem::publishManipPreview(const std::string &nodeId,
                                            const epaper::document::SmartTransform &liveT,
@@ -1446,23 +1265,6 @@ void TabletCanvasItem::setInteractionDebug(const QString &info)
 {
     m_debugInfo = info;
     emit debugChanged();
-}
-
-/** Live manip ghost: paint SmartGroup + bound connectors. */
-void TabletCanvasItem::paintDocumentSubtree(QPainter &painter, const std::string &nodeId)
-{
-    using namespace epaper::document;
-    const DocNode *n = m_session.document.find(nodeId);
-    if (!n)
-        return;
-    drawTree(painter, n->children, n);
-    for (const auto &node : m_session.document.rootChildren) {
-        if (node.kind != NodeKind::Connector)
-            continue;
-        if (node.fromNodeId != n->id && node.toNodeId != n->id)
-            continue;
-        drawWarpedConnector(painter, node);
-    }
 }
 
 /** Surface name for lodOkPanel. */

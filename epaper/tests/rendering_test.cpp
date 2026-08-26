@@ -172,6 +172,101 @@ static void test_sg_child_visible_when_panned_into_view()
     CHECK(cullSink.polylineCount == 1);
 }
 
+static void test_suppress_skips_subtree()
+{
+    DeviceDocument doc;
+    doc.rootChildren.push_back(makeFreeInk("ink_near", 10, 10, 20, 20));
+    doc.rootChildren.push_back(makeFarSmartGroup());
+
+    CanvasFrame frame;
+    frame.setPanelSize(1404, 1872);
+    frame.applyDrawingRegion({0, 0, 10000, 10000}, true);
+    FrameProjector proj;
+    proj.frame = &frame;
+
+    RenderRequest req;
+    req.worldClip = proj.drawingWorldClip();
+    req.sharp = true;
+    req.suppressIds.insert("sg_far_c");
+
+    RecordingSink flatSink;
+    FlatWalkAlgorithm flat;
+    flat.paint(doc, proj, req, flatSink);
+
+    RecordingSink cullSink;
+    HierarchyCullAlgorithm cull;
+    cull.paint(doc, proj, req, cullSink);
+
+    CHECK(flatSink.polylineCount == 1);
+    CHECK(cullSink.polylineCount == 1);
+}
+
+static DocNode makeSgWithConnector()
+{
+    DocNode sg = makeFarSmartGroup();
+    sg.id = "sg_a";
+    sg.transform = {0, 0, 0, 1, 1};
+    sg.children[0].id = "sg_a_c";
+    return sg;
+}
+
+static ConnectorRestPt restPt(double x, double y)
+{
+    ConnectorRestPt p;
+    p.x = x;
+    p.y = y;
+    return p;
+}
+
+static void test_renderSubtree_sg_and_connector()
+{
+    DeviceDocument doc;
+    DocNode sg = makeSgWithConnector();
+    doc.rootChildren.push_back(std::move(sg));
+    DocNode conn;
+    conn.id = "conn_a";
+    conn.kind = NodeKind::Connector;
+    conn.fromNodeId = "sg_a";
+    conn.toNodeId = "other";
+    conn.style.strokeWidth = 2;
+    conn.warpedSamples.push_back(restPt(5, 5));
+    conn.warpedSamples.push_back(restPt(50, 50));
+    doc.rootChildren.push_back(std::move(conn));
+
+    CanvasFrame frame;
+    frame.setPanelSize(100, 100);
+    frame.applyDrawingRegion({0, 0, 100, 100}, true);
+    FrameProjector proj;
+    proj.frame = &frame;
+
+    RenderRequest req;
+    req.sharp = true;
+
+    RecordingSink sink;
+    DocumentRenderer renderer;
+    renderer.setAlgorithm(std::make_unique<FlatWalkAlgorithm>());
+    renderer.renderSubtree(doc, proj, req, "sg_a", sink);
+    CHECK(sink.polylineCount == 2); // child ink + bound connector
+}
+
+static void test_collectManipSuppressIds()
+{
+    DeviceDocument doc;
+    DocNode sg = makeSgWithConnector();
+    doc.rootChildren.push_back(std::move(sg));
+    DocNode conn;
+    conn.id = "conn_a";
+    conn.kind = NodeKind::Connector;
+    conn.fromNodeId = "sg_a";
+    conn.toNodeId = "other";
+    doc.rootChildren.push_back(std::move(conn));
+
+    std::unordered_set<std::string> ids;
+    collectManipSuppressIds(doc, "sg_a", &ids);
+    CHECK(ids.count("sg_a_c") == 1);
+    CHECK(ids.count("conn_a") == 1);
+}
+
 static void test_suppress_and_style()
 {
     DeviceDocument doc;
@@ -202,6 +297,9 @@ int main()
     test_full_clip_same_polylines();
     test_hierarchy_cull_skips_far_sg();
     test_sg_child_visible_when_panned_into_view();
+    test_suppress_skips_subtree();
+    test_renderSubtree_sg_and_connector();
+    test_collectManipSuppressIds();
     test_suppress_and_style();
     if (g_fails) {
         std::cerr << "rendering_test: " << g_fails << " failure(s)\n";

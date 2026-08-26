@@ -18,6 +18,7 @@
 #include "finger_gesture_machine.hpp"
 #include "input/pen_sample.hpp"
 #include "manip_session.hpp"
+#include "rendering/rendering.hpp"
 #include "selection_session.hpp"
 
 class TabletCanvasItem;
@@ -104,8 +105,6 @@ signals:
 private:
     void onDocumentOrCameraChanged();
     void clearSelection();
-    void publishLiveManipOrigin();
-    void clearLiveManipOrigin();
 
     QString exclusiveTool() const;
     epaper::document::DeviceDocument &doc();
@@ -270,17 +269,15 @@ private:
 
     int handleIndexAtPanel(const PanelPt &panel, double hitDu) const;
 
-    void captureOriginConnectorPunches(const std::string &sgId);
     void showManipUnavailable(const epaper::document::SmartBounds &wb);
     void sendManipPreviewToInfini();
 
     epaper::selection::SelectionSession m_selection;
     epaper::manip::ManipSession m_manip;
+    epaper::render::DocumentRenderer m_renderer;
 
     QRectF m_liveDirtyPrev;
     QRectF m_originPanelRect;
-    QRectF m_originConnPunch;
-    QVector<OriginConnStroke> m_originConnStrokes;
 
     QElapsedTimer m_selectionGhostClock;
     int m_toolIntentSeq = 0;

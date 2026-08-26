@@ -284,11 +284,6 @@ private:
 
     void scheduleVectorRasterize(bool sharp);
     void rasterizeVectors(bool sharp);
-    /** ToolCanvas live-manip ghost still paints via QPainter helpers. */
-    void drawTree(QPainter &p, const std::vector<epaper::document::DocNode> &nodes,
-        const epaper::document::DocNode *smartParent);
-    void drawDocNode(QPainter &p, const epaper::document::DocNode &node,
-        const epaper::document::DocNode *smartParent = nullptr);
 
     bool m_rasterizePending = false;
     bool m_rasterizeSharp = false;
@@ -307,10 +302,6 @@ private:
  * Connector ink rendering
  * =================================================================================================
  */
-
-private: 
-
-    void drawWarpedConnector(QPainter &p, const epaper::document::DocNode &conn);
 
 /**
  * =================================================================================================
@@ -392,7 +383,6 @@ public:
     void cancelActiveStroke();
 
     void scheduleDocumentRasterize(bool sharp);
-    void notifyOriginPunch(const QRectF &panelRect);
     void publishManipPreview(const std::string &nodeId,
                              const epaper::document::SmartTransform &liveT,
                              const epaper::document::SmartBounds *liveB);
@@ -401,7 +391,6 @@ public:
     void maybePublishLocalViewport(bool settle);
     void ensureLocalDrawingRegion();
     void setInteractionDebug(const QString &info);
-    void paintDocumentSubtree(QPainter &painter, const std::string &nodeId);
     bool lodOkWorld(const epaper::document::SmartBounds &wb) const;
     QRectF boundConnectorsPanelUnion(const std::string &sgId) const;
     qreal connectorPanelStrokeWidth(const epaper::document::DocNode &conn) const;

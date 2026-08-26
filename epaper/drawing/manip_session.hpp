@@ -25,14 +25,12 @@ enum class ManipIntent : int {
     SendPreview = 1 << 4,
     Redraw = 1 << 5,
     RefreshAllConnectors = 1 << 6,
-    CaptureOriginPunches = 1 << 7,
     RefreshChrome = 1 << 8,
     AbortGesture = 1 << 9,
     CommitTransform = 1 << 10,
     ScheduleRasterize = 1 << 11,
     NotifyHistory = 1 << 12,
     FlushWire = 1 << 13,
-    UpdatePunch = 1 << 14,
 };
 
 inline ManipIntent operator|(ManipIntent a, ManipIntent b)
@@ -87,7 +85,7 @@ struct ManipSession {
         liveB = b;
         ManipResult r;
         r.intent = ManipIntent::BeginGesture | ManipIntent::RefreshAllConnectors
-            | ManipIntent::CaptureOriginPunches | ManipIntent::RefreshChrome | ManipIntent::Redraw;
+            | ManipIntent::ScheduleRasterize | ManipIntent::RefreshChrome | ManipIntent::Redraw;
         return r;
     }
 
@@ -139,7 +137,8 @@ struct ManipSession {
             || std::abs(liveB.width - originB.width) > 0.5;
         if (!r.moved) {
             r.intent = ManipIntent::ApplyLiveGeometry | ManipIntent::AbortGesture
-                | ManipIntent::UpdatePunch | ManipIntent::RefreshChrome | ManipIntent::NotifyHistory;
+                | ManipIntent::ScheduleRasterize | ManipIntent::RefreshChrome
+                | ManipIntent::NotifyHistory;
             // Restore origin geometry on apply — canvas uses originT/B before reset.
         } else {
             r.intent = ManipIntent::CommitTransform | ManipIntent::RefreshAllConnectors
@@ -156,7 +155,7 @@ struct ManipSession {
             return r;
         r.intent = ManipIntent::ApplyLiveGeometry | ManipIntent::RefreshBoundConnectors
             | ManipIntent::AbortGesture | ManipIntent::RefreshAllConnectors
-            | ManipIntent::UpdatePunch | ManipIntent::RefreshChrome;
+            | ManipIntent::ScheduleRasterize | ManipIntent::RefreshChrome;
         return r;
     }
 };

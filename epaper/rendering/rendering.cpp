@@ -372,6 +372,44 @@ void walkCull(const std::vector<DocNode> &nodes, const DocNode *smartParent,
     }
 }
 
+void collectPaintableIds(const std::vector<DocNode> &nodes, std::unordered_set<std::string> *out)
+{
+    if (!out)
+        return;
+    for (const auto &node : nodes) {
+        if (node.kind == NodeKind::Ink || node.kind == NodeKind::Primitive)
+            out->insert(node.id);
+        else if (node.kind == NodeKind::SmartGroup || node.kind == NodeKind::Frame
+                 || node.kind == NodeKind::Group)
+            collectPaintableIds(node.children, out);
+    }
+}
+
+void emitBoundConnectors(const document::DeviceDocument &doc, const std::string &sgId,
+                         const FrameProjector &proj, const RenderRequest &req, IPixelSink &sink)
+{
+    for (const auto &node : doc.rootChildren) {
+        if (node.kind != NodeKind::Connector)
+            continue;
+        if (node.fromNodeId != sgId && node.toNodeId != sgId)
+            continue;
+        emitConnector(node, proj, req, sink);
+    }
+}
+
+void paintSubtreeWalk(const document::DeviceDocument &doc, const DocNode *root,
+                      const FrameProjector &proj, const RenderRequest &req, IPixelSink &sink,
+                      std::size_t *visits, bool cull)
+{
+    if (!root || root->kind != NodeKind::SmartGroup)
+        return;
+    if (cull)
+        walkCull(root->children, root, proj, req, sink, visits);
+    else
+        walkFlat(root->children, root, proj, req, sink, visits);
+    emitBoundConnectors(doc, root->id, proj, req, sink);
+}
+
 } // namespace
 
 void FrameProjector::worldToPanel(double wx, double wy, double *px, double *py) const
@@ -451,6 +489,36 @@ void DocumentRenderer::render(const document::DeviceDocument &doc, const FramePr
     else
         sink.clearRect(req.dirtyPanelX, req.dirtyPanelY, req.dirtyPanelW, req.dirtyPanelH);
     m_alg->paint(doc, proj, req, sink);
+    sink.end();
+}
+
+void collectManipSuppressIds(const document::DeviceDocument &doc, const std::string &sgId,
+                             std::unordered_set<std::string> *out)
+{
+    if (!out)
+        return;
+    const DocNode *root = doc.find(sgId);
+    if (!root || root->kind != NodeKind::SmartGroup)
+        return;
+    collectPaintableIds(root->children, out);
+    for (const auto &node : doc.rootChildren) {
+        if (node.kind != NodeKind::Connector)
+            continue;
+        if (node.fromNodeId == sgId || node.toNodeId == sgId)
+            out->insert(node.id);
+    }
+}
+
+void DocumentRenderer::renderSubtree(const document::DeviceDocument &doc, const FrameProjector &proj,
+                                     const RenderRequest &req, const std::string &rootId,
+                                     IPixelSink &sink)
+{
+    const DocNode *root = doc.find(rootId);
+    if (!root)
+        return;
+    sink.begin(req.sharp);
+    std::size_t visits = 0;
+    paintSubtreeWalk(doc, root, proj, req, sink, &visits, /*cull=*/false);
     sink.end();
 }
 

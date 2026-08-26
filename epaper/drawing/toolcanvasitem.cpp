@@ -8,6 +8,10 @@
 #include "document/connector_warp.hpp"
 #include "document/manipulate.hpp"
 #include "document/surround_create.hpp"
+#include "rendering/rendering_qt.hpp"
+
+#include <memory>
+#include <unordered_set>
 
 #include <QDebug>
 #include <QEvent>
@@ -40,6 +44,7 @@ QRectF modeChipRect(const QRectF &box)
 ToolCanvasItem::ToolCanvasItem(QQuickItem *parent)
     : QQuickPaintedItem(parent)
 {
+    m_renderer.setAlgorithm(std::make_unique<epaper::render::HierarchyCullAlgorithm>());
     setAntialiasing(false);
     setRenderTarget(QQuickPaintedItem::Image);
     setOpaquePainting(false);
@@ -147,28 +152,6 @@ void ToolCanvasItem::onDocumentOrCameraChanged()
 void ToolCanvasItem::cancelInteraction()
 {
     onPointerCancel();
-}
-
-/** Publish local origin hole to session for Tablet paint. */
-void ToolCanvasItem::publishLiveManipOrigin()
-{
-    if (!m_session)
-        return;
-    if (m_originPanelRect.isEmpty() && m_originConnStrokes.isEmpty()) {
-        m_session->clearLiveManipOrigin();
-        return;
-    }
-    OriginPunchSnapshot s;
-    s.panelRect = m_originPanelRect;
-    s.connStrokes = m_originConnStrokes;
-    m_session->setLiveManipOrigin(std::move(s));
-}
-
-/** Clear session origin hole (commit / abort / update-punch). */
-void ToolCanvasItem::clearLiveManipOrigin()
-{
-    if (m_session)
-        m_session->clearLiveManipOrigin();
 }
 
 /** Drop selection + manip node (finger empty-tap / enclose success). */
@@ -843,7 +826,7 @@ void ToolCanvasItem::applySelectionIntent(const epaper::selection::SelectionResu
         refreshSelectionChrome();
 }
 
-/** ManipIntent → live geometry, commit op, punch, preview, wire. */
+/** ManipIntent → live geometry, commit op, preview, wire. */
 void ToolCanvasItem::applyManipIntent(const epaper::manip::ManipResult &r, bool restoreOrigin)
 {
     using epaper::manip::ManipIntent;
@@ -862,12 +845,9 @@ void ToolCanvasItem::applyManipIntent(const epaper::manip::ManipResult &r, bool 
         doc().previewManipulationFrame();
     if (has(r.intent, ManipIntent::SendPreview))
         sendManipPreviewToInfini();
-    // Begin/abort: refresh warps before origin punch capture. Commit: after the op.
     if (has(r.intent, ManipIntent::RefreshAllConnectors)
         && !has(r.intent, ManipIntent::CommitTransform))
         refreshAllConnectorWarps(doc());
-    if (has(r.intent, ManipIntent::CaptureOriginPunches))
-        captureOriginConnectorPunches(m_manip.nodeId);
     if (has(r.intent, ManipIntent::AbortGesture))
         doc().abortGesture();
     if (has(r.intent, ManipIntent::CommitTransform)) {
@@ -877,26 +857,17 @@ void ToolCanvasItem::applyManipIntent(const epaper::manip::ManipResult &r, bool 
         const epaper::document::SmartBounds *bptr = r.resized ? &liveB : nullptr;
         doc().commitOp(
             epaper::document::makeSetSmartTransformOp(opId, m_manip.nodeId, m_manip.liveT, bptr));
-        // Clear origin punch state without forcing a panel update (rasterize covers it).
         m_originPanelRect = QRectF();
-        m_originConnPunch = QRectF();
-        m_originConnStrokes.clear();
-        clearLiveManipOrigin();
+        if (m_session)
+            m_session->clearLiveManipSuppressIds();
     }
     if (has(r.intent, ManipIntent::RefreshAllConnectors)
         && has(r.intent, ManipIntent::CommitTransform))
         refreshAllConnectorWarps(doc());
-    if (has(r.intent, ManipIntent::ScheduleRasterize) && m_session)
+    if (has(r.intent, ManipIntent::ScheduleRasterize) && m_session) {
+        if (has(r.intent, ManipIntent::AbortGesture))
+            m_session->clearLiveManipSuppressIds();
         m_session->noteDocumentMutated();
-    if (has(r.intent, ManipIntent::UpdatePunch)) {
-        const QRectF punch =
-            m_originPanelRect.united(m_selectionChromeDirty).united(m_originConnPunch);
-        m_originPanelRect = QRectF();
-        m_originConnPunch = QRectF();
-        m_originConnStrokes.clear();
-        clearLiveManipOrigin();
-        if (!punch.isEmpty() && m_surface)
-            m_surface->notifyOriginPunch(punch);
     }
     if (has(r.intent, ManipIntent::RefreshChrome))
         refreshSelectionChrome();
@@ -986,7 +957,7 @@ void ToolCanvasItem::finishMarqueeOrLasso()
         }));
 }
 
-/** Begin move/resize; capture origin punch for Tablet hole. */
+/** Begin move/resize; suppress subtree on Tablet and rasterize. */
 void ToolCanvasItem::startLiveManip(const epaper::document::DocNode *subject,
                                      epaper::document::ResizeHandle handle, WorldPt world)
 {
@@ -1001,15 +972,16 @@ void ToolCanvasItem::startLiveManip(const epaper::document::DocNode *subject,
     m_liveDirtyPrev = QRectF();
     m_selectionChromeDirty = QRectF();
     SmartBounds originWorld;
-    if (boundsOf(*subject, originWorld)) {
+    if (boundsOf(*subject, originWorld))
         m_originPanelRect = worldBoundsToPanel(originWorld).adjusted(-8, -8, 8, 8);
-        if (m_surface)
-            m_surface->notifyOriginPunch(m_originPanelRect);
-    } else {
+    else
         m_originPanelRect = QRectF();
+    if (m_session) {
+        std::unordered_set<std::string> suppress;
+        epaper::render::collectManipSuppressIds(doc(), subject->id, &suppress);
+        m_session->setLiveManipSuppressIds(std::move(suppress));
     }
     applyManipIntent(r);
-    publishLiveManipOrigin();
 }
 
 /** Live manip sample (throttled preview to Infini). */
@@ -1071,7 +1043,7 @@ void ToolCanvasItem::tapModeChip()
     m_surface->flushWire();
 }
 
-/** Dirty Tool chrome + ask Tablet to re-punch origin. */
+/** Dirty Tool chrome during live manip. */
 void ToolCanvasItem::redrawLiveManipRegion()
 {
     using namespace epaper::document;
@@ -1087,13 +1059,6 @@ void ToolCanvasItem::redrawLiveManipRegion()
                                       : QRectF();
     if (!connLive.isEmpty())
         next = next.isEmpty() ? connLive : next.united(connLive);
-    if (!m_originConnPunch.isEmpty())
-        next = next.isEmpty() ? m_originConnPunch : next.united(m_originConnPunch);
-    // CanvasLayer: re-assert the origin hole only. ToolCanvas: origin∪live chrome.
-    if (!m_originPanelRect.isEmpty() && m_surface)
-        m_surface->notifyOriginPunch(m_originPanelRect);
-    if (!m_originConnPunch.isEmpty())
-        update(m_originConnPunch.toAlignedRect());
     const QRectF toolDirty = m_liveDirtyPrev.isNull()
         ? next.united(m_originPanelRect)
         : m_liveDirtyPrev.united(next);
@@ -1181,34 +1146,6 @@ void ToolCanvasItem::showManipUnavailable(const epaper::document::SmartBounds &w
     m_manipUnavailableRect = QRectF(x, y, kW, kH);
     emit selectionChromeChanged();
 }
-
-/** Rest-pose connector strokes for Tablet hole. */
-void ToolCanvasItem::captureOriginConnectorPunches(const std::string &sgId)
-{
-    m_originConnStrokes.clear();
-    m_originConnPunch = QRectF();
-    if (!m_surface)
-        return;
-    using epaper::document::NodeKind;
-    for (const auto &node : doc().rootChildren) {
-        if (node.kind != NodeKind::Connector)
-            continue;
-        if (node.fromNodeId != sgId && node.toNodeId != sgId)
-            continue;
-        if (node.warpedSamples.size() < 2)
-            continue;
-        OriginConnStroke st;
-        st.width = m_surface->connectorPanelStrokeWidth(node);
-        st.panel.reserve(int(node.warpedSamples.size()));
-        for (const auto &s : node.warpedSamples)
-            st.panel.append(worldToPanel(s.x, s.y));
-        m_originConnStrokes.append(st);
-        const QRectF r = m_surface->warpedConnectorPanelRect(node);
-        m_originConnPunch = m_originConnPunch.isEmpty() ? r : m_originConnPunch.united(r);
-    }
-    publishLiveManipOrigin();
-}
-
 
 /**
  * =================================================================================================
@@ -1304,7 +1241,13 @@ void ToolCanvasItem::paintLiveManipOnToolCanvas(QPainter *painter)
     const DocNode *n = doc().find(m_manip.nodeId);
     if (!n)
         return;
-    m_surface->paintDocumentSubtree(*painter, n->id);
+
+    epaper::render::FrameProjector proj;
+    proj.frame = &frame();
+    epaper::render::RenderRequest req;
+    req.sharp = true;
+    epaper::render::QPainterPixelSink sink(painter);
+    m_renderer.renderSubtree(doc(), proj, req, m_manip.nodeId, sink);
 
     SmartBounds wb;
     if (!boundsOf(*n, wb))

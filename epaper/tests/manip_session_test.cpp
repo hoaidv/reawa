@@ -51,7 +51,7 @@ static void test_begin_intents()
     CHECK(m.active);
     CHECK(m.nodeId == "n1");
     CHECK(has(r.intent, ManipIntent::BeginGesture));
-    CHECK(has(r.intent, ManipIntent::CaptureOriginPunches));
+    CHECK(has(r.intent, ManipIntent::ScheduleRasterize));
     CHECK(has(r.intent, ManipIntent::Redraw));
 }
 
@@ -101,7 +101,7 @@ static void test_commit_no_move_aborts()
     const ManipResult r = m.commit();
     CHECK(!r.moved);
     CHECK(has(r.intent, ManipIntent::AbortGesture));
-    CHECK(has(r.intent, ManipIntent::UpdatePunch));
+    CHECK(has(r.intent, ManipIntent::ScheduleRasterize));
     CHECK(m.active); // fields stay until canvas reset()
 }
 
@@ -132,7 +132,7 @@ static void test_abort()
     const ManipResult r = m.abort();
     CHECK(has(r.intent, ManipIntent::ApplyLiveGeometry));
     CHECK(has(r.intent, ManipIntent::AbortGesture));
-    CHECK(has(r.intent, ManipIntent::UpdatePunch));
+    CHECK(has(r.intent, ManipIntent::ScheduleRasterize));
 }
 
 int main()

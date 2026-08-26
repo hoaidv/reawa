@@ -11,25 +11,10 @@
 #include "primary_toolbar.hpp"
 
 #include <QObject>
-#include <QPointF>
-#include <QRectF>
 #include <QString>
-#include <QVector>
 
-#include <optional>
 #include <string>
-
-/** Rest-pose connector polylines in panel space — Tablet origin hole (stroke, not AABB). */
-struct OriginConnStroke {
-    QVector<QPointF> panel;
-    qreal width = 4;
-};
-
-/** Snapshot for TabletCanvas white-hole during live manip — POD shared via CanvasSession. */
-struct OriginPunchSnapshot {
-    QRectF panelRect;
-    QVector<OriginConnStroke> connStrokes;
-};
+#include <unordered_set>
 
 class CanvasSession : public QObject
 {
@@ -64,10 +49,13 @@ public:
     void setFollowDirection(const QString &id);
     void syncFollowDirectionFromSession();
 
-    /** Live-manip origin hole for Tablet paint — set by Tool, read by Tablet. */
-    const std::optional<OriginPunchSnapshot> &liveManipOrigin() const { return m_liveManipOrigin; }
-    void setLiveManipOrigin(OriginPunchSnapshot punch);
-    void clearLiveManipOrigin();
+    /** Live-manip subtree ids omitted from Tablet rasterize — set by Tool, read by Tablet. */
+    const std::unordered_set<std::string> &liveManipSuppressIds() const
+    {
+        return m_liveManipSuppressIds;
+    }
+    void setLiveManipSuppressIds(std::unordered_set<std::string> ids);
+    void clearLiveManipSuppressIds();
 
 signals:
     void exclusiveToolChanged();
@@ -78,5 +66,5 @@ signals:
 
 private:
     QString m_followDirection = QStringLiteral("none");
-    std::optional<OriginPunchSnapshot> m_liveManipOrigin;
+    std::unordered_set<std::string> m_liveManipSuppressIds;
 };
