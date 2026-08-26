@@ -20,6 +20,14 @@
 #include "manip_session.hpp"
 #include "rendering/rendering.hpp"
 #include "selection_session.hpp"
+#include "tools/connector_recognizer_modifier.hpp"
+#include "tools/ink_box_recognizer_modifier.hpp"
+#include "tools/input_hub.hpp"
+#include "tools/modes/pen_mode.hpp"
+#include "tools/operations/ink_stroke_operation.hpp"
+#include "tools/tablet_ink_sink.hpp"
+
+#include <memory>
 
 class TabletCanvasItem;
 
@@ -105,6 +113,9 @@ signals:
 private:
     void onDocumentOrCameraChanged();
     void clearSelection();
+    void syncToolHost();
+    void syncActiveMode();
+    void feedInkStroke(QEvent::Type type, const PanelPt &panel, qreal pressure);
 
     QString exclusiveTool() const;
     epaper::document::DeviceDocument &doc();
@@ -114,6 +125,12 @@ private:
 
     CanvasSession *m_session = nullptr;
     TabletCanvasItem *m_surface = nullptr;
+    epaper::tools::InputHub m_hub;
+    epaper::tools::PenMode m_penMode;
+    std::unique_ptr<epaper::tools::TabletInkSink> m_inkSink;
+    std::unique_ptr<epaper::tools::InkStrokeOperation> m_inkStroke;
+    std::unique_ptr<epaper::tools::InkBoxRecognizerModifier> m_inkBoxRecog;
+    std::unique_ptr<epaper::tools::ConnectorRecognizerModifier> m_connRecog;
     QMetaObject::Connection m_docConn;
     QMetaObject::Connection m_camConn;
     QMetaObject::Connection m_toolConn;

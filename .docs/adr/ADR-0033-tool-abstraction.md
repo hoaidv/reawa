@@ -1,3 +1,13 @@
+---
+id: ADR-0033
+title: Tool system abstraction (Router, Mode, Operation, Modifiers)
+status: accepted
+date: 2026-08-26
+deciders: [architect]
+supersedes: null
+source: tool system refactor planning
+---
+
 # Question
 
 Context: We have a primary toolbar. Each tool will have different logic. We need to analyze the abstraction before going deeper and adding more tools.
@@ -900,3 +910,28 @@ And one more test is particularly relevant to your target:
 > **Can I open `PenTool.kt` and understand Pen behavior without reading Selection, Transform, Eraser, or toolbar-specific conditionals?**
 
 If yes, you have probably found the right abstraction boundary.
+
+---
+
+# Decision
+
+Accepted for epaper device implementation (2026-08-26). Full working design notes:
+[`.docs/memory/epaper-tool-system-refactor.md`](../memory/epaper-tool-system-refactor.md).
+
+## Locks
+
+1. **`ToolCanvasItem` + `InputHub`** are the **Interaction Router**. Qt handlers stay in `ToolCanvas.qml`; tools never bind Qt listeners.
+2. **Interaction Mode** is an **object** (`id` enum + state), not enum-only. Toolbar / `ChipModel.exclusive` maps to Mode id.
+3. **Operation** is the locked gesture lifecycle object (`Lasso`, `Marquee`, `Move`, `Resize`, `InkStroke`, `Navigation`, …). Each gesture is its own Operation class.
+4. Operations declare **`OperationDescriptor`**: `matchOn` / `receive` **StrategyKind** (`RawPointer`, `Drag`, `Tap`, `Pinch`, `HitTarget`). Router demuxes; Op implements one narrow sink. `matchOn` may differ from `receive` (e.g. Resize: HitTarget → RawPointer).
+5. **Modifiers** (never exclusive): **HandTouch** (finger/pinch; profiles per Mode id → allowed Operation kinds + **`postHandling` as `std::function`** — dynamic, e.g. switch to Selection only when select/move actually selected something); **InkBoxRecognizer** + **ConnectorRecognizer** (Pen Mode pen-up behaviors, latch on pen-down).
+6. **SelectionOverlay hits** use **HitTarget** + visual-only chrome (not per-knob DragHandlers) — including future connector knobs.
+7. Capability ports: **`InkSink`**, **`DocContext`**, **`ToolContext`** (SelectionOverlay Tool UI), **`SelectionContext`**. Activate bag = **`HostCaps`**.
+8. Durable selection state lives in **SelectionContext**; ephemeral gesture geometry on the locked Operation.
+9. Code lives under `epaper/drawing/tools/`.
+
+## Consequences
+
+- Adding a tool/gesture = new Mode and/or Operation + registration; Router/HandTouch dispatch stays stable.
+- Migrating off the `toolcanvasitem.cpp` monolith is phased; behavior must stay preserved at each phase.
+- ADR-0019 chrome layers remain: ToolContext never blits the document.

@@ -1,8 +1,15 @@
 # ToolCanvasItem — event routing
 
 ToolCanvas owns pointer/finger interaction and selection chrome. TabletCanvas owns
-document ink, rasterize, and the sync wire. They share one `CanvasSession`; Tool
-calls Tablet only through the Surface API.
+document ink, rasterize, and the sync wire. They share one `CanvasSession`.
+
+**Target architecture (ADR-0033):** `ToolCanvasItem` + `tools::InputHub` are the
+Interaction Router. Modes / Operations / HandTouch live under
+[`epaper/drawing/tools/`](tools/). Design notes:
+[`.docs/memory/epaper-tool-system-refactor.md`](../../.docs/memory/epaper-tool-system-refactor.md).
+
+Phase 0 ships contracts + `InputHub` member; routing still uses the legacy
+paths below until Modes/Operations are extracted.
 
 Input enters through `ToolCanvas.qml` handlers (and a few `Input` Connections in
 `Main.qml`). **Tool decides** whether a stylus sample is selection/handle work or

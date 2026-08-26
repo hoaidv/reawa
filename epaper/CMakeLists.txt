@@ -12,6 +12,7 @@ qt_add_executable(epaper_bin
     drawing/canvas_session.cpp
     drawing/tabletcanvasitem.cpp
     drawing/toolcanvasitem.cpp
+    drawing/tools/input_hub.cpp
     drawing/tabletwindow.cpp
     rendering/rendering.cpp
     regionsync/strokesync.cpp

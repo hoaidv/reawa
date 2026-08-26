@@ -99,6 +99,7 @@ void ToolCanvasItem::setSurface(TabletCanvasItem *surface)
     if (m_surface == surface)
         return;
     m_surface = surface;
+    syncToolHost();
     emit surfaceChanged();
     update();
 }
@@ -114,18 +115,87 @@ void ToolCanvasItem::setSession(CanvasSession *session)
         disconnect(m_camConn);
     if (m_toolConn)
         disconnect(m_toolConn);
+    if (m_hub.activeMode() == &m_penMode)
+        m_penMode.deactivate(m_hub, m_hub.handTouch());
+    m_hub.setActiveMode(nullptr);
     m_session = session;
     emit sessionChanged();
-    if (!m_session)
+    if (!m_session) {
+        m_inkBoxRecog.reset();
+        m_connRecog.reset();
         return;
+    }
+    m_inkBoxRecog = std::make_unique<epaper::tools::InkBoxRecognizerModifier>(m_session);
+    m_connRecog = std::make_unique<epaper::tools::ConnectorRecognizerModifier>(m_session);
     m_docConn = connect(m_session, &CanvasSession::documentMutated, this,
                         &ToolCanvasItem::onDocumentOrCameraChanged);
     m_camConn = connect(m_session, &CanvasSession::cameraChanged, this,
                         &ToolCanvasItem::onDocumentOrCameraChanged);
     m_toolConn = connect(m_session, &CanvasSession::exclusiveToolChanged, this, [this]() {
+        syncActiveMode();
         syncToolCanvasPresence();
         refreshSelectionChrome();
     });
+    syncToolHost();
+    syncActiveMode();
+}
+
+/** Rebuild HostCaps + InkSink when session/surface change. */
+void ToolCanvasItem::syncToolHost()
+{
+    m_inkSink = std::make_unique<epaper::tools::TabletInkSink>(m_surface);
+    epaper::tools::HostCaps caps;
+    caps.ink = m_inkSink.get();
+    caps.setExclusiveTool = [this](const QString &id) {
+        if (m_surface)
+            m_surface->setToolMode(id);
+    };
+    m_hub.setHostCaps(caps);
+    m_inkStroke.reset();
+}
+
+/** Activate PenMode when exclusive is pen; deactivate otherwise. */
+void ToolCanvasItem::syncActiveMode()
+{
+    const bool wantPen = exclusiveTool() == QLatin1String("pen");
+    if (wantPen) {
+        if (m_hub.activeMode() != &m_penMode) {
+            if (m_hub.activeMode())
+                m_hub.activeMode()->deactivate(m_hub, m_hub.handTouch());
+            m_penMode.activate(m_hub.hostCaps(), m_hub, m_hub.handTouch());
+            m_hub.setActiveMode(&m_penMode);
+        }
+    } else if (m_hub.activeMode() == &m_penMode) {
+        m_penMode.deactivate(m_hub, m_hub.handTouch());
+        m_hub.setActiveMode(nullptr);
+    }
+}
+
+/** Pen ink samples via InkStrokeOperation (ADR-0033 Phase 1). */
+void ToolCanvasItem::feedInkStroke(QEvent::Type type, const PanelPt &panel, qreal pressure)
+{
+    if (!m_inkSink)
+        syncToolHost();
+    if (!m_inkStroke)
+        m_inkStroke = std::make_unique<epaper::tools::InkStrokeOperation>(&m_hub.hostCaps());
+    epaper::tools::PointerSample s;
+    s.panel = panel;
+    s.pressure = pressure;
+    s.device = epaper::tools::PointerDevice::Pen;
+    switch (type) {
+    case QEvent::TabletPress:
+        m_inkStroke->onDown(s);
+        break;
+    case QEvent::TabletMove:
+        m_inkStroke->onMove(s);
+        break;
+    case QEvent::TabletRelease:
+        m_inkStroke->onUp(s);
+        m_inkStroke.reset();
+        break;
+    default:
+        break;
+    }
 }
 
 /** Prune dead selection ids and reproject chrome after session mutation. */
@@ -383,10 +453,7 @@ void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen)
             beginSelectionGesture(panel);
             return;
         }
-        TabletCanvasItem::RawPt raw;
-        IngestChannels ch = m_surface->stashedChannels(panel, &raw);
-        ch.pressure = pressure;
-        m_surface->ingestPen(QEvent::TabletPress, panel, raw, ch);
+        feedInkStroke(QEvent::TabletPress, panel, pressure);
         return;
     }
     if (m_finger.lockedUntilLift)
@@ -407,10 +474,7 @@ void ToolCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen)
             updateSelectionGesture(panel);
             return;
         }
-        TabletCanvasItem::RawPt raw;
-        IngestChannels ch = m_surface->stashedChannels(panel, &raw);
-        ch.pressure = pressure;
-        m_surface->ingestPen(QEvent::TabletMove, panel, raw, ch);
+        feedInkStroke(QEvent::TabletMove, panel, pressure);
         return;
     }
     updateFingerTouch(panel, 1);
@@ -428,10 +492,7 @@ void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen)
             m_surface->clearStash();
             return;
         }
-        TabletCanvasItem::RawPt raw;
-        const IngestChannels ch = m_surface->stashedChannels(panel, &raw);
-        m_surface->ingestPen(QEvent::TabletRelease, panel, raw, ch);
-        m_surface->clearStash();
+        feedInkStroke(QEvent::TabletRelease, panel, 0);
         return;
     }
     // PinchHandler owns two-finger; the one-finger handler deactivates on takeover.
@@ -457,7 +518,10 @@ void ToolCanvasItem::onFingerTap(qreal x, qreal y)
 /** Abort stroke or selection gesture; cancel hand touch. */
 void ToolCanvasItem::onPointerCancel()
 {
-    if (m_surface && m_surface->strokeActive())
+    if (m_inkStroke) {
+        m_inkStroke->cancel();
+        m_inkStroke.reset();
+    } else if (m_surface && m_surface->strokeActive())
         m_surface->cancelActiveStroke();
     else if (selectionGestureActive())
         endSelectionGesture();

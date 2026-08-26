@@ -1,6 +1,5 @@
 #include "rendering/rendering.hpp"
 
-#include "document/membership.hpp"
 #include "document/recognize_enclose.hpp"
 #include "document/surround_create.hpp"
 
