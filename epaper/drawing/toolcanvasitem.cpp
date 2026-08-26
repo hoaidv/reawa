@@ -44,6 +44,7 @@ QRectF modeChipRect(const QRectF &box)
 ToolCanvasItem::ToolCanvasItem(QQuickItem *parent)
     : QQuickPaintedItem(parent)
 {
+    m_selCtx.attach(&m_selection);
     m_renderer.setAlgorithm(std::make_unique<epaper::render::HierarchyCullAlgorithm>());
     setAntialiasing(false);
     setRenderTarget(QQuickPaintedItem::Image);
@@ -115,14 +116,15 @@ void ToolCanvasItem::setSession(CanvasSession *session)
         disconnect(m_camConn);
     if (m_toolConn)
         disconnect(m_toolConn);
-    if (m_hub.activeMode() == &m_penMode)
-        m_penMode.deactivate(m_hub, m_hub.handTouch());
+    if (m_hub.activeMode())
+        m_hub.activeMode()->deactivate(m_hub, m_hub.handTouch());
     m_hub.setActiveMode(nullptr);
     m_session = session;
     emit sessionChanged();
     if (!m_session) {
         m_inkBoxRecog.reset();
         m_connRecog.reset();
+        m_selectStroke.reset();
         return;
     }
     m_inkBoxRecog = std::make_unique<epaper::tools::InkBoxRecognizerModifier>(m_session);
@@ -146,6 +148,7 @@ void ToolCanvasItem::syncToolHost()
     m_inkSink = std::make_unique<epaper::tools::TabletInkSink>(m_surface);
     epaper::tools::HostCaps caps;
     caps.ink = m_inkSink.get();
+    caps.selection = &m_selCtx;
     caps.setExclusiveTool = [this](const QString &id) {
         if (m_surface)
             m_surface->setToolMode(id);
@@ -154,20 +157,25 @@ void ToolCanvasItem::syncToolHost()
     m_inkStroke.reset();
 }
 
-/** Activate PenMode when exclusive is pen; deactivate otherwise. */
+/** Activate PenMode or SelectionMode from exclusive chip. */
 void ToolCanvasItem::syncActiveMode()
 {
     const bool wantPen = exclusiveTool() == QLatin1String("pen");
-    if (wantPen) {
-        if (m_hub.activeMode() != &m_penMode) {
-            if (m_hub.activeMode())
-                m_hub.activeMode()->deactivate(m_hub, m_hub.handTouch());
-            m_penMode.activate(m_hub.hostCaps(), m_hub, m_hub.handTouch());
-            m_hub.setActiveMode(&m_penMode);
-        }
-    } else if (m_hub.activeMode() == &m_penMode) {
-        m_penMode.deactivate(m_hub, m_hub.handTouch());
-        m_hub.setActiveMode(nullptr);
+    const bool wantSel = isSelectionTool();
+    epaper::tools::InteractionMode *want = nullptr;
+    if (wantPen)
+        want = &m_penMode;
+    else if (wantSel)
+        want = &m_selectionMode;
+
+    if (m_hub.activeMode() == want)
+        return;
+    if (m_hub.activeMode())
+        m_hub.activeMode()->deactivate(m_hub, m_hub.handTouch());
+    m_hub.setActiveMode(nullptr);
+    if (want) {
+        want->activate(m_hub.hostCaps(), m_hub, m_hub.handTouch());
+        m_hub.setActiveMode(want);
     }
 }
 
@@ -192,6 +200,50 @@ void ToolCanvasItem::feedInkStroke(QEvent::Type type, const PanelPt &panel, qrea
     case QEvent::TabletRelease:
         m_inkStroke->onUp(s);
         m_inkStroke.reset();
+        break;
+    default:
+        break;
+    }
+}
+
+/** Host bag for Marquee/Lasso Operations. */
+epaper::tools::SelectionStrokeHost ToolCanvasItem::makeSelectionStrokeHost()
+{
+    epaper::tools::SelectionStrokeHost host;
+    host.session = &m_selection;
+    host.minGesture = kMinMarqueeGesture;
+    host.applyIntent = [this](const epaper::selection::SelectionResult &r) {
+        applySelectionIntent(r);
+    };
+    host.document = [this]() -> const epaper::document::DeviceDocument & { return doc(); };
+    host.panelToWorld = [this](double px, double py, double *wx, double *wy) {
+        const WorldPt w = panelToWorld(PanelPt(px, py));
+        *wx = w.x;
+        *wy = w.y;
+    };
+    return host;
+}
+
+/** Marquee/Lasso samples via Selection Operations (ADR-0033 Phase 2). */
+void ToolCanvasItem::feedSelectStroke(QEvent::Type type, const PanelPt &panel)
+{
+    auto *sink = dynamic_cast<epaper::tools::RawPointerSink *>(m_selectStroke.get());
+    if (!sink)
+        return;
+    epaper::tools::PointerSample s;
+    s.panel = panel;
+    s.pressure = 1.0;
+    s.device = epaper::tools::PointerDevice::Pen;
+    switch (type) {
+    case QEvent::TabletPress:
+        sink->onDown(s);
+        break;
+    case QEvent::TabletMove:
+        sink->onMove(s);
+        break;
+    case QEvent::TabletRelease:
+        sink->onUp(s);
+        m_selectStroke.reset();
         break;
     default:
         break;
@@ -336,6 +388,10 @@ void ToolCanvasItem::updateSelectionGesture(const PanelPt &canvasPos)
 {
     if (!selectionGestureActive())
         return;
+    if (m_selectStroke) {
+        feedSelectStroke(QEvent::TabletMove, canvasPos);
+        return;
+    }
     if (m_selection.gesture == epaper::selection::Gesture::Marquee) {
         applySelectionIntent(m_selection.updateMarquee(canvasPos.x(), canvasPos.y()));
         return;
@@ -350,10 +406,15 @@ void ToolCanvasItem::updateSelectionGesture(const PanelPt &canvasPos)
 /** Release: finish marquee/lasso or commit live manip. */
 void ToolCanvasItem::endSelectionGesture()
 {
-    if (!selectionGestureActive())
+    if (!selectionGestureActive() && !m_selectStroke)
         return;
-    if (m_selection.gesture == epaper::selection::Gesture::Marquee || m_selection.gesture == epaper::selection::Gesture::Lasso) {
-        finishMarqueeOrLasso();
+    if (m_selectStroke
+        || m_selection.gesture == epaper::selection::Gesture::Marquee
+        || m_selection.gesture == epaper::selection::Gesture::Lasso) {
+        if (m_selectStroke)
+            feedSelectStroke(QEvent::TabletRelease, PanelPt());
+        else
+            finishMarqueeOrLasso();
         return;
     }
     if (m_selection.gesture == epaper::selection::Gesture::Move || m_selection.gesture == epaper::selection::Gesture::Resize) {
@@ -523,7 +584,11 @@ void ToolCanvasItem::onPointerCancel()
         m_inkStroke.reset();
     } else if (m_surface && m_surface->strokeActive())
         m_surface->cancelActiveStroke();
-    else if (selectionGestureActive())
+    else if (m_selectStroke) {
+        if (auto *sink = dynamic_cast<epaper::tools::RawPointerSink *>(m_selectStroke.get()))
+            sink->onCancel();
+        m_selectStroke.reset();
+    } else if (selectionGestureActive())
         endSelectionGesture();
     cancelHandTouch();
     if (m_surface)
@@ -1005,13 +1070,21 @@ void ToolCanvasItem::encloseSelection()
 /** Start rect or freeform gesture from exclusive tool. */
 void ToolCanvasItem::beginMarqueeOrLasso(const PanelPt &canvasPos)
 {
-    applySelectionIntent(m_selection.beginMarqueeOrLasso(
-        canvasPos.x(), canvasPos.y(), exclusiveTool() == QLatin1String("sel_freeform")));
+    m_selectStroke.reset();
+    if (exclusiveTool() == QLatin1String("sel_freeform"))
+        m_selectStroke = std::make_unique<epaper::tools::LassoOperation>(makeSelectionStrokeHost());
+    else
+        m_selectStroke = std::make_unique<epaper::tools::MarqueeOperation>(makeSelectionStrokeHost());
+    feedSelectStroke(QEvent::TabletPress, canvasPos);
 }
 
-/** Commit marquee/lasso hit-test into selection. */
+/** Commit marquee/lasso hit-test into selection (legacy fallback). */
 void ToolCanvasItem::finishMarqueeOrLasso()
 {
+    if (m_selectStroke) {
+        feedSelectStroke(QEvent::TabletRelease, PanelPt());
+        return;
+    }
     applySelectionIntent(m_selection.finish(
         kMinMarqueeGesture, doc(),
         [this](double px, double py, double *wx, double *wy) {

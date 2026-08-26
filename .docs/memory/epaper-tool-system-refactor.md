@@ -522,6 +522,7 @@ ToolCanvasItem = **Interaction Router host**: QML entry, `HostCaps`, switch Mode
 ### Phase 2 — SelectionMode + SelectionContext + Lasso/Marquee Operations
 
 - SelectionMode object; SelectionContext durable state; **LassoOperation** + **MarqueeOperation**; pen `sel_rect`/`sel_freeform` choose which; HandTouch allow-list includes Lasso/Marquee/Move/Resize/….
+- **Status (2026-08-26):** done — `SelectionContextHost`, `SelectionMode`, marquee/lasso ops wired through `ToolCanvasItem::feedSelectStroke`; Move/Resize remain `ManipSession` until Phase 4.
 
 ### Phase 3 — HandTouchModifier dispatch
 

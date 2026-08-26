@@ -8,8 +8,9 @@ Interaction Router. Modes / Operations / HandTouch live under
 [`epaper/drawing/tools/`](tools/). Design notes:
 [`.docs/memory/epaper-tool-system-refactor.md`](../../.docs/memory/epaper-tool-system-refactor.md).
 
-Phase 0 ships contracts + `InputHub` member; routing still uses the legacy
-paths below until Modes/Operations are extracted.
+Phase 0–2: contracts + `InputHub`; PenMode/`InkStrokeOperation`; SelectionMode +
+`SelectionContextHost` + Marquee/Lasso Operations. Move/Resize and HandTouch
+match→lock still use legacy paths below until Phases 3–4.
 
 Input enters through `ToolCanvas.qml` handlers (and a few `Input` Connections in
 `Main.qml`). **Tool decides** whether a stylus sample is selection/handle work or

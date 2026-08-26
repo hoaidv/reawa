@@ -24,7 +24,13 @@
 #include "tools/ink_box_recognizer_modifier.hpp"
 #include "tools/input_hub.hpp"
 #include "tools/modes/pen_mode.hpp"
+#include "tools/modes/selection_mode.hpp"
+#include "tools/operation.hpp"
 #include "tools/operations/ink_stroke_operation.hpp"
+#include "tools/operations/lasso_operation.hpp"
+#include "tools/operations/marquee_operation.hpp"
+#include "tools/selection_context_host.hpp"
+#include "tools/selection_stroke_host.hpp"
 #include "tools/tablet_ink_sink.hpp"
 
 #include <memory>
@@ -116,6 +122,8 @@ private:
     void syncToolHost();
     void syncActiveMode();
     void feedInkStroke(QEvent::Type type, const PanelPt &panel, qreal pressure);
+    epaper::tools::SelectionStrokeHost makeSelectionStrokeHost();
+    void feedSelectStroke(QEvent::Type type, const PanelPt &panel);
 
     QString exclusiveTool() const;
     epaper::document::DeviceDocument &doc();
@@ -127,8 +135,11 @@ private:
     TabletCanvasItem *m_surface = nullptr;
     epaper::tools::InputHub m_hub;
     epaper::tools::PenMode m_penMode;
+    epaper::tools::SelectionMode m_selectionMode;
+    epaper::tools::SelectionContextHost m_selCtx;
     std::unique_ptr<epaper::tools::TabletInkSink> m_inkSink;
     std::unique_ptr<epaper::tools::InkStrokeOperation> m_inkStroke;
+    std::unique_ptr<epaper::tools::Operation> m_selectStroke;
     std::unique_ptr<epaper::tools::InkBoxRecognizerModifier> m_inkBoxRecog;
     std::unique_ptr<epaper::tools::ConnectorRecognizerModifier> m_connRecog;
     QMetaObject::Connection m_docConn;
