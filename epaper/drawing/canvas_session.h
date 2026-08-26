@@ -11,9 +11,25 @@
 #include "primary_toolbar.hpp"
 
 #include <QObject>
+#include <QPointF>
+#include <QRectF>
 #include <QString>
+#include <QVector>
 
+#include <optional>
 #include <string>
+
+/** Rest-pose connector polylines in panel space — Tablet origin hole (stroke, not AABB). */
+struct OriginConnStroke {
+    QVector<QPointF> panel;
+    qreal width = 4;
+};
+
+/** Snapshot for TabletCanvas white-hole during live manip — POD shared via CanvasSession. */
+struct OriginPunchSnapshot {
+    QRectF panelRect;
+    QVector<OriginConnStroke> connStrokes;
+};
 
 class CanvasSession : public QObject
 {
@@ -48,6 +64,11 @@ public:
     void setFollowDirection(const QString &id);
     void syncFollowDirectionFromSession();
 
+    /** Live-manip origin hole for Tablet paint — set by Tool, read by Tablet. */
+    const std::optional<OriginPunchSnapshot> &liveManipOrigin() const { return m_liveManipOrigin; }
+    void setLiveManipOrigin(OriginPunchSnapshot punch);
+    void clearLiveManipOrigin();
+
 signals:
     void exclusiveToolChanged();
     void recogChanged();
@@ -57,4 +78,5 @@ signals:
 
 private:
     QString m_followDirection = QStringLiteral("none");
+    std::optional<OriginPunchSnapshot> m_liveManipOrigin;
 };

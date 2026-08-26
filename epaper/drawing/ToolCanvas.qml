@@ -7,6 +7,7 @@ Item {
     id: root
 
     property alias surface: tool.surface
+    property alias session: tool.session
 
     property alias handTouchArmed: tool.handTouchArmed
     property alias encloseCtaRect: tool.encloseCtaRect

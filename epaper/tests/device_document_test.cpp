@@ -411,19 +411,17 @@ static void test_undo_one_gesture_one_entry()
     CHECK(sg2 && geomNear(sg2->transform.x, 0) && geomNear(sg2->transform.y, 0));
 }
 
-/** @SRS-EP-07 Viewport tool and selection do not push undo */
+/** @SRS-EP-07 Viewport and tool switch do not push undo */
 static void test_undo_viewport_tool_selection_do_not_push()
 {
     DeviceDocument doc;
     CHECK(doc.undoDepth() == 0);
     doc.applyViewportPan(12, -4);
     doc.applyToolSwitch("ink_box");
-    doc.applySelectionChange(std::string("sg_1"));
     CHECK(doc.undoDepth() == 0);
     CHECK(doc.publishQueue().empty());
     CHECK(doc.viewportPanX() == 12);
     CHECK(doc.uiTool() == "ink_box");
-    CHECK(doc.selectionId() && *doc.selectionId() == "sg_1");
 }
 
 /** @SRS-EP-07 Ring overflow drops the oldest entry */

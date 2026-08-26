@@ -12,6 +12,7 @@
 #include "drawing/tabletcanvasitem.h"
 #include "drawing/toolcanvasitem.h"
 #include "drawing/tabletwindow.h"
+#include "drawing/canvas_session.h"
 #include "epaperbridge.h"
 #include "debug/debug_log_ship.h"
 #include "debug/ui_stall.hpp"
@@ -64,6 +65,9 @@ int main(int argc, char *argv[])
     qmlRegisterType<TabletCanvasItem>("epaper", 1, 0, "TabletCanvas");
     qmlRegisterType<ToolCanvasItem>("epaper", 1, 0, "ToolCanvasItem");
     qmlRegisterType<TabletWindow>("epaper", 1, 0, "TabletWindow");
+    qmlRegisterUncreatableType<CanvasSession>(
+        "epaper", 1, 0, "CanvasSession",
+        QStringLiteral("CanvasSession is owned by TabletCanvas"));
     qmlRegisterSingletonInstance("epaper", 1, 0, "EpaperBridge", bridge);
     qmlRegisterSingletonInstance("epaper", 1, 0, "UsbHud", usbLink);
     qmlRegisterSingletonInstance("epaper", 1, 0, "DebugLog", debugShip);

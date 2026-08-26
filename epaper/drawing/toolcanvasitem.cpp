@@ -82,24 +82,18 @@ void ToolCanvasItem::geometryChange(const QRectF &newGeometry, const QRectF &old
 
 /**
  * =================================================================================================
- * Interaction API for TabletCanvas
+ * Host wiring (composition / QML)
  *
- * setSurface takes session from Tablet and registers this as interactionTool. Tablet calls
- * clearSelection / cancelInteraction / liveManipActive / originPunch; doc and camera
- * changes arrive via CanvasSession signals.
+ * setSurface stores the Surface API target only. Session is injected separately via setSession.
  * =================================================================================================
  */
 
-/** Bind Tablet Surface API target; adopt its CanvasSession. */
+/** Bind Tablet Surface API target (ingest / rasterize / wire). */
 void ToolCanvasItem::setSurface(TabletCanvasItem *surface)
 {
     if (m_surface == surface)
         return;
     m_surface = surface;
-    if (m_surface) {
-        setSession(m_surface->session());
-        m_surface->setInteractionTool(this);
-    }
     emit surfaceChanged();
     update();
 }
@@ -107,6 +101,8 @@ void ToolCanvasItem::setSurface(TabletCanvasItem *surface)
 /** Connect documentMutated / cameraChanged / exclusiveToolChanged. */
 void ToolCanvasItem::setSession(CanvasSession *session)
 {
+    if (m_session == session)
+        return;
     if (m_docConn)
         disconnect(m_docConn);
     if (m_camConn)
@@ -114,6 +110,7 @@ void ToolCanvasItem::setSession(CanvasSession *session)
     if (m_toolConn)
         disconnect(m_toolConn);
     m_session = session;
+    emit sessionChanged();
     if (!m_session)
         return;
     m_docConn = connect(m_session, &CanvasSession::documentMutated, this,
@@ -152,20 +149,33 @@ void ToolCanvasItem::cancelInteraction()
     onPointerCancel();
 }
 
-/** Tablet paint() asks this before punching the origin hole. */
-bool ToolCanvasItem::liveManipActive() const
+/** Publish local origin hole to session for Tablet paint. */
+void ToolCanvasItem::publishLiveManipOrigin()
 {
-    return m_selection.gesture == epaper::selection::Gesture::Move
-        || m_selection.gesture == epaper::selection::Gesture::Resize;
-}
-
-/** Panel rect + connector polylines for Tablet’s white hole. */
-OriginPunchSnapshot ToolCanvasItem::originPunch() const
-{
+    if (!m_session)
+        return;
+    if (m_originPanelRect.isEmpty() && m_originConnStrokes.isEmpty()) {
+        m_session->clearLiveManipOrigin();
+        return;
+    }
     OriginPunchSnapshot s;
     s.panelRect = m_originPanelRect;
     s.connStrokes = m_originConnStrokes;
-    return s;
+    m_session->setLiveManipOrigin(std::move(s));
+}
+
+/** Clear session origin hole (commit / abort / update-punch). */
+void ToolCanvasItem::clearLiveManipOrigin()
+{
+    if (m_session)
+        m_session->clearLiveManipOrigin();
+}
+
+/** Drop selection + manip node (finger empty-tap / enclose success). */
+void ToolCanvasItem::clearSelection()
+{
+    m_selection.clear();
+    m_manip.clearNodeId();
 }
 
 /** Current exclusive tool id from the session chip. */
@@ -173,7 +183,6 @@ QString ToolCanvasItem::exclusiveTool() const
 {
     return m_session ? m_session->exclusiveTool() : QStringLiteral("pen");
 }
-
 
 /** Session document reference for intention code. */
 epaper::document::DeviceDocument &ToolCanvasItem::doc()
@@ -203,13 +212,6 @@ const epaper::canvasframe::CanvasFrame &ToolCanvasItem::frame() const
     return m_session->frame;
 }
 
-
-/** Drop selection + manip node (sync inbound / enclose success). */
-void ToolCanvasItem::clearSelection()
-{
-    m_selection.clear();
-    m_manip.clearNodeId();
-}
 
 /** Pen/finger hit on a resize knob → beginHandleDrag. */
 bool ToolCanvasItem::tryBeginHandleAtPanel(const PanelPt &panel, double hitDu)
@@ -879,6 +881,7 @@ void ToolCanvasItem::applyManipIntent(const epaper::manip::ManipResult &r, bool 
         m_originPanelRect = QRectF();
         m_originConnPunch = QRectF();
         m_originConnStrokes.clear();
+        clearLiveManipOrigin();
     }
     if (has(r.intent, ManipIntent::RefreshAllConnectors)
         && has(r.intent, ManipIntent::CommitTransform))
@@ -891,6 +894,7 @@ void ToolCanvasItem::applyManipIntent(const epaper::manip::ManipResult &r, bool 
         m_originPanelRect = QRectF();
         m_originConnPunch = QRectF();
         m_originConnStrokes.clear();
+        clearLiveManipOrigin();
         if (!punch.isEmpty() && m_surface)
             m_surface->notifyOriginPunch(punch);
     }
@@ -1005,6 +1009,7 @@ void ToolCanvasItem::startLiveManip(const epaper::document::DocNode *subject,
         m_originPanelRect = QRectF();
     }
     applyManipIntent(r);
+    publishLiveManipOrigin();
 }
 
 /** Live manip sample (throttled preview to Infini). */
@@ -1201,6 +1206,7 @@ void ToolCanvasItem::captureOriginConnectorPunches(const std::string &sgId)
         const QRectF r = m_surface->warpedConnectorPanelRect(node);
         m_originConnPunch = m_originConnPunch.isEmpty() ? r : m_originConnPunch.united(r);
     }
+    publishLiveManipOrigin();
 }
 
 

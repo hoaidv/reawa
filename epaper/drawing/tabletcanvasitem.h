@@ -27,7 +27,6 @@
 #include "stroke_capture.hpp"
 
 class StrokeSync;
-class ToolCanvasItem;
 
 /**
  * Pen ink + device document rasterize for the sync region.
@@ -126,6 +125,8 @@ private:
 public:
     CanvasSession *session() { return &m_session; }
     const CanvasSession *session() const { return &m_session; }
+
+    Q_PROPERTY(CanvasSession *session READ session CONSTANT)
 
 /**
  * =================================================================================================
@@ -380,9 +381,6 @@ private:
  */
 
 public:
-    void setInteractionTool(ToolCanvasItem *tool);
-    ToolCanvasItem *interactionTool() const { return m_tool; }
-
     void ingestPen(QEvent::Type type, const PanelPt &canvasPos, RawPt rawPos,
                    const IngestChannels &ch);
     IngestChannels stashedChannels(const PanelPt &panel, RawPt *raw) const;
@@ -405,9 +403,6 @@ public:
     QRectF boundConnectorsPanelUnion(const std::string &sgId) const;
     qreal connectorPanelStrokeWidth(const epaper::document::DocNode &conn) const;
     QRectF warpedConnectorPanelRect(const epaper::document::DocNode &conn) const;
-
-private:
-    ToolCanvasItem *m_tool = nullptr;
 
 /**
  * =================================================================================================

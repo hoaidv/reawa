@@ -9,7 +9,6 @@
 #include "document/membership.hpp"
 #include "document/manipulate.hpp"
 #include "debug/debug_log_format.hpp"
-#include "toolcanvasitem.h"
 #include "primary_toolbar.hpp"
 #include "ingest_origin_guard.hpp"
 
@@ -347,12 +346,12 @@ bool TabletCanvasItem::lodOkPanel(const epaper::document::SmartBounds &wb) const
  * Panel raster surface
  *
  * Live ink stamps into m_image; paint() blits it and, during live manip, punches the
- * origin hole from ToolCanvas Interaction API. flushPending coalesces dirty rects to the
+ * origin hole from CanvasSession::liveManipOrigin. flushPending coalesces dirty rects to the
  * e-ink path.
  * =================================================================================================
  */
 
-/** Blit ink buffer; white-hole punch when Tool reports live manip. */
+/** Blit ink buffer; white-hole punch from session liveManipOrigin during live manip. */
 void TabletCanvasItem::paint(QPainter *painter)
 {
     if (!m_paintsInk)
@@ -362,29 +361,27 @@ void TabletCanvasItem::paint(QPainter *painter)
     ensureImage();
     m_paintCount.fetchAndAddRelaxed(1);
     painter->drawImage(0, 0, m_image);
-    if (m_tool && m_tool->liveManipActive()) {
-        const OriginPunchSnapshot punch = m_tool->originPunch();
-        if (!punch.panelRect.isEmpty()) {
-            // Punch only the original box — not origin∪live (that wipes a vertical strip).
-            painter->fillRect(punch.panelRect, Qt::white);
-            // Connector origin hole: thick white stroke along the rest-pose polyline.
-            // [SRS-EP-18] [CHL-0018]
-            if (!punch.connStrokes.isEmpty()) {
-                painter->save();
-                painter->setRenderHint(QPainter::Antialiasing, false);
-                painter->setBrush(Qt::NoBrush);
-                for (const OriginConnStroke &st : punch.connStrokes) {
-                    if (st.panel.size() < 2)
-                        continue;
-                    QPen erase(Qt::white);
-                    erase.setWidthF(st.width + 16.0);
-                    erase.setCapStyle(Qt::RoundCap);
-                    erase.setJoinStyle(Qt::RoundJoin);
-                    painter->setPen(erase);
-                    painter->drawPolyline(st.panel.constData(), st.panel.size());
-                }
-                painter->restore();
+    const auto &origin = m_session.liveManipOrigin();
+    if (origin && !origin->panelRect.isEmpty()) {
+        // Punch only the original box — not origin∪live (that wipes a vertical strip).
+        painter->fillRect(origin->panelRect, Qt::white);
+        // Connector origin hole: thick white stroke along the rest-pose polyline.
+        // [SRS-EP-18] [CHL-0018]
+        if (!origin->connStrokes.isEmpty()) {
+            painter->save();
+            painter->setRenderHint(QPainter::Antialiasing, false);
+            painter->setBrush(Qt::NoBrush);
+            for (const OriginConnStroke &st : origin->connStrokes) {
+                if (st.panel.size() < 2)
+                    continue;
+                QPen erase(Qt::white);
+                erase.setWidthF(st.width + 16.0);
+                erase.setCapStyle(Qt::RoundCap);
+                erase.setJoinStyle(Qt::RoundJoin);
+                painter->setPen(erase);
+                painter->drawPolyline(st.panel.constData(), st.panel.size());
             }
+            painter->restore();
         }
     }
 }
@@ -1243,15 +1240,9 @@ void TabletCanvasItem::toggleRecogConnector()
  * Surface API for ToolCanvas
  *
  * Only entry points Tool may call. Intention methods mutate doc/ink/sync or expose
- * read-only geometry helpers; no chrome getters.
+ * read-only geometry helpers; no chrome getters. Peers are not registered here.
  * =================================================================================================
  */
-
-/** Wire ToolCanvas peer for punch/selection handoff. */
-void TabletCanvasItem::setInteractionTool(ToolCanvasItem *tool)
-{
-    m_tool = tool;
-}
 
 /** Tool-routed stylus sample → ingestMappedTablet. */
 void TabletCanvasItem::ingestPen(QEvent::Type type, const PanelPt &canvasPos, RawPt rawPos,
@@ -1644,9 +1635,6 @@ void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
         else
             qInfo() << "[sync] ignore inbound viewport follow=" << m_session.followDirection();
     }
-    if (m_session.document.selectionId() == std::nullopt)
-        if (m_tool)
-            m_tool->clearSelection();
     flushOneWayWire();
     if (obj.value(QStringLiteral("type")).toString() == QLatin1String("doc_load")
         && m_oneWay.epochLive())

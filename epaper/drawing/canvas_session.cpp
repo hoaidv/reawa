@@ -65,3 +65,13 @@ void CanvasSession::syncFollowDirectionFromSession()
 {
     setFollowDirection(QString::fromLatin1(epaper::handtouch::followId(follow.direction)));
 }
+
+void CanvasSession::setLiveManipOrigin(OriginPunchSnapshot punch)
+{
+    m_liveManipOrigin = std::move(punch);
+}
+
+void CanvasSession::clearLiveManipOrigin()
+{
+    m_liveManipOrigin.reset();
+}

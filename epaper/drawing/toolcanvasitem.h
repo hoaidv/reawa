@@ -11,30 +11,16 @@
 #include <vector>
 
 #include "canvas_frame.hpp"
+#include "canvas_session.h"
 #include "document/device_document.hpp"
 #include "document/hand_touch.hpp"
 #include "document/manipulate.hpp"
-#include "document/viewport_follow.hpp"
 #include "finger_gesture_machine.hpp"
 #include "input/pen_sample.hpp"
 #include "manip_session.hpp"
-#include "primary_toolbar.hpp"
 #include "selection_session.hpp"
 
-class CanvasSession;
 class TabletCanvasItem;
-
-/** Rest-pose connector polylines in panel space — Tablet origin hole (stroke, not AABB). */
-struct OriginConnStroke {
-    QVector<QPointF> panel;
-    qreal width = 4;
-};
-
-/** Snapshot for TabletCanvas white-hole during live manip — POD, no private access. */
-struct OriginPunchSnapshot {
-    QRectF panelRect;
-    QVector<OriginConnStroke> connStrokes;
-};
 
 /**
  * ToolCanvas — pointer/finger interaction + selection chrome. Never blits the document.
@@ -45,6 +31,7 @@ class ToolCanvasItem : public QQuickPaintedItem
 {
     Q_OBJECT
     Q_PROPERTY(TabletCanvasItem *surface READ surface WRITE setSurface NOTIFY surfaceChanged)
+    Q_PROPERTY(CanvasSession *session READ session WRITE setSession NOTIFY sessionChanged)
     Q_PROPERTY(bool handTouchArmed READ handTouchArmed NOTIFY handTouchArmedChanged)
     Q_PROPERTY(QRectF encloseCtaRect READ encloseCtaRect NOTIFY selectionChromeChanged)
     Q_PROPERTY(bool encloseVisible READ encloseVisible NOTIFY selectionChromeChanged)
@@ -94,11 +81,10 @@ protected:
 
 /**
  * =================================================================================================
- * Interaction API for TabletCanvas
+ * Host wiring (composition / QML)
  *
- * Session/surface wiring plus actions Tablet must request (selection clear, cancel, punch).
- * Doc/camera refresh: listen to CanvasSession NOTIFY — not Tablet calling onDocumentOrCameraChanged.
- * Selection gestures stay private; only Tool routes pen/finger into them.
+ * Session and surface are injected separately. Tool never registers itself on Tablet.
+ * cancelInteraction is QML (pen-near); selection gestures stay private.
  * =================================================================================================
  */
 
@@ -109,18 +95,17 @@ public:
     void setSurface(TabletCanvasItem *surface);
     TabletCanvasItem *surface() const { return m_surface; }
 
-    void clearSelection();
     Q_INVOKABLE void cancelInteraction();
-    bool liveManipActive() const;
-
-    // TODO Need other approach to hide the manipulating document node
-    OriginPunchSnapshot originPunch() const;
 
 signals:
     void surfaceChanged();
+    void sessionChanged();
 
 private:
     void onDocumentOrCameraChanged();
+    void clearSelection();
+    void publishLiveManipOrigin();
+    void clearLiveManipOrigin();
 
     QString exclusiveTool() const;
     epaper::document::DeviceDocument &doc();

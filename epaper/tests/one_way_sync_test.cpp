@@ -145,7 +145,6 @@ static void test_load_handshake_drains_then_new_epoch()
         CHECK(doc.commitOp(makeAppendInkOp(std::string("q") + std::to_string(i), double(i), 0))
                   .applied);
     CHECK(doc.publishQueue().size() == 5);
-    doc.applySelectionChange(std::string("q0"));
 
     sync.onLinkUp();
     JsonValue hello = firstOf(sync.outbound(), "hello");
@@ -181,7 +180,6 @@ static void test_load_handshake_drains_then_new_epoch()
     CHECK(doc.publishQueue().empty());
     CHECK(doc.lastSeq() == 0);
     CHECK(doc.undoDepth() == 0);
-    CHECK(!doc.selectionId());
     CHECK(countType(sync.outbound(), "load_ack") == 1);
     CHECK(doc.publishQueue().size() == 0);
 }

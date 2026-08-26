@@ -478,7 +478,8 @@ public:
     int lastSeq() const { return m_lastSeq; }
 
     /**
-     * Viewport / tool / selection are not document state and must not push.
+     * Viewport / tool are not document state and must not push.
+     * Selection lives on ToolCanvas, not the document tree.
      * @implements [SRS-EP-07] viewport tool and selection do not push undo
      */
     void applyViewportPan(double dx, double dy)
@@ -487,14 +488,9 @@ public:
         m_panY += dy;
     }
     void applyToolSwitch(std::string tool) { m_tool = std::move(tool); }
-    void applySelectionChange(std::optional<std::string> nodeId)
-    {
-        m_selectedNodeId = std::move(nodeId);
-    }
     double viewportPanX() const { return m_panX; }
     double viewportPanY() const { return m_panY; }
     const std::string &uiTool() const { return m_tool; }
-    const std::optional<std::string> &selectionId() const { return m_selectedNodeId; }
 
     /**
      * Accepted load empties the ring. Handshake/TCP is STORY-EP-020.
@@ -509,7 +505,6 @@ public:
         m_intermediateFrames = 0;
         m_lastSeq = 0;
         m_publishQueue.clear();
-        m_selectedNodeId.reset();
     }
 
     void onAcceptedDocLoad(const JsonValue &document)
@@ -587,7 +582,6 @@ private:
     double m_panX = 0;
     double m_panY = 0;
     std::string m_tool = "pen";
-    std::optional<std::string> m_selectedNodeId;
 
     void enqueueChange(const DocOp &op)
     {

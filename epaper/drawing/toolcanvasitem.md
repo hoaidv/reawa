@@ -148,6 +148,9 @@ Release: `endFingerTouch` → settle pan or `endSelectionGesture`.
 `Main.qml` → `cancelHandTouch` + `cancelInteraction` / `onSecondContact` so
 navigation outranks an in-flight one-finger manip without DragHandler.
 
+Live manip origin hole: Tool writes `CanvasSession::liveManipOrigin`; Tablet
+`paint()` reads it (no Tablet→Tool calls).
+
 ## Shared vs separate
 
 ### Same selection pipeline, two entry doors

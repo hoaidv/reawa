@@ -54,6 +54,7 @@ TabletWindow {
         width: drawCanvas.width
         height: drawCanvas.height
         surface: drawCanvas
+        session: drawCanvas.session
     }
 
     // Facts the pointer handlers on ToolCanvas cannot see, and what this app
