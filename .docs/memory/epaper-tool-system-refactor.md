@@ -527,6 +527,7 @@ ToolCanvasItem = **Interaction Router host**: QML entry, `HostCaps`, switch Mode
 ### Phase 3 — HandTouchModifier dispatch
 
 - Profile registry; modeId→allowedOperations→match→**lock Operation**; NavigationOperation shared.
+- **Status (2026-08-27):** done — `InputHub` match/lock/feed for finger + pinch; `NavigationOperation`, `MoveOperation`, `FingerResizeOperation`, `SelectOperation`; factories registered from `ToolCanvasItem::syncHandTouchFactories`.
 
 ### Phase 4 — MoveOperation + ResizeOperation (+ overlays)
 

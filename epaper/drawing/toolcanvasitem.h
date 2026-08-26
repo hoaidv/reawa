@@ -21,6 +21,7 @@
 #include "rendering/rendering.hpp"
 #include "selection_session.hpp"
 #include "tools/connector_recognizer_modifier.hpp"
+#include "tools/finger_host.hpp"
 #include "tools/ink_box_recognizer_modifier.hpp"
 #include "tools/input_hub.hpp"
 #include "tools/modes/pen_mode.hpp"
@@ -121,8 +122,12 @@ private:
     void clearSelection();
     void syncToolHost();
     void syncActiveMode();
+    void syncHandTouchFactories();
     void feedInkStroke(QEvent::Type type, const PanelPt &panel, qreal pressure);
     epaper::tools::SelectionStrokeHost makeSelectionStrokeHost();
+    epaper::tools::FingerHost makeFingerHost();
+    epaper::tools::HandTouchCommitInfo makeHandTouchCommitInfo(
+        epaper::tools::OperationKind kind) const;
     void feedSelectStroke(QEvent::Type type, const PanelPt &panel);
 
     QString exclusiveTool() const;
