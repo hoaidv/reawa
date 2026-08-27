@@ -30,7 +30,7 @@ void ToolChrome::refresh(SelectionContext &selection, SessionDocContext &doc, bo
     const bool transforming = selection.phase() == SelectionPhase::Transforming;
     QRectF dirty = bounds;
     if (!bounds.isEmpty() && !stroke)
-        dirty = bounds.adjusted(-12, -12, 12, 84);
+        dirty = bounds.adjusted(-12, -12, 12, 120);
     else
         dirty.adjust(-12, -12, 12, 12);
     m_state.selectionChromeDirty = dirty;
@@ -64,19 +64,17 @@ void ToolChrome::damageSegment(const QRectF &seg,
     repaint(seg.toAlignedRect());
 }
 
-void ToolChrome::syncPresence(SelectionContext &selection, bool isSelectionTool,
+void ToolChrome::syncPresence(SelectionContext &selection, bool isSelectionTool, bool penWaveform,
                               const std::function<void(bool visible)> &setVisible,
                               const std::function<void(bool penWaveform)> &setStrokeWaveform)
 {
-    const bool liveManip = selection.phase() == SelectionPhase::Transforming;
-    const bool strokeChrome = selection.phase() == SelectionPhase::Selecting;
-    const bool settled =
-        isSelectionTool && !selection.ids().empty() && !liveManip && !strokeChrome;
-    const bool on = isSelectionTool && (strokeChrome || liveManip || settled);
+    // Keep the overlay attached for the whole Selection mode so the first lasso
+    // pen-down does not pay Mono-attach / waveform switch (ADR-0019).
     if (setVisible)
-        setVisible(on);
-    if (on && !strokeChrome && setStrokeWaveform)
-        setStrokeWaveform(false);
+        setVisible(isSelectionTool);
+    if (isSelectionTool && setStrokeWaveform)
+        setStrokeWaveform(penWaveform);
+    (void)selection;
 }
 
 void ToolChrome::paint(QPainter *painter, SelectionContext &selection, SessionDocContext &doc,
@@ -113,26 +111,6 @@ void ToolChrome::paint(QPainter *painter, SelectionContext &selection, SessionDo
                 painter->setBrush(Qt::NoBrush);
                 painter->setPen(dotted);
                 painter->drawRect(r);
-
-                if (m_state.handleCount == 8) {
-                    const qreal h = kHandleVisualDu;
-                    const QPointF pts[8] = {
-                        r.topLeft(),
-                        QPointF(r.center().x(), r.top()),
-                        r.topRight(),
-                        QPointF(r.right(), r.center().y()),
-                        r.bottomRight(),
-                        QPointF(r.center().x(), r.bottom()),
-                        r.bottomLeft(),
-                        QPointF(r.left(), r.center().y()),
-                    };
-                    painter->setBrush(Qt::white);
-                    QPen solid(Qt::black);
-                    solid.setWidthF(4.0);
-                    painter->setPen(solid);
-                    for (const QPointF &pt : pts)
-                        painter->drawRect(QRectF(pt.x() - h * 0.5, pt.y() - h * 0.5, h, h));
-                }
             }
         }
         painter->restore();
@@ -182,6 +160,7 @@ void ToolChrome::redrawLiveManip(SelectionContext &selection, SessionDocContext 
                                  const std::function<void()> &emitChanged)
 {
     using namespace epaper::document;
+    (void)resizing;
     SmartBounds wb;
     const DocNode *n = doc.document().find(selection.pickableId());
     QRectF liveBounds;
@@ -200,10 +179,9 @@ void ToolChrome::redrawLiveManip(SelectionContext &selection, SessionDocContext 
     m_state.selectionChromeDirty = m_state.originPanelRect;
     if (!liveBounds.isEmpty())
         m_state.selectionBoundsRect = liveBounds;
-    if (!resizing)
-        m_state.handleCount = 0;
-    else
-        m_state.handleCount = 8;
+    // QML knobs stay hidden during the live gesture — driving 8 items every
+    // ghost frame is the resize stall. Overlay paints the live node + AABB.
+    m_state.handleCount = 0;
     if (emitChanged)
         emitChanged();
     damage(toolDirty, repaint);

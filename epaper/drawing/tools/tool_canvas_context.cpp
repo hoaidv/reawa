@@ -4,6 +4,7 @@
 #include "../toolcanvasitem.h"
 #include "input_hub.hpp"
 #include "operation.hpp"
+#include "selection_context.hpp"
 #include "session_doc_context.hpp"
 #include "ui/selection_context_bar.hpp"
 
@@ -42,7 +43,11 @@ void ToolCanvasContext::syncOverlayPresence()
 {
     if (!m_selection)
         return;
-    m_chrome.syncPresence(*m_selection, isSelectionTool(), m_setVisible, m_setStrokeWaveform);
+    const bool penWaveform = isSelectionTool() && exclusiveTool() == QLatin1String("sel_freeform")
+        && m_selection->phase() != SelectionPhase::Selected
+        && m_selection->phase() != SelectionPhase::Transforming;
+    m_chrome.syncPresence(*m_selection, isSelectionTool(), penWaveform, m_setVisible,
+                          m_setStrokeWaveform);
 }
 
 void ToolCanvasContext::setStrokeWaveform(bool penInFlight)
@@ -81,9 +86,7 @@ void ToolCanvasContext::redrawLiveManip(bool resizing)
 {
     if (!m_doc || !m_selection)
         return;
-    m_chrome.redrawLiveManip(*m_selection, *m_doc, resizing, m_repaint, m_emitChanged);
-    if (m_hub && m_bar)
-        m_bar->refresh(m_hub->hostCaps(), m_chrome.state());
+    m_chrome.redrawLiveManip(*m_selection, *m_doc, resizing, m_repaint, nullptr);
     syncOverlayPresence();
 }
 

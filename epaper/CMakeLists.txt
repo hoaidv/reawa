@@ -28,13 +28,12 @@ qt_add_executable(epaper_bin
     input/qtinputfilter.cpp
 )
 set_source_files_properties(drawing/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
-set_source_files_properties(drawing/ResizeKnob.qml PROPERTIES QT_RESOURCE_ALIAS ResizeKnob.qml)
 set_source_files_properties(drawing/ToolCanvas.qml PROPERTIES QT_RESOURCE_ALIAS ToolCanvas.qml)
 set_source_files_properties(drawing/tools/ui/SelectionContextToolbar.qml PROPERTIES QT_RESOURCE_ALIAS SelectionContextToolbar.qml)
 qt_add_qml_module(epaper_bin
     URI epaper
     VERSION 1.0
-    QML_FILES drawing/Main.qml drawing/ResizeKnob.qml drawing/ToolCanvas.qml
+    QML_FILES drawing/Main.qml drawing/ToolCanvas.qml
               drawing/tools/ui/SelectionContextToolbar.qml
 )
 
@@ -54,6 +53,9 @@ qt_add_resources(epaper_bin "epaper_tool_icons"
         icons/icon-epaper-ink-box-inv.png
         icons/icon-epaper-enclose.png
         icons/icon-epaper-enclose-inv.png
+        icons/icon-epaper-cut.png
+        icons/icon-epaper-copy.png
+        icons/icon-epaper-paste.png
         icons/icon-epaper-undo.png
         icons/icon-epaper-redo.png
         icons/icon-epaper-switch.png

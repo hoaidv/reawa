@@ -15,6 +15,7 @@ namespace tools {
 class PasteAction final : public ToolAction {
 public:
     QString id() const override { return QStringLiteral("paste"); }
+    QString icon() const override { return QStringLiteral("qrc:/icons/icons/icon-epaper-paste.png"); }
     QString label(const HostCaps &) const override { return QStringLiteral("Paste"); }
     bool visible(const HostCaps &caps) const override
     {

@@ -15,6 +15,7 @@ namespace tools {
 class CopyAction final : public ToolAction {
 public:
     QString id() const override { return QStringLiteral("copy"); }
+    QString icon() const override { return QStringLiteral("qrc:/icons/icons/icon-epaper-copy.png"); }
     QString label(const HostCaps &) const override { return QStringLiteral("Copy"); }
     bool visible(const HostCaps &caps) const override
     {

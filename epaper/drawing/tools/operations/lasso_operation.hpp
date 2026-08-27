@@ -60,7 +60,7 @@ public:
         m_caps->toolUi->emitChromeChanged();
         m_caps->toolUi->syncOverlayPresence();
         m_caps->toolUi->setStrokeWaveform(true);
-        m_caps->toolUi->damageChrome(QRectF(s.panel, s.panel).adjusted(-8, -8, 8, 8));
+        m_caps->toolUi->damageChrome(QRectF(s.panel, s.panel).adjusted(-12, -12, 12, 12));
     }
 
     void onMove(const PointerSample &s) override
@@ -94,7 +94,7 @@ public:
 
     void paintOverlay(QPainter *painter) override
     {
-        if (!painter || m_pts.size() < 2)
+        if (!painter || m_pts.empty())
             return;
         painter->save();
         QPen dotted(Qt::black);
@@ -102,11 +102,15 @@ public:
         dotted.setStyle(Qt::DotLine);
         painter->setBrush(Qt::NoBrush);
         painter->setPen(dotted);
-        QPainterPath path;
-        path.moveTo(m_pts.front());
-        for (size_t i = 1; i < m_pts.size(); ++i)
-            path.lineTo(m_pts[i]);
-        painter->drawPath(path);
+        if (m_pts.size() == 1) {
+            painter->drawEllipse(m_pts.front(), 2.0, 2.0);
+        } else {
+            QPainterPath path;
+            path.moveTo(m_pts.front());
+            for (size_t i = 1; i < m_pts.size(); ++i)
+                path.lineTo(m_pts[i]);
+            painter->drawPath(path);
+        }
         painter->restore();
     }
 

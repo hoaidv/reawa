@@ -10,7 +10,7 @@ Item {
 
     Repeater {
         model: bar ? bar.handleCount : 0
-        delegate: ResizeKnob {
+        delegate: Item {
             readonly property var _r: bar.selectionBounds
             readonly property real _h: bar.handleSize
             readonly property real _hit: Math.max(_h, 64)
@@ -41,11 +41,20 @@ Item {
                 ]
                 return p6[i]
             }
-            visualSize: _h
-            hitSize: _hit
+            width: _hit
+            height: _hit
             x: _pt.x - _hit / 2
             y: _pt.y - _hit / 2
             visible: bar.handleCount > 0 && _r.width > 0 && _r.height > 0
+            z: 22
+            Rectangle {
+                anchors.centerIn: parent
+                width: _h
+                height: _h
+                color: "white"
+                border.color: "black"
+                border.width: 2
+            }
         }
     }
 
@@ -62,7 +71,8 @@ Item {
             if (!bar)
                 return 0
             var r = bar.selectionBounds
-            return r.y + r.height + 8
+            var knob = bar.handleCount > 0 ? bar.handleSize * 0.5 : 0
+            return r.y + r.height + knob + 16
         }
         visible: bar && bar.selectionBounds.width > 0 && bar.actions.count > 0
         spacing: 0
@@ -74,8 +84,7 @@ Item {
                 height: strip.tile
                 color: "white"
                 border.color: "black"
-                border.width: 1
-                opacity: model.enabled ? 1.0 : 0.4
+                border.width: model.enabled ? 2 : 1
 
                 Image {
                     anchors.centerIn: parent

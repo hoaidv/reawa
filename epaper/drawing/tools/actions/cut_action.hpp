@@ -15,6 +15,7 @@ namespace tools {
 class CutAction final : public ToolAction {
 public:
     QString id() const override { return QStringLiteral("cut"); }
+    QString icon() const override { return QStringLiteral("qrc:/icons/icons/icon-epaper-cut.png"); }
     QString label(const HostCaps &) const override { return QStringLiteral("Cut"); }
     bool visible(const HostCaps &caps) const override
     {
