@@ -4,6 +4,10 @@
  */
 
 #include "doc_edit.hpp"
+#include "edit_helpers.hpp"
+#include "remove_node_edit.hpp"
+
+#include <stdexcept>
 
 namespace epaper {
 namespace document {
@@ -44,6 +48,60 @@ private:
     std::optional<std::string> m_role;
     std::vector<InkSample> m_samples;
 };
+
+inline ApplyResult AppendInkEdit::doApply(DeviceDocument &doc)
+{
+    if (m_nodeId.empty())
+        throw std::runtime_error("missing_id");
+    doc.requireUnique(m_nodeId);
+    DocNode n;
+    n.id = m_nodeId;
+    n.kind = NodeKind::Ink;
+    n.style = m_style;
+    n.role = m_role;
+    n.samples = m_samples;
+    if (n.samples.empty())
+        throw std::runtime_error("missing_samples");
+    doc.insertUnder(m_parentId, std::move(n));
+    return {true, {}};
+}
+
+inline std::unique_ptr<DocEdit> AppendInkEdit::generateUndo(const DeviceDocument &) const
+{
+    return makeRemoveEdit(m_id, m_nodeId);
+}
+
+inline JsonValue AppendInkEdit::serialize() const
+{
+    JsonValue::Object p;
+    p.emplace_back("id", JsonValue::string(m_nodeId));
+    if (m_parentId)
+        p.emplace_back("parentId", JsonValue::string(*m_parentId));
+    p.emplace_back("samples", samplesToJsonArray(m_samples));
+    p.emplace_back("style", styleToJson(m_style));
+    if (m_role)
+        p.emplace_back("role", JsonValue::string(*m_role));
+    return envelope(JsonValue::object(std::move(p)));
+}
+
+inline std::unique_ptr<DocEdit> AppendInkEdit::clone() const
+{
+    return std::make_unique<AppendInkEdit>(*this);
+}
+
+inline std::unique_ptr<AppendInkEdit> AppendInkEdit::fromPayload(const JsonValue &envelope,
+                                                                const JsonValue &payload)
+{
+    auto e = std::make_unique<AppendInkEdit>();
+    fillMeta(*e, envelope);
+    e->setNodeId(payload.getString("id"));
+    e->setParentId(parentIdFromJson(payload));
+    e->setStyle(styleFromJson(payload.get("style")));
+    if (const JsonValue *role = payload.get("role"); role && role->isString())
+        e->setRole(role->asString());
+    e->setSamples(samplesFromJsonArray(payload.get("samples")));
+    return e;
+}
 
 } // namespace document
 } // namespace epaper

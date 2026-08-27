@@ -1,6 +1,8 @@
 #pragma once
 /**
  * JsonValue → DocEdit factory (wire / fixtures).
+ * Included after DeviceDocument is complete so *edit.hpp method bodies can
+ * use the tree.
  * @implements [SRS-EP-07] typed edit dispatch
  */
 

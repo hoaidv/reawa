@@ -498,6 +498,70 @@ static void test_undo_after_live_preview_restores_origin()
     CHECK(sg2 && geomNear(sg2->transform.x, 40, 1) && geomNear(sg2->transform.y, 60, 1));
 }
 
+/** Live resize mutates scale before commit; inverse must restore origin scale. */
+static void test_undo_after_live_preview_resize_restores_scale()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitJson(makeSmartGroupOp("sg-1", "B", 40, 60, 40, 40)).applied);
+    const DocNode *sg0 = doc.find("B");
+    CHECK(sg0);
+    const SmartTransform originT = sg0->transform;
+    const SmartBounds originB = sg0->smartBounds;
+    CHECK(geomNear(originT.scaleX, 1) && geomNear(originT.scaleY, 1));
+    SmartTransform destT = originT;
+    destT.scaleX = 1.5;
+    destT.scaleY = 1.25;
+    destT.x = 32;
+    destT.y = 55;
+    CHECK(doc.applyLiveSmartGeometry("B", destT, originB));
+    SetSmartTransformEdit edit("op-live-resize", "B", originT, originB, destT, originB, true);
+    CHECK(doc.commitEdit(edit).applied);
+    const DocNode *mid = doc.find("B");
+    CHECK(mid && geomNear(mid->transform.scaleX, 1.5) && geomNear(mid->transform.scaleY, 1.25));
+    const UndoRingEntry *e = doc.newestEntry();
+    CHECK(e && e->inverses.size() == 1);
+    const auto *st = dynamic_cast<const SetSmartTransformEdit *>(e->inverses[0].get());
+    CHECK(st && geomNear(st->toT().scaleX, 1) && geomNear(st->toT().scaleY, 1));
+    CHECK(doc.undo().restored);
+    const DocNode *sg2 = doc.find("B");
+    CHECK(sg2 && geomNear(sg2->transform.scaleX, 1) && geomNear(sg2->transform.scaleY, 1));
+    CHECK(geomNear(sg2->transform.x, 40, 1) && geomNear(sg2->transform.y, 60, 1));
+}
+
+/** Move then resize must both commit; duplicate sst-N would leave resize un-undoable. */
+static void test_undo_resize_after_move_restores_scale()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitJson(makeSmartGroupOp("sg-1", "B", 40, 60, 40, 40)).applied);
+    const DocNode *sg0 = doc.find("B");
+    CHECK(sg0);
+    const SmartTransform originT = sg0->transform;
+    const SmartBounds originB = sg0->smartBounds;
+    SmartTransform moved = originT;
+    moved.x = 88;
+    moved.y = 91;
+    CHECK(doc.applyLiveSmartGeometry("B", moved, originB));
+    SetSmartTransformEdit mv("sst-1", "B", originT, originB, moved, originB, true);
+    CHECK(doc.commitEdit(mv).applied);
+    const DocNode *afterMove = doc.find("B");
+    CHECK(afterMove);
+    const SmartTransform moveT = afterMove->transform;
+    SmartTransform resized = moveT;
+    resized.scaleX = 2;
+    resized.scaleY = 2;
+    CHECK(doc.applyLiveSmartGeometry("B", resized, originB));
+    SetSmartTransformEdit rz("sst-1", "B", moveT, originB, resized, originB, true);
+    const ApplyResult dup = doc.commitEdit(rz);
+    CHECK(!dup.applied);
+    CHECK(dup.reason == "duplicate_opId");
+    SetSmartTransformEdit rz2("sst-2", "B", moveT, originB, resized, originB, true);
+    CHECK(doc.commitEdit(rz2).applied);
+    CHECK(doc.undo().restored);
+    const DocNode *sg2 = doc.find("B");
+    CHECK(sg2 && geomNear(sg2->transform.scaleX, 1) && geomNear(sg2->transform.scaleY, 1));
+    CHECK(geomNear(sg2->transform.x, 88, 1) && geomNear(sg2->transform.y, 91, 1));
+}
+
 /** @SRS-EP-07 Undo with matching lastOpId restores stored pre-op fields */
 static void test_undo_matching_lastopid_restores_pre_op_fields()
 {
@@ -1130,6 +1194,8 @@ int main()
     test_undo_structural_gesture_pushes_inverse_entry();
     test_undo_one_gesture_one_entry();
     test_undo_after_live_preview_restores_origin();
+    test_undo_after_live_preview_resize_restores_scale();
+    test_undo_resize_after_move_restores_scale();
     test_undo_matching_lastopid_restores_pre_op_fields();
     test_undo_viewport_tool_selection_copy_do_not_push();
     test_undo_ring_overflow_drops_oldest();

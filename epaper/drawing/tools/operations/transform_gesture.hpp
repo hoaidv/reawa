@@ -89,8 +89,11 @@ public:
             caps->toolUi->requestChromeRefresh();
             caps->doc->notifyHistory();
         } else {
-            ++m_seq;
-            const std::string opId = std::string("sst-") + std::to_string(m_seq);
+            // MoveOperation and ResizeOperation each own a TransformGesture.
+            // A per-instance seq reused sst-1 across tools, so resize after
+            // move was dropped as duplicate_opId while live geometry stayed.
+            static int seq = 0;
+            const std::string opId = std::string("sst-") + std::to_string(++seq);
             const epaper::document::SmartBounds liveB = m_live.liveB;
             epaper::document::SetSmartTransformEdit edit(
                 opId, id, originT, originB, m_live.liveT, liveB, true);
@@ -137,7 +140,6 @@ public:
 private:
     TransformSession m_live;
     QElapsedTimer m_ghost;
-    int m_seq = 0;
     bool m_didMutate = false;
 };
 

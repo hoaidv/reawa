@@ -10,11 +10,7 @@
 #include "doc_model.hpp"
 #include "operations/undo_stack.hpp"
 
-#include <algorithm>
 #include <chrono>
-#include <cmath>
-#include <cstdint>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <set>
@@ -261,13 +257,6 @@ public:
         return n;
     }
 
-    std::vector<std::string> allIds() const
-    {
-        std::vector<std::string> ids;
-        walk(rootChildren, [&](const DocNode &node) { ids.push_back(node.id); });
-        return ids;
-    }
-
     JsonValue toJSON() const
     {
         JsonValue::Object o;
@@ -281,8 +270,6 @@ public:
     }
 
     std::string snapshotString() const { return stringify(toJSON()); }
-
-    bool hasOp(const std::string &opId) const { return m_applied.count(opId) > 0; }
 
     /** Paint-order walk (sibling order). */
     template <typename Fn>
@@ -494,22 +481,6 @@ public:
         if (node.kind == NodeKind::Frame)
             throw std::runtime_error("frame_not_under_container");
         parent->children.push_back(std::move(node));
-    }
-
-    std::optional<std::string> parentIdOf(const JsonValue &p) const
-    {
-        const JsonValue *x = p.get("parentId");
-        if (!x || !x->isString())
-            return std::nullopt;
-        return x->asString();
-    }
-
-    std::string requireId(const JsonValue &p) const
-    {
-        const JsonValue *x = p.get("id");
-        if (!x || !x->isString())
-            throw std::runtime_error("missing_id");
-        return x->asString();
     }
 
     static ConnectorAnchor anchorFromJson(const JsonValue *a)
@@ -933,7 +904,7 @@ public:
 } // namespace document
 } // namespace epaper
 
-#include "operations/edit_bodies.hpp"
+#include "operations/from_json.hpp"
 
 namespace epaper {
 namespace document {

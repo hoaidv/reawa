@@ -4,7 +4,12 @@
  * @implements [SRS-EP-10] reparent capture into Smart Group
  */
 
+#include "compound_edit.hpp"
 #include "doc_edit.hpp"
+#include "edit_helpers.hpp"
+#include "remove_node_edit.hpp"
+
+#include <stdexcept>
 
 namespace epaper {
 namespace document {
@@ -44,6 +49,105 @@ private:
     std::vector<std::string> m_captureIds;
     std::vector<DocNode> m_children;
 };
+
+inline ApplyResult CreateSmartGroupEdit::doApply(DeviceDocument &doc)
+{
+    if (m_nodeId.empty())
+        throw std::runtime_error("missing_id");
+    doc.requireUnique(m_nodeId);
+    for (const auto &cid : m_captureIds) {
+        DocNode discarded;
+        if (!doc.detachInk(cid, &discarded))
+            throw std::runtime_error(std::string("capture_missing:") + cid);
+    }
+    DocNode n;
+    n.id = m_nodeId;
+    n.kind = NodeKind::SmartGroup;
+    n.smartBounds = m_bounds;
+    n.transform = m_transform;
+    n.inkScaleMode = m_inkScaleMode.empty() ? "fixedInk" : m_inkScaleMode;
+    n.children = m_children;
+    doc.insertUnder(m_parentId, std::move(n));
+    return {true, {}};
+}
+
+inline std::vector<std::string> CreateSmartGroupEdit::targets() const
+{
+    std::vector<std::string> ts;
+    addTargetId(ts, m_nodeId);
+    for (const auto &c : m_children)
+        addTargetId(ts, c.id);
+    for (const auto &id : m_captureIds)
+        addTargetId(ts, id);
+    return ts;
+}
+
+inline std::unique_ptr<DocEdit> CreateSmartGroupEdit::generateUndo(const DeviceDocument &doc) const
+{
+    auto compound = std::make_unique<CompoundEdit>();
+    compound->setId(m_id);
+    std::vector<std::string> ids = m_captureIds;
+    for (const auto &c : m_children)
+        addTargetId(ids, c.id);
+    collectCapturedRestores(doc, ids, *compound, m_id);
+    compound->addPart(makeRemoveEdit(m_id, m_nodeId));
+    if (compound->parts().size() == 1)
+        return makeRemoveEdit(m_id, m_nodeId);
+    return compound;
+}
+
+inline JsonValue CreateSmartGroupEdit::serialize() const
+{
+    JsonValue::Array children;
+    for (const auto &c : m_children)
+        children.push_back(DeviceDocument::nodeToJson(c));
+    JsonValue::Array cap;
+    for (const auto &id : m_captureIds)
+        cap.push_back(JsonValue::string(id));
+    JsonValue::Object p;
+    p.emplace_back("id", JsonValue::string(m_nodeId));
+    if (m_parentId)
+        p.emplace_back("parentId", JsonValue::string(*m_parentId));
+    p.emplace_back("bounds", boundsToJson(m_bounds));
+    p.emplace_back("transform", transformToJson(m_transform));
+    p.emplace_back("inkScaleMode", JsonValue::string(m_inkScaleMode));
+    p.emplace_back("captureIds", JsonValue::array(std::move(cap)));
+    p.emplace_back("children", JsonValue::array(std::move(children)));
+    return envelope(JsonValue::object(std::move(p)));
+}
+
+inline std::unique_ptr<DocEdit> CreateSmartGroupEdit::clone() const
+{
+    return std::make_unique<CreateSmartGroupEdit>(*this);
+}
+
+inline std::unique_ptr<CreateSmartGroupEdit>
+CreateSmartGroupEdit::fromPayload(const JsonValue &envelope, const JsonValue &payload)
+{
+    auto e = std::make_unique<CreateSmartGroupEdit>();
+    fillMeta(*e, envelope);
+    e->setNodeId(payload.getString("id"));
+    e->setParentId(parentIdFromJson(payload));
+    e->setBounds(boundsFromJson(payload.get("bounds")));
+    if (const JsonValue *t = payload.get("transform"); t && t->isObject())
+        e->setTransform(transformFromJson(t));
+    e->setInkScaleMode(payload.getString("inkScaleMode", "fixedInk"));
+    std::vector<std::string> caps;
+    if (const JsonValue *ids = payload.get("captureIds"); ids && ids->isArray()) {
+        for (const auto &idv : ids->asArray()) {
+            if (idv.isString())
+                caps.push_back(idv.asString());
+        }
+    }
+    e->setCaptureIds(std::move(caps));
+    std::vector<DocNode> children;
+    if (const JsonValue *ch = payload.get("children"); ch && ch->isArray()) {
+        for (const auto &c : ch->asArray())
+            children.push_back(DeviceDocument::nodeFromJson(c));
+    }
+    e->setChildren(std::move(children));
+    return e;
+}
 
 } // namespace document
 } // namespace epaper

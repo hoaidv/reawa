@@ -6,6 +6,9 @@
  */
 
 #include "doc_edit.hpp"
+#include "edit_helpers.hpp"
+
+#include <stdexcept>
 
 namespace epaper {
 namespace document {
@@ -68,6 +71,64 @@ private:
     SmartBounds m_fromB;
     bool m_hasFrom = false;
 };
+
+inline std::unique_ptr<SetSmartTransformEdit>
+SetSmartTransformEdit::fromPayload(const JsonValue &envelope, const JsonValue &payload)
+{
+    auto e = std::make_unique<SetSmartTransformEdit>();
+    fillMeta(*e, envelope);
+    e->setNodeId(payload.getString("id"));
+    if (const JsonValue *t = payload.get("transform"))
+        e->setTo(transformFromJson(t), nullptr);
+    if (const JsonValue *b = payload.get("bounds"); b && b->isObject()) {
+        const SmartBounds bb = boundsFromJson(b);
+        e->setTo(e->toT(), &bb);
+    }
+    return e;
+}
+
+inline ApplyResult SetSmartTransformEdit::doApply(DeviceDocument &doc)
+{
+    DocNode *node = doc.mutableFind(m_nodeId);
+    if (!node || node->kind != NodeKind::SmartGroup)
+        throw std::runtime_error(std::string("not_smart_group:") + m_nodeId);
+    node->transform = m_toT;
+    if (m_hasToBounds)
+        node->smartBounds = m_toB;
+    return {true, {}};
+}
+
+inline std::unique_ptr<DocEdit> SetSmartTransformEdit::generateUndo(const DeviceDocument &doc) const
+{
+    auto u = std::make_unique<SetSmartTransformEdit>();
+    u->setId(m_id);
+    u->setUndo(true);
+    u->setNodeId(m_nodeId);
+    if (m_hasFrom) {
+        u->setTo(m_fromT, &m_fromB);
+        u->setFrom(m_toT, m_toB);
+        return u;
+    }
+    const DocNode *n = doc.find(m_nodeId);
+    if (n)
+        u->setTo(n->transform, &n->smartBounds);
+    return u;
+}
+
+inline JsonValue SetSmartTransformEdit::serialize() const
+{
+    JsonValue::Object payload;
+    payload.emplace_back("id", JsonValue::string(m_nodeId));
+    payload.emplace_back("transform", transformToJson(m_toT));
+    if (m_hasToBounds)
+        payload.emplace_back("bounds", boundsToJson(m_toB));
+    return envelope(JsonValue::object(std::move(payload)));
+}
+
+inline std::unique_ptr<DocEdit> SetSmartTransformEdit::clone() const
+{
+    return std::make_unique<SetSmartTransformEdit>(*this);
+}
 
 } // namespace document
 } // namespace epaper

@@ -161,6 +161,30 @@ static void test_with_bounds_scales()
     CHECK(near(mapped.bounds.width, 100));
 }
 
+static void test_resize_undo_restores_scale()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitJson(createSg("sg_u", "withBounds", 100, 100)).applied);
+    const DocNode *orig = doc.find("sg_u");
+    CHECK(orig);
+    const SmartTransform originT = orig->transform;
+    const SmartBounds originB = orig->smartBounds;
+    const WorldBox origin = originWorldAabb(originB, originT);
+    const WorldBox grown = resizeWorldAabbFromHandle(origin, ResizeHandle::Se, origin.maxX + 100,
+                                                     origin.maxY + 100);
+    const auto mapped = smartTransformFromWorldAabb(grown, originB, originT, "withBounds");
+    CHECK(doc.applyLiveSmartGeometry("sg_u", mapped.transform, mapped.bounds));
+    SetSmartTransformEdit rz("rz-undo", "sg_u", originT, originB, mapped.transform, mapped.bounds,
+                             true);
+    CHECK(doc.commitEdit(rz).applied);
+    const DocNode *grownN = doc.find("sg_u");
+    CHECK(grownN && near(grownN->transform.scaleX, 2.0, 0.05));
+    CHECK(doc.undo().restored);
+    const DocNode *undone = doc.find("sg_u");
+    CHECK(undone && near(undone->transform.scaleX, 1.0) && near(undone->transform.scaleY, 1.0));
+    CHECK(near(undone->transform.x, originT.x) && near(undone->transform.y, originT.y));
+}
+
 static void test_inverted_resize_non_negative()
 {
     WorldBox box{0, 0, 40, 30};
@@ -186,6 +210,7 @@ int main()
     test_move_commit_equals_preview();
     test_fixed_ink_resize_keeps_uv_and_sample_size();
     test_with_bounds_scales();
+    test_resize_undo_restores_scale();
     test_inverted_resize_non_negative();
     test_lod();
     if (g_fails) {
