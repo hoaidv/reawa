@@ -19,6 +19,12 @@ class SelectionMode final : public InteractionMode {
 public:
     ModeId id() const override { return ModeId::Selection; }
 
+    std::vector<OperationKind> penOperations() const override
+    {
+        return {OperationKind::Resize, OperationKind::Move, OperationKind::Lasso,
+                OperationKind::Marquee};
+    }
+
     void activate(HostCaps &caps, InputHub &hub, HandTouchModifier &hand) override
     {
         (void)caps;

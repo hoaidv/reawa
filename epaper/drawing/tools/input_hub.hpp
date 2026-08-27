@@ -2,7 +2,7 @@
 
 /**
  * InputHub — Interaction Router demux (ADR-0033).
- * Phase 3: HandTouch match → allow-list → lock Operation → feed receive sink.
+ * Unified pointer/pinch dispatch; Operations own gesture bodies.
  * @implements [SRS-EP-04] @implements [SRS-EP-21]
  */
 
@@ -12,28 +12,12 @@
 #include "operation.hpp"
 #include "strategy.hpp"
 
-#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 namespace epaper {
 namespace tools {
-
-struct FingerDownContext {
-    PointerSample sample;
-    bool knobHit = false;
-    bool boxHit = false;
-};
-
-struct PinchContext {
-    QPointF contactA;
-    QPointF contactB;
-    QPointF centroid;
-    qreal scale = 1.0;
-};
-
-using OperationFactory = std::function<std::unique_ptr<Operation>(HostCaps &)>;
 
 class InputHub {
 public:
@@ -48,83 +32,46 @@ public:
     InteractionMode *activeMode() const { return m_activeMode; }
 
     Operation *lockedOperation() const { return m_lockedOp; }
-    void clearLock() { m_lockedOp = nullptr; }
 
-    void registerFactory(OperationKind kind, OperationFactory factory)
+    void setOperation(OperationKind kind, std::unique_ptr<Operation> op)
     {
-        m_factories[static_cast<int>(kind)] = std::move(factory);
+        m_ops[static_cast<int>(kind)] = std::move(op);
     }
 
-    /** Cached finger Operations — reused across gestures (no per-down allocation). */
-    void setFingerOperation(OperationKind kind, std::unique_ptr<Operation> op)
-    {
-        m_fingerOps[static_cast<int>(kind)] = std::move(op);
-    }
-
-    void clearFingerOperations() { m_fingerOps.clear(); }
-
-    void clearFactories() { m_factories.clear(); }
+    void clearOperations() { m_ops.clear(); }
 
     void registerHitRegion(const HitRegion &r) { m_hits.push_back(r); }
     void clearHitRegions() { m_hits.clear(); }
 
-    StrategyKind classifyPointer(bool pen) const
-    {
-        (void)pen;
-        return StrategyKind::RawPointer;
-    }
-
-    /** HandTouch one-finger down: match among profile allow-list, lock, onDown. */
-    bool dispatchFingerDown(const FingerDownContext &ctx);
-
-    /** Pen (or finger) selection transform down: HitTarget resize, then move pick. */
-    bool dispatchSelectionPointerDown(const FingerDownContext &ctx);
-
-    /** Feed locked RawPointer sink; returns false if nothing locked. */
-    bool dispatchPointerMove(const PointerSample &s, int fingerCount = 1);
-
-    /** onUp + optional postHandling + clear lock. */
-    bool dispatchPointerUp(const PointerSample &s, const HandTouchCommitInfo &commit);
-
-    /** Cancel locked pointer Operation. */
+    bool dispatchPointerDown(const PointerSample &s);
+    bool dispatchPointerMove(const PointerSample &s);
+    bool dispatchPointerUp(const PointerSample &s);
     void dispatchPointerCancel();
+    void cancelAll();
 
-    /** Stationary tap → Tap strategy match (SelectOperation). */
-    bool dispatchFingerTap(const PointerSample &s, const HandTouchCommitInfo &commit);
+    bool dispatchTap(const PointerSample &s);
 
-    /** Two-finger begin → lock NavigationOperation, beginTwoFinger. */
-    bool dispatchPinchBegin(const PinchContext &ctx);
-
-    bool dispatchPinchUpdate(const PinchContext &ctx);
-    void dispatchPinchEnd(const HandTouchCommitInfo &commit);
-
-    void runPostHandling(const HandTouchCommitInfo &info)
-    {
-        if (m_activeMode)
-            m_hand.runPostHandling(m_activeMode->id(), m_caps, info);
-    }
+    bool dispatchPinchBegin(qreal x, qreal y, qreal scale);
+    bool dispatchPinchUpdate(qreal x, qreal y, qreal scale);
+    void dispatchPinchEnd();
 
 private:
     const HandTouchProfile *activeProfile() const;
-    std::vector<OperationKind> allowedKinds() const;
+    bool kindAllowed(OperationKind kind, PointerDevice device) const;
+    Operation *opFor(OperationKind kind) const;
+    Operation *matchOperation(StrategyKind channel, const PointerSample &s);
 
-    bool kindAllowed(OperationKind kind) const;
-    bool shouldTryKind(OperationKind kind, const FingerDownContext *ctx) const;
-    Operation *matchOperation(StrategyKind channel, const PointerSample &s,
-                              const FingerDownContext *fingerCtx, PointerDevice device);
-
-    void applyHitContext(Operation *op, const FingerDownContext &ctx);
     void feedRawDown(Operation *op, const PointerSample &s);
-    void feedRawMove(Operation *op, const PointerSample &s, int fingerCount);
+    void feedRawMove(Operation *op, const PointerSample &s);
     void feedRawUp(Operation *op, const PointerSample &s);
     void feedRawCancel(Operation *op);
+    void runCommitPostHandling();
 
     HostCaps m_caps;
     HandTouchModifier m_hand;
     InteractionMode *m_activeMode = nullptr;
     Operation *m_lockedOp = nullptr;
-    std::unordered_map<int, OperationFactory> m_factories;
-    std::unordered_map<int, std::unique_ptr<Operation>> m_fingerOps;
+    std::unordered_map<int, std::unique_ptr<Operation>> m_ops;
     std::vector<HitRegion> m_hits;
 };
 

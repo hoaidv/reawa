@@ -5,13 +5,14 @@
  * @implements [SRS-EP-12] @implements [ADR-0019]
  */
 
-#include "../manip_session.hpp"
-#include "../selection_session.hpp"
 #include "document/manipulate.hpp"
+#include "selection_context.hpp"
 #include "session_doc_context.hpp"
 
+#include <QPointF>
 #include <QRectF>
 #include <QString>
+#include <functional>
 
 class QPainter;
 
@@ -42,17 +43,15 @@ public:
     ToolChromeState &state() { return m_state; }
     const ToolChromeState &state() const { return m_state; }
 
-    void refresh(epaper::selection::SelectionSession &selection, epaper::manip::ManipSession &manip,
-                 SessionDocContext &doc, bool isSelectionTool);
+    void refresh(SelectionContext &selection, SessionDocContext &doc, bool isSelectionTool);
     void damage(const QRectF &next, const std::function<void(const QRectF &)> &repaint);
     void damageSegment(const QRectF &seg, const std::function<void(const QRectF &)> &repaint);
-    void syncPresence(epaper::selection::SelectionSession &selection, bool isSelectionTool,
+    void syncPresence(SelectionContext &selection, bool isSelectionTool,
                       const std::function<void(bool visible)> &setVisible,
                       const std::function<void(bool penWaveform)> &setStrokeWaveform);
-    void paint(QPainter *painter, epaper::selection::SelectionSession &selection,
-               epaper::manip::ManipSession &manip, SessionDocContext &doc, bool isSelectionTool);
-    void redrawLiveManip(epaper::selection::SelectionSession &selection,
-                         epaper::manip::ManipSession &manip, SessionDocContext &doc,
+    void paint(QPainter *painter, SelectionContext &selection, SessionDocContext &doc,
+               bool isSelectionTool);
+    void redrawLiveManip(SelectionContext &selection, SessionDocContext &doc, bool resizing,
                          const std::function<void(const QRectF &)> &repaint,
                          const std::function<void()> &emitChanged);
     int handleIndexAtPanel(const QPointF &panel, double hitDu) const;

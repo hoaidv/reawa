@@ -1,43 +1,29 @@
 #pragma once
 
 #include <QQuickPaintedItem>
-#include <QElapsedTimer>
-#include <QPointF>
 #include <QRectF>
 #include <QString>
 
-#include <QEvent>
 #include <QPainter>
+#include <memory>
 
-#include "tools/operation.hpp"
-#include "tools/operations/ink_stroke_operation.hpp"
-
-#include "finger_gesture_machine.hpp"
-#include "input/pen_sample.hpp"
-#include "manip_session.hpp"
-#include "selection_session.hpp"
-#include "tools/connector_recognizer_modifier.hpp"
-#include "tools/finger_intent_applier.hpp"
-#include "tools/ink_box_recognizer_modifier.hpp"
 #include "tools/input_hub.hpp"
-#include "tools/manip_intent_applier.hpp"
 #include "tools/modes/pen_mode.hpp"
 #include "tools/modes/selection_mode.hpp"
 #include "tools/selection_context_host.hpp"
-#include "tools/selection_intent_applier.hpp"
-#include "tools/finger_host.hpp"
-#include "tools/manip_host.hpp"
-#include "tools/selection_stroke_host.hpp"
-#include "tools/selection_manip_controller.hpp"
 #include "tools/session_doc_context.hpp"
-#include "tools/tool_canvas_context.hpp"
 #include "tools/tablet_ink_sink.hpp"
+#include "tools/tool_canvas_context.hpp"
+#include "tools/connector_recognizer_modifier.hpp"
+#include "tools/ink_box_recognizer_modifier.hpp"
+
+#include "selection_session.hpp"
 
 class CanvasSession;
 class TabletCanvasItem;
 
 /**
- * ToolCanvas — Qt router host for pointer/finger → InputHub + context ports.
+ * ToolCanvas — Qt router host; Q_INVOKABLE forwards to InputHub.
  * @implements [SRS-EP-12] @implements [ADR-0019] @implements [ADR-0033]
  */
 class ToolCanvasItem : public QQuickPaintedItem
@@ -89,7 +75,7 @@ protected:
     Q_INVOKABLE void onPinchUpdate(qreal x, qreal y, qreal scale);
     Q_INVOKABLE void onPinchEnd();
 
-    bool handTouchArmed() const { return m_finger.armed; }
+    bool handTouchArmed() const { return m_hub.handTouch().armed(); }
     Q_INVOKABLE void toggleHandTouch();
     Q_INVOKABLE void cancelHandTouch();
 
@@ -117,27 +103,9 @@ signals:
 private:
     void syncToolHost();
     void syncActiveMode();
-    void syncHandTouchFactories();
+    void registerOperations();
     void onDocumentOrCameraChanged();
-    void feedInkStroke(QEvent::Type type, const PanelPt &panel, qreal pressure);
-    void feedSelectStroke(QEvent::Type type, const PanelPt &panel);
-    bool beginFingerTouch(const PanelPt &panel);
-    void updateFingerTouch(const PanelPt &panel, int fingerCount);
-    void endFingerTouch(const PanelPt &panel);
-    bool beginTwoFingerTouch(const PanelPt &a, const PanelPt &b);
-    void updateTwoFingerTouch(const PanelPt &a, const PanelPt &b);
-    void endTwoFingerTouch();
-    PanelPt pinchArmPoint(qreal x, qreal y, qreal scale, bool positive) const;
-    bool isSelectionTool() const;
-    bool selectionGestureActive() const { return m_selection.active(); }
-    bool tryDispatchSelectionPointer(const PanelPt &panel, qreal pressure);
-    bool fingerHitsBox(const PanelPt &panel) const;
-
-    epaper::tools::SelectionStrokeHost makeSelectionStrokeHost();
-    epaper::tools::FingerHost makeFingerHost();
-    epaper::tools::ManipHost makeManipHost();
-    epaper::tools::HandTouchCommitInfo makeHandTouchCommitInfo(
-        epaper::tools::OperationKind kind) const;
+    epaper::tools::PointerSample sample(qreal x, qreal y, qreal pressure, bool pen) const;
 
     CanvasSession *m_session = nullptr;
     TabletCanvasItem *m_surface = nullptr;
@@ -146,25 +114,11 @@ private:
     epaper::tools::SelectionMode m_selectionMode;
     epaper::tools::SelectionContextHost m_selCtx;
     epaper::selection::SelectionSession m_selection;
-    epaper::manip::ManipSession m_manip;
-    epaper::fingergesture::FingerGestureMachine m_finger;
     std::unique_ptr<epaper::tools::TabletInkSink> m_inkSink;
     std::unique_ptr<epaper::tools::SessionDocContext> m_docCtx;
     std::unique_ptr<epaper::tools::ToolCanvasContext> m_toolCtx;
-    epaper::tools::ManipIntentApplier m_manipApplier;
-    epaper::tools::SelectionIntentApplier m_selApplier;
-    epaper::tools::FingerIntentApplier m_fingerApplier;
-    epaper::tools::SelectionManipController m_selManip;
-    std::unique_ptr<epaper::tools::InkStrokeOperation> m_inkStroke;
-    std::unique_ptr<epaper::tools::Operation> m_selectStroke;
     std::unique_ptr<epaper::tools::InkBoxRecognizerModifier> m_inkBoxRecog;
     std::unique_ptr<epaper::tools::ConnectorRecognizerModifier> m_connRecog;
-    QElapsedTimer m_fingerPanClock;
-    QElapsedTimer m_selectionGhostClock;
-    int m_toolIntentSeq = 0;
-    bool m_pinchIgnore = false;
-    qreal m_pinchArm = 80.0;
-    qreal m_pinchScale0 = 1.0;
     QMetaObject::Connection m_docConn;
     QMetaObject::Connection m_camConn;
     QMetaObject::Connection m_toolConn;

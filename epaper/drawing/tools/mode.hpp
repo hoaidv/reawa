@@ -7,6 +7,9 @@
 
 #include "host_caps.hpp"
 #include "mode_id.hpp"
+#include "operation.hpp"
+
+#include <vector>
 
 namespace epaper {
 namespace tools {
@@ -20,6 +23,8 @@ public:
     virtual ModeId id() const = 0;
     virtual void activate(HostCaps &caps, InputHub &hub, HandTouchModifier &hand) = 0;
     virtual void deactivate(InputHub &hub, HandTouchModifier &hand) = 0;
+    /** Pen-down candidates (not HandTouch allow-list). Empty = none. */
+    virtual std::vector<OperationKind> penOperations() const { return {}; }
 };
 
 } // namespace tools

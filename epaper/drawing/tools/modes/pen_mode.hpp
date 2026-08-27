@@ -20,6 +20,11 @@ class PenMode final : public InteractionMode {
 public:
     ModeId id() const override { return ModeId::Pen; }
 
+    std::vector<OperationKind> penOperations() const override
+    {
+        return {OperationKind::InkStroke};
+    }
+
     void activate(HostCaps &caps, InputHub &hub, HandTouchModifier &hand) override
     {
         (void)hub;

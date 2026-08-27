@@ -7,7 +7,6 @@
 #include "rendering/rendering_qt.hpp"
 
 #include <QPainter>
-#include <QPainterPath>
 #include <QtMath>
 
 namespace {
@@ -23,14 +22,12 @@ QRectF modeChipRect(const QRectF &box)
 namespace epaper {
 namespace tools {
 
-void ToolChrome::refresh(epaper::selection::SelectionSession &selection,
-                         epaper::manip::ManipSession &manip, SessionDocContext &doc,
-                         bool isSelectionTool)
+void ToolChrome::refresh(SelectionContext &selection, SessionDocContext &doc, bool isSelectionTool)
 {
     using namespace epaper::document;
     m_state.encloseRefuseReason.clear();
     SmartBounds unionB;
-    const std::vector<std::string> &ids = selection.ids;
+    const std::vector<std::string> &ids = selection.ids();
     QRectF bounds;
     if (!ids.empty() && unionAabbOfIds(doc.document(), ids, unionB)) {
         const QPointF tl = doc.worldToPanel(unionB.x, unionB.y);
@@ -38,8 +35,9 @@ void ToolChrome::refresh(epaper::selection::SelectionSession &selection,
             doc.worldToPanel(unionB.x + unionB.width, unionB.y + unionB.height);
         bounds = QRectF(tl, br).normalized();
     }
-    m_state.encloseVisible =
-        isSelectionTool && ids.size() >= 2 && !selection.isMarqueeOrLasso();
+    const bool stroke = selection.phase() == SelectionPhase::Selecting;
+    const bool transforming = selection.phase() == SelectionPhase::Transforming;
+    m_state.encloseVisible = isSelectionTool && ids.size() >= 2 && !stroke;
     if (m_state.encloseVisible && !bounds.isEmpty())
         m_state.encloseCtaRect =
             QRectF(bounds.center().x() - 32.0, bounds.bottom() + 36.0, 64.0, 64.0);
@@ -50,13 +48,13 @@ void ToolChrome::refresh(epaper::selection::SelectionSession &selection,
         m_state.selectionChromeDirty = m_state.selectionChromeDirty.united(modeChipRect(bounds));
     m_state.selectionChromeDirty.adjust(-12, -12, 12, 12);
     m_state.selectionBoundsRect = bounds;
+    m_state.liveDirtyPrev = QRectF();
     m_state.handleCount = 0;
     m_state.handleSize = 16.0;
     m_state.modeChipVisible = false;
     m_state.modeChipLabel.clear();
     m_state.modeChipRect = QRectF();
-    if (isSelectionTool && !ids.empty() && !bounds.isEmpty() && !selection.isMarqueeOrLasso()
-        && !selection.isLiveManip()) {
+    if (isSelectionTool && !ids.empty() && !bounds.isEmpty() && !stroke && !transforming) {
         const DocNode *one = ids.size() == 1 ? doc.document().find(ids[0]) : nullptr;
         const bool manipChrome = one && descriptorFor(one->kind).has(Verb::Resize);
         m_state.handleCount = manipChrome ? 8 : 6;
@@ -68,7 +66,6 @@ void ToolChrome::refresh(epaper::selection::SelectionSession &selection,
             m_state.modeChipRect = modeChipRect(bounds);
         }
     }
-    (void)manip;
 }
 
 void ToolChrome::damage(const QRectF &next, const std::function<void(const QRectF &)> &repaint)
@@ -89,15 +86,14 @@ void ToolChrome::damageSegment(const QRectF &seg,
     repaint(seg.toAlignedRect());
 }
 
-void ToolChrome::syncPresence(epaper::selection::SelectionSession &selection,
-                              bool isSelectionTool,
+void ToolChrome::syncPresence(SelectionContext &selection, bool isSelectionTool,
                               const std::function<void(bool visible)> &setVisible,
                               const std::function<void(bool penWaveform)> &setStrokeWaveform)
 {
-    const bool liveManip = selection.isLiveManip();
-    const bool strokeChrome = selection.isMarqueeOrLasso();
+    const bool liveManip = selection.phase() == SelectionPhase::Transforming;
+    const bool strokeChrome = selection.phase() == SelectionPhase::Selecting;
     const bool settled =
-        isSelectionTool && !selection.ids.empty() && !liveManip && !strokeChrome;
+        isSelectionTool && !selection.ids().empty() && !liveManip && !strokeChrome;
     const bool on = isSelectionTool && (strokeChrome || liveManip || settled);
     if (setVisible)
         setVisible(on);
@@ -105,8 +101,7 @@ void ToolChrome::syncPresence(epaper::selection::SelectionSession &selection,
         setStrokeWaveform(false);
 }
 
-void ToolChrome::paint(QPainter *painter, epaper::selection::SelectionSession &selection,
-                       epaper::manip::ManipSession &manip, SessionDocContext &doc,
+void ToolChrome::paint(QPainter *painter, SelectionContext &selection, SessionDocContext &doc,
                        bool isSelectionTool)
 {
     if (!isSelectionTool)
@@ -115,10 +110,10 @@ void ToolChrome::paint(QPainter *painter, epaper::selection::SelectionSession &s
     painter->save();
     painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
 
-    if (selection.gesture == epaper::selection::Gesture::Move
-        || selection.gesture == epaper::selection::Gesture::Resize) {
+    if (selection.phase() == SelectionPhase::Transforming) {
         using namespace epaper::document;
-        const DocNode *n = doc.document().find(manip.nodeId);
+        const std::string &id = selection.pickableId();
+        const DocNode *n = doc.document().find(id);
         if (n) {
             epaper::render::FrameProjector proj;
             proj.frame = &doc.frame();
@@ -126,7 +121,7 @@ void ToolChrome::paint(QPainter *painter, epaper::selection::SelectionSession &s
             req.sharp = true;
             epaper::render::DocumentRenderer renderer;
             epaper::render::QPainterPixelSink sink(painter);
-            renderer.renderSubtree(doc.document(), proj, req, manip.nodeId, sink);
+            renderer.renderSubtree(doc.document(), proj, req, id, sink);
 
             SmartBounds wb;
             if (boundsOf(*n, wb)) {
@@ -141,7 +136,7 @@ void ToolChrome::paint(QPainter *painter, epaper::selection::SelectionSession &s
                 painter->setPen(dotted);
                 painter->drawRect(r);
 
-                if (manip.resizing()) {
+                if (m_state.handleCount == 8) {
                     const qreal h = kHandleVisualDu;
                     const QPointF pts[8] = {
                         r.topLeft(),
@@ -173,40 +168,25 @@ void ToolChrome::paint(QPainter *painter, epaper::selection::SelectionSession &s
         return;
     }
 
+    if (selection.phase() == SelectionPhase::Selecting) {
+        painter->restore();
+        return;
+    }
+
     QPen dotted(Qt::black);
     dotted.setWidthF(3.0);
     dotted.setStyle(Qt::DotLine);
     painter->setBrush(Qt::NoBrush);
 
-    if (selection.gesture == epaper::selection::Gesture::Marquee) {
-        painter->setPen(dotted);
-        painter->drawRect(
-            QRectF(QPointF(selection.marqueeStart.x, selection.marqueeStart.y),
-                   QPointF(selection.marqueeEnd.x, selection.marqueeEnd.y))
-                .normalized());
-        painter->restore();
-        return;
-    }
-    if (selection.gesture == epaper::selection::Gesture::Lasso && selection.lasso.size() >= 2) {
-        painter->setPen(dotted);
-        QPainterPath path;
-        path.moveTo(QPointF(selection.lasso.front().x, selection.lasso.front().y));
-        for (size_t i = 1; i < selection.lasso.size(); ++i)
-            path.lineTo(QPointF(selection.lasso[i].x, selection.lasso[i].y));
-        painter->drawPath(path);
-        painter->restore();
-        return;
-    }
-
-    if (selection.ids.empty() && selection.pickableId.empty() && !selection.active()) {
+    if (selection.ids().empty() && selection.pickableId().empty()) {
         painter->restore();
         return;
     }
 
     using namespace epaper::document;
-    std::vector<std::string> ids = selection.ids;
-    if (ids.empty() && !selection.pickableId.empty())
-        ids.push_back(selection.pickableId);
+    std::vector<std::string> ids = selection.ids();
+    if (ids.empty() && !selection.pickableId().empty())
+        ids.push_back(selection.pickableId());
 
     SmartBounds unionB;
     QRectF r;
@@ -226,21 +206,20 @@ void ToolChrome::paint(QPainter *painter, epaper::selection::SelectionSession &s
     painter->restore();
 }
 
-void ToolChrome::redrawLiveManip(epaper::selection::SelectionSession &selection,
-                                 epaper::manip::ManipSession &manip, SessionDocContext &doc,
+void ToolChrome::redrawLiveManip(SelectionContext &selection, SessionDocContext &doc, bool resizing,
                                  const std::function<void(const QRectF &)> &repaint,
                                  const std::function<void()> &emitChanged)
 {
     using namespace epaper::document;
     SmartBounds wb;
-    const DocNode *n = doc.document().find(manip.nodeId);
+    const DocNode *n = doc.document().find(selection.pickableId());
     QRectF liveBounds;
     QRectF next;
     if (n && boundsOf(*n, wb)) {
         liveBounds = doc.worldBoundsToPanel(wb);
         next = liveBounds.adjusted(-12, -12, 12, 48);
     }
-    const QRectF connLive = doc.boundConnectorsPanelUnion(manip.nodeId);
+    const QRectF connLive = doc.boundConnectorsPanelUnion(selection.pickableId());
     if (!connLive.isEmpty())
         next = next.isEmpty() ? connLive : next.united(connLive);
     const QRectF toolDirty = m_state.liveDirtyPrev.isNull()
@@ -250,13 +229,13 @@ void ToolChrome::redrawLiveManip(epaper::selection::SelectionSession &selection,
     m_state.selectionChromeDirty = m_state.originPanelRect;
     if (!liveBounds.isEmpty())
         m_state.selectionBoundsRect = liveBounds;
-    const bool holdKnobs = manip.active && manip.resizing();
-    if (!holdKnobs)
+    if (!resizing)
         m_state.handleCount = 0;
+    else
+        m_state.handleCount = 8;
     m_state.modeChipVisible = false;
     if (emitChanged)
         emitChanged();
-    (void)selection;
     damage(toolDirty, repaint);
 }
 

@@ -1,20 +1,23 @@
 #pragma once
 
 /**
- * MoveOperation — pick-move via ManipSession (pen + finger HandTouch).
+ * MoveOperation — pick-move; owns ManipSession via TransformGesture.
  * @implements [SRS-EP-11] @implements [SRS-EP-21]
  */
 
-#include "../manip_host.hpp"
+#include "../host_caps.hpp"
 #include "../operation.hpp"
+#include "../transform_gesture.hpp"
+#include "document/capability.hpp"
+#include "document/manipulate.hpp"
 
 namespace epaper {
 namespace tools {
 
 class MoveOperation final : public Operation, public RawPointerSink {
 public:
-    explicit MoveOperation(ManipHost host)
-        : m_host(std::move(host))
+    explicit MoveOperation(HostCaps *caps)
+        : m_caps(caps)
     {
         m_desc.kind = OperationKind::Move;
         m_desc.matchOn = StrategyKind::RawPointer;
@@ -26,48 +29,67 @@ public:
 
     OperationKind kind() const override { return OperationKind::Move; }
     const OperationDescriptor &descriptor() const override { return m_desc; }
+    bool didMutateSelection() const override { return m_gesture.didMutateSelection(); }
 
     bool match(StrategyKind channel, const PointerSample &s) const override
     {
-        (void)s;
-        return channel == StrategyKind::RawPointer && m_boxHit;
+        if (channel != StrategyKind::RawPointer || !m_caps || !m_caps->doc || !m_caps->toolUi)
+            return false;
+        const auto w = m_caps->toolUi->panelToWorld(s.panel);
+        return m_caps->doc->hitMoveTarget(w.x, w.y) != nullptr;
     }
-
-    void setHitContext(bool boxHit) { m_boxHit = boxHit; }
 
     void onDown(const PointerSample &s) override
     {
-        if (!m_host.beginMoveFromPanel)
+        if (!m_caps || !m_caps->doc || !m_caps->toolUi || !m_caps->selection)
             return;
-        const bool arm = s.device == PointerDevice::Finger;
-        m_host.beginMoveFromPanel(s.panel, arm);
+        m_gesture.resetMutate();
+        if (s.device == PointerDevice::Finger && m_caps->setExclusiveTool)
+            m_caps->setExclusiveTool(QStringLiteral("sel_freeform"));
+        m_caps->toolUi->clearManipUnavailable();
+        const auto w = m_caps->toolUi->panelToWorld(s.panel);
+        const epaper::document::DocNode *hit = m_caps->doc->hitMoveTarget(w.x, w.y);
+        if (!hit)
+            return;
+
+        epaper::document::CapabilityDescriptor cap = epaper::document::descriptorFor(hit->kind);
+        bool lodOk = true;
+        epaper::document::SmartBounds wb;
+        if (epaper::document::boundsOf(*hit, wb))
+            lodOk = m_caps->toolUi->lodOkPanel(wb);
+        const epaper::document::GestureKind kind =
+            epaper::document::resolvePress(cap, lodOk, false, false, true);
+        if (kind == epaper::document::GestureKind::Unavailable) {
+            m_caps->toolUi->showManipUnavailable(wb);
+            return;
+        }
+        if (kind != epaper::document::GestureKind::SelectMove)
+            return;
+        m_gesture.begin(m_caps, hit, epaper::document::ResizeHandle::None, {w.x, w.y});
     }
 
     void onMove(const PointerSample &s) override
     {
-        if (m_host.applyDragFromPanel)
-            m_host.applyDragFromPanel(s.panel);
+        if (!m_caps || !m_caps->toolUi)
+            return;
+        const auto w = m_caps->toolUi->panelToWorld(s.panel);
+        m_gesture.apply(m_caps, {w.x, w.y});
     }
 
     void onUp(const PointerSample &s) override
     {
         (void)s;
-        if (m_host.commitTransform)
-            m_host.commitTransform();
+        m_gesture.commit(m_caps);
     }
 
     void onCancel() override { cancel(); }
 
-    void cancel() override
-    {
-        if (m_host.abortTransform)
-            m_host.abortTransform();
-    }
+    void cancel() override { m_gesture.abort(m_caps); }
 
 private:
-    ManipHost m_host;
+    HostCaps *m_caps = nullptr;
+    TransformGesture m_gesture;
     OperationDescriptor m_desc;
-    bool m_boxHit = false;
 };
 
 } // namespace tools

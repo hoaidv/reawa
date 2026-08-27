@@ -1,8 +1,7 @@
 #pragma once
 
 /**
- * HandTouch modifier — sole finger/pinch binder when armed; profile dispatch later.
- * Phase 0: stub; ToolCanvasItem still owns FingerGestureMachine.
+ * HandTouch modifier — armed + lock-until-lift; profile dispatch by Mode id.
  * @implements [SRS-EP-21]
  */
 
@@ -16,7 +15,15 @@ namespace tools {
 class HandTouchModifier {
 public:
     bool armed() const { return m_armed; }
-    void setArmed(bool on) { m_armed = on; }
+    void setArmed(bool on)
+    {
+        m_armed = on;
+        if (!on)
+            m_lockedUntilLift = false;
+    }
+
+    bool lockedUntilLift() const { return m_lockedUntilLift; }
+    void setLockedUntilLift(bool on) { m_lockedUntilLift = on; }
 
     void registerProfile(const HandTouchProfile &profile)
     {
@@ -40,7 +47,8 @@ public:
     }
 
 private:
-    bool m_armed = false;
+    bool m_armed = true;
+    bool m_lockedUntilLift = false;
     std::unordered_map<int, HandTouchProfile> m_profiles;
 };
 

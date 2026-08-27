@@ -10,6 +10,8 @@
 
 #include <cstdint>
 
+class QPainter;
+
 namespace epaper {
 namespace tools {
 
@@ -51,6 +53,11 @@ public:
         return true;
     }
     virtual void cancel() = 0;
+    virtual void paintOverlay(QPainter *painter)
+    {
+        (void)painter;
+    }
+    virtual bool didMutateSelection() const { return false; }
 };
 
 } // namespace tools

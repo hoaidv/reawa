@@ -8,6 +8,7 @@
 #include "../canvas_frame.hpp"
 #include "doc_context.hpp"
 #include "document/hand_touch.hpp"
+#include "viewport.hpp"
 
 #include <QPointF>
 #include <QRectF>
@@ -24,7 +25,7 @@ struct SmartBounds;
 } // namespace document
 namespace tools {
 
-class SessionDocContext final : public DocContext {
+class SessionDocContext final : public DocContext, public Viewport {
 public:
     SessionDocContext(CanvasSession *session, TabletCanvasItem *surface);
 
@@ -47,6 +48,25 @@ public:
     void noteDocumentMutated() override;
     void flushWire() override;
     void clearLiveManipSuppressIds() override;
+    void setLiveManipSuppressIds(const std::string &nodeId) override;
+
+    const epaper::document::DocNode *hitMoveTarget(double wx, double wy) const override;
+    bool fingerHitsBox(double wx, double wy) const override;
+    std::string hitSelectTarget(double wx, double wy) const override;
+
+    bool encloseSelection(const std::vector<std::string> &ids, QString *refuseReason) override;
+    void toggleInkScaleMode(const std::string &nodeId) override;
+
+    void applyCamera(const epaper::handtouch::WorldAabb &region, bool markValid) override;
+    void publishViewport(bool settle) override;
+    void scheduleRasterize(bool sharp) override;
+    void ensureDrawingRegion() override;
+    epaper::canvasframe::WorldAabb drawingRegion() const override;
+    epaper::handtouch::FollowDirection follow() const override;
+    epaper::handtouch::TwoFingerContacts uvPair(double ax, double ay, double bx,
+                                                double by) const override;
+    void worldThroughPanOrigin(const epaper::canvasframe::WorldAabb &origin, double px, double py,
+                               double *wx, double *wy) const override;
 
     void setSession(CanvasSession *session) { m_session = session; }
     void setSurface(TabletCanvasItem *surface) { m_surface = surface; }
@@ -56,7 +76,6 @@ public:
 
     QString exclusiveTool() const;
     void setExclusiveTool(const QString &id);
-    epaper::handtouch::FollowDirection followDirection() const;
 
     epaper::canvasframe::CanvasFrame &frame();
     const epaper::canvasframe::CanvasFrame &frame() const;
@@ -66,19 +85,7 @@ public:
     QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const;
     bool lodOkPanel(const epaper::document::SmartBounds &wb) const;
 
-    void applyCamera(const epaper::handtouch::WorldAabb &region, bool markValid);
-    epaper::handtouch::TwoFingerContacts uvPair(double ax, double ay, double bx, double by) const;
-    void worldThroughPanOrigin(const epaper::canvasframe::WorldAabb &panOrigin, double px, double py,
-                               double *wx, double *wy) const;
-
-    const epaper::document::DocNode *pickTopMoveTarget(double wx, double wy) const;
-    bool fingerHitsBox(double wx, double wy) const;
     QString hitLocalSmartGroup(double wx, double wy) const;
-
-    bool encloseSelection(const std::vector<std::string> &ids, QString *refuseReason);
-    void toggleInkScaleMode(const std::string &nodeId);
-
-    void setLiveManipSuppressIds(const std::string &nodeId);
     QRectF boundConnectorsPanelUnion(const std::string &nodeId) const;
 
 private:

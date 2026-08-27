@@ -8,7 +8,10 @@
 #include "document/device_document.hpp"
 #include "document/manipulate.hpp"
 
+#include <QString>
+
 #include <string>
+#include <vector>
 
 namespace epaper {
 namespace tools {
@@ -35,6 +38,14 @@ public:
     virtual void noteDocumentMutated() = 0;
     virtual void flushWire() = 0;
     virtual void clearLiveManipSuppressIds() = 0;
+    virtual void setLiveManipSuppressIds(const std::string &nodeId) = 0;
+
+    virtual const epaper::document::DocNode *hitMoveTarget(double wx, double wy) const = 0;
+    virtual bool fingerHitsBox(double wx, double wy) const = 0;
+    virtual std::string hitSelectTarget(double wx, double wy) const = 0;
+
+    virtual bool encloseSelection(const std::vector<std::string> &ids, QString *refuseReason) = 0;
+    virtual void toggleInkScaleMode(const std::string &nodeId) = 0;
 };
 
 } // namespace tools

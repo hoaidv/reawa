@@ -106,7 +106,7 @@ void SessionDocContext::setExclusiveTool(const QString &id)
         m_session->setExclusiveTool(id);
 }
 
-epaper::handtouch::FollowDirection SessionDocContext::followDirection() const
+epaper::handtouch::FollowDirection SessionDocContext::follow() const
 {
     return m_session ? epaper::handtouch::parseFollow(m_session->followDirection().toStdString())
                      : epaper::handtouch::FollowDirection::None;
@@ -157,6 +157,31 @@ void SessionDocContext::applyCamera(const epaper::handtouch::WorldAabb &region, 
         m_session->applyCamera(region, markValid);
 }
 
+void SessionDocContext::publishViewport(bool settle)
+{
+    if (m_surface)
+        m_surface->maybePublishLocalViewport(settle);
+}
+
+void SessionDocContext::scheduleRasterize(bool sharp)
+{
+    if (m_surface)
+        m_surface->scheduleDocumentRasterize(sharp);
+}
+
+void SessionDocContext::ensureDrawingRegion()
+{
+    if (m_surface)
+        m_surface->ensureLocalDrawingRegion();
+}
+
+epaper::canvasframe::WorldAabb SessionDocContext::drawingRegion() const
+{
+    if (!m_session)
+        return {};
+    return frame().drawingRegion;
+}
+
 epaper::handtouch::TwoFingerContacts SessionDocContext::uvPair(double ax, double ay, double bx,
                                                                double by) const
 {
@@ -172,7 +197,7 @@ void SessionDocContext::worldThroughPanOrigin(const epaper::canvasframe::WorldAa
     epaper::handtouch::mapUvToWorld(panOrigin.box(), uv.u, uv.v, wx, wy);
 }
 
-const epaper::document::DocNode *SessionDocContext::pickTopMoveTarget(double wx, double wy) const
+const epaper::document::DocNode *SessionDocContext::hitMoveTarget(double wx, double wy) const
 {
     using namespace epaper::document;
     std::vector<const DocNode *> pick;
@@ -192,13 +217,31 @@ const epaper::document::DocNode *SessionDocContext::pickTopMoveTarget(double wx,
 
 bool SessionDocContext::fingerHitsBox(double wx, double wy) const
 {
-    const epaper::document::DocNode *hit = pickTopMoveTarget(wx, wy);
+    const epaper::document::DocNode *hit = hitMoveTarget(wx, wy);
     if (!hit)
         return false;
     epaper::document::SmartBounds b;
     if (!epaper::document::boundsOf(*hit, b))
         return false;
     return lodOkPanel(b);
+}
+
+std::string SessionDocContext::hitSelectTarget(double wx, double wy) const
+{
+    using namespace epaper::document;
+    std::vector<const DocNode *> pick;
+    collectPickable(document().rootChildren, pick);
+    for (int i = int(pick.size()) - 1; i >= 0; --i) {
+        const DocNode *n = pick[size_t(i)];
+        if (!n || !descriptorFor(n->kind).has(Verb::Select))
+            continue;
+        SmartBounds b;
+        if (!boundsOf(*n, b))
+            continue;
+        if (wx >= b.x && wx <= b.x + b.width && wy >= b.y && wy <= b.y + b.height)
+            return n->id;
+    }
+    return {};
 }
 
 QString SessionDocContext::hitLocalSmartGroup(double wx, double wy) const

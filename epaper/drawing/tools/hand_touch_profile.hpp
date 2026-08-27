@@ -17,9 +17,8 @@
 namespace epaper {
 namespace tools {
 
-/** Filled by HandTouch / Operation on gesture commit before postHandling runs. */
+/** Filled by InputHub after Operation onUp — not from OperationKind. */
 struct HandTouchCommitInfo {
-    OperationKind kind = OperationKind::None;
     bool selectionNonEmpty = false;
     bool didMutateSelection = false;
 };

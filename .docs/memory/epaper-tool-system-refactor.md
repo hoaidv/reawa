@@ -544,7 +544,17 @@ ToolCanvasItem = **Interaction Router host**: QML entry, `HostCaps`, switch Mode
 
 - `FingerIntentApplier`, `SelectionManipController`, `ToolChrome`; frame/pick/camera on `SessionDocContext`.
 - `ToolCanvasContext` owns chrome refresh/paint/damage (not forwarders to host).
-- **Status (2026-08-27):** done — `toolcanvasitem.cpp` ~700 lines (Qt router + hub dispatch only).
+- **Status (2026-08-27):** done — then superseded by dissolve-host-bags (Operations own logic).
+
+### Phase 7 — Operations own logic; HostCaps is ports only
+
+- Move/Resize own `TransformGesture` (`ManipSession` + DocContext/ToolContext calls). No `ManipHost` / `ManipIntentApplier`.
+- Lasso/Marquee own polyline/rect; containment via `document()`; no `SelectionStrokeHost` / `SelectionIntentApplier`.
+- Navigation owns pan/pinch + `Viewport`; Select is tap pick/clear; `HandTouchModifier` is armed + lock-until-lift only.
+- `InputHub` unified `dispatchPointerDown/Move/Up`, `dispatchTap`, `dispatchPinch*` via `PinchSink` (no `NavigationOperation` cast). Commit info from `SelectionContext` + `Operation::didMutateSelection()`.
+- ToolCanvasItem Q_INVOKABLE one-liners. Deleted `SelectionManipController` and host bags.
+- ToolContext holds panel↔world mapping. Ops never downcast `SessionDocContext` (`Viewport*` ctor-injected into Navigation).
+- **Status (2026-08-27):** done.
 
 ## Verification
 
