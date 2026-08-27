@@ -105,7 +105,7 @@ static void seedDoc(DeviceDocument &doc, const JsonValue &fix)
     if (!ops || !ops->isArray())
         return;
     for (const auto &opj : ops->asArray()) {
-        const ApplyResult r = doc.applyOp(opFromJson(opj));
+        const ApplyResult r = doc.applyJson(opj);
         if (!r.applied) {
             std::cerr << "seed op failed: " << r.reason << "\n";
             ++g_fails;
@@ -205,7 +205,7 @@ static void test_successful_enclose_local()
     CHECK(doc.rootChildren[0].id == r.smartGroupId);
 
     CHECK(doc.publishQueue().size() == q0 + 1);
-    CHECK(doc.publishQueue().back().op.type == "create_smart_group");
+    CHECK(doc.publishQueue().back().op.getString("type") == "create_smart_group");
     CHECK(ns <= 500000000); // p95 ≤500 ms host analog — not device p95
 }
 
@@ -287,8 +287,8 @@ static void test_session_down_queues_create()
     CHECK(r.kind == EncloseKind::Created);
     CHECK(smartGroupCount(doc) == 1);
     CHECK(doc.publishQueue().size() == 1);
-    CHECK(doc.publishQueue().back().op.type == "create_smart_group");
-    CHECK(doc.publishQueue().back().op.type != "recognize_enclose");
+    CHECK(doc.publishQueue().back().op.getString("type") == "create_smart_group");
+    CHECK(doc.publishQueue().back().op.getString("type") != "recognize_enclose");
 }
 
 /** @SRS-EP-10 Consecutive encloses stay correct (CHL-0007) */
@@ -319,12 +319,7 @@ static void test_ten_consecutive_encloses()
         seedPayload.emplace_back("id", JsonValue::string(std::string("ink_") + std::to_string(i)));
         seedPayload.emplace_back("samples", JsonValue::array(std::move(samples)));
         seedPayload.emplace_back("style", JsonValue::object(std::move(style)));
-        DocOp seed;
-        seed.opId = std::string("seed_") + std::to_string(i);
-        seed.type = "append_ink";
-        seed.source = "epaper";
-        seed.payload = JsonValue::object(std::move(seedPayload));
-        CHECK(doc.applyOp(seed).applied);
+                CHECK(doc.applyJson(opEnvelope(std::string("seed_") + std::to_string(i), "append_ink", JsonValue::object(std::move(seedPayload)), "epaper")).applied);
 
         EncloseStrokeInput stroke;
         stroke.id = std::string("enclose_") + std::to_string(i);
@@ -355,7 +350,7 @@ static void test_undo_restores_pre_create()
     const EncloseResult r = commitStrokeWithEncloseRecognition(doc, strokeFromFixture(loadEnclose("successful.json")));
     CHECK(r.kind == EncloseKind::Created);
     CHECK(doc.undoDepth() == 1);
-    CHECK(doc.newestEntry() && doc.newestEntry()->kind == "create_smart_group");
+    CHECK(doc.newestEntry() && doc.newestEntry()->forwardOpId.find("create_smart_group") != std::string::npos);
     const UndoResult u = doc.undo();
     CHECK(u.restored);
     CHECK(doc.snapshotString() == before);

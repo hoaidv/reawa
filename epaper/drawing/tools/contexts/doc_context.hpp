@@ -31,6 +31,7 @@ public:
     virtual void commitSetSmartTransform(const std::string &opId, const std::string &nodeId,
                                          const epaper::document::SmartTransform &t,
                                          const epaper::document::SmartBounds *bounds) = 0;
+    virtual epaper::document::ApplyResult applyEdit(epaper::document::DocEdit &edit) = 0;
     virtual void refreshConnectorsBoundTo(const std::string &nodeId) = 0;
     virtual void refreshAllConnectorWarps() = 0;
 

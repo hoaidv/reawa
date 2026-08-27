@@ -175,11 +175,7 @@ static void addSg(DeviceDocument &doc, const std::string &id, double x, double y
     payload.emplace_back("transform", JsonValue::object(std::move(t)));
     payload.emplace_back("inkScaleMode", JsonValue::string("fixedInk"));
     payload.emplace_back("children", std::move(kids));
-    DocOp op;
-    op.opId = "create_smart_group:" + id;
-    op.type = "create_smart_group";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(op).applied);
+        CHECK(doc.commitJson(opEnvelope("create_smart_group:" + id, "create_smart_group", JsonValue::object(std::move(payload)))).applied);
 }
 
 static RecogDispatchResult penUp(DeviceDocument &doc, const std::string &id,
@@ -208,13 +204,9 @@ static void test_d39_delete_keeps_connector()
     CHECK(!conn0->warpedSamples.empty());
     const size_t nSamp = conn0->warpedSamples.size();
 
-    DocOp rm;
-    rm.opId = "remove_node:A";
-    rm.type = "remove_node";
-    JsonValue::Object p;
-    p.emplace_back("id", JsonValue::string("A"));
-    rm.payload = JsonValue::object(std::move(p));
-    CHECK(doc.commitOp(rm).applied);
+    CHECK(doc.commitJson(opEnvelope("remove_node:A", "remove_node",
+                                    JsonValue::object({{"id", JsonValue::string("A")}})))
+              .applied);
     CHECK(!doc.find("A"));
     CHECK(doc.find(cid));
     refreshAllConnectorWarps(doc);

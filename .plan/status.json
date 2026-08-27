@@ -1,15 +1,15 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-21T12:16:04+00:00",
+  "generated_at": "2026-08-27T10:16:41+00:00",
   "current_iter": "iter-005",
   "by_status": {
     "draft": 16,
     "ready": 1,
     "in-progress": 0,
     "in-review": 0,
-    "done": 129,
+    "done": 132,
     "blocked": 13,
-    "cancelled": 2
+    "cancelled": 3
   },
   "by_module": {
     "reawa": {
@@ -18,18 +18,18 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 58,
-      "done": 35,
+      "total": 61,
+      "done": 38,
       "in_review": 0
     },
     "infini": {
-      "total": 37,
+      "total": 38,
       "done": 28,
       "in_review": 0
     }
   },
   "open_challenges": 3,
-  "resolved_challenges_this_iter": 2,
+  "resolved_challenges_this_iter": 3,
   "sync_orphans": 55,
   "master_plan": true,
   "tracks": [
@@ -65,7 +65,14 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "WAIT Product Manager adopt ADR-0032 (CHL-0026); no code; follow field test still outstanding",
+      "cursor": "wait human \u2014 EP-059\u2026061 done; IN-038 cancelled; W3 frozen; remaining follow field test",
+      "iter": "iter-005"
+    },
+    {
+      "id": "TRACK-006",
+      "kind": "expedite",
+      "status": "done",
+      "cursor": "done \u2014 human closed 2026-08-27; leftover DeviceMap UI / Mouse handler parked",
       "iter": "iter-005"
     }
   ]

@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -58,55 +59,31 @@ inline ApplyResult ingestFinishedStroke(DeviceDocument &doc, const FinishedStrok
     if (stroke.samples.size() < 2)
         return {false, "too_few_samples"};
 
-    JsonValue::Array samples;
+    std::vector<InkSample> samples;
     samples.reserve(stroke.samples.size());
     for (size_t i = 0; i < stroke.samples.size(); ++i) {
         const DigitizerSample &s = stroke.samples[i];
-        double wx = s.panelX;
-        double wy = s.panelY;
-        map(s.panelX, s.panelY, &wx, &wy);
-        JsonValue::Object o;
-        o.emplace_back("x", JsonValue::number(wx));
-        o.emplace_back("y", JsonValue::number(wy));
-        auto pushOpt = [&](const char *k, const std::optional<double> &v) {
-            if (v)
-                o.emplace_back(k, JsonValue::number(*v));
-        };
-        pushOpt("pressure", s.pressure);
-        pushOpt("tiltX", s.tiltX);
-        pushOpt("tiltY", s.tiltY);
-        if (s.t)
-            pushOpt("t", s.t);
-        else
-            o.emplace_back("t", JsonValue::number(static_cast<double>(i)));
-        pushOpt("timestamp", s.timestamp);
-        pushOpt("distance", s.distance);
-        if (!s.extras.empty()) {
-            JsonValue::Object ex;
-            for (const auto &kv : s.extras)
-                ex.emplace_back(kv.first, kv.second);
-            o.emplace_back("extras", JsonValue::object(std::move(ex)));
-        }
-        samples.push_back(JsonValue::object(std::move(o)));
+        InkSample out;
+        map(s.panelX, s.panelY, &out.x, &out.y);
+        out.pressure = s.pressure;
+        out.tiltX = s.tiltX;
+        out.tiltY = s.tiltY;
+        out.t = s.t ? s.t : std::optional<double>(static_cast<double>(i));
+        out.timestamp = s.timestamp;
+        out.distance = s.distance;
+        out.extras = s.extras;
+        samples.push_back(std::move(out));
     }
 
-    JsonValue::Object style;
-    style.emplace_back("stroke", JsonValue::string(stroke.stroke));
-    style.emplace_back("strokeWidth", JsonValue::number(stroke.strokeWidthWorld));
+    Style style;
+    style.stroke = stroke.stroke;
+    style.strokeWidth = stroke.strokeWidthWorld;
 
-    JsonValue::Object payload;
-    payload.emplace_back("id", JsonValue::string(stroke.id));
-    if (stroke.parentId && !stroke.parentId->empty())
-        payload.emplace_back("parentId", JsonValue::string(*stroke.parentId));
-    payload.emplace_back("samples", JsonValue::array(std::move(samples)));
-    payload.emplace_back("style", JsonValue::object(std::move(style)));
-
-    DocOp op;
-    op.opId = std::string("append_ink:") + stroke.id;
-    op.type = "append_ink";
-    op.source = stroke.source;
-    op.payload = JsonValue::object(std::move(payload));
-    return doc.commitOp(op);
+    AppendInkEdit edit(stroke.id, std::move(samples), std::move(style));
+    edit.setId(std::string("append_ink:") + stroke.id);
+    edit.setSource(stroke.source);
+    edit.setParentId(stroke.parentId);
+    return doc.commitEdit(edit);
 }
 
 struct IngestTiming {

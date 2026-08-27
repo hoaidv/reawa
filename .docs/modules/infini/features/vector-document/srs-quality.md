@@ -1,7 +1,7 @@
 ---
 feature: vector-document
 parent_req: [REQ-02, REQ-04]
-version: 0.4.0
+version: 0.5.0
 lifecycle: active
 ---
 
@@ -10,7 +10,8 @@ lifecycle: active
 ## [SRS-IN-06] Fidelity, structure, and dual-ask
 
 <!-- revised: 2026-08-13 — CHL-0008 / ADR-0014. Desktop authoring scenarios move with SRS-IN-11/14;
-     fidelity and round-trip stay; mirror-replay rows added. Same id, content revised. -->
+     fidelity and round-trip stay; mirror-replay rows added. Same id, content revised.
+     revised: 2026-08-27 — ADR-0032. Inverse / compound replay; undo is not restore_snapshot. -->
 
 > **Revised 2026-08-13.** The desktop no longer creates or manipulates Smart Groups, so the
 > interaction rows (enclose, membership, pick-vs-pan, LOD guard, gesture economy) move to
@@ -39,7 +40,8 @@ lifecycle: active
 | **Replay idempotency** | Re-apply every `opId` in the stream a second time | Tree unchanged |
 | **Out-of-order rejection** | A `doc_change` whose `baseSeq` skips | Mirror marked suspect; resync requested; **0** silent saves |
 | **Preview isolation** | Preview strokes during a session | **0** written to the mirror or to disk |
-| **Restore-snapshot apply** | Device undo published as `restore_snapshot` | Mirror equals the device's restored tree |
+| **Inverse / compound replay** | Device undo/redo published as counterpart or `compound` | Mirror equals the device tree after that undo/redo (0 divergent nodes) |
+| **No wholesale undo** | `restore_snapshot` in an undo/redo `doc_change` | **0** — last-resort non-undo only |
 | Invalid connector apply | No crash; connector marked invalid | Always |
 | Open failure | Prior tree bytes unchanged in memory | Always |
 | Large ink reopen | 10k-point ink polyline open | ≤ 2 s cold open on reference Mac (advisory) |

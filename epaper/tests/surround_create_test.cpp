@@ -53,11 +53,7 @@ static void appendInk(DeviceDocument &doc, const std::string &id, const std::vec
     payload.emplace_back("id", JsonValue::string(id));
     payload.emplace_back("samples", JsonValue::array(std::move(arr)));
     payload.emplace_back("style", JsonValue::object(std::move(style)));
-    DocOp op;
-    op.opId = "append_ink:" + id;
-    op.type = "append_ink";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(op).applied);
+        CHECK(doc.commitJson(opEnvelope("append_ink:" + id, "append_ink", JsonValue::object(std::move(payload)))).applied);
 }
 
 int main()
@@ -190,11 +186,7 @@ int main()
         payload.emplace_back("bounds", JsonValue::object(std::move(b)));
         payload.emplace_back("transform", JsonValue::object(std::move(t)));
         payload.emplace_back("children", JsonValue::array({}));
-        DocOp op;
-        op.opId = "create_smart_group:sg_existing";
-        op.type = "create_smart_group";
-        op.payload = JsonValue::object(std::move(payload));
-        CHECK(doc.commitOp(op).applied);
+                CHECK(doc.commitJson(opEnvelope("create_smart_group:sg_existing", "create_smart_group", JsonValue::object(std::move(payload)))).applied);
         const std::string before = doc.snapshotString();
         const auto r = createSmartGroupFromSelection(doc, {"outer", "inner", "sg_existing"});
         CHECK(!r.created);

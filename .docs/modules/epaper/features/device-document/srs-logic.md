@@ -1,7 +1,7 @@
 ---
 feature: device-document
 parent_req: [REQ-04, REQ-07]
-version: 0.2.0
+version: 0.3.0
 lifecycle: active
 ---
 
@@ -95,8 +95,14 @@ The device applies these locally; it never applies an inbound op except by whole
 | `set_smart_transform` | [SRS-EP-11](../ink-box/srs-logic.md) move / resize commit |
 | `set_ink_scale_mode` | [SRS-EP-11](../ink-box/srs-logic.md) toggle |
 | `reparent` | [SRS-EP-10](../ink-box/srs-logic.md) when membership cannot be expressed as `append_ink.parentId` |
-| `remove_node` | Empty-group cleanup ([SRS-EP-10](../ink-box/srs-logic.md)); a `SmartGroup` left with zero children is removed in the **same** gesture as the child removal |
-| `restore_snapshot` | Undo (this section) — how undo publishes ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §5) |
+| `remove_node` | Empty-group cleanup ([SRS-EP-10](../ink-box/srs-logic.md)); a `SmartGroup` left with zero children is removed in the **same** gesture as the child removal; Path B selection-erase ([SRS-EP-28](#srs-ep-28-selection-erase)); cut ([SRS-EP-31](#srs-ep-31-clipboard)) |
+| `set_ink_samples` | Path A stroke-erase ([SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib)); sample restore on undo of that erase |
+| `compound` | Undo/redo of a multi-inverse gesture — atomic on the mirror ([ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md) §4) |
+| `restore_snapshot` | **Last-resort, non-undo** wholesale replace (tests / emergency). Undo and redo **must not** emit it |
+
+<!-- lifecycle: retired -->
+<!-- superseded-by: [ADR-0032] -->
+<!-- note: 2026-08-27 — `restore_snapshot` as the undo publish op is retired. Inverse path below. -->
 
 Unknown `type` values are not applied. An op that would violate a domain invariant is
 **rejected**: tree unchanged, ring unchanged, queue unchanged.
@@ -116,20 +122,29 @@ validate op against domain invariants
   fail → reject (tree, ring, queue unchanged); stop
 if a structural op will apply:
   if ring depth == 20 → drop the oldest entry
-  push { snapshot: current tree, opId, kind }     # pre-op snapshot
+  push UndoEntry { forwardOpId, seq, inverses, targets: [{ nodeId, prevLastOpId }] }
   apply op to the tree
+  set lastOpId of every mutated or created node to this op's opId
   enqueue one doc_change for this op              # [SRS-EP-08]
 ```
 
 | Rule | Value |
 |---|---|
 | Granularity | Exactly **1** ring entry per completed gesture. Intermediate manipulation frames are local paint only — they do not push |
-| Snapshot | Whole-document snapshot ([SRS-EP-09](./srs-data.md) `{ snapshot, opId, kind }`). Inverse-op algebra is not used ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §5) |
+| Entry | Inverse entry ([SRS-EP-09](./srs-data.md) `{ forwardOpId, seq, inverses, targets }`). Whole-tree snapshots are **not** the undo mechanism ([ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md)). `inverses` hold **absolute** pre-op parent, index, and field values. Counterpart table: ungroup ≠ delete children; connector warp is derived (not an entry); copy = **0** entries |
 | Depth | **20**. Overflow drops the oldest. Undo past an empty ring is a **no-op**, not an error |
-| Not covered | Viewport pan/zoom, tool switches, selection changes — these are not document state and **must not** push |
-| Redo | Snapshot stack, depth **20**. Undo pushes the current tree onto redo before restore. A successful structural commit **clears** redo. Empty redo is a no-op. Branching / non-linear history remains out ([ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md)) |
+| Not covered | Viewport pan/zoom, tool switches, selection changes, clipboard-slot contents — these are not document state and **must not** push. Copy = **0** entries |
+| Redo | Counterpart of inverse (same `forwardOpId` and `targets`; inverses/counterparts swapped). Skip when a live node’s `lastOpId` ≠ `prevLastOpId`. After a successful redo, stamp `lastOpId` = `forwardOpId`. Depth **20**. A successful structural commit **clears** redo. Empty redo is a no-op. Branching / non-linear history remains out ([ADR-0018](../../../../adr/ADR-0018-undo-redo-chip-actions.md)) |
+
+<!-- lifecycle: retired -->
+<!-- superseded-by: [ADR-0032] -->
+<!-- note: 2026-08-27 — snapshot `{ snapshot, opId, kind }` and “inverse-op algebra is not used” retired in place. -->
 
 ### Undo
+
+<!-- lifecycle: retired (snapshot restore path) -->
+<!-- superseded-by: [ADR-0032] -->
+<!-- note: 2026-08-27 — `replace the tree with that entry's snapshot` / `restore_snapshot` publish retired. Inverse path is active. -->
 
 ```text
 if a gesture is in flight:
@@ -137,11 +152,25 @@ if a gesture is in flight:
   after that gesture commits (one ring entry, one queued change), run undo
 if ring is empty: no-op
 else:
-  push the current tree onto the redo stack (drop oldest if depth == 20)
   pop the newest undo entry
-  replace the tree with that entry's snapshot
-  enqueue doc_change { op: restore_snapshot { document: restored tree } }
+  classify every target:
+    node absent (and inverse needed it present)            → no-op that inverse
+    required parent absent and the node is absent too      → no-op
+    node present and lastOpId ≠ entry.forwardOpId          → skip
+    node present and lastOpId == entry.forwardOpId         → apply
+    restore inverse finds nodeId already present           → skip (do not clobber)
+  if any target is skip:
+    consume the entry; do not apply; 0 doc_change; 0 redo  # F20: skip whole
+  else:
+    apply the apply-set; absences stay no-ops              # F21: absence-only partial
+    if apply-set is empty: consume; 0 doc_change; 0 redo
+    else:
+      restore lastOpId of applied nodes to each target's prevLastOpId
+      enqueue one doc_change: counterpart op, or compound { ops: […] }
+      push one redo entry (same forwardOpId + targets; inverses/counterparts swapped)
 ```
+
+Do **not** emit `restore_snapshot` for undo. Do **not** emit N `doc_change` messages for one undo tap.
 
 ### Redo
 
@@ -150,17 +179,25 @@ if a gesture is in flight:
   latch; last history request wins; run after commit
 if redo stack is empty: no-op
 else:
-  push the current tree onto the undo ring (drop oldest if depth == 20)
   pop the newest redo entry
-  replace the tree with that entry's snapshot
-  enqueue doc_change { op: restore_snapshot { document: restored tree } }
+  classify every target:
+    node present and lastOpId ≠ target.prevLastOpId        → skip
+    node present and lastOpId == target.prevLastOpId       → apply
+  apply with the same fail-safe / atomic-gesture rules as undo
+  if ≥1 inverse of the redo applied:
+    stamp lastOpId of applied nodes to the original forwardOpId
+    enqueue counterpart / compound (never restore_snapshot)
+    push one undo entry (same forwardOpId + targets)
 ```
 
 | Rule | Value |
 |---|---|
-| Exactness | After undo, the tree equals the popped pre-op snapshot (0 divergent nodes). Geometry tolerance is [SRS-EP-13](./srs-quality.md), not redefined here |
+| Exactness | When every target’s `lastOpId` matches the entry’s forward `opId`, undo restores the stored **pre-op fields** (0 divergent nodes vs those fields). Geometry tolerance is [SRS-EP-13](./srs-quality.md), not redefined here. Mismatch → skip (not an inexact restore) |
+| Skip | Any **changed** sibling (`lastOpId` mismatch) ⇒ skip the **whole** entry (F20). 0 undo-through |
+| No-op | Absent targets that the inverse needed present are no-ops. If none skip, apply live targets (F21). Partial apply is absence-only, never undo-through |
+| Consume | Skip and no-op **consume** the entry. 0 error UI, 0 tree corruption, 0 `doc_change`. Do **not** push redo for a skip or a pure no-op |
 | Mid-gesture | Deferred as above. **0** corrupted in-flight gestures |
-| Already published | Undo is itself a change and publishes like any other — the mirror follows |
+| Already published | An **applied** counterpart publishes like any other — the mirror follows. Skip and pure no-op publish nothing |
 | Accepted `doc_load` | Undo and redo stacks are emptied. History cannot reach the pre-load tree |
 
 ### No peer round trip inside a gesture
@@ -176,7 +213,10 @@ A `doc_load` offered during the gesture is deferred by [SRS-EP-08](#srs-ep-08-on
 | Ingestion failure | Ink stays painted; document unchanged; 0 half-inserted nodes |
 | Rejected op (invariant) | 0 published, 0 ring entries pushed |
 | Undo on empty ring | No-op |
-| Link down during ingest / undo | Completes locally; the change joins the publish queue |
+| Undo, target absent (needed present); none skip | No-op those inverses; apply live targets if any; consume entry; 0 error UI |
+| Undo, any target `lastOpId` mismatch | Skip whole entry; consume; 0 undo-through; 0 `doc_change` |
+| Undo, all targets match | Counterpart applied; pre-op fields restored |
+| Link down during ingest / undo | Completes locally; an **applied** counterpart joins the publish queue; skip/no-op enqueue nothing |
 | App restart | Unpublished tree is gone — accepted ([srs-product](./srs-product.md) BR-D07) |
 
 ---
@@ -281,7 +321,7 @@ Envelope (do not fork):
 | Link down | Editing continues; every commit enqueues; **0** tools gated on the session ([srs-product](./srs-product.md) BR-D04) |
 | Reconnect | `hello` → `drain_ack` → publish the queue in `seq` order → `queue_empty`. **0** lost, **0** reordered |
 | Pending visibility | Non-empty queue is a visible pending state ([SRS-EP-05](../tool-modes/srs-ui.md)). Queued changes are never silently dropped ([srs-product](./srs-product.md) BR-D11) |
-| Undo | Publishes as `restore_snapshot` like any other committed op |
+| Undo | An **applied** counterpart publishes as the inverse op or `compound`, like any other committed gesture. Skip and pure no-op publish **0**. Never `restore_snapshot` ([ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md) §4) |
 
 ### Preview strokes are not document changes
 
@@ -444,11 +484,11 @@ Example (informative):
 | Trigger | **Erase** command: chip CTA, bound barrel Click that resolves to erase, or equivalent — **not** the nib |
 | Non-empty selection | `remove_node` every selected node (and SmartGroup cleanup per existing empty-group rules). **0** leftovers on the next settled frame |
 | Empty selection | **No-op**: 0 nodes change, 0 undo entries |
-| Undo | One undo restores the removed nodes (snapshot exactness ±1 px @ 100% zoom) |
+| Undo | One undo restores the removed nodes via inverse of `remove_node` (stored bodies at stored `{parentId, index}`). Exactness when `lastOpId` matches; skip/no-op per [SRS-EP-07](#srs-ep-07-device-document). Geometry ±1 px @ 100% zoom vs stored pre-op fields |
 | No session | Same local result; publish when linked |
 | Does not | Start a new ink stroke; run Path A unless the command was `temp_erase` hold-move (that path is SRS-EP-27 mutation via barrel) |
 
-Additional device ops (extend the SRS-EP-07 table without replacing it): `remove_node` from this command; Path A may emit `remove_node` plus in-place sample edits — v1 **locks sample erase as a snapshot-backed mutation** (one ring entry) so Infini converges via `restore_snapshot` if no `erase_samples` op exists yet. Prefer `restore_snapshot` for Path A until a `erase_samples` wire op is added to [SRS-IN-09](../../../infini/features/vector-document/srs-data.md).
+Additional device ops (extend the SRS-EP-07 table without replacing it): `remove_node` from this command. Path A stroke-erase ([SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib)) publishes `set_ink_samples` and, when a node is emptied, `remove_node` in the same gesture (`compound` if both). Inverse is stored previous samples and/or restore of the removed body. **Do not** use `restore_snapshot` for Path A or Path B.
 
 ---
 
@@ -461,12 +501,12 @@ Additional device ops (extend the SRS-EP-07 table without replacing it): `remove
 | Op | Precondition | Document | Slot | Undo |
 |---|---|---|---|---|
 | Copy | Non-empty selection | Unchanged | Replaced with clone (old ids in slot) | **0** entries |
-| Cut | Non-empty selection | Selection removed (`remove_node` / snapshot) | Replaced with clone | **1** — restores originals |
+| Cut | Non-empty selection | Selection removed (`remove_node`) | Replaced with clone | **1** — inverse restores stored originals at stored `{parentId, index}` |
 | Paste | Slot non-empty | Insert clones with **new ids**, AABB min += **(24 u, 24 u)**; clamp into `drawingRegion` if needed | Unchanged | **1** — removes copies |
 | Paste | Slot empty | **0** nodes change | Unchanged | **0** |
 | Copy/cut | Empty selection | No-op | Unchanged | **0** |
 
-Cut then paste: undo paste removes copies (originals still gone, slot still full); second undo restores originals. Geometry ±1 px @ 100% zoom vs source translated by the offset. No session: same local behaviour; cut/paste still satisfy [REQ-07](../../prd.md#one-way-sync) when linked (`duplicate_subtree` / `remove_node`). OS / cross-app paste **out**.
+Cut then paste: undo paste `remove_node`s each pasted id (originals still gone, slot still full); second undo restores originals (inverse of cut’s `remove_node`). Geometry ±1 px @ 100% zoom vs source translated by the offset. Copy = **0** entries. No session: same local behaviour; cut/paste still satisfy [REQ-07](../../prd.md#one-way-sync) when linked (`duplicate_subtree` / `remove_node`; undo publishes counterpart / `compound`, never `restore_snapshot`). OS / cross-app paste **out**.
 
 ### UI-driving fields
 
@@ -499,8 +539,10 @@ Ink-box manual/enclose remains REQ-05. No general brush/color/layer palette.
 New sections. They inherit, on the device:
 
 - infini [SRS-IN-12](../../../infini/features/vector-document/srs-logic.md#srs-in-12-undo-history)
-  (deprecated) — snapshot ring, depth 20, "not covered" list. The shared-timeline / remote-op
-  row is dropped: one writer.
+  (deprecated) — **do not revive** a desktop stack. Device undo is inverse-op per session
+  ([ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md)), not an inherited snapshot ring.
+  Depth 20 and the “not covered” list (viewport/tool/selection) are kept. The shared-timeline /
+  remote-op row stays dropped: one writer.
 - the device half of [SRS-IN-13](../../../infini/features/tablet-sync/srs-logic.md#srs-in-13-tool-intent-transport)
   (retired) and the document-authority half of [SRS-IN-07](../../../infini/features/tablet-sync/srs-logic.md)
   as it stood before 2026-08-13.

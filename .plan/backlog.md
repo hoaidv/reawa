@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-21T12:16:04+00:00
+generated_at: 2026-08-27T10:16:41+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -65,6 +65,9 @@ generated_at: 2026-08-21T12:16:04+00:00
 | [STORY-EP-056](./iter-005/stories/STORY-EP-056.md) | Revise pen-button map as Epaper on-device editor | design | designer | epaper | [SRS-EP-52], [SRS-EP-53], [SRS-EP-42] | done | iter-005 | 5 |
 | [STORY-EP-057](./iter-005/stories/STORY-EP-057.md) | Persist Device Settings on the Epaper device | implement | dev | epaper | [SRS-EP-53] | draft | iter-005 | 3 |
 | [STORY-EP-058](./iter-005/stories/STORY-EP-058.md) | Implement Device Settings page (Pen buttons) | implement | dev | epaper | [SRS-EP-52] | draft | iter-005 | 5 |
+| [STORY-EP-059](./iter-005/stories/STORY-EP-059.md) | Device inverse undo ring and lastOpId | implement | dev | epaper | [SRS-EP-07], [SRS-EP-09] | done | iter-005 | 5 |
+| [STORY-EP-060](./iter-005/stories/STORY-EP-060.md) | Undo fail-safe skip and no-op catalogue | implement | dev | epaper | [SRS-EP-13], [SRS-EP-07] | done | iter-005 | 3 |
+| [STORY-EP-061](./iter-005/stories/STORY-EP-061.md) | Device undo queue is counterpart compound not restore snapshot | implement | dev | epaper | [SRS-EP-08], [SRS-EP-07] | done | iter-005 | 3 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |
@@ -102,6 +105,7 @@ generated_at: 2026-08-21T12:16:04+00:00
 | [STORY-IN-035](./iter-005/stories/STORY-IN-035.md) | Persist and restore pen-button map (not the editor) | implement | dev | infini | [SRS-IN-23], [SRS-IN-25] | cancelled | iter-005 | 3 |
 | [STORY-IN-036](./iter-005/stories/STORY-IN-036.md) | Design Infini viewport-follow Epaper toggle | design | designer | infini | [SRS-IN-27], [SRS-IN-26], [SRS-IN-28] | done | iter-005 | 3 |
 | [STORY-IN-037](./iter-005/stories/STORY-IN-037.md) | Infini follow Epaper — toggle, exclusion, disconnect | implement | dev | infini | [SRS-IN-26], [SRS-IN-28] | done | iter-005 | 5 |
+| [STORY-IN-038](./iter-005/stories/STORY-IN-038.md) | Infini applies compound and set ink samples | implement | dev | infini | [SRS-IN-09], [SRS-IN-07], [SRS-IN-06] | cancelled | iter-005 | 5 |
 | [STORY-RW-001](./iter-000/stories/STORY-RW-001.md) | Application activation policy | implement | dev | reawa | [SRS-RW-01] | done | iter-000 | 1 |
 | [STORY-RW-002](./iter-000/stories/STORY-RW-002.md) | Menu bar icon and menu rebuild | implement | dev | reawa | [SRS-RW-02] | done | iter-000 | 1 |
 | [STORY-RW-003](./iter-000/stories/STORY-RW-003.md) | Accessibility permission gate | implement | dev | reawa | [SRS-RW-03] | done | iter-000 | 1 |

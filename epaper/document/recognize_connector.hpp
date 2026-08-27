@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -748,9 +749,10 @@ inline double hullAreaOverLen2(const std::vector<InkSample> &s)
     return convexHullArea(s) / (L * L);
 }
 
-inline void pickStrokeAnchor(const DocNode &sg, double x, double y, const RestVec &drawn,
-                             JsonValue::Object *o)
+inline ConnectorAnchor pickStrokeAnchor(const DocNode &sg, double x, double y, const RestVec &drawn)
 {
+    ConnectorAnchor a;
+    a.nodeId = sg.id;
     const Vec2 loc = smartWorldToLocal(x, y, sg, "boundary");
     const auto poly = smartGroupBoundaryWorld(sg);
     double dPoly = 1e300;
@@ -818,21 +820,17 @@ inline void pickStrokeAnchor(const DocNode &sg, double x, double y, const RestVe
         ey.x /= ley;
         ey.y /= ley;
     }
-    o->emplace_back("kind", JsonValue::string(centre ? "centre" : "edge"));
-    o->emplace_back("edge", JsonValue::number(edge));
-    o->emplace_back("t", JsonValue::number(t));
-    JsonValue::Object local;
-    local.emplace_back("x", JsonValue::number(loc.x));
-    local.emplace_back("y", JsonValue::number(loc.y));
-    o->emplace_back("local", JsonValue::object(std::move(local)));
-    JsonValue::Object locN;
-    locN.emplace_back("n", JsonValue::number(unitD.x * n.x + unitD.y * n.y));
-    locN.emplace_back("e", JsonValue::number(unitD.x * e.x + unitD.y * e.y));
-    o->emplace_back("drawnEdgeLocal", JsonValue::object(std::move(locN)));
-    JsonValue::Object box;
-    box.emplace_back("x", JsonValue::number(unitD.x * ex.x + unitD.y * ex.y));
-    box.emplace_back("y", JsonValue::number(unitD.x * ey.x + unitD.y * ey.y));
-    o->emplace_back("drawnBoxLocal", JsonValue::object(std::move(box)));
+    a.kind = centre ? "centre" : "edge";
+    a.edge = edge;
+    a.t = t;
+    a.localX = loc.x;
+    a.localY = loc.y;
+    a.hasLocal = true;
+    a.drawnN = unitD.x * n.x + unitD.y * n.y;
+    a.drawnE = unitD.x * e.x + unitD.y * e.y;
+    a.drawnBoxX = unitD.x * ex.x + unitD.y * ex.y;
+    a.drawnBoxY = unitD.x * ey.x + unitD.y * ey.y;
+    return a;
 }
 
 inline JsonValue restShapeToJson(const RestShape &r)
@@ -1016,37 +1014,35 @@ inline ConnectorResult tryRecognizeConnector(DeviceDocument &doc, const std::str
                    rest.spine[ns - 2].y - rest.spine[ns - 1].y};
     }
 
-    JsonValue::Object from;
-    from.emplace_back("nodeId", JsonValue::string(fromG->id));
     const double ax = rest.spine.size() >= 2 ? rest.spine.front().x : concat.front().x;
     const double ay = rest.spine.size() >= 2 ? rest.spine.front().y : concat.front().y;
     const double bx = rest.spine.size() >= 2 ? rest.spine.back().x : concat.back().x;
     const double by = rest.spine.size() >= 2 ? rest.spine.back().y : concat.back().y;
-    pickStrokeAnchor(*fromG, ax, ay, drawnFrom, &from);
-    JsonValue::Object to;
-    to.emplace_back("nodeId", JsonValue::string(toG->id));
-    pickStrokeAnchor(*toG, bx, by, drawnTo, &to);
+    ConnectorAnchor from = pickStrokeAnchor(*fromG, ax, ay, drawnFrom);
+    ConnectorAnchor to = pickStrokeAnchor(*toG, bx, by, drawnTo);
 
-    JsonValue::Array cap;
+    std::vector<std::string> cap;
     for (const auto &id : bodyIds)
-        cap.push_back(JsonValue::string(id));
+        cap.push_back(id);
 
     const std::string cid = std::string("conn_") + strokeId;
-    JsonValue::Object payload;
-    payload.emplace_back("id", JsonValue::string(cid));
-    payload.emplace_back("from", JsonValue::object(std::move(from)));
-    payload.emplace_back("to", JsonValue::object(std::move(to)));
-    payload.emplace_back("warpStyle", JsonValue::string(rest.warpStyle));
-    payload.emplace_back("restShape", restShapeToJson(rest));
-    payload.emplace_back("captureIds", JsonValue::array(std::move(cap)));
-    payload.emplace_back("terminal", JsonValue::object({}));
-
-    DocOp op;
-    op.opId = std::string("create_connector:") + cid;
-    op.type = "create_connector";
-    op.source = "epaper";
-    op.payload = JsonValue::object(std::move(payload));
-    const ApplyResult r = doc.commitOp(op);
+    CreateConnectorEdit edit;
+    edit.setId(std::string("create_connector:") + cid);
+    edit.setSource("epaper");
+    edit.setNodeId(cid);
+    edit.setFrom(std::move(from));
+    edit.setTo(std::move(to));
+    edit.setWarpStyle(rest.warpStyle);
+    std::vector<ConnectorRestPt> spine;
+    for (const auto &p : rest.spine)
+        spine.push_back({p.x, p.y});
+    std::vector<ConnectorRestOff> offsets;
+    for (const auto &p : rest.offsets)
+        offsets.push_back({p.s, p.d});
+    edit.setRestSpine(std::move(spine));
+    edit.setRestOffsets(std::move(offsets));
+    edit.setCaptureIds(std::move(cap));
+    const ApplyResult r = doc.commitEdit(edit);
     if (!r.applied) {
         out.reason = r.reason.empty() ? "commit_failed" : r.reason;
         return out;

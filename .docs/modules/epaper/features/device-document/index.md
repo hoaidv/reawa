@@ -31,6 +31,8 @@ inherits semantics from the deprecated infini sections listed in the
   [SRS-EP-33] clipboard fidelity
 - BDD: [bdd/ingest-stroke.feature](./bdd/ingest-stroke.feature) ·
   [bdd/undo-ring.feature](./bdd/undo-ring.feature) ·
+  [bdd/undo-fail-safe.feature](./bdd/undo-fail-safe.feature) ·
+  [bdd/undo-queue.feature](./bdd/undo-queue.feature) ·
   [bdd/one-way-sync.feature](./bdd/one-way-sync.feature) ·
   [bdd/debug-log-ship.feature](./bdd/debug-log-ship.feature)
 - Shared node semantics: [domain/vector-document](../../../../domain/vector-document.md) ·

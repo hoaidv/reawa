@@ -14,6 +14,7 @@
 
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -219,42 +220,29 @@ inline JsonValue inkSamplesToJson(const std::vector<InkSample> &samples)
     return JsonValue::array(std::move(arr));
 }
 
-inline JsonValue inkChildToJson(const std::string &id, const std::string &role,
-                                const std::vector<InkSample> &samples, const Style &style,
-                                const std::optional<std::pair<double, double>> &layoutOffset)
+inline DocNode makeInkChild(const std::string &id, const std::string &role,
+                            const std::vector<InkSample> &samples, const Style &style,
+                            const std::optional<std::pair<double, double>> &layoutOffset)
 {
-    JsonValue::Object o;
-    o.emplace_back("id", JsonValue::string(id));
-    o.emplace_back("kind", JsonValue::string("ink"));
-    o.emplace_back("samples", inkSamplesToJson(samples));
-    o.emplace_back("style", styleToJson(style));
-    o.emplace_back("role", JsonValue::string(role));
-    if (layoutOffset) {
-        JsonValue::Object lo;
-        lo.emplace_back("u", JsonValue::number(layoutOffset->first));
-        lo.emplace_back("v", JsonValue::number(layoutOffset->second));
-        o.emplace_back("layoutOffset", JsonValue::object(std::move(lo)));
-    }
-    return JsonValue::object(std::move(o));
+    DocNode n;
+    n.id = id;
+    n.kind = NodeKind::Ink;
+    n.samples = samples;
+    n.style = style;
+    n.role = role;
+    n.layoutOffset = layoutOffset;
+    return n;
 }
 
 inline ApplyResult appendOrdinaryInk(DeviceDocument &doc, const EncloseStrokeInput &stroke)
 {
-    JsonValue::Object style;
-    style.emplace_back("stroke", JsonValue::string(stroke.stroke));
-    style.emplace_back("strokeWidth", JsonValue::number(stroke.width));
-
-    JsonValue::Object payload;
-    payload.emplace_back("id", JsonValue::string(stroke.id));
-    payload.emplace_back("samples", inkSamplesToJson(stroke.samples));
-    payload.emplace_back("style", JsonValue::object(std::move(style)));
-
-    DocOp op;
-    op.opId = std::string("append_ink:") + stroke.id;
-    op.type = "append_ink";
-    op.source = stroke.source;
-    op.payload = JsonValue::object(std::move(payload));
-    return doc.commitOp(op);
+    Style style;
+    style.stroke = stroke.stroke;
+    style.strokeWidth = stroke.width;
+    AppendInkEdit edit(stroke.id, stroke.samples, std::move(style));
+    edit.setId(std::string("append_ink:") + stroke.id);
+    edit.setSource(stroke.source);
+    return doc.commitEdit(edit);
 }
 
 /**
@@ -363,10 +351,10 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
             boundarySamples[i].t = static_cast<double>(i);
     }
 
-    JsonValue::Array children;
-    children.push_back(inkChildToJson(stroke.id, "boundary", boundarySamples, style, std::nullopt));
+    std::vector<DocNode> children;
+    children.push_back(makeInkChild(stroke.id, "boundary", boundarySamples, style, std::nullopt));
 
-    JsonValue::Array captureIds;
+    std::vector<std::string> captureIds;
     std::vector<std::string> childIdsForLog;
     childIdsForLog.push_back(stroke.id);
     for (auto &cap : capturable) {
@@ -377,40 +365,26 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
                 cap.samples[i].t = static_cast<double>(i);
         }
         const auto uv = seedLayoutOffset(cap.samples, bounds);
-        children.push_back(inkChildToJson(cap.id, "content", cap.samples, cap.style, uv));
-        captureIds.push_back(JsonValue::string(cap.id));
+        children.push_back(makeInkChild(cap.id, "content", cap.samples, cap.style, uv));
+        captureIds.push_back(cap.id);
         childIdsForLog.push_back(cap.id);
     }
 
-    JsonValue::Object b;
-    b.emplace_back("x", JsonValue::number(bounds.x));
-    b.emplace_back("y", JsonValue::number(bounds.y));
-    b.emplace_back("width", JsonValue::number(bounds.width));
-    b.emplace_back("height", JsonValue::number(bounds.height));
-
-    JsonValue::Object transform;
-    transform.emplace_back("x", JsonValue::number(world.x));
-    transform.emplace_back("y", JsonValue::number(world.y));
-    transform.emplace_back("rotation", JsonValue::number(0));
-    transform.emplace_back("scaleX", JsonValue::number(1));
-    transform.emplace_back("scaleY", JsonValue::number(1));
-
     const std::string smartGroupId = std::string("sg_enclose_") + stroke.id;
-    JsonValue::Object payload;
-    payload.emplace_back("id", JsonValue::string(smartGroupId));
-    payload.emplace_back("bounds", JsonValue::object(std::move(b)));
-    payload.emplace_back("transform", JsonValue::object(std::move(transform)));
-    payload.emplace_back("inkScaleMode", JsonValue::string("fixedInk"));
-    payload.emplace_back("captureIds", JsonValue::array(std::move(captureIds)));
-    payload.emplace_back("children", JsonValue::array(std::move(children)));
+    CreateSmartGroupEdit edit;
+    edit.setId(std::string("create_smart_group:") + smartGroupId);
+    edit.setSource(stroke.source);
+    edit.setNodeId(smartGroupId);
+    edit.setBounds(bounds);
+    SmartTransform xf;
+    xf.x = world.x;
+    xf.y = world.y;
+    edit.setTransform(xf);
+    edit.setInkScaleMode("fixedInk");
+    edit.setCaptureIds(std::move(captureIds));
+    edit.setChildren(std::move(children));
 
-    DocOp op;
-    op.opId = std::string("create_smart_group:") + smartGroupId;
-    op.type = "create_smart_group";
-    op.source = stroke.source;
-    op.payload = JsonValue::object(std::move(payload));
-
-    const ApplyResult r = doc.commitOp(op);
+    const ApplyResult r = doc.commitEdit(edit);
     if (!r.applied) {
         appendOrdinaryInk(doc, stroke);
         out.kind = EncloseKind::OrdinaryInk;

@@ -1,20 +1,21 @@
 #pragma once
 /**
- * In-memory device document tree + SRS-IN-09 op apply + snapshot undo ring.
- * @implements [SRS-EP-07] DeviceDocument tree, op apply, undo ring
- * @implements [SRS-EP-09] device-local tree; double coords; sample retention
- *
- * Publish queue is in-memory only (STORY-EP-020 owns TCP / handshake).
+ * Working document: tree + DocEdit apply. Undo lives on UndoStack.
+ * @implements [SRS-EP-07] DeviceDocument tree, DocEdit apply, inverse undo
+ * @implements [SRS-EP-09] device-local tree; lastOpId; inverse entry shape
+ * @implements [SRS-EP-13] F20 skip-whole; F21 absence-partial; empty/pure no-op
+ * @implements [SRS-EP-08] counterpart / compound / set_ink_samples publish
  */
 
-#include "json_value.hpp"
+#include "doc_model.hpp"
+#include "operations/undo_stack.hpp"
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
-#include <deque>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -25,283 +26,7 @@
 namespace epaper {
 namespace document {
 
-struct Style {
-    std::string stroke = "#1C2430";
-    double strokeWidth = 2;
-    std::optional<std::string> fill;
-};
-
-struct InkSample {
-    double x = 0;
-    double y = 0;
-    std::optional<double> pressure;
-    std::optional<double> tiltX;
-    std::optional<double> tiltY;
-    std::optional<double> t;
-    std::optional<double> timestamp;
-    std::optional<double> distance;
-    std::map<std::string, JsonValue> extras;
-};
-
-struct Aabb {
-    double minX = 0;
-    double minY = 0;
-    double maxX = 0;
-    double maxY = 0;
-};
-
-struct SmartBounds {
-    double x = 0;
-    double y = 0;
-    double width = 0;
-    double height = 0;
-};
-
-struct SmartTransform {
-    double x = 0;
-    double y = 0;
-    double rotation = 0;
-    double scaleX = 1;
-    double scaleY = 1;
-};
-
-enum class NodeKind {
-    Ink,
-    Text,
-    Primitive,
-    Group,
-    Frame,
-    Connector,
-    SmartGroup,
-};
-
-enum class PrimitiveKind { Line, Rect, Ellipse };
-
-struct TextRun {
-    std::string text;
-    bool bold = false;
-};
-
-struct ConnectorAnchor {
-    std::string nodeId;
-    std::string kind = "edge";
-    int edge = 0;
-    double t = 0;
-    double drawnN = 1;
-    double drawnE = 0;
-    double drawnBoxX = 1;
-    double drawnBoxY = 0;
-    double localX = 0;
-    double localY = 0;
-    bool hasLocal = false;
-};
-
-struct ConnectorRestPt {
-    double x = 0;
-    double y = 0;
-};
-
-struct ConnectorRestOff {
-    double s = 0;
-    double d = 0;
-};
-
-/** @implements [SRS-EP-18] last live world pose cache (D39) */
-struct ConnectorEndPose {
-    double x = 0;
-    double y = 0;
-    double fx = 1;
-    double fy = 0;
-    bool valid = false;
-};
-
-struct DocNode {
-    std::string id;
-    NodeKind kind = NodeKind::Ink;
-    Style style;
-    std::vector<InkSample> samples;
-    std::optional<std::string> role; // content | boundary
-    std::optional<std::pair<double, double>> layoutOffset; // u, v
-    Aabb box;
-    Aabb bounds;
-    std::vector<TextRun> runs;
-    PrimitiveKind geomKind = PrimitiveKind::Rect;
-    double gx = 0, gy = 0, gw = 0, gh = 0;
-    double x1 = 0, y1 = 0, x2 = 0, y2 = 0;
-    double cx = 0, cy = 0, rx = 0, ry = 0;
-    SmartBounds smartBounds;
-    SmartTransform transform;
-    std::string inkScaleMode = "withBounds";
-    std::string fromNodeId;
-    std::string toNodeId;
-    ConnectorAnchor fromAnchor;
-    ConnectorAnchor toAnchor;
-    std::string warpStyle;
-    std::vector<ConnectorRestPt> restSpine;
-    std::vector<ConnectorRestOff> restOffsets;
-    std::vector<ConnectorRestPt> warpedSamples; // derived; not an op
-    ConnectorEndPose fromPose; // last live world pose (D39)
-    ConnectorEndPose toPose;
-    bool connectorInvalid = false;
-    std::vector<DocNode> children;
-};
-
-struct DocOp {
-    std::string opId;
-    std::string type;
-    std::string source;
-    JsonValue payload;
-    std::optional<double> ts;
-};
-
-struct ApplyResult {
-    bool applied = false;
-    std::string reason;
-};
-
-/** @implements [SRS-EP-07] undo ring depth 20 */
-constexpr int kUndoRingDepth = 20;
-
-/**
- * Whole-document pre-op snapshot.
- * @implements [SRS-EP-09] undo ring entry { snapshot, opId, kind }
- */
-struct UndoRingEntry {
-    std::vector<DocNode> snapshot;
-    std::string status;
-    std::set<std::string> appliedOpIds;
-    std::string opId;
-    std::string kind;
-};
-
-/**
- * In-memory doc_change (not TCP).
- * @implements [SRS-EP-09] publish queue entry
- */
-struct DocChange {
-    int seq = 0;
-    int baseSeq = 0;
-    std::string opId;
-    DocOp op;
-    std::int64_t committedAtMs = 0;
-};
-
-struct UndoResult {
-    bool restored = false;
-    bool latched = false;
-    bool noop = false;
-};
-
-/**
- * Device-authored structural ops plus fixture create_* used by host tests.
- * Viewport / tool / selection are not in this set.
- * @implements [SRS-EP-07] structural op set for the undo ring
- */
-inline bool isStructuralOp(const std::string &type)
-{
-    return type == "append_ink" || type == "create_smart_group" || type == "join_smart_group"
-        || type == "set_smart_transform" || type == "set_ink_scale_mode" || type == "reparent"
-        || type == "remove_node" || type == "create_frame" || type == "create_group"
-        || type == "create_text" || type == "create_primitive" || type == "create_connector";
-}
-
-inline Style defaultStyle()
-{
-    return Style{};
-}
-
-inline Style styleFromJson(const JsonValue *p)
-{
-    Style s = defaultStyle();
-    if (!p || !p->isObject())
-        return s;
-    if (p->has("stroke") && p->get("stroke")->isString())
-        s.stroke = p->get("stroke")->asString();
-    if (p->has("strokeWidth") && p->get("strokeWidth")->isNumber())
-        s.strokeWidth = p->get("strokeWidth")->asNumber();
-    if (p->has("fill") && p->get("fill")->isString())
-        s.fill = p->get("fill")->asString();
-    return s;
-}
-
-inline std::optional<double> optNumber(const JsonValue &obj, const char *key)
-{
-    const JsonValue *x = obj.get(key);
-    if (!x || !x->isNumber())
-        return std::nullopt;
-    return x->asNumber();
-}
-
-inline InkSample sampleFromJson(const JsonValue &s)
-{
-    InkSample out;
-    out.x = s.getNumber("x");
-    out.y = s.getNumber("y");
-    out.pressure = optNumber(s, "pressure");
-    out.tiltX = optNumber(s, "tiltX");
-    out.tiltY = optNumber(s, "tiltY");
-    out.t = optNumber(s, "t");
-    out.timestamp = optNumber(s, "timestamp");
-    out.distance = optNumber(s, "distance");
-    out.extras = extrasFromJson(s.get("extras"));
-    return out;
-}
-
-inline JsonValue sampleToJson(const InkSample &s)
-{
-    JsonValue::Object o;
-    o.emplace_back("x", JsonValue::number(s.x));
-    o.emplace_back("y", JsonValue::number(s.y));
-    auto pushOpt = [&](const char *k, const std::optional<double> &v) {
-        if (v)
-            o.emplace_back(k, JsonValue::number(*v));
-    };
-    pushOpt("pressure", s.pressure);
-    pushOpt("tiltX", s.tiltX);
-    pushOpt("tiltY", s.tiltY);
-    pushOpt("t", s.t);
-    pushOpt("timestamp", s.timestamp);
-    pushOpt("distance", s.distance);
-    if (!s.extras.empty()) {
-        JsonValue::Object ex;
-        for (const auto &kv : s.extras)
-            ex.emplace_back(kv.first, kv.second);
-        o.emplace_back("extras", JsonValue::object(std::move(ex)));
-    }
-    return JsonValue::object(std::move(o));
-}
-
-inline JsonValue styleToJson(const Style &s)
-{
-    JsonValue::Object o;
-    o.emplace_back("stroke", JsonValue::string(s.stroke));
-    o.emplace_back("strokeWidth", JsonValue::number(s.strokeWidth));
-    if (s.fill)
-        o.emplace_back("fill", JsonValue::string(*s.fill));
-    return JsonValue::object(std::move(o));
-}
-
-inline Aabb aabbFromJson(const JsonValue *p)
-{
-    Aabb a;
-    if (!p || !p->isObject())
-        return a;
-    a.minX = p->getNumber("minX");
-    a.minY = p->getNumber("minY");
-    a.maxX = p->getNumber("maxX");
-    a.maxY = p->getNumber("maxY");
-    return a;
-}
-
-inline JsonValue aabbToJson(const Aabb &a)
-{
-    JsonValue::Object o;
-    o.emplace_back("minX", JsonValue::number(a.minX));
-    o.emplace_back("minY", JsonValue::number(a.minY));
-    o.emplace_back("maxX", JsonValue::number(a.maxX));
-    o.emplace_back("maxY", JsonValue::number(a.maxY));
-    return JsonValue::object(std::move(o));
-}
+class DocEdit;
 
 /**
  * Working document. Session memory only.
@@ -312,82 +37,31 @@ public:
     std::vector<DocNode> rootChildren;
     std::string status = "open";
 
-    ApplyResult applyOp(const DocOp &op)
-    {
-        if (m_applied.count(op.opId))
-            return {false, "duplicate_opId"};
-        try {
-            if (op.type == "create_frame")
-                opCreateFrame(op.payload);
-            else if (op.type == "create_group")
-                opCreateGroup(op.payload);
-            else if (op.type == "create_text")
-                opCreateText(op.payload);
-            else if (op.type == "create_primitive")
-                opCreatePrimitive(op.payload);
-            else if (op.type == "append_ink")
-                opAppendInk(op.payload);
-            else if (op.type == "create_connector")
-                opCreateConnector(op.payload);
-            else if (op.type == "create_smart_group")
-                opCreateSmartGroup(op.payload);
-            else if (op.type == "join_smart_group")
-                opJoinSmartGroup(op.payload);
-            else if (op.type == "set_smart_transform")
-                opSetSmartTransform(op.payload);
-            else if (op.type == "set_ink_scale_mode")
-                opSetInkScaleMode(op.payload);
-            else if (op.type == "reparent")
-                opReparent(op.payload);
-            else if (op.type == "remove_node")
-                opRemoveNode(op.payload);
-            else
-                return {false, std::string("unknown_type:") + op.type};
-        } catch (const std::exception &e) {
-            return {false, e.what()};
-        }
-        m_applied.insert(op.opId);
-        status = "dirty";
-        return {true, {}};
-    }
+    ApplyResult apply(DocEdit &edit);
+    ApplyResult commitEdit(DocEdit &edit);
+    ApplyResult applyJson(const JsonValue &j);
+    ApplyResult commitJson(const JsonValue &j);
 
     /**
-     * Gesture-commit path: snapshot then apply; enqueue one doc_change.
-     * @implements [SRS-EP-07] undo-aware apply
+     * One gesture, N edits, one undo entry, one doc_change (compound if N>1).
+     * @implements [SRS-EP-08] compound publish of a multi-inverse gesture
      */
-    ApplyResult commitOp(const DocOp &op)
+    ApplyResult commitGesture(const std::string &opId, std::vector<std::unique_ptr<DocEdit>> parts)
     {
-        const bool structural = isStructuralOp(op.type);
-        const bool didPush = structural;
-        if (structural) {
-            if (static_cast<int>(m_undoRing.size()) == kUndoRingDepth)
-                m_undoRing.pop_front();
-            UndoRingEntry e;
-            e.snapshot = rootChildren;
-            e.status = status;
-            e.appliedOpIds = m_applied;
-            e.opId = op.opId;
-            e.kind = op.type;
-            m_undoRing.push_back(std::move(e));
-        }
-        const ApplyResult r = applyOp(op);
-        if (!r.applied) {
-            if (didPush)
-                m_undoRing.pop_back();
-            return r;
-        }
-        if (structural) {
-            enqueueChange(op);
-            m_redoRing.clear();
-        }
-        m_intermediateFrames = 0;
-        m_gestureInFlight = false;
-        runLatchedHistory();
-        return r;
+        return commitParts(opId, std::move(parts));
     }
 
     /**
-     * @implements [SRS-EP-07] undo restores pre-op snapshot
+     * Path A stroke-erase: set_ink_samples; remove_node only if emptied.
+     * Never restore_snapshot.
+     * @implements [SRS-EP-08] Path A set_ink_samples / compound queue
+     */
+    ApplyResult commitPathAErase(const std::string &opId, const std::string &inkId,
+                                 const std::vector<std::pair<double, double>> &worldHits,
+                                 double nibRadius = 8.0);
+
+    /**
+     * @implements [SRS-EP-07] undo applies counterpart inverses
      */
     UndoResult undo()
     {
@@ -399,7 +73,7 @@ public:
     }
 
     /**
-     * @implements [SRS-EP-07] redo restores the undone tree
+     * @implements [SRS-EP-07] redo applies the forward counterparts
      */
     UndoResult redo()
     {
@@ -434,7 +108,7 @@ public:
      */
     void previewManipulationFrame() { ++m_intermediateFrames; }
 
-    /** Live paint only — not a ring entry. Restore origin before commitOp. */
+    /** Live paint only — not a ring entry. Restore origin before commitEdit. */
     bool applyLiveSmartGeometry(const std::string &id, const SmartTransform &t, const SmartBounds &b)
     {
         DocNode *n = findMut(id);
@@ -449,33 +123,32 @@ public:
     bool gestureInFlight() const { return m_gestureInFlight; }
     bool undoLatched() const { return m_historyLatch == HistoryLatch::Undo; }
     bool redoLatched() const { return m_historyLatch == HistoryLatch::Redo; }
-    std::size_t undoDepth() const { return m_undoRing.size(); }
-    std::size_t redoDepth() const { return m_redoRing.size(); }
+    std::size_t undoDepth() const { return m_history.undoDepth(); }
+    std::size_t redoDepth() const { return m_history.redoDepth(); }
 
-    const UndoRingEntry *oldestEntry() const
-    {
-        return m_undoRing.empty() ? nullptr : &m_undoRing.front();
-    }
-    const UndoRingEntry *newestEntry() const
-    {
-        return m_undoRing.empty() ? nullptr : &m_undoRing.back();
-    }
+    const UndoRingEntry *oldestEntry() const { return m_history.oldestUndo(); }
+    const UndoRingEntry *newestEntry() const { return m_history.newestUndo(); }
 
-    std::string entrySnapshotString(const UndoRingEntry &e) const
+    /** Inverse ring has no whole-tree snapshot. Always 0. */
+    static bool entryHasSnapshot(const UndoRingEntry &) { return false; }
+
+    int restoreSnapshotQueued() const
     {
-        JsonValue::Object o;
-        o.emplace_back("version", JsonValue::number(1));
-        o.emplace_back("status", JsonValue::string(e.status));
-        JsonValue::Array kids;
-        for (const auto &c : e.snapshot)
-            kids.push_back(nodeToJson(c));
-        o.emplace_back("rootChildren", JsonValue::array(std::move(kids)));
-        return stringify(JsonValue::object(std::move(o)));
+        int n = 0;
+        for (const auto &ch : m_publishQueue)
+            n += countRestoreSnapshot(ch.op);
+        return n;
     }
 
     const std::vector<DocChange> &publishQueue() const { return m_publishQueue; }
     void clearPublishQueue() { m_publishQueue.clear(); }
     int lastSeq() const { return m_lastSeq; }
+
+    /**
+     * Skip / no-op / empty history never surfaces error UI (F20, F21, F1).
+     * @implements [SRS-EP-13] 0 error UI on skip and no-op
+     */
+    int errorUiShown() const { return 0; }
 
     /**
      * Viewport / tool are not document state and must not push.
@@ -488,18 +161,49 @@ public:
         m_panY += dy;
     }
     void applyToolSwitch(std::string tool) { m_tool = std::move(tool); }
+    void applySelectionChange(std::string selectedId) { m_selectionId = std::move(selectedId); }
+    const std::string &selectionId() const { return m_selectionId; }
     double viewportPanX() const { return m_panX; }
     double viewportPanY() const { return m_panY; }
     const std::string &uiTool() const { return m_tool; }
 
     /**
-     * Accepted load empties the ring. Handshake/TCP is STORY-EP-020.
+     * Copy clones into the session slot. 0 ring entries.
+     * @implements [SRS-EP-07] copy does not push undo
+     */
+    void copyToClipboard(const std::vector<std::string> &ids)
+    {
+        m_clipboard.clear();
+        for (const auto &id : ids) {
+            const DocNode *n = find(id);
+            if (n)
+                m_clipboard.push_back(*n);
+        }
+    }
+    const std::vector<DocNode> &clipboardSlot() const { return m_clipboard; }
+
+    /**
+     * Last-live-pose cache when an endpoint is missing. Does not bump lastOpId.
+     * @implements [SRS-EP-09] last-live-pose does not count as a change
+     */
+    bool writeLastLivePose(const std::string &connectorId, double x, double y)
+    {
+        DocNode *n = findMut(connectorId);
+        if (!n || n->kind != NodeKind::Connector)
+            return false;
+        n->fromPose.x = x;
+        n->fromPose.y = y;
+        n->fromPose.valid = true;
+        return true;
+    }
+
+    /**
+     * Accepted load empties undo and redo. Handshake/TCP is STORY-EP-020.
      * @implements [SRS-EP-07] accepted doc_load clears the ring
      */
     void onAcceptedDocLoad()
     {
-        m_undoRing.clear();
-        m_redoRing.clear();
+        m_history.clear();
         m_historyLatch = HistoryLatch::None;
         m_gestureInFlight = false;
         m_intermediateFrames = 0;
@@ -521,6 +225,24 @@ public:
     }
 
     const DocNode *find(const std::string &id) const { return findMut(id); }
+    DocNode *mutableFind(const std::string &id) { return findMut(id); }
+
+    struct NodePlace {
+        std::string parentId;
+        int index = 0;
+    };
+
+    bool findPlace(const std::string &id, NodePlace *out) const
+    {
+        return findPlaceIn(rootChildren, id, "", out);
+    }
+
+    bool detachAny(const std::string &id, DocNode *out)
+    {
+        return detachAny(rootChildren, id, out);
+    }
+    bool removeNodeId(const std::string &id) { return removeId(rootChildren, id); }
+    void requireUnique(const std::string &id) { assertUniqueId(id); }
 
     int inkCount() const
     {
@@ -572,64 +294,117 @@ public:
 private:
     std::set<std::string> m_applied;
     enum class HistoryLatch { None, Undo, Redo };
-    std::deque<UndoRingEntry> m_undoRing;
-    std::deque<UndoRingEntry> m_redoRing;
+    UndoStack m_history;
     std::vector<DocChange> m_publishQueue;
     int m_lastSeq = 0;
+    int m_historySerial = 0;
     bool m_gestureInFlight = false;
     HistoryLatch m_historyLatch = HistoryLatch::None;
     int m_intermediateFrames = 0;
     double m_panX = 0;
     double m_panY = 0;
     std::string m_tool = "pen";
+    std::string m_selectionId;
+    std::vector<DocNode> m_clipboard;
 
-    void enqueueChange(const DocOp &op)
+    void enqueueChange(JsonValue envelope)
     {
         DocChange ch;
         ch.seq = ++m_lastSeq;
         ch.baseSeq = ch.seq - 1;
-        ch.opId = op.opId;
-        ch.op = op;
+        ch.opId = envelope.getString("opId");
+        ch.op = std::move(envelope);
         ch.committedAtMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                                std::chrono::steady_clock::now().time_since_epoch())
                                .count();
         m_publishQueue.push_back(std::move(ch));
     }
 
-    /**
-     * @implements [SRS-EP-07] pop newest, replace tree, enqueue restore_snapshot
-     */
-    UndoRingEntry captureNow(const std::string &opId, const std::string &kind) const
+    std::string nextHistoryOpId(bool isUndo)
     {
-        UndoRingEntry cur;
-        cur.snapshot = rootChildren;
-        cur.status = status;
-        cur.appliedOpIds = m_applied;
-        cur.opId = opId;
-        cur.kind = kind;
-        return cur;
+        ++m_historySerial;
+        return std::string(isUndo ? "undo:" : "redo:") + std::to_string(m_historySerial);
     }
 
-    static void pushCapped(std::deque<UndoRingEntry> &ring, UndoRingEntry &&e)
+    void stampLastOpId(const std::vector<UndoTarget> &targets, const std::string &opId)
     {
-        if (static_cast<int>(ring.size()) == kUndoRingDepth)
-            ring.pop_front();
-        ring.push_back(std::move(e));
+        for (const auto &t : targets) {
+            if (DocNode *n = findMut(t.nodeId))
+                n->lastOpId = opId;
+        }
     }
 
-    void restoreEntry(UndoRingEntry &&e, const std::string &prefix)
+    std::vector<UndoTarget> captureTargets(const std::vector<std::string> &ids) const;
+    UndoResult applyHistoryEntry(UndoRingEntry e, bool isUndo);
+
+    static int countRestoreSnapshot(const JsonValue &op)
     {
-        rootChildren = std::move(e.snapshot);
-        status = e.status;
-        m_applied = std::move(e.appliedOpIds);
-        DocOp rst;
-        rst.opId = prefix + e.opId;
-        rst.type = "restore_snapshot";
-        rst.source = "epaper";
-        JsonValue::Object payload;
-        payload.emplace_back("document", toJSON());
-        rst.payload = JsonValue::object(std::move(payload));
-        enqueueChange(rst);
+        const std::string type = op.getString("type");
+        if (kindEq(type.c_str(), edit_kind::kRestoreSnapshot))
+            return 1;
+        int n = 0;
+        if (kindEq(type.c_str(), edit_kind::kCompound)) {
+            const JsonValue *payload = op.get("payload");
+            const JsonValue *ops = payload ? payload->get("ops") : nullptr;
+            if (ops && ops->isArray()) {
+                for (const auto &j : ops->asArray()) {
+                    if (kindEq(j.getString("type").c_str(), edit_kind::kRestoreSnapshot))
+                        ++n;
+                }
+            }
+        }
+        return n;
+    }
+
+    ApplyResult commitParts(const std::string &opId, std::vector<std::unique_ptr<DocEdit>> parts);
+
+    static bool findPlaceIn(const std::vector<DocNode> &nodes, const std::string &id,
+                            const std::string &parentId, NodePlace *out)
+    {
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            if (nodes[i].id == id) {
+                if (out) {
+                    out->parentId = parentId;
+                    out->index = static_cast<int>(i);
+                }
+                return true;
+            }
+            if (findPlaceIn(nodes[i].children, id, nodes[i].id, out))
+                return true;
+        }
+        return false;
+    }
+
+    static bool detachAny(std::vector<DocNode> &nodes, const std::string &id, DocNode *out)
+    {
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            if (nodes[i].id == id) {
+                if (out)
+                    *out = std::move(nodes[i]);
+                nodes.erase(nodes.begin() + static_cast<std::ptrdiff_t>(i));
+                return true;
+            }
+            if (detachAny(nodes[i].children, id, out))
+                return true;
+        }
+        return false;
+    }
+
+public:
+    void insertAt(const std::string &parentId, int index, DocNode node)
+    {
+        std::vector<DocNode> *sibs = &rootChildren;
+        if (!parentId.empty()) {
+            DocNode *p = findMut(parentId);
+            if (!p)
+                throw std::runtime_error(std::string("missing_parent:") + parentId);
+            sibs = &p->children;
+        }
+        if (index < 0)
+            index = 0;
+        if (index > static_cast<int>(sibs->size()))
+            index = static_cast<int>(sibs->size());
+        sibs->insert(sibs->begin() + index, std::move(node));
     }
 
     void runLatchedHistory()
@@ -643,28 +418,20 @@ private:
     }
 
     /**
-     * @implements [SRS-EP-07] pop newest, replace tree, enqueue restore_snapshot
+     * @implements [SRS-EP-07] pop newest, apply inverses, enqueue counterpart
      */
     UndoResult undoNow()
     {
-        if (m_undoRing.empty())
+        if (m_history.undoEmpty())
             return {false, false, true};
-        pushCapped(m_redoRing, captureNow("redo-of:" + m_undoRing.back().opId, "undo"));
-        UndoRingEntry e = std::move(m_undoRing.back());
-        m_undoRing.pop_back();
-        restoreEntry(std::move(e), "restore_snapshot:");
-        return {true, false, false};
+        return applyHistoryEntry(m_history.takeUndo(), true);
     }
 
     UndoResult redoNow()
     {
-        if (m_redoRing.empty())
+        if (m_history.redoEmpty())
             return {false, false, true};
-        pushCapped(m_undoRing, captureNow("undo-of:" + m_redoRing.back().opId, "redo"));
-        UndoRingEntry e = std::move(m_redoRing.back());
-        m_redoRing.pop_back();
-        restoreEntry(std::move(e), "restore_snapshot:redo:");
-        return {true, false, false};
+        return applyHistoryEntry(m_history.takeRedo(), false);
     }
 
     template <typename Fn>
@@ -743,103 +510,6 @@ private:
         if (!x || !x->isString())
             throw std::runtime_error("missing_id");
         return x->asString();
-    }
-
-    void opCreateFrame(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        assertUniqueId(id);
-        DocNode n;
-        n.id = id;
-        n.kind = NodeKind::Frame;
-        n.bounds = aabbFromJson(p.get("bounds"));
-        rootChildren.push_back(std::move(n));
-    }
-
-    void opCreateGroup(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        assertUniqueId(id);
-        DocNode n;
-        n.id = id;
-        n.kind = NodeKind::Group;
-        insertUnder(parentIdOf(p), std::move(n));
-    }
-
-    void opCreateText(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        assertUniqueId(id);
-        DocNode n;
-        n.id = id;
-        n.kind = NodeKind::Text;
-        n.box = aabbFromJson(p.get("box"));
-        n.style = styleFromJson(p.get("style"));
-        if (const JsonValue *runs = p.get("runs"); runs && runs->isArray()) {
-            for (const auto &r : runs->asArray()) {
-                TextRun tr;
-                tr.text = r.getString("text");
-                const JsonValue *b = r.get("bold");
-                tr.bold = b && b->isBool() && b->asBool();
-                n.runs.push_back(tr);
-            }
-        } else {
-            n.runs.push_back(TextRun{});
-        }
-        insertUnder(parentIdOf(p), std::move(n));
-    }
-
-    void opCreatePrimitive(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        assertUniqueId(id);
-        DocNode n;
-        n.id = id;
-        n.kind = NodeKind::Primitive;
-        n.style = styleFromJson(p.get("style"));
-        const JsonValue *geom = p.get("geom");
-        if (!geom || !geom->isObject())
-            throw std::runtime_error("missing_geom");
-        const std::string gk = geom->getString("kind");
-        if (gk == "line") {
-            n.geomKind = PrimitiveKind::Line;
-            n.x1 = geom->getNumber("x1");
-            n.y1 = geom->getNumber("y1");
-            n.x2 = geom->getNumber("x2");
-            n.y2 = geom->getNumber("y2");
-        } else if (gk == "ellipse") {
-            n.geomKind = PrimitiveKind::Ellipse;
-            n.cx = geom->getNumber("cx");
-            n.cy = geom->getNumber("cy");
-            n.rx = geom->getNumber("rx");
-            n.ry = geom->getNumber("ry");
-        } else {
-            n.geomKind = PrimitiveKind::Rect;
-            n.gx = geom->getNumber("x");
-            n.gy = geom->getNumber("y");
-            n.gw = geom->getNumber("w");
-            n.gh = geom->getNumber("h");
-        }
-        insertUnder(parentIdOf(p), std::move(n));
-    }
-
-    /** @implements [SRS-EP-07] append_ink — finished stroke → Ink node */
-    void opAppendInk(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        assertUniqueId(id);
-        DocNode n;
-        n.id = id;
-        n.kind = NodeKind::Ink;
-        n.style = styleFromJson(p.get("style"));
-        if (const JsonValue *role = p.get("role"); role && role->isString())
-            n.role = role->asString();
-        const JsonValue *samples = p.get("samples");
-        if (!samples || !samples->isArray())
-            throw std::runtime_error("missing_samples");
-        for (const auto &s : samples->asArray())
-            n.samples.push_back(sampleFromJson(s));
-        insertUnder(parentIdOf(p), std::move(n));
     }
 
     static ConnectorAnchor anchorFromJson(const JsonValue *a)
@@ -949,39 +619,6 @@ private:
 
     /** @implements [SRS-EP-07] create_connector — device-authored; body + rest + anchors
      *  @implements [SRS-EP-17] commit envelope */
-    void opCreateConnector(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        assertUniqueId(id);
-        DocNode n;
-        n.id = id;
-        n.kind = NodeKind::Connector;
-        n.fromAnchor = anchorFromJson(p.get("from"));
-        n.toAnchor = anchorFromJson(p.get("to"));
-        n.fromNodeId = n.fromAnchor.nodeId;
-        n.toNodeId = n.toAnchor.nodeId;
-        n.warpStyle = p.getString("warpStyle", "morph");
-        fillConnectorRest(n, p);
-        if (const JsonValue *ids = p.get("captureIds"); ids && ids->isArray()) {
-            for (const auto &idv : ids->asArray()) {
-                if (!idv.isString())
-                    throw std::runtime_error("capture_id_not_string");
-                DocNode ink;
-                if (!detachInk(idv.asString(), &ink))
-                    throw std::runtime_error(std::string("capture_missing:") + idv.asString());
-                n.children.push_back(std::move(ink));
-            }
-        }
-        n.connectorInvalid = false;
-        n.fromPose = poseFromJson(p.get("fromPose"));
-        n.toPose = poseFromJson(p.get("toPose"));
-        insertUnder(parentIdOf(p), std::move(n));
-    }
-
-    /**
-     * Detach free ink (root / frame / group only — not inside a SmartGroup).
-     * @implements [SRS-EP-10] reparent capture into Smart Group
-     */
     bool detachInk(const std::string &id, DocNode *out)
     {
         return detachInkFrom(rootChildren, id, out);
@@ -1002,150 +639,6 @@ private:
             }
         }
         return false;
-    }
-
-    void opCreateSmartGroup(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        assertUniqueId(id);
-        if (const JsonValue *ids = p.get("captureIds"); ids && ids->isArray()) {
-            for (const auto &idv : ids->asArray()) {
-                if (!idv.isString())
-                    throw std::runtime_error("capture_id_not_string");
-                DocNode discarded;
-                if (!detachInk(idv.asString(), &discarded))
-                    throw std::runtime_error(std::string("capture_missing:") + idv.asString());
-            }
-        }
-        DocNode n;
-        n.id = id;
-        n.kind = NodeKind::SmartGroup;
-        if (const JsonValue *b = p.get("bounds"); b && b->isObject()) {
-            n.smartBounds.x = b->getNumber("x");
-            n.smartBounds.y = b->getNumber("y");
-            n.smartBounds.width = b->getNumber("width");
-            n.smartBounds.height = b->getNumber("height");
-        }
-        if (const JsonValue *t = p.get("transform"); t && t->isObject()) {
-            n.transform.x = t->getNumber("x");
-            n.transform.y = t->getNumber("y");
-            n.transform.rotation = t->getNumber("rotation");
-            n.transform.scaleX = t->has("scaleX") ? t->getNumber("scaleX") : 1;
-            n.transform.scaleY = t->has("scaleY") ? t->getNumber("scaleY") : 1;
-        }
-        // Infini apply fallback is fixedInk when the field is omitted.
-        n.inkScaleMode = p.getString("inkScaleMode", "fixedInk");
-        if (const JsonValue *ch = p.get("children"); ch && ch->isArray()) {
-            for (const auto &c : ch->asArray())
-                n.children.push_back(nodeFromJson(c));
-        }
-        insertUnder(parentIdOf(p), std::move(n));
-    }
-
-    void opSetSmartTransform(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        DocNode *node = findMut(id);
-        if (!node || node->kind != NodeKind::SmartGroup)
-            throw std::runtime_error(std::string("not_smart_group:") + id);
-        if (const JsonValue *t = p.get("transform"); t && t->isObject()) {
-            node->transform.x = t->getNumber("x");
-            node->transform.y = t->getNumber("y");
-            node->transform.rotation = t->getNumber("rotation");
-            node->transform.scaleX = t->has("scaleX") ? t->getNumber("scaleX") : node->transform.scaleX;
-            node->transform.scaleY = t->has("scaleY") ? t->getNumber("scaleY") : node->transform.scaleY;
-        }
-        if (const JsonValue *b = p.get("bounds"); b && b->isObject()) {
-            node->smartBounds.x = b->getNumber("x");
-            node->smartBounds.y = b->getNumber("y");
-            node->smartBounds.width = b->getNumber("width");
-            node->smartBounds.height = b->getNumber("height");
-        }
-    }
-
-    void opSetInkScaleMode(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        DocNode *node = findMut(id);
-        if (!node || node->kind != NodeKind::SmartGroup)
-            throw std::runtime_error(std::string("not_smart_group:") + id);
-        const std::string mode = p.getString("inkScaleMode");
-        if (mode != "withBounds" && mode != "fixedInk")
-            throw std::runtime_error(std::string("bad_ink_scale_mode:") + mode);
-        node->inkScaleMode = mode;
-    }
-
-    /**
-     * Reparent free world-space ink into an existing Smart Group as content.
-     * Converts samples to group-local; seeds layoutOffset; does **not** expand bounds.
-     * @implements [SRS-EP-10] join membership
-     */
-    void opJoinSmartGroup(const JsonValue &p)
-    {
-        const std::string inkId = p.getString("inkId");
-        const std::string smartGroupId = p.getString("smartGroupId");
-        DocNode *sg = findMut(smartGroupId);
-        if (!sg || sg->kind != NodeKind::SmartGroup)
-            throw std::runtime_error(std::string("not_smart_group:") + smartGroupId);
-        DocNode detached;
-        if (!detachInk(inkId, &detached))
-            throw std::runtime_error(std::string("join_missing:") + inkId);
-
-        // Inverse of smartLocalToWorld: fixedInk is translate-only (no /scale).
-        // @fix [STORY-EP-017] draw-into local vs resized parent
-        const SmartTransform &t = sg->transform;
-        const bool fixedInk = sg->inkScaleMode == "fixedInk";
-        const double sx = t.scaleX != 0 ? t.scaleX : 1.0;
-        const double sy = t.scaleY != 0 ? t.scaleY : 1.0;
-        for (auto &s : detached.samples) {
-            if (fixedInk) {
-                s.x = s.x - t.x;
-                s.y = s.y - t.y;
-            } else {
-                s.x = (s.x - t.x) / sx;
-                s.y = (s.y - t.y) / sy;
-            }
-        }
-        detached.role = "content";
-        // UV vs current local bounds — do not expand bounds (SRS-EP-10)
-        const double w = sg->smartBounds.width != 0 ? sg->smartBounds.width : 1.0;
-        const double h = sg->smartBounds.height != 0 ? sg->smartBounds.height : 1.0;
-        double minX = std::numeric_limits<double>::infinity();
-        double minY = std::numeric_limits<double>::infinity();
-        double maxX = -std::numeric_limits<double>::infinity();
-        double maxY = -std::numeric_limits<double>::infinity();
-        for (const auto &s : detached.samples) {
-            minX = std::min(minX, s.x);
-            minY = std::min(minY, s.y);
-            maxX = std::max(maxX, s.x);
-            maxY = std::max(maxY, s.y);
-        }
-        const double cx = std::isfinite(minX) ? (minX + maxX) / 2.0 : 0.0;
-        const double cy = std::isfinite(minY) ? (minY + maxY) / 2.0 : 0.0;
-        detached.layoutOffset = {(cx - sg->smartBounds.x) / w, (cy - sg->smartBounds.y) / h};
-        sg->children.push_back(std::move(detached));
-    }
-
-    /** @implements [SRS-EP-07] reparent (device closed set; not shipped as a gesture this story) */
-    void opReparent(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        const std::string newParentId = p.getString("newParentId");
-        DocNode *node = findMut(id);
-        if (!node)
-            throw std::runtime_error(std::string("missing:") + id);
-        DocNode moved = *node;
-        if (!removeId(rootChildren, id))
-            throw std::runtime_error(std::string("missing:") + id);
-        insertUnder(newParentId.empty() ? std::nullopt : std::optional<std::string>(newParentId),
-                    std::move(moved));
-    }
-
-    void opRemoveNode(const JsonValue &p)
-    {
-        const std::string id = requireId(p);
-        if (!removeId(rootChildren, id))
-            throw std::runtime_error(std::string("missing:") + id);
     }
 
     static bool removeId(std::vector<DocNode> &nodes, const std::string &id)
@@ -1437,50 +930,323 @@ private:
     }
 };
 
-inline DocOp opFromJson(const JsonValue &j)
+} // namespace document
+} // namespace epaper
+
+#include "operations/edit_bodies.hpp"
+
+namespace epaper {
+namespace document {
+
+inline ApplyResult DeviceDocument::apply(DocEdit &edit)
 {
-    DocOp op;
-    op.opId = j.getString("opId");
-    op.type = j.getString("type");
-    op.source = j.getString("source");
-    if (const JsonValue *p = j.get("payload"))
-        op.payload = *p;
-    op.ts = optNumber(j, "ts");
-    return op;
+    try {
+        return edit.doApply(*this);
+    } catch (const std::exception &e) {
+        return {false, e.what()};
+    }
 }
 
-/** @implements [SRS-EP-08] closed transmit op envelope */
-inline JsonValue opToJson(const DocOp &op)
+inline UndoResult DeviceDocument::applyHistoryEntry(UndoRingEntry e, bool isUndo)
 {
-    JsonValue::Object o;
-    o.emplace_back("opId", JsonValue::string(op.opId));
-    o.emplace_back("type", JsonValue::string(op.type));
-    if (!op.source.empty())
-        o.emplace_back("source", JsonValue::string(op.source));
-    o.emplace_back("payload", op.payload);
-    if (op.ts)
-        o.emplace_back("ts", JsonValue::number(*op.ts));
-    return JsonValue::object(std::move(o));
+    bool anySkip = false;
+    for (const auto &inv : e.inverses) {
+        if (!inv)
+            continue;
+        if (isCreateKind(inv->kind())) {
+            const auto ts = inv->targets();
+            if (!ts.empty() && find(ts.front()))
+                anySkip = true;
+        }
+    }
+    for (const auto &t : e.targets) {
+        const DocNode *n = find(t.nodeId);
+        if (!n)
+            continue;
+        const std::string expected = isUndo ? e.forwardOpId : t.prevLastOpId;
+        if (n->lastOpId != expected)
+            anySkip = true;
+    }
+    if (anySkip)
+        return {false, false, true, true};
+
+    const std::string histId = nextHistoryOpId(isUndo);
+    std::vector<std::unique_ptr<DocEdit>> applied;
+    for (const auto &inv : e.inverses) {
+        if (!inv)
+            continue;
+        if (kindEq(inv->kind(), edit_kind::kReparent)) {
+            const auto *rp = dynamic_cast<const ReparentEdit *>(inv.get());
+            if (rp && !rp->hasBody() && !find(rp->nodeId()))
+                continue;
+        } else if (kindEq(inv->kind(), edit_kind::kSetSmartTransform)
+                   || kindEq(inv->kind(), edit_kind::kSetInkScaleMode)
+                   || kindEq(inv->kind(), edit_kind::kRemoveNode)
+                   || kindEq(inv->kind(), edit_kind::kSetInkSamples)) {
+            const auto ts = inv->targets();
+            if (!ts.empty() && !find(ts.front()))
+                continue;
+        }
+        auto run = inv->clone();
+        run->setId(histId);
+        const ApplyResult r = apply(*run);
+        if (r.applied)
+            applied.push_back(std::move(run));
+    }
+    if (applied.empty())
+        return {false, false, true, false};
+
+    if (isUndo) {
+        for (const auto &t : e.targets) {
+            if (DocNode *n = findMut(t.nodeId))
+                n->lastOpId = t.prevLastOpId;
+        }
+    } else {
+        stampLastOpId(e.targets, e.forwardOpId);
+    }
+
+    JsonValue pub;
+    if (applied.size() == 1) {
+        pub = applied[0]->serialize();
+    } else {
+        CompoundEdit compound;
+        compound.setId(histId);
+        compound.setSource("epaper");
+        for (auto &a : applied)
+            compound.addPart(std::move(a));
+        pub = compound.serialize();
+    }
+    enqueueChange(std::move(pub));
+
+    UndoRingEntry other;
+    other.forwardOpId = e.forwardOpId;
+    other.seq = m_lastSeq;
+    other.inverses = std::move(e.counterparts);
+    other.counterparts = std::move(e.inverses);
+    other.targets = std::move(e.targets);
+    m_history.pushOther(isUndo, std::move(other));
+    return {true, false, false, false};
 }
 
-/** @implements [SRS-EP-08] doc_change wire envelope */
-inline JsonValue docChangeToJson(const DocChange &ch)
+inline ApplyResult DeviceDocument::applyJson(const JsonValue &j)
 {
-    JsonValue::Object o;
-    o.emplace_back("type", JsonValue::string("doc_change"));
-    o.emplace_back("seq", JsonValue::number(ch.seq));
-    o.emplace_back("opId", JsonValue::string(ch.opId));
-    o.emplace_back("op", opToJson(ch.op));
-    o.emplace_back("baseSeq", JsonValue::number(ch.baseSeq));
-    return JsonValue::object(std::move(o));
+    auto e = DocEdit::fromJson(j);
+    if (!e)
+        return {false, std::string("unknown_type:") + j.getString("type")};
+    if (e->id().empty())
+        return {false, "missing_opId"};
+    if (m_applied.count(e->id()))
+        return {false, "duplicate_opId"};
+    const ApplyResult r = apply(*e);
+    if (!r.applied)
+        return r;
+    m_applied.insert(e->id());
+    status = "dirty";
+    stampLastOpId(captureTargets(e->targets()), e->id());
+    return {true, {}};
 }
 
-/** @implements [SRS-EP-08] SRS-IN-09 closed op.type list */
-inline bool isClosedTransmitOp(const std::string &type)
+inline ApplyResult DeviceDocument::commitJson(const JsonValue &j)
 {
-    return type == "append_ink" || type == "create_smart_group" || type == "join_smart_group"
-        || type == "set_smart_transform" || type == "set_ink_scale_mode" || type == "reparent"
-        || type == "remove_node" || type == "restore_snapshot";
+    auto e = DocEdit::fromJson(j);
+    if (!e)
+        return {false, std::string("unknown_type:") + j.getString("type")};
+    return commitEdit(*e);
+}
+
+inline std::vector<UndoTarget> DeviceDocument::captureTargets(const std::vector<std::string> &ids) const
+{
+    std::vector<UndoTarget> ts;
+    ts.reserve(ids.size());
+    for (const auto &id : ids) {
+        bool dup = false;
+        for (const auto &t : ts) {
+            if (t.nodeId == id) {
+                dup = true;
+                break;
+            }
+        }
+        if (dup)
+            continue;
+        const DocNode *n = find(id);
+        ts.push_back({id, n ? n->lastOpId : std::string()});
+    }
+    return ts;
+}
+
+inline void flattenInverses(std::unique_ptr<DocEdit> inv, std::vector<std::unique_ptr<DocEdit>> *out)
+{
+    if (!inv || !out)
+        return;
+    if (kindEq(inv->kind(), edit_kind::kCompound)) {
+        auto *c = dynamic_cast<CompoundEdit *>(inv.get());
+        if (!c)
+            return;
+        for (auto &p : c->takeParts())
+            flattenInverses(std::move(p), out);
+        return;
+    }
+    out->push_back(std::move(inv));
+}
+
+inline ApplyResult DeviceDocument::commitEdit(DocEdit &edit)
+{
+    if (kindEq(edit.kind(), edit_kind::kCompound)) {
+        auto *c = dynamic_cast<CompoundEdit *>(&edit);
+        if (!c)
+            return {false, "compound_cast"};
+        std::vector<std::unique_ptr<DocEdit>> parts;
+        for (const auto &p : c->parts()) {
+            if (p)
+                parts.push_back(p->clone());
+        }
+        return commitParts(edit.id(), std::move(parts));
+    }
+    if (edit.id().empty())
+        return {false, "missing_opId"};
+    const bool structural = isStructuralKind(edit.kind());
+    UndoRingEntry pending;
+    if (structural) {
+        pending.forwardOpId = edit.id();
+        pending.counterparts.push_back(edit.clone());
+        flattenInverses(edit.generateUndo(*this), &pending.inverses);
+        pending.targets = captureTargets(edit.targets());
+        m_history.popOldestIfFull();
+        m_history.pushUndo(std::move(pending));
+    }
+    if (m_applied.count(edit.id())) {
+        if (structural)
+            m_history.popUndoBack();
+        return {false, "duplicate_opId"};
+    }
+    const ApplyResult r = apply(edit);
+    if (!r.applied) {
+        if (structural)
+            m_history.popUndoBack();
+        return r;
+    }
+    m_applied.insert(edit.id());
+    status = "dirty";
+    if (structural) {
+        stampLastOpId(m_history.undoBack().targets, edit.id());
+        enqueueChange(edit.serialize());
+        m_history.undoBack().seq = m_lastSeq;
+        m_history.clearRedo();
+    }
+    m_intermediateFrames = 0;
+    m_gestureInFlight = false;
+    runLatchedHistory();
+    return r;
+}
+
+inline ApplyResult DeviceDocument::commitParts(const std::string &opId,
+                                               std::vector<std::unique_ptr<DocEdit>> parts)
+{
+    if (parts.empty())
+        return {false, "empty_gesture"};
+    if (m_applied.count(opId))
+        return {false, "duplicate_opId"};
+    for (auto &p : parts) {
+        if (p && p->id().empty())
+            p->setId(opId);
+    }
+
+    UndoRingEntry pending;
+    pending.forwardOpId = opId;
+    std::vector<std::vector<std::unique_ptr<DocEdit>>> invParts;
+    invParts.reserve(parts.size());
+    for (auto &part : parts) {
+        if (!part)
+            return {false, "null_part"};
+        std::vector<std::unique_ptr<DocEdit>> flat;
+        flattenInverses(part->generateUndo(*this), &flat);
+        invParts.push_back(std::move(flat));
+        auto more = captureTargets(part->targets());
+        for (auto &t : more) {
+            bool dup = false;
+            for (const auto &e : pending.targets) {
+                if (e.nodeId == t.nodeId) {
+                    dup = true;
+                    break;
+                }
+            }
+            if (!dup)
+                pending.targets.push_back(std::move(t));
+        }
+        pending.counterparts.push_back(part->clone());
+    }
+    for (auto it = invParts.rbegin(); it != invParts.rend(); ++it) {
+        for (auto &inv : *it)
+            pending.inverses.push_back(std::move(inv));
+    }
+
+    const std::vector<DocNode> backup = rootChildren;
+    for (auto &part : parts) {
+        const ApplyResult r = apply(*part);
+        if (!r.applied) {
+            rootChildren = backup;
+            return r;
+        }
+    }
+    m_applied.insert(opId);
+    status = "dirty";
+
+    m_history.popOldestIfFull();
+    m_history.pushUndo(std::move(pending));
+    stampLastOpId(m_history.undoBack().targets, opId);
+
+    JsonValue pub;
+    if (parts.size() == 1) {
+        pub = parts[0]->serialize();
+    } else {
+        CompoundEdit compound;
+        compound.setId(opId);
+        compound.setSource("epaper");
+        for (auto &p : parts)
+            compound.addPart(std::move(p));
+        pub = compound.serialize();
+    }
+    enqueueChange(std::move(pub));
+    m_history.undoBack().seq = m_lastSeq;
+    m_history.clearRedo();
+    m_intermediateFrames = 0;
+    m_gestureInFlight = false;
+    runLatchedHistory();
+    return {true, {}};
+}
+
+inline ApplyResult DeviceDocument::commitPathAErase(const std::string &opId, const std::string &inkId,
+                                                    const std::vector<std::pair<double, double>> &worldHits,
+                                                    double nibRadius)
+{
+    const DocNode *ink = find(inkId);
+    if (!ink || ink->kind != NodeKind::Ink)
+        return {false, std::string("not_ink:") + inkId};
+    std::vector<InkSample> remaining;
+    remaining.reserve(ink->samples.size());
+    const double r2 = nibRadius * nibRadius;
+    for (const auto &s : ink->samples) {
+        bool hit = false;
+        for (const auto &h : worldHits) {
+            const double dx = s.x - h.first;
+            const double dy = s.y - h.second;
+            if (dx * dx + dy * dy <= r2) {
+                hit = true;
+                break;
+            }
+        }
+        if (!hit)
+            remaining.push_back(s);
+    }
+    auto setSamples = std::make_unique<SetInkSamplesEdit>(inkId, remaining);
+    setSamples->setId(opId);
+    if (!remaining.empty())
+        return commitEdit(*setSamples);
+    CompoundEdit compound;
+    compound.setId(opId);
+    compound.addPart(std::move(setSamples));
+    compound.addPart(makeRemoveEdit(opId, inkId));
+    return commitEdit(compound);
 }
 
 } // namespace document

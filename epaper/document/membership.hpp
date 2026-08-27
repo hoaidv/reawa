@@ -11,6 +11,7 @@
 #include "device_document.hpp"
 #include "recognize_enclose.hpp"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -97,16 +98,10 @@ inline MembershipResult tryDrawIntoMembership(DeviceDocument &doc, const std::st
     }
     const DocNode *winner = qualifiers.back();
 
-    DocOp op;
-    op.opId = std::string("join_smart_group:") + inkId + ":" + winner->id;
-    op.type = "join_smart_group";
-    op.source = "epaper";
-    JsonValue::Object payload;
-    payload.emplace_back("inkId", JsonValue::string(inkId));
-    payload.emplace_back("smartGroupId", JsonValue::string(winner->id));
-    op.payload = JsonValue::object(std::move(payload));
-
-    const ApplyResult r = doc.commitOp(op);
+    JoinSmartGroupEdit edit(inkId, winner->id);
+    edit.setId(std::string("join_smart_group:") + inkId + ":" + winner->id);
+    edit.setSource("epaper");
+    const ApplyResult r = doc.commitEdit(edit);
     if (!r.applied) {
         out.reason = r.reason.empty() ? "join_failed" : r.reason;
         return out;

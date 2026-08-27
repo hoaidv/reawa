@@ -1,11 +1,10 @@
 ---
 iter: iter-005
 goal: "Hand-on-paper (REQ-10…18 except REQ-15) plus independent cameras and optional viewport follow"
-committed_points: 96
+committed_points: 93
 start: 2026-08-16
 end: ""
 capacity: 72
-committed_points: 77
 status: active
 ---
 
@@ -18,7 +17,7 @@ Lock: **vertical · verified · wip 2**.
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 
-W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). 2026-08-21: [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) inverse-op undo — [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **proposed**. WAIT Product Manager adopt. **No code.** W3 frozen. Follow field test still outstanding.
+W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). 2026-08-27: [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. Inverse-undo local EP-059…061 **done**. IN-038 **cancelled**. W3 frozen. Follow field test still outstanding. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **closed**.
 
 ## Committed
 
@@ -54,6 +53,10 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-EP-051](./stories/STORY-EP-051.md) — 8 — manual insert · depends EP-050
 - [STORY-EP-052](./stories/STORY-EP-052.md) — 5 — barrel dispatch · depends EP-056
 - [STORY-IN-035](./stories/STORY-IN-035.md) — 3 — Infini persist — **cancelled**
+- [STORY-EP-059](./stories/STORY-EP-059.md) — 5 — inverse ring + lastOpId — **done**
+- [STORY-EP-060](./stories/STORY-EP-060.md) — 3 — skip/no-op · depends EP-059 — **done**
+- [STORY-EP-061](./stories/STORY-EP-061.md) — 3 — device undo queue counterpart/compound — **done**
+- [STORY-IN-038](./stories/STORY-IN-038.md) — 5 — Infini apply compound — **cancelled**
 
 ## Carry-over (not NOW)
 
@@ -68,8 +71,9 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - CHL-0022 shipped “no pan” prose — Product Manager adopt
 - EP-037 package still empty=no-op until EP-054
 - PM `srs-product` BR-D08 still always-on viewport (architect flagged)
-- [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) inverse-op undo — [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) proposed (READY-WITH-CONCERNS); **no application code** until adopt
-- Vertical work-in-progress 2: Architect docs lane; W3 / Device Settings still frozen
+- [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**; EP-059…061 **done**; IN-038 cancelled
+- [CHL-0027](./challenges/CHL-0027-palm-travel-not-contact-count.md) palm rest by travel — open; Product Manager triage
+- Vertical work-in-progress 2: wait human; W3 / Device Settings still frozen; TRACK-006 closed
 - Agent host has no RM2 panel / no live TCP `:9877`; remaining follow field test is still outstanding
 
 ## Links

@@ -58,6 +58,21 @@ static std::vector<InkSample> lineXY(double x0, double y0, double x1, double y1,
     return out;
 }
 
+static JsonValue inkChildToJsonLocal(const std::string &id, const std::string &role,
+                                     const std::vector<InkSample> &samples)
+{
+    JsonValue::Object o;
+    o.emplace_back("id", JsonValue::string(id));
+    o.emplace_back("kind", JsonValue::string("ink"));
+    o.emplace_back("role", JsonValue::string(role));
+    JsonValue::Object style;
+    style.emplace_back("stroke", JsonValue::string("#1C2430"));
+    style.emplace_back("strokeWidth", JsonValue::number(2));
+    o.emplace_back("style", JsonValue::object(std::move(style)));
+    o.emplace_back("samples", inkSamplesToJson(samples));
+    return JsonValue::object(std::move(o));
+}
+
 static std::vector<InkSample> wiggleXY(double x0, double y0, double x1, double y1, int n)
 {
     std::vector<InkSample> out;
@@ -82,11 +97,7 @@ static void appendInk(DeviceDocument &doc, const std::string &id,
     payload.emplace_back("id", JsonValue::string(id));
     payload.emplace_back("samples", inkSamplesToJson(samples));
     payload.emplace_back("style", JsonValue::object(std::move(style)));
-    DocOp op;
-    op.opId = "append_ink:" + id;
-    op.type = "append_ink";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(op).applied);
+        CHECK(doc.commitJson(opEnvelope("append_ink:" + id, "append_ink", JsonValue::object(std::move(payload)))).applied);
 }
 
 static void addSg(DeviceDocument &doc, const std::string &id, double x, double y, double w, double h)
@@ -112,19 +123,14 @@ static void addSg(DeviceDocument &doc, const std::string &id, double x, double y
     t.emplace_back("rotation", JsonValue::number(0));
     t.emplace_back("scaleX", JsonValue::number(1));
     t.emplace_back("scaleY", JsonValue::number(1));
-    Style st;
-    JsonValue kids = JsonValue::array({inkChildToJson(id + "_b", "boundary", bpoly, st, std::nullopt)});
+    JsonValue kids = JsonValue::array({inkChildToJsonLocal(id + "_b", "boundary", bpoly)});
     JsonValue::Object payload;
     payload.emplace_back("id", JsonValue::string(id));
     payload.emplace_back("bounds", JsonValue::object(std::move(b)));
     payload.emplace_back("transform", JsonValue::object(std::move(t)));
     payload.emplace_back("inkScaleMode", JsonValue::string("fixedInk"));
     payload.emplace_back("children", std::move(kids));
-    DocOp op;
-    op.opId = "create_smart_group:" + id;
-    op.type = "create_smart_group";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(op).applied);
+        CHECK(doc.commitJson(opEnvelope("create_smart_group:" + id, "create_smart_group", JsonValue::object(std::move(payload)))).applied);
 }
 
 static void createSgEmpty(DeviceDocument &doc, const std::string &id, double tx, double ty, double w,
@@ -147,11 +153,7 @@ static void createSgEmpty(DeviceDocument &doc, const std::string &id, double tx,
     payload.emplace_back("transform", JsonValue::object(std::move(t)));
     payload.emplace_back("inkScaleMode", JsonValue::string("fixedInk"));
     payload.emplace_back("children", JsonValue::array({}));
-    DocOp op;
-    op.opId = "create_smart_group:" + id;
-    op.type = "create_smart_group";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(op).applied);
+        CHECK(doc.commitJson(opEnvelope("create_smart_group:" + id, "create_smart_group", JsonValue::object(std::move(payload)))).applied);
 }
 
 static RecogDispatchResult penUp(DeviceDocument &doc, const std::string &id,

@@ -33,5 +33,7 @@ Semantics inherited from the deprecated infini sections [SRS-IN-10], [SRS-IN-11]
   [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md) (empty pan is local; publish only if Infini following)
 - Forward constraint: must conform to [node-manipulation](../node-manipulation/srs-product.md)
   ([REQ-08](../../prd.md#node-manipulation))
+- Architect view (lasso/move/resize routing): [tool-system](../../tool-system/index.md) ·
+  [ADR-0033](../../../../adr/ADR-0033-tool-abstraction.md)
 - Siblings: [tool-modes](../tool-modes/index.md) (how a tool is armed) ·
   [device-document](../device-document/index.md) (what it edits)

@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.12.0-draft
+version: 0.13.0-draft
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -189,8 +189,15 @@ viewed at scale, and saved.
 - Node semantics are shared with Infini (Ink, SmartGroup roles, `inkScaleMode`, `layoutOffset`) so a
   document means the same thing on both ends — see [ADR-0011](../../adr/ADR-0011-smart-group.md) and
   [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md).
-- **Undo** is on the device, because editing is on the device: a bounded history of structural ops
-  with one entry per completed gesture.
+- **Undo** is on the device, because editing is on the device. Each completed structural gesture
+  has a **counterpart** undo (create that ink → that ink is gone; move A to a new place → A is back
+  where it was). History is **one stack for this device document-epoch** (accepted load until the
+  next load or process death), depth 20, with Redo as the counterpart of undo — not a second model.
+  Infini is **not** a second undo author. Exact restore holds when the gesture’s targets were not
+  later changed. If a target is **absent**, that counterpart is a no-op; if any sibling in the same
+  gesture was later **changed**, the whole undo is skipped. Skip and no-op consume the entry, are
+  not errors, and do not publish a ghost change. Whole-tree snapshot undo is **not** the product
+  ([CHL-0026](../../../.plan/iter-005/challenges/CHL-0026-inverse-op-undo.md)).
 - The **document** is **in memory only** this iter. On-device **document** persistence, offline work
   across restarts, and sync-any-moment are deferred (Non-Goals). **Device Settings** are not the
   document — they persist on this device ([REQ-20](#device-settings)). No document settings.
@@ -204,9 +211,16 @@ viewed at scale, and saved.
   pen-down → pixel (ingestion costs no ink latency).
 - Given the device receives an initial full-document load, When it applies it, Then the local
   document equals the loaded document (0 divergent nodes) and becomes the base for local edits.
-- Given any structural op (create box, move, resize, draw-into), When the creator undoes it, Then
-  the local document returns to the exact pre-op state (geometry ±1 px @ 100% zoom) with no peer
-  involvement, for at least the last 20 structural ops.
+- Given any structural op (create box, move, resize, draw-into) whose targets have not been later
+  changed, When the creator undoes it, Then the counterpart of that gesture is applied (geometry
+  ±1 px @ 100% zoom vs those targets’ pre-op outcome) with no peer involvement, for at least the
+  last 20 structural ops.
+- Given a multi-node gesture where some targets are **absent** and none of the remaining targets
+  were later changed, When the creator undoes it, Then live targets receive their counterpart and
+  absences are no-ops (0 error UI; the entry is consumed; 0 ghost publish).
+- Given a multi-node gesture where any sibling was later **changed**, When the creator undoes it,
+  Then the whole entry is skipped (0 undo-through; 0 half-applied siblings; the entry is consumed;
+  0 error UI; 0 ghost publish).
 - Given the panel repaints for any reason (settle, viewport change, refresh), When it paints, Then
   it paints the local document (0 repaints sourced from an inbound peer picture).
 
@@ -275,8 +289,9 @@ viewed at scale, and saved.
   the stroke parents under the qualifying box with the highest paint/z order (0 dual-parent outcomes).
 - Given **no session**, When the creator performs any creation path above, Then the result is
   identical to the linked case (100% parity across a scripted 10-gesture set).
-- Given any successful create, When the creator undoes once, Then the previous document is restored
-  exactly (geometry ±1 px @ 100% zoom).
+- Given any successful create whose targets have not been later changed, When the creator undoes
+  once, Then that create’s counterpart is applied (the new group is gone; enclosed ink is back
+  where it was; geometry ±1 px @ 100% zoom). Skip and no-op follow [REQ-04](#device-document).
 - Given 10 consecutive enclose gestures, When each completes, Then each produces exactly one Smart
   Group with correct membership (0 desync, 0 lost boxes) — regression bar from
   [CHL-0007](../../../.plan/iter-003/challenges/CHL-0007-selection-move-enclose-sync.md).
@@ -337,8 +352,10 @@ viewed at scale, and saved.
   The live node is painted on ToolCanvasLayer; CanvasLayer does not keep a second copy of that box.
   Mid-gesture ghosting/dirty traces do not fail this AC; on pen-up the next settled frame shows
   **one** box at the committed geometry (0 leftover origin pixels, 0 overlay duplicate).
-- Given any completed manipulation gesture, When the creator undoes once, Then exactly that gesture
-  is reverted (1 undo entry per gesture; 0 partial reverts).
+- Given any completed manipulation gesture whose targets have not been later changed, When the
+  creator undoes once, Then that gesture’s counterpart is applied (1 undo entry per gesture).
+  Partial apply is only for **absent** targets; a later change on any sibling skips the whole
+  entry ([REQ-04](#device-document)).
 - Given a selected Smart Group, When the creator presses empty canvas, Then selection clears and the
   next settled frame shows 0 residual selection pixels — regression bar from
   [CHL-0007](../../../.plan/iter-003/challenges/CHL-0007-selection-move-enclose-sync.md).
@@ -441,15 +458,17 @@ viewed at scale, and saved.
 **Acceptance**
 - Given two SmartGroups and Connector recognition armed, When the creator draws an open stroke
   from near A into C, Then a connector exists in the local document and is visible on the panel
-  with p95 ≤500 ms after pen-up, **0 desktop messages required**, and one undo restores the
-  original ink.
+  with p95 ≤500 ms after pen-up, **0 desktop messages required**, and one undo applies the
+  counterpart of that create (connector gone; original ink remains). Skip and no-op follow
+  [REQ-04](#device-document).
 - Given the same stroke with Connector recognition **disarmed**, When the stroke ends, Then it
   remains ordinary ink (0 connectors).
 - Given a connector, When the creator moves or resizes a bound box, Then the connector stays
   attached, re-warps live at ≥5 Hz with 0 full-panel invalidations, and on pen-up committed
   geometry equals the last previewed pose (0 px jump).
 - Given a connector, When the bound box is deleted, Then the connector remains drawn; When that
-  delete is undone, Then the connector glues back to the restored box (same id).
+  delete’s counterpart is applied, Then the connector glues back to the restored box (same id).
+  Skip and no-op follow [REQ-04](#device-document).
 - Given a scripted 20-gesture set on shared fixtures, When both ends settle, Then device and
   desktop connector geometry match (0 divergent nodes) — [REQ-07](#one-way-sync).
 - Given both recognizers armed as shipped, When a real writing corpus (incl. a fresh page's
@@ -642,13 +661,13 @@ viewed at scale, and saved.
 - **Campaign:** iter-005 **draft**. Not in the current lock.
 - **Outcome:** a mark the creator no longer wants is gone the way pencil paper works — flip or stroke it away, or delete what is already selected — without a round trip.
 - **Path A — hardware eraser nib** (when the stylus reports a distinct eraser tool): rubbing with that nib removes intersecting **ink samples** (and may delete a node that has no remaining samples). Does not start a new ink stroke.
-- **Path B — selection-erase:** with a non-empty selection, an **Erase** command (chip, barrel-click if bound, or equivalent) deletes the selected nodes. One undo restores them.
+- **Path B — selection-erase:** with a non-empty selection, an **Erase** command (chip, barrel-click if bound, or equivalent) deletes the selected nodes. One undo applies the counterpart of that erase ([REQ-04](#device-document) skip/no-op).
 - Barrel **hold-move = temporary erase** is an accelerator of Path A’s stroke-erase feel, bound via [REQ-18](#pen-buttons) — not a third grammar.
 
 **Acceptance**
-- Given a stylus with an eraser nib and ink on the panel, When the creator rubs the nib across that ink, Then intersecting samples are gone with p95 ≤50 ms after the gesture ends, **0** new Ink nodes are created, and one undo restores the pre-erase document (±1 px @ 100% zoom).
+- Given a stylus with an eraser nib and ink on the panel, When the creator rubs the nib across that ink, Then intersecting samples are gone with p95 ≤50 ms after the gesture ends, **0** new Ink nodes are created, and one undo applies the counterpart of that erase (rev-match → pre-erase marks back, geometry ±1 px @ 100% zoom; skip/no-op per [REQ-04](#device-document)).
 - Given a stylus **without** an eraser nib, When the creator uses the pen tip, Then Path A does not fire (0 accidental erases); erase is Path B and/or a bound [REQ-18](#pen-buttons) hold-move.
-- Given a non-empty selection, When the creator invokes Erase, Then every selected node is removed from the local document (0 leftovers on the next settled frame) and one undo restores them.
+- Given a non-empty selection, When the creator invokes Erase, Then every selected node is removed from the local document (0 leftovers on the next settled frame) and one undo applies the counterpart of that erase ([REQ-04](#device-document) skip/no-op).
 - Given empty selection, When Erase is invoked, Then 0 nodes change (no-op).
 - Given **no session**, When any erase path runs, Then the result matches the linked case.
 - **UI states / journeys to design:** eraser-nib in progress; selection-erase CTA; empty selection no-op; undo after erase; missing nib.
@@ -663,7 +682,7 @@ viewed at scale, and saved.
 
 **Acceptance**
 - Given a non-empty selection, When the creator copies then pastes, Then a new subtree exists with new ids, geometry equal to the source translated by a documented offset (±1 px @ 100% zoom), and the source is unchanged.
-- Given a non-empty selection, When the creator cuts then pastes, Then the originals are gone after cut and the paste matches the cut content (geometry ±1 px @ 100% zoom); one undo of paste removes the copies; a second undo restores the cut originals.
+- Given a non-empty selection, When the creator cuts then pastes, Then the originals are gone after cut and the paste matches the cut content (geometry ±1 px @ 100% zoom); one undo of paste applies the counterpart (copies gone); a second undo applies the counterpart of the cut (originals back). Skip and no-op follow [REQ-04](#device-document).
 - Given an empty clipboard, When paste is invoked, Then 0 nodes change.
 - Given **no session**, When copy/cut/paste runs, Then behaviour matches the linked case; published ops still satisfy [REQ-07](#one-way-sync) when the link is up.
 - **UI states / journeys to design:** copy/cut/paste affordances on selection; empty clipboard; paste offset visible; undo stack after cut+paste.
@@ -887,6 +906,9 @@ viewed at scale, and saved.
 - Undo depth and affordance on the device — **closed 2026-08-14** ([CHL-0016](../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
   / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)): depth 20; on-panel Undo and Redo after
   a gap on the primary strip. Exclusive tools are three as of [ADR-0021](../../adr/ADR-0021-connector-toolchip.md).
+  Snapshot vs inverse — **closed 2026-08-27** ([CHL-0026](../../../.plan/iter-005/challenges/CHL-0026-inverse-op-undo.md)):
+  counterpart inverse per device document-epoch; Infini is not a second author; Architect accepts
+  [ADR-0032](../../adr/ADR-0032-inverse-op-undo.md).
 - Document-change granularity on the wire (op log vs coalesced change set) — **owner:** architect —
   **needed by:** ADR-0015. Affects the ≤300 ms mirror target and the reconnect queue.
 - Manual "reload document to tablet" control — **owner:** pm — **needed by:** first

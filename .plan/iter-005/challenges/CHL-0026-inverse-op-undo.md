@@ -3,7 +3,8 @@ id: CHL-0026
 author: sm
 target: [SRS-EP-07, ADR-0014, ADR-0015, ADR-0018]
 severity: high
-status: open
+status: resolved
+resolution: adopted
 opened: 2026-08-21
 iter: iter-005
 expedite: false
@@ -35,7 +36,20 @@ Shipped today: [ADR-0014](../../../.docs/adr/ADR-0014-document-ownership-inversi
 4. Chip chrome ([ADR-0018](../../../.docs/adr/ADR-0018-undo-redo-chip-actions.md)) stays unless the investigation says otherwise — this challenge is the **ring**, not the tiles.
 
 ## Resolution
-<!-- PM fills after triage: adopted | deferred | rejected -->
+
+**Adopted** 2026-08-27 (pm). Human 2026-08-21 closed the product fork (snapshots vs inverse); human 2026-08-27 said **go**. Whole-tree snapshot undo is not the product. Inverse-op per session is.
+
+### Confirmations (binding)
+
+1. **F21 — confirmed.** Multi-node gesture; some targets **absent**, none **changed** ⇒ apply live targets, no-op absences. Skip the **whole entry** only when any sibling is **changed** (F20). Partial apply is absence-only, never undo-through.
+2. **v1 stack — confirmed.** One device document-epoch stack. Infini is **not** a second author. “Anyone else” = `lastOpId` mismatch, not Infini undo. [ADR-0014](../../../.docs/adr/ADR-0014-document-ownership-inversion.md) §§1–4 stand. Chip chrome ([ADR-0018](../../../.docs/adr/ADR-0018-undo-redo-chip-actions.md) tiles) stands.
+
+Product Manager does **not** mark [ADR-0032](../../../.docs/adr/ADR-0032-inverse-op-undo.md) `status: accepted`. Architect must accept it when amending the named sections.
 
 ## Product doc updates
-<!-- Architect / Product Manager after ADR accept -->
+
+- `.docs/modules/epaper/prd.md` — [REQ-04](../../../.docs/modules/epaper/prd.md#device-document) undo outcome + acceptance; related snapshot-restore ACs in [REQ-05](../../../.docs/modules/epaper/prd.md#device-ink-box) / [REQ-06](../../../.docs/modules/epaper/prd.md#device-manipulation) / [REQ-09](../../../.docs/modules/epaper/prd.md#device-connectors) / [REQ-11](../../../.docs/modules/epaper/prd.md#erase) / [REQ-12](../../../.docs/modules/epaper/prd.md#clipboard) pointed at counterpart + skip/no-op (not field lists). Version `0.13.0-draft`.
+- `.docs/modules/epaper/features/device-document/srs-product.md` — [BR-D05](../../../.docs/modules/epaper/features/device-document/srs-product.md) no longer inherits Infini [SRS-IN-12](../../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) snapshot-ring. Version `0.1.2`.
+- Infini PRD — **not edited** (no live REQ claims Infini undo; Infini [SRS-IN-12](../../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) stays deprecated).
+
+Architect amends SRS logic/data/quality, domain, and named ADRs **after** accepting ADR-0032. Scrum Master slices after that amend — not this run.

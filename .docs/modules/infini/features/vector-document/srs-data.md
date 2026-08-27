@@ -1,7 +1,7 @@
 ---
 feature: vector-document
 parent_req: [REQ-02]
-version: 0.3.0
+version: 0.4.0
 lifecycle: active
 ---
 
@@ -10,7 +10,8 @@ lifecycle: active
 ## [SRS-IN-09] Persistence and transmit schemas
 
 <!-- revised: 2026-08-13 — CHL-0008 / ADR-0015. Added the doc_change envelope and the load shape;
-     ownership table re-stated for one-writer sessions. Same id, content revised. -->
+     ownership table re-stated for one-writer sessions. Same id, content revised.
+     revised: 2026-08-27 — ADR-0032. `compound` + `set_ink_samples`; undo is not wholesale replace. -->
 
 **Logic:** [SRS-IN-04](./srs-logic.md). **ADR:** [ADR-0010](../../../../adr/ADR-0010-tree-of-vectors.md),
 [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md).
@@ -189,12 +190,15 @@ Exact attribute grammar may tighten in an appendix without changing ADR-0010.
 | `duplicate_subtree` | `{ nodes: Node[], dxy: {x: 24, y: 24} }` ([ADR-0024](../../../../adr/ADR-0024-in-document-clipboard.md)) |
 | `create_frame` | `{ id, bounds }` root Frame |
 | `create_primitive` | `{ id, kind: "line"\|"rect"\|"ellipse", geometry }` — not a polyline stand-in |
+| `set_ink_samples` | `{ id, samples }` — Path A erase and its inverse ([ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md)) |
+| `compound` | `{ ops: [ … ] }` — atomic multi-op gesture (undo/redo of N inverses). Unknown type still marks the mirror **suspect** |
+| `restore_snapshot` | `{ document }` — **last-resort, non-undo** wholesale replace (tests / emergency). Undo is **not** wholesale replace |
 
 Op envelope: `{ opId, type, payload, ts?, source? }`. Apply is idempotent on `opId`.
 
-`restore_snapshot { document }` joins the list as of [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md)
-§2 — it is how device undo publishes, since the device restores wholesale rather than computing
-inverse ops.
+<!-- lifecycle: retired -->
+<!-- superseded-by: [ADR-0032] -->
+<!-- note: 2026-08-27 — `restore_snapshot` as how device undo publishes is retired. Counterpart / compound is the undo path. -->
 
 ### Document-change envelope (Epaper → Infini)
 

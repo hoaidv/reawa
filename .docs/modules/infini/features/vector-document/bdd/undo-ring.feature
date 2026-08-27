@@ -8,6 +8,10 @@ Feature: Snapshot undo ring for vector document
   # the ring moved to the device: epaper/features/device-document/bdd/undo-ring.feature
   # (@SRS-EP-07). Mechanism and depth are inherited verbatim. Kept as the acceptance
   # evidence for STORY-IN-014.
+  #
+  # STORY-EP-059 does not revive this file. Desktop undo stays deprecated (SRS-IN-12).
+  # Snapshot wording left as IN-014 evidence. Wire-path inverse publish waits for
+  # STORY-EP-061 / STORY-IN-038.
 
   # STORY-IN-014 — SRS-IN-12
 

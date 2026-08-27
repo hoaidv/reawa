@@ -30,7 +30,7 @@ static bool near(double a, double b, double eps = 1e-6)
     return std::abs(a - b) <= eps;
 }
 
-static DocOp createSg(const std::string &id, const std::string &mode, double bw, double bh)
+static JsonValue createSg(const std::string &id, const std::string &mode, double bw, double bh)
 {
     const std::string json = std::string("{\"opId\":\"op-") + id
         + "\",\"type\":\"create_smart_group\",\"source\":\"epaper\",\"payload\":{"
@@ -51,7 +51,7 @@ static DocOp createSg(const std::string &id, const std::string &mode, double bw,
         + std::to_string(bw) + ",\"y\":0},{\"x\":" + std::to_string(bw) + ",\"y\":"
         + std::to_string(bh) + "},{\"x\":0,\"y\":" + std::to_string(bh) + "}]}"
                                                                         "]}}";
-    return opFromJson(parseJson(json));
+    return parseJson(json);
 }
 
 static void test_descriptor()
@@ -76,7 +76,7 @@ static void test_router_no_kind_branch()
 static void test_move_commit_equals_preview()
 {
     DeviceDocument doc;
-    CHECK(doc.commitOp(createSg("sg_m", "withBounds", 200, 200)).applied);
+    CHECK(doc.commitJson(createSg("sg_m", "withBounds", 200, 200)).applied);
     const DocNode *orig = doc.find("sg_m");
     CHECK(orig);
     doc.beginGesture();
@@ -89,9 +89,10 @@ static void test_move_commit_equals_preview()
     applyLiveGeometry(preview, live, preview.smartBounds);
     doc.previewManipulationFrame();
     CHECK(near(preview.transform.x, 40) && near(preview.transform.y, 15));
-    const DocOp op = makeSetSmartTransformOp("mv1", "sg_m", preview.transform, nullptr);
-    CHECK(op.payload.get("transform")->getNumber("rotation") == 0);
-    CHECK(doc.commitOp(op).applied);
+    CHECK(near(preview.transform.rotation, 0));
+    SetSmartTransformEdit move("mv1", "sg_m", origin, orig->smartBounds, preview.transform,
+                               orig->smartBounds, false);
+    CHECK(doc.commitEdit(move).applied);
     const DocNode *done = doc.find("sg_m");
     CHECK(done && near(done->transform.x, 40) && near(done->transform.y, 15));
     CHECK(near(done->transform.rotation, 0));
@@ -100,7 +101,7 @@ static void test_move_commit_equals_preview()
 static void test_fixed_ink_resize_keeps_uv_and_sample_size()
 {
     DeviceDocument doc;
-    CHECK(doc.commitOp(createSg("sg_f", "fixedInk", 100, 80)).applied);
+    CHECK(doc.commitJson(createSg("sg_f", "fixedInk", 100, 80)).applied);
     const DocNode *c0 = nullptr;
     for (const auto &ch : doc.find("sg_f")->children) {
         if (ch.role && *ch.role == "content")
@@ -117,7 +118,9 @@ static void test_fixed_ink_resize_keeps_uv_and_sample_size()
                                                      origin.maxY + 40);
     const auto mapped = smartTransformFromWorldAabb(grown, doc.find("sg_f")->smartBounds,
                                                     doc.find("sg_f")->transform, "fixedInk");
-    CHECK(doc.commitOp(makeSetSmartTransformOp("rz1", "sg_f", mapped.transform, &mapped.bounds)).applied);
+    SetSmartTransformEdit rz("rz1", "sg_f", doc.find("sg_f")->transform, doc.find("sg_f")->smartBounds,
+                             mapped.transform, mapped.bounds, true);
+    CHECK(doc.commitEdit(rz).applied);
     const DocNode *c1 = nullptr;
     for (const auto &ch : doc.find("sg_f")->children) {
         if (ch.role && *ch.role == "content")
@@ -147,7 +150,7 @@ static void test_fixed_ink_resize_keeps_uv_and_sample_size()
 static void test_with_bounds_scales()
 {
     DeviceDocument doc;
-    CHECK(doc.commitOp(createSg("sg_w", "withBounds", 100, 100)).applied);
+    CHECK(doc.commitJson(createSg("sg_w", "withBounds", 100, 100)).applied);
     const WorldBox origin = originWorldAabb(doc.find("sg_w")->smartBounds, doc.find("sg_w")->transform);
     const WorldBox grown = resizeWorldAabbFromHandle(origin, ResizeHandle::Se, origin.maxX + 100,
                                                      origin.maxY + 100);

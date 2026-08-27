@@ -12,7 +12,7 @@ source: TRACK-005 / [REQ-12]
 
 ## Context
 
-[Epaper REQ-12](../modules/epaper/prd.md#clipboard) requires copy / cut / paste **on the tablet**, in-document only: one slot, paste offset so the copy is visible, cut = copy + delete, paste one undoable op, OS / cross-app paste out. The device already has a snapshot undo ring ([SRS-EP-07](../modules/epaper/features/device-document/srs-logic.md), [ADR-0014](./ADR-0014-document-ownership-inversion.md) §5) and an ordered `doc_change` stream ([ADR-0015](./ADR-0015-one-way-sync-contract.md)).
+[Epaper REQ-12](../modules/epaper/prd.md#clipboard) requires copy / cut / paste **on the tablet**, in-document only: one slot, paste offset so the copy is visible, cut = copy + delete, paste one undoable op, OS / cross-app paste out. The device already has an inverse-op undo ring ([SRS-EP-07](../modules/epaper/features/device-document/srs-logic.md), [ADR-0032](./ADR-0032-inverse-op-undo.md)) and an ordered `doc_change` stream ([ADR-0015](./ADR-0015-one-way-sync-contract.md)).
 
 Quality goals: local sufficiency (works with the link down), undo exactness (±1 px @ 100% zoom), publish the resulting ops when linked (REQ-07).
 
@@ -26,12 +26,12 @@ v1 clipboard is a **device-local slot**, not an OS pasteboard and not a document
 | Contents | Deep-cloned selected subtree(s): nodes + child ink, with **new ids** minted only at **paste** |
 | Lifetime | Session memory. App restart → empty slot. Never in `doc_load` / SVG |
 | Copy | Slot ← clone of selection; document unchanged; **0** undo entries |
-| Cut | Slot ← clone; then **one** `remove` (or equivalent snapshot) of the selection — **one** undo restores the originals |
-| Paste | Insert clones at `sourceAABB.min + (24 u, 24 u)` world; mint new ids; **one** undo removes the copies. Empty slot → no-op, **0** undo |
+| Cut | Slot ← clone; then **one** `remove_node` of the selection — **one** undo restores the stored originals (inverse of remove; body travels on the undo entry) |
+| Paste | Insert clones at `sourceAABB.min + (24 u, 24 u)` world; mint new ids; **one** undo `remove_node`s each pasted id. Empty slot → no-op, **0** undo |
 | Offset | Documented constant **+24 world units** in +x and +y from the **copied** AABB min. If the offset would land fully outside the current `drawingRegion`, clamp the AABB into the region (keep size) so the paste is visible |
 | Selection after paste | The **new** nodes are selected |
-| Publish | Copy publishes **0** ops. Cut publishes the remove. Paste publishes the insert(s) (one `doc_change` per committed gesture; a multi-node paste is still **one** gesture → one snapshot undo, one or more ops only if the wire grammar already requires one op per node — see below) |
-| Wire | Prefer **one** `restore_snapshot` after paste if the insert set is multi-node and no `insert_subtree` op exists yet; otherwise a closed `duplicate_subtree` op. v1 **locks `duplicate_subtree`** (below) so Infini does not have to infer a snapshot |
+| Publish | Copy publishes **0** ops. Cut publishes the remove. Paste publishes `duplicate_subtree` (one `doc_change` per committed gesture; a multi-node paste is still **one** gesture → one undo entry of N `remove_node` inverses, published as `compound` if needed). Undo of cut/paste publishes the counterpart, never `restore_snapshot` |
+| Wire | v1 **locks `duplicate_subtree`** (below). Do **not** publish paste or paste-undo as `restore_snapshot` |
 | Cross-app / OS | Out. Slot is invisible to macOS pasteboard |
 
 ### `duplicate_subtree` (new document op)
@@ -55,7 +55,7 @@ Cut remains `remove` of original ids (existing op). Copy is local-only.
 - Slot anatomy lives in [SRS-EP-09](../modules/epaper/features/device-document/srs-data.md) (device-local). Behaviour: [SRS-EP-31](../modules/epaper/features/device-document/srs-logic.md).
 - Undo stack after cut+paste: undo paste → copies gone, originals still gone, slot still full; undo again → originals restored. Matches REQ-12 acceptance.
 - Does not fork OS clipboard; Designer must not invent a “paste from Mac” control.
-- Sensitivity: **one undo vs one op per node**. Snapshot-per-gesture already exists; `duplicate_subtree` keeps the mirror an op-stream without a second full snapshot on the wire for a 3-node paste.
+- Sensitivity: **one undo vs one op per node**. One gesture is one undo entry ([ADR-0032](./ADR-0032-inverse-op-undo.md)); `duplicate_subtree` keeps the mirror an op-stream without a wholesale replace on the wire for a 3-node paste.
 
 ## Alternatives Considered
 

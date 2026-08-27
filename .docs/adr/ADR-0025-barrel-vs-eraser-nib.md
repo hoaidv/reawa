@@ -28,7 +28,7 @@ Two **input channels**, one **erase mutation**.
 | **Barrel** | Button down/up + movement vs threshold | REQ-18 catalogues in [SRS-EP-41](../modules/epaper/features/tool-modes/srs-logic.md) | Pretend to be a nib; drive Path A unless Hold-move is bound to `temp_erase` |
 | **Selection-erase** | Chip / bound Click `toggle_pen_eraser` completing as Erase command / explicit Erase CTA | REQ-11 Path B in [SRS-EP-28](../modules/epaper/features/device-document/srs-logic.md) | Run while selection empty (no-op) |
 
-Shared mutation for stroke-erase (nib **or** `temp_erase` hold-move): remove intersecting **ink samples**; delete a node that has **no remaining samples**; **0** new Ink nodes; one undo restores pre-erase document.
+Shared mutation for stroke-erase (nib **or** `temp_erase` hold-move): remove intersecting **ink samples**; delete a node that has **no remaining samples**; **0** new Ink nodes; one undo restores the pre-erase document via the inverse of `set_ink_samples` and, when the forward also emptied a node, restore of that body (`remove_node` inverse) — not a whole-tree snapshot ([ADR-0032](./ADR-0032-inverse-op-undo.md)).
 
 Classifier isolation:
 

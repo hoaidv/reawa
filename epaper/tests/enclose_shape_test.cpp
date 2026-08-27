@@ -44,11 +44,7 @@ static void appendInk(DeviceDocument &doc, const std::string &id,
     payload.emplace_back("id", JsonValue::string(id));
     payload.emplace_back("samples", inkSamplesToJson(samples));
     payload.emplace_back("style", JsonValue::object(std::move(style)));
-    DocOp op;
-    op.opId = "append_ink:" + id;
-    op.type = "append_ink";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(op).applied);
+        CHECK(doc.commitJson(opEnvelope("append_ink:" + id, "append_ink", JsonValue::object(std::move(payload)))).applied);
 }
 
 int main()

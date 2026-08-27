@@ -1,8 +1,9 @@
 ---
 id: ADR-0032
 title: Inverse-op undo per session
-status: proposed
+status: accepted
 date: 2026-08-21
+accepted: 2026-08-27
 deciders: [architect, pm]
 supersedes: null
 amends: [ADR-0014, ADR-0015, ADR-0018, ADR-0024, ADR-0025]
@@ -11,7 +12,7 @@ source: CHL-0026
 
 # ADR-0032 — Inverse-op undo per session
 
-**Status: proposed.** Do not treat this as accepted. Shipped snapshot-ring text in [SRS-EP-07](../modules/epaper/features/device-document/srs-logic.md), [SRS-IN-09](../modules/infini/features/vector-document/srs-data.md), and [ADR-0014](./ADR-0014-document-ownership-inversion.md) stays in force until Product Manager adopts this record and those sections are amended. Challenge: [CHL-0026](../../.plan/iter-005/challenges/CHL-0026-inverse-op-undo.md).
+**Status: accepted** 2026-08-27. Product Manager adopted [CHL-0026](../../.plan/iter-005/challenges/CHL-0026-inverse-op-undo.md) (Inverse-op undo, not whole-tree snapshots). Named sections in Consequences are amended to this record. Ownership inversion in [ADR-0014](./ADR-0014-document-ownership-inversion.md) §§1–4 and ToolChip tiles in [ADR-0018](./ADR-0018-undo-redo-chip-actions.md) stand.
 
 ## Context
 
@@ -60,7 +61,7 @@ ADR-0014 §5’s rationale (inverse algebra “gets reparent wrong”) is **reje
 | Reliability | Skip ≠ error | 0 error UI; 0 published ghost change | H × L |
 | Maintainability | One history model | Redo is the counterpart of inverse, not a third log | M × M |
 
-High×high leaves are the ones this ADR must earn. Measurable bars for Product Manager to place in `srs-quality` **after accept** are in Consequences — this record does not rewrite [SRS-EP-13](../modules/epaper/features/device-document/srs-quality.md).
+High×high leaves are the ones this ADR must earn. Measurable bars live in [SRS-EP-13](../modules/epaper/features/device-document/srs-quality.md) (amended on accept).
 
 ## Decision
 
@@ -88,10 +89,10 @@ An undo entry is **not** a whole-tree snapshot. It is the committed gesture’s 
 
 ```text
 UndoEntry {
-  forwardOpId,           # opId of the committed gesture
-  seq,                   # device seq of that commit
-  inverses: [ Inverse ], # 1..N counterpart ops, apply order
-  targets:  [ { nodeId, lastOpId } ]  # every node the forward op mutated or created
+  forwardOpId,                 # opId of the committed gesture
+  seq,                         # device seq of that commit
+  inverses: [ Inverse ],       # 1..N counterpart edits, apply order
+  targets:  [ { nodeId, prevLastOpId } ]  # lastOpId on each node *before* this forward edit
 }
 ```
 
@@ -122,7 +123,7 @@ Multi-node gestures (selection move of N boxes, selection-erase of N nodes, mult
 
 ### 3. Node version (what “changed” means)
 
-Each node carries `lastOpId` — the `opId` of the last **document-semantic** mutation of that node. New nodes start at the creating op’s `opId`.
+Each node carries `lastOpId` — the `opId` of the last **forward** document-semantic mutation still in effect on that node. New nodes start at the creating op’s `opId`. Undo restores `lastOpId` to `prevLastOpId` captured at commit (the previous forward). Redo restamps the original `forwardOpId`. Wire envelopes for history may use `undo:N` / `redo:N` as publish `opId` only — those ids are **not** written onto nodes.
 
 **Counts as a change** (must update `lastOpId`):
 
@@ -148,7 +149,7 @@ Undo-time check, per target:
 | Node absent (and inverse needed it present) | **Fail-safe** | That inverse is a **no-op** |
 | Required parent absent and the node is absent too | **Fail-safe** | **No-op** |
 | Node present and `lastOpId` ≠ entry’s forward `opId` | **Undo-through** | **Skip** |
-| Node present and `lastOpId` == entry’s forward `opId` | Apply | Run the inverse; then set `lastOpId` to the **undo** op’s new `opId` |
+| Node present and `lastOpId` == entry’s forward `opId` | Apply | Run the inverse; then restore `lastOpId` to that target’s `prevLastOpId` |
 
 #### Atomic gesture rule
 
@@ -172,7 +173,7 @@ Local apply first (link down is normal). If at least one inverse **applied**, en
 
 Do **not** emit N `doc_change` messages for one undo tap.
 
-**`set_ink_samples { id, samples }`** is added to the transmit set so Path A erase has a real inverse. Until Product Manager adopts that row into [SRS-IN-09](../modules/infini/features/vector-document/srs-data.md), stroke-erase cannot ship inverse-op undo without cheating via `restore_snapshot` — and this ADR forbids that cheat.
+**`set_ink_samples { id, samples }`** is on the transmit set so Path A erase has a real inverse. Stroke-erase must not cheat via `restore_snapshot`.
 
 `restore_snapshot` after accept:
 
@@ -187,7 +188,7 @@ Keep linear redo ([ADR-0018](./ADR-0018-undo-redo-chip-actions.md) chrome and th
 
 | Rule | Value |
 |---|---|
-| What redo stores | The **forward** ops just inverted (inverse-of-the-inverse), plus `lastOpId` expected **after** the undo |
+| What redo stores | The **forward** ops just inverted (inverse-of-the-inverse), plus the same `targets` / original `forwardOpId`. Skip redo when a live node’s `lastOpId` ≠ that target’s `prevLastOpId` (the lastOpId undo restored). After a successful redo, stamp `lastOpId` = `forwardOpId` again. Do **not** replace `forwardOpId` with `redo:N`. |
 | Depth | 20 |
 | Successful structural commit | **Clears** redo (unchanged) |
 | Successful undo that applied ≥1 inverse | Pushes one redo entry |
@@ -237,9 +238,9 @@ Fail-safe no-op **must not** corrupt the tree: 0 half-inserted nodes, 0 empty `G
 
 ## Consequences
 
-### On accept (Product Manager / Architect — not this run)
+### On accept (done 2026-08-27)
 
-Mark **ADR-0014 §5 superseded by this ADR**; do **not** mark ADR-0014 `status: superseded` (ownership inversion stands). Amend the following **sections** (append-only / section lifecycle; do not silently rewrite shipped bodies before accept):
+**ADR-0014 §5 superseded by this ADR**; ADR-0014 is **not** `status: superseded` (ownership inversion stands). Named sections amended:
 
 | After accept | Section | Change |
 |---|---|---|
@@ -264,11 +265,11 @@ Mark **ADR-0014 §5 superseded by this ADR**; do **not** mark ADR-0014 `status: 
 
 [SRS-IN-12](../modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) stays **deprecated**. Do not revive a desktop stack.
 
-### Scrum Master (after accept — do not slice in this run)
+### Scrum Master (slice after this accept — Architect does not slice)
 
 Replace snapshot-ring stories (starting from shipped [STORY-EP-015](../../.plan/iter-003/stories/STORY-EP-015.md) behaviour) with implement slices for: inverse entries on `DeviceDocument`, `lastOpId`, fail-safe/skip fixtures, `compound` + `set_ink_samples` on the Infini applier, publish path without `restore_snapshot`. Chip stories stay on ADR-0018. QA retags [undo-ring.feature](../modules/epaper/features/device-document/bdd/undo-ring.feature) exactness: “rev matches → identical fields”, plus skip/no-op scenarios.
 
-### Quality scenarios to add after accept (not written into `srs-quality` in this run)
+### Quality scenarios (placed in [SRS-EP-13](../modules/epaper/features/device-document/srs-quality.md) on accept)
 
 | Source | Stimulus | Artifact | Environment | Response | Measure |
 |---|---|---|---|---|---|
@@ -295,7 +296,7 @@ Replace snapshot-ring stories (starting from shipped [STORY-EP-015](../../.plan/
 | `compound` unknown to an old Infini build | M × M | Unknown op → suspect mirror (existing); ship applier in the same slice as device emit |
 | Path A erase blocked on `set_ink_samples` | H × M | Named follow-up; do not fall back to `restore_snapshot` |
 | Memory still large if bodies of huge removes sit on the ring | L × M | Depth 20; measure; still far below 20 whole trees |
-| Readers treat this proposed ADR as shipped | M × H | Status **proposed**; CHL-0026 open until PM adopt |
+| Readers treat snapshot-ring SRS as still in force | L × H | Status **accepted** 2026-08-27; CHL-0026 adopted; named sections amended this run |
 
 ## Alternatives Considered
 

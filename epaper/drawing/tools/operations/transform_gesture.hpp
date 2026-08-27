@@ -9,6 +9,7 @@
 #include "transform_session.hpp"
 #include "debug/ui_stall.hpp"
 #include "document/manipulate.hpp"
+#include "document/operations/set_smart_transform_edit.hpp"
 #include "../host_caps.hpp"
 #include "../contexts/selection_context.hpp"
 
@@ -91,8 +92,9 @@ public:
             ++m_seq;
             const std::string opId = std::string("sst-") + std::to_string(m_seq);
             const epaper::document::SmartBounds liveB = m_live.liveB;
-            const epaper::document::SmartBounds *bptr = r.resized ? &liveB : nullptr;
-            caps->doc->commitSetSmartTransform(opId, id, m_live.liveT, bptr);
+            epaper::document::SetSmartTransformEdit edit(
+                opId, id, originT, originB, m_live.liveT, liveB, true);
+            caps->doc->applyEdit(edit);
             caps->toolUi->clearOriginPanelRect();
             caps->doc->clearLiveManipSuppressIds();
             caps->doc->refreshAllConnectorWarps();

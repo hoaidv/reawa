@@ -88,6 +88,19 @@ struct JsonValue {
     bool has(const std::string &key) const { return get(key) != nullptr; }
 };
 
+/** Wire envelope { opId, type, source, payload } — fixtures / publish, not the tool path. */
+inline JsonValue opEnvelope(std::string opId, std::string type, JsonValue payload,
+                            std::string source = "epaper")
+{
+    JsonValue::Object o;
+    o.emplace_back("opId", JsonValue::string(std::move(opId)));
+    o.emplace_back("type", JsonValue::string(std::move(type)));
+    if (!source.empty())
+        o.emplace_back("source", JsonValue::string(std::move(source)));
+    o.emplace_back("payload", std::move(payload));
+    return JsonValue::object(std::move(o));
+}
+
 inline std::string jsonEscape(const std::string &s)
 {
     std::string out;

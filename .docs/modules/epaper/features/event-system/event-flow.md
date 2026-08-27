@@ -17,7 +17,12 @@ components.** The only hit-tests we own are against *document* geometry (node bo
 Anything that looks like `if (rect.contains(p))` for a button is a defect, not a design.
 
 Sources: `epaper/main.cpp`, `epaper/input/qtinputfilter.{h,cpp}`, `epaper/input/pen_sample.hpp`,
-`epaper/drawing/Main.qml`, `epaper/drawing/tabletcanvasitem.cpp`, `epaper/document/hand_touch.hpp`.
+`epaper/drawing/Main.qml`, `epaper/drawing/ToolCanvas.qml`, `epaper/drawing/toolcanvasitem.cpp`,
+`epaper/drawing/tools/` ([tool-system](../../tool-system/index.md) — Modes / Operations / InputHub),
+`epaper/drawing/tabletcanvasitem.cpp`, `epaper/document/hand_touch.hpp`.
+
+Gesture **bodies** live on Operations, not on `TabletCanvasItem`. This page is the Qt/QML stack
+and the knobs that bought bugs; post-`canvasInput` match/lock is the tool-system view.
 
 ## The stack an event falls through
 
@@ -43,7 +48,7 @@ flowchart TB
     raster["z 0–1 TabletCanvas + ToolCanvas — paint only, no handlers"]
     policy["Connections on Input — reads penNear + contactCount"]
   end
-  canvas["TabletCanvasItem C++ — gesture state, document hit-test, commits"]
+    canvas["ToolCanvasItem + InputHub — match/lock Operations; Tablet paints ink"]
   dig --> tab --> filt
   cap --> tch --> filt
   filt -->|"pen: consume raw, inject mapped"| agent

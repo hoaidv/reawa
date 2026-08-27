@@ -49,11 +49,7 @@ static void appendInk(DeviceDocument &doc, const std::string &id,
     payload.emplace_back("id", JsonValue::string(id));
     payload.emplace_back("samples", inkSamplesToJson(samples));
     payload.emplace_back("style", JsonValue::object(std::move(style)));
-    DocOp op;
-    op.opId = "append_ink:" + id;
-    op.type = "append_ink";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(op).applied);
+        CHECK(doc.commitJson(opEnvelope("append_ink:" + id, "append_ink", JsonValue::object(std::move(payload)))).applied);
 }
 
 static EncloseStrokeInput strokeFromFixture(const JsonValue &fix)
@@ -83,7 +79,7 @@ static void seedDoc(DeviceDocument &doc, const JsonValue &fix)
     if (!ops || !ops->isArray())
         return;
     for (const auto &opj : ops->asArray())
-        CHECK(doc.applyOp(opFromJson(opj)).applied);
+        CHECK(doc.applyJson(opj).applied);
 }
 
 static RecogOutcome expectedDispatch(const char *name, RecogLatch latch)
@@ -132,11 +128,7 @@ static void test_d21_fall_through()
     payload.emplace_back("transform", JsonValue::object(std::move(t)));
     payload.emplace_back("inkScaleMode", JsonValue::string("fixedInk"));
     payload.emplace_back("children", JsonValue::array({}));
-    DocOp op;
-    op.opId = "create_smart_group:sg_1";
-    op.type = "create_smart_group";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(op).applied);
+        CHECK(doc.commitJson(opEnvelope("create_smart_group:sg_1", "create_smart_group", JsonValue::object(std::move(payload)))).applied);
 
     EncloseStrokeInput stroke;
     stroke.id = "fail_in_box";

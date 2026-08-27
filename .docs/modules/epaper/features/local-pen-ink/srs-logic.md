@@ -77,9 +77,9 @@ square into the ink image; together with the `paint=` counter this distinguishes
 | After gesture | p95 ≤50 ms until intersecting samples are gone ([SRS-EP-30](./srs-quality.md#srs-ep-30-erase-quality)) |
 | New Ink | **0** Ink nodes created |
 | Empty node | If an Ink (or other sample-holding) node has **no remaining samples**, `remove_node` that node |
-| Undo | One snapshot restores the pre-erase document (±1 px @ 100% zoom) |
+| Undo | One undo restores the pre-erase document via inverse of `set_ink_samples` and, if the forward also `remove_node`’d an emptied ink, restore of that body. Exactness when `lastOpId` matches ([SRS-EP-07](../device-document/srs-logic.md#srs-ep-07-device-document)); geometry ±1 px @ 100% zoom vs stored samples |
 | No nib | Path A **does not fire** (0 accidental erases). Pen tip never erases |
-| No session | Same local result; publish the `remove` / snapshot when linked ([REQ-07](../../prd.md#one-way-sync)) |
+| No session | Same local result; publish `set_ink_samples` and/or `remove_node` (`compound` if both) when linked ([REQ-07](../../prd.md#one-way-sync)). Never `restore_snapshot` |
 | Ink latency | Must not put I/O on the pen-tip hot path ([SRS-EP-01](#srs-ep-01)); eraser nib is a **different** tool report |
 
 ### UI-driving fields

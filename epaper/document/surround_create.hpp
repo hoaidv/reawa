@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -323,17 +324,17 @@ inline SelectionCreateResult createSmartGroupFromSelection(DeviceDocument &doc,
     bounds.width = world.width;
     bounds.height = world.height;
 
-    JsonValue::Array children;
-    JsonValue::Array captureIds;
+    std::vector<DocNode> children;
+    std::vector<std::string> captureIds;
     std::vector<InkSample> boundary = winner->samples;
     for (auto &s : boundary) {
         s.x -= world.x;
         s.y -= world.y;
     }
-    children.push_back(inkChildToJson(winnerId, "boundary", boundary, winner->style, std::nullopt));
+    children.push_back(makeInkChild(winnerId, "boundary", boundary, winner->style, std::nullopt));
 
     for (const DocNode *ink : orderedInks) {
-        captureIds.push_back(JsonValue::string(ink->id));
+        captureIds.push_back(ink->id);
         if (ink->id == winnerId)
             continue;
         std::vector<InkSample> local = ink->samples;
@@ -342,20 +343,8 @@ inline SelectionCreateResult createSmartGroupFromSelection(DeviceDocument &doc,
             s.y -= world.y;
         }
         const auto uv = seedLayoutOffset(local, bounds);
-        children.push_back(inkChildToJson(ink->id, "content", local, ink->style, uv));
+        children.push_back(makeInkChild(ink->id, "content", local, ink->style, uv));
     }
-
-    JsonValue::Object b;
-    b.emplace_back("x", JsonValue::number(bounds.x));
-    b.emplace_back("y", JsonValue::number(bounds.y));
-    b.emplace_back("width", JsonValue::number(bounds.width));
-    b.emplace_back("height", JsonValue::number(bounds.height));
-    JsonValue::Object transform;
-    transform.emplace_back("x", JsonValue::number(world.x));
-    transform.emplace_back("y", JsonValue::number(world.y));
-    transform.emplace_back("rotation", JsonValue::number(0));
-    transform.emplace_back("scaleX", JsonValue::number(1));
-    transform.emplace_back("scaleY", JsonValue::number(1));
 
     std::vector<std::string> capturedIds;
     capturedIds.reserve(orderedInks.size());
@@ -363,21 +352,20 @@ inline SelectionCreateResult createSmartGroupFromSelection(DeviceDocument &doc,
         capturedIds.push_back(ink->id);
 
     const std::string smartGroupId = std::string("sg_sel_") + winnerId;
-    JsonValue::Object payload;
-    payload.emplace_back("id", JsonValue::string(smartGroupId));
-    payload.emplace_back("bounds", JsonValue::object(std::move(b)));
-    payload.emplace_back("transform", JsonValue::object(std::move(transform)));
-    payload.emplace_back("inkScaleMode", JsonValue::string("fixedInk"));
-    payload.emplace_back("captureIds", JsonValue::array(std::move(captureIds)));
-    payload.emplace_back("children", JsonValue::array(std::move(children)));
+    CreateSmartGroupEdit edit;
+    edit.setId(std::string("create_smart_group:") + smartGroupId);
+    edit.setSource("epaper");
+    edit.setNodeId(smartGroupId);
+    edit.setBounds(bounds);
+    SmartTransform xf;
+    xf.x = world.x;
+    xf.y = world.y;
+    edit.setTransform(xf);
+    edit.setInkScaleMode("fixedInk");
+    edit.setCaptureIds(std::move(captureIds));
+    edit.setChildren(std::move(children));
 
-    DocOp op;
-    op.opId = std::string("create_smart_group:") + smartGroupId;
-    op.type = "create_smart_group";
-    op.source = "epaper";
-    op.payload = JsonValue::object(std::move(payload));
-
-    const ApplyResult r = doc.commitOp(op);
+    const ApplyResult r = doc.commitEdit(edit);
     if (!r.applied) {
         out.reason = r.reason.empty() ? "create_failed" : r.reason;
         return out;

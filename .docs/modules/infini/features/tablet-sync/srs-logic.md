@@ -1,7 +1,7 @@
 ---
 feature: tablet-sync
 parent_req: [REQ-03, REQ-06]
-version: 0.8.0
+version: 0.9.0
 lifecycle: active
 ---
 
@@ -156,7 +156,7 @@ load while the device reports queued changes.
 | Order | Strict `seq`; `baseSeq` ≠ last applied `seq` ⇒ **gap** |
 | On gap | Mirror is unsafe → request an explicit resync; do **not** guess or reorder |
 | Unknown `op` type | Log, do not crash, mark the mirror **suspect** and surface it. A suspect mirror must not be saved silently |
-| Ops carried | `append_ink`, `create_smart_group`, `set_smart_group_transform`, `set_ink_scale_mode`, `reparent`, `remove`, `restore_snapshot` |
+| Ops carried | Same transmit set as [SRS-IN-09](../vector-document/srs-data.md): includes `append_ink`, `create_smart_group`, `set_smart_transform`, `set_ink_scale_mode`, `reparent`, `remove_node`, `set_ink_samples`, `compound`, `duplicate_subtree`, and last-resort `restore_snapshot`. Undo is **not** wholesale replace |
 | Mirror latency | p95 ≤300 ms from device commit to mirror applied ([SRS-IN-08](./srs-quality.md)) |
 
 ### Preview stroke stream (Epaper → Infini)

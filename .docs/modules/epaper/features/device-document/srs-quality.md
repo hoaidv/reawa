@@ -1,7 +1,7 @@
 ---
 feature: device-document
 parent_req: [REQ-04, REQ-07]
-version: 0.2.0
+version: 0.3.0
 lifecycle: active
 ---
 
@@ -41,10 +41,29 @@ This is also the top risk in
 |---|---|---|
 | Undo depth | Structural ops recoverable | **≥20** |
 | Undo granularity | Ring entries per completed gesture | Exactly **1** |
-| Undo exactness | Tree after undo vs tree before the op | Identical (0 divergent nodes; geometry ±1 world unit) |
-| Undo latency | p95 request → panel shows the restored state | ≤500 ms |
-| Snapshot cost | Added memory for a full ring at the 500-node fixture | Bounded and measured; shrink the ring before slowing ink |
+| Undo exactness (rev match) | Tree after undo vs stored pre-op fields, when every target `lastOpId` equals the entry’s forward `opId` | Identical (0 divergent nodes; geometry ±1 world unit) |
+| Undo skip (rev mismatch) | Later op’s fields after undo of an earlier op on the same node | **Unchanged**; 0 undo-through; whole entry skipped if any sibling changed |
+| Undo no-op (absent) | Extra / half-inserted nodes; error UI | **0**; entry consumed |
+| Undo latency | p95 request → panel shows the applied (or skip/no-op) state | ≤500 ms |
+| Entry-size bound | Memory for a full ring at the 500-node fixture | Bounded and measured; **order-of-forward-op per entry**, not 20× document; shrink depth before slowing ink |
 | Undo mid-gesture | Gestures corrupted by a deferred undo | **0** |
+| Undo publish | `doc_change` for an applied undo | Counterpart or `compound`, **0** `restore_snapshot`; p95 commit → mirror ≤300 ms; payload order-of-forward-op |
+| Undo vs ink budget | p95 pen-down → pixel with a full ring resident (500-node fixture) | **≤30 ms** — ring must not steal the ink budget |
+
+<!-- lifecycle: retired -->
+<!-- superseded-by: [ADR-0032] -->
+<!-- note: 2026-08-27 — “tree after undo vs tree before the op / identical always” and Snapshot-cost (20 whole trees) retired. Exactness is lastOpId match → pre-op fields. -->
+
+#### Quality-attribute scenarios (inverse ring)
+
+| Source | Stimulus | Artifact | Environment | Response | Measure |
+|---|---|---|---|---|---|
+| Creator | Undo, target absent | Device tree | Live session | No-op those inverses; consume entry | 0 divergent extra nodes; 0 error UI |
+| Creator | Undo, `lastOpId` mismatch | Device tree | Live or (future) second writer | Skip whole gesture | 0 undo-through; later op’s fields unchanged |
+| Creator | Undo, rev matches | Device tree | Normal | Counterpart applied | 0 divergent nodes vs stored pre-op fields; geometry ±1 world unit |
+| Creator | Undo mid-gesture | In-flight stroke | Normal | Latch; 0 corrupt gesture | **0** |
+| Device | Undo publish | `doc_change` | Link up | Counterpart / `compound`, not wholesale tree | p95 commit → mirror ≤300 ms; payload order-of-forward-op |
+| Device | Undo with document resident | Ink path | 500-node fixture | Ring must not steal the ink budget | p95 pen-down → pixel ≤30 ms |
 
 ### Sync — the one-way invariants
 

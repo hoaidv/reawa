@@ -26,7 +26,7 @@ static int g_fails = 0;
         }                                                                                      \
     } while (0)
 
-static DocOp makeAppendInkOp(const std::string &id, double x = 10, double y = 20)
+static JsonValue makeAppendInkOp(const std::string &id, double x = 10, double y = 20)
 {
     const std::string json = std::string("{\"opId\":\"op-") + id + "\",\"type\":\"append_ink\","
                                                                   "\"source\":\"epaper\",\"payload\":{\"id\":\""
@@ -34,7 +34,7 @@ static DocOp makeAppendInkOp(const std::string &id, double x = 10, double y = 20
                              + std::to_string(y) + "},{\"x\":" + std::to_string(x + 2) + ",\"y\":"
                              + std::to_string(y + 2)
                              + "}],\"style\":{\"stroke\":\"#1C2430\",\"strokeWidth\":2}}}";
-    return opFromJson(parseJson(json));
+    return parseJson(json);
 }
 
 static JsonValue emptyDoc()
@@ -115,11 +115,11 @@ static void test_after_initial_load_only_viewport()
 static void test_unsolicited_document_inbound_rejected()
 {
     DeviceDocument doc;
-    CHECK(doc.commitOp(makeAppendInkOp("keep")).applied);
+    CHECK(doc.commitJson(makeAppendInkOp("keep")).applied);
     OneWaySyncSession sync(doc);
     completeInitialLoad(sync);
     // Initial load replaced the tree; put a node back as the local document.
-    CHECK(doc.commitOp(makeAppendInkOp("local")).applied);
+    CHECK(doc.commitJson(makeAppendInkOp("local")).applied);
     const std::string snap = doc.snapshotString();
     const int ink = doc.inkCount();
 
@@ -142,7 +142,7 @@ static void test_load_handshake_drains_then_new_epoch()
     DeviceDocument doc;
     OneWaySyncSession sync(doc);
     for (int i = 0; i < 5; ++i)
-        CHECK(doc.commitOp(makeAppendInkOp(std::string("q") + std::to_string(i), double(i), 0))
+        CHECK(doc.commitJson(makeAppendInkOp(std::string("q") + std::to_string(i), double(i), 0))
                   .applied);
     CHECK(doc.publishQueue().size() == 5);
 
@@ -192,7 +192,7 @@ static void test_editing_continues_session_down()
     sync.onLinkDown();
     CHECK(!sync.linked());
     for (int i = 0; i < 10; ++i)
-        CHECK(doc.commitOp(makeAppendInkOp(std::string("off") + std::to_string(i), double(i), 1))
+        CHECK(doc.commitJson(makeAppendInkOp(std::string("off") + std::to_string(i), double(i), 1))
                   .applied);
     CHECK(doc.inkCount() == 10);
     CHECK(doc.publishQueue().size() == 10);
@@ -207,7 +207,7 @@ static void test_reconnect_publishes_queue_duplicate_noop()
     DeviceDocument doc;
     OneWaySyncSession sync(doc);
     for (int i = 0; i < 3; ++i)
-        CHECK(doc.commitOp(makeAppendInkOp(std::string("r") + std::to_string(i))).applied);
+        CHECK(doc.commitJson(makeAppendInkOp(std::string("r") + std::to_string(i))).applied);
     sync.onLinkUp();
     sync.handleInbound(parseJson(R"({"type":"drain_ack"})"));
     CHECK(sync.mirror().appliedCount == 3);
@@ -230,7 +230,7 @@ static void test_one_doc_change_per_structural_op()
     sync.takeOutbound();
 
     CHECK(isClosedTransmitOp("append_ink"));
-    CHECK(doc.commitOp(makeAppendInkOp("one")).applied);
+    CHECK(doc.commitJson(makeAppendInkOp("one")).applied);
     sync.onLocalCommit();
     CHECK(countType(sync.outbound(), "doc_change") == 1);
     const JsonValue ch = firstOf(sync.outbound(), "doc_change");
@@ -271,7 +271,7 @@ static void test_preview_stroke_not_document_change()
     const JsonValue begin = firstOf(sync.outbound(), "stroke_begin");
     CHECK(!begin.has("intent"));
 
-    CHECK(doc.commitOp(makeAppendInkOp("penup")).applied);
+    CHECK(doc.commitJson(makeAppendInkOp("penup")).applied);
     sync.onLocalCommit();
     CHECK(countType(sync.outbound(), "doc_change") == 1);
     CHECK(firstOf(sync.outbound(), "doc_change").get("op")->getString("type") == "append_ink");
@@ -289,7 +289,7 @@ static void test_load_mid_gesture_deferred()
     CHECK(!doc.find("loaded"));
     CHECK(countType(sync.outbound(), "load_ack") == 0);
 
-    CHECK(doc.commitOp(makeAppendInkOp("mid")).applied);
+    CHECK(doc.commitJson(makeAppendInkOp("mid")).applied);
     CHECK(!doc.gestureInFlight());
     sync.onLocalCommit();
     CHECK(doc.find("loaded"));
@@ -343,7 +343,7 @@ static void test_hello_carries_document_when_queue_empty()
 static void test_empty_doc_load_does_not_wipe_local_tree()
 {
     DeviceDocument doc;
-    doc.applyOp(makeAppendInkOp("keep"));
+    doc.applyJson(makeAppendInkOp("keep"));
     OneWaySyncSession sync(doc);
     sync.onLinkUp();
     sync.takeOutbound();

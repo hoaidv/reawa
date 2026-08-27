@@ -1,7 +1,7 @@
 ---
 feature: device-document
 parent_req: [REQ-04, REQ-07]
-version: 0.1.1
+version: 0.1.2
 lifecycle: active
 owner: pm
 ---
@@ -32,7 +32,7 @@ that distance.
 | Device holds the document tree in memory for the session | On-device **document** persistence / file browser / documents surviving app restart. **Device Settings** persist on-device is [REQ-20](../../prd.md#device-settings), not this feature |
 | Device ingests its own finished strokes as document nodes | Bézier fitting of handwriting (samples stay polylines) |
 | Panel paints from the device document | Painting from a peer-supplied picture |
-| Undo/redo history for structural ops, on the device (linear, depth 20) | Branching history, per-sample undo |
+| Undo/redo history for structural ops, on the device (linear, depth 20, counterpart inverse per gesture) | Branching history, per-sample undo, whole-tree snapshot undo, a second Infini undo stack |
 | Publish document changes to the desktop; queue them when the link is down | Applying desktop-authored changes mid-session |
 | Accept an initial full-document load at start / reconnect / explicit resync | Multi-directional sync, CRDT, conflict resolution |
 | Multiple boxes and nodes in one document | Multiple documents / switching documents on the device |
@@ -45,7 +45,7 @@ that distance.
 | BR-D02 | **The panel paints the device's own document.** No repaint is sourced from an inbound peer picture. | Kills the "snapshot is truth" model |
 | BR-D03 | **A finished stroke becomes a document node.** Ink is not a transient sample stream that only exists on the wire; it is a node the device can then select, group, and transform. | Prerequisite for every edit |
 | BR-D04 | **Editing never depends on the link.** Create, group, move, resize, and undo behave identically with the session up or down. Only *publishing* waits. | Link down is a normal state |
-| BR-D05 | **Every structural op is undoable, one entry per completed gesture.** A wrong recognition or a slipped drag costs one undo, never a stuck document. Floor: the last 20 structural ops. | Inherits infini SRS-IN-12 semantics |
+| BR-D05 | **Every structural op is undoable, one entry per completed gesture, as that gesture’s counterpart — not a whole-tree snapshot.** A wrong recognition or a slipped drag costs one undo, never a stuck document. Floor: the last 20 structural ops on **this device’s document-epoch** (Infini is not a second author). Absent targets no-op; a later change on any sibling of a multi-node gesture skips the whole entry. Skip and no-op consume the entry and are not errors. | Adopted [CHL-0026](../../../../../.plan/iter-005/challenges/CHL-0026-inverse-op-undo.md). Does **not** inherit deprecated Infini [SRS-IN-12](../../../infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) snapshot-ring. |
 | BR-D06 | **Ingestion costs no ink latency.** Turning a stroke into a node must not push pen-down → pixel past the [REQ-01](../../prd.md#local-pen-ink) budget. | The device is a notebook first |
 | BR-D07 | **The document is in memory only.** If the app restarts, in-session work not yet published is gone; the desktop file is the durable copy. | Deliberate scope limit — see Non-Goals. **Does not apply to Device Settings** ([REQ-20](../../prd.md#device-settings)): those persist on this device and are not document fields. |
 | BR-D08 | **Downward traffic is exactly two kinds:** an initial full-document load, and pan/zoom viewport. Anything else arriving is a defect, not a feature. | [REQ-07](../../prd.md#one-way-sync) |
@@ -65,7 +65,10 @@ that distance.
 | Load arrives while changes are queued | Deferred until the queue drains; never applied over unpublished work |
 | App restarts | Local document is empty; the next session start load restores the desktop's copy (which contains everything previously published) |
 | Undo past the history floor | Oldest entries are discarded; the creator cannot undo below the floor and the UI does not pretend otherwise |
-| Undo of an op that was already published | Undo is itself a change and publishes like any other — the mirror follows |
+| Undo of an op that was already published | An **applied** counterpart publishes like any other change — the mirror follows. Skip and pure no-op publish nothing |
+| Multi-node undo; some targets absent, none later-changed | Apply live counterparts; absences no-op; consume the entry; 0 error UI |
+| Multi-node undo; any sibling later-changed | Skip the whole entry; consume it; 0 undo-through; 0 error UI |
+| Empty undo or redo | No-op; 0 document change |
 | Document grows large enough to threaten ink latency | Ink latency wins: the device may degrade repaint fidelity or defer non-essential work, never pen responsiveness |
 | Desktop is running an older document format | Out of scope this iter; single-version assumption, flagged as an architect risk |
 
@@ -77,8 +80,14 @@ that distance.
   and the next stroke still meets pen-down → pixel p95 ≤30 ms.
 - Given any panel repaint, When it occurs, Then it renders the local document (0 repaints sourced
   from an inbound peer picture).
-- Given 20 structural ops, When the creator undoes 20 times, Then the document returns through each
-  intermediate state to the starting state (geometry ±1 px @ 100% zoom; 1 undo per gesture).
+- Given 20 structural ops whose targets were not later changed, When the creator undoes 20 times,
+  Then each counterpart is applied in reverse order back to the starting state (geometry ±1 px @
+  100% zoom; 1 undo per gesture).
+- Given a multi-node gesture with some targets absent and none later-changed, When the creator
+  undoes, Then live targets receive their counterpart and absences are no-ops (entry consumed;
+  0 error UI; 0 ghost publish).
+- Given a multi-node gesture where any sibling was later changed, When the creator undoes, Then
+  the whole entry is skipped (0 half-applied siblings; entry consumed; 0 error UI; 0 ghost publish).
 - Given the link drops and the creator performs 10 document operations, When the link returns, Then
   all 10 publish in order (0 lost, 0 reordered) before any load is accepted.
 - Given a full load is offered while changes are queued, When the device handles it, Then the queue
@@ -94,7 +103,7 @@ that distance.
 
 | Concern | Pointer |
 |---|---|
-| Tree, ingestion, undo ring, change queue | `srs-logic.md` — architect, ids from `SRS-EP-07` |
+| Tree, ingestion, undo ring, change queue | `srs-logic.md` — architect, ids from `SRS-EP-07` (rebind inverse-op after [ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md) accept) |
 | Sync contract + message set | `srs-logic.md` + **ADR-0015** |
 | Ownership decision | **ADR-0014** |
 | Change envelope schema | [infini srs-data](../../../infini/features/vector-document/srs-data.md) — extend, do not fork |
@@ -107,6 +116,9 @@ that distance.
 
 ## Superseded
 
-Inherits, on the device, the semantics of infini [SRS-IN-12] (undo ring) and the document-authority
-half of [SRS-IN-07] / [SRS-IN-13]. See the
+Undo no longer inherits Infini [SRS-IN-12](../../../infini/features/vector-document/srs-logic.md#srs-in-12-undo-history)
+snapshot-ring (deprecated). Product outcome is inverse-op per device session
+([CHL-0026](../../../../../.plan/iter-005/challenges/CHL-0026-inverse-op-undo.md)). Architect accepts
+[ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md) and amends logic/data/quality. Document-authority
+half of [SRS-IN-07] / [SRS-IN-13] still maps via the
 [lifecycle map](../../../../../.plan/iter-003/lifecycle-map-2026-08-13.md).

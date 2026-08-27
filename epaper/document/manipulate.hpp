@@ -202,47 +202,6 @@ inline ResizeHandle hitResizeHandlePanel(const SmartBounds &worldAabb, double pa
     return ResizeHandle::None;
 }
 
-inline DocOp makeSetSmartTransformOp(const std::string &opId, const std::string &id,
-                                     const SmartTransform &t, const SmartBounds *bounds)
-{
-    JsonValue::Object xf;
-    xf.emplace_back("x", JsonValue::number(t.x));
-    xf.emplace_back("y", JsonValue::number(t.y));
-    xf.emplace_back("rotation", JsonValue::number(0));
-    xf.emplace_back("scaleX", JsonValue::number(t.scaleX));
-    xf.emplace_back("scaleY", JsonValue::number(t.scaleY));
-    JsonValue::Object payload;
-    payload.emplace_back("id", JsonValue::string(id));
-    payload.emplace_back("transform", JsonValue::object(std::move(xf)));
-    if (bounds) {
-        JsonValue::Object b;
-        b.emplace_back("x", JsonValue::number(bounds->x));
-        b.emplace_back("y", JsonValue::number(bounds->y));
-        b.emplace_back("width", JsonValue::number(bounds->width));
-        b.emplace_back("height", JsonValue::number(bounds->height));
-        payload.emplace_back("bounds", JsonValue::object(std::move(b)));
-    }
-    DocOp op;
-    op.opId = opId;
-    op.type = "set_smart_transform";
-    op.source = "epaper";
-    op.payload = JsonValue::object(std::move(payload));
-    return op;
-}
-
-inline DocOp makeSetInkScaleModeOp(const std::string &opId, const std::string &id, const std::string &mode)
-{
-    JsonValue::Object payload;
-    payload.emplace_back("id", JsonValue::string(id));
-    payload.emplace_back("inkScaleMode", JsonValue::string(mode));
-    DocOp op;
-    op.opId = opId;
-    op.type = "set_ink_scale_mode";
-    op.source = "epaper";
-    op.payload = JsonValue::object(std::move(payload));
-    return op;
-}
-
 inline void applyLiveGeometry(DocNode &n, const SmartTransform &t, const SmartBounds &b)
 {
     n.transform = t;

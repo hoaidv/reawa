@@ -29,10 +29,13 @@ stays contextual ([ADR-0016](./ADR-0016-selection-create-enclose-cta.md)).
 1. The floating strip has **two clusters** and a **32 du gap**: four exclusive tools, then Undo and
    Redo as **actions** (`cta.undo`, `cta.redo`). Actions never become `toolMode`. Default tool remains `pen`.
 2. Tiles stay **64×64**. Gap is not a fifth tool; it is still inside the ink-exclusion union.
-3. Snapshot **redo** stack, depth 20, mirrors the undo ring. Undo pushes the current tree onto redo
-   before restore. A successful structural `commitOp` **clears** redo. `doc_load` clears both.
-   Mid-gesture undo/redo latch; last request wins if both are tapped in flight.
-4. Empty undo or redo is a **no-op**. Publish undo/redo as `restore_snapshot` (same as EP-015).
+3. **Redo** stores the forward counterparts just inverted (inverse-of-the-inverse), depth 20,
+   beside the undo ring ([ADR-0032](./ADR-0032-inverse-op-undo.md) §5). A successful structural
+   commit **clears** redo. A successful undo that applied ≥1 inverse pushes one redo entry. Skip and
+   pure no-op undo do **not** push redo. `doc_load` clears both. Mid-gesture undo/redo latch; last
+   request wins if both are tapped in flight.
+4. Empty undo or redo is a **no-op**. Publish undo/redo as the counterpart op or `compound`, never
+   `restore_snapshot` ([ADR-0032](./ADR-0032-inverse-op-undo.md) §4).
 
 ## Consequences
 

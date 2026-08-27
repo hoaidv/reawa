@@ -73,10 +73,17 @@ else about the sync contract is [ADR-0015](./ADR-0015-one-way-sync-contract.md).
 
 ### 5. Undo lives where editing lives
 
-The snapshot ring of ADR-0013 §5 moves to the device unchanged in mechanism: push
-`snapshotString()` before each structural op, depth 20, restore wholesale. The rationale is
-untouched — the requirement is that one undo restores the previous tree *exactly*, and inverse-op
-algebra gets reparent and coordinate-space changes wrong.
+<!-- superseded-by: [ADR-0032] 2026-08-27. Snapshot-ring mechanism and “inverse-op algebra gets
+     reparent wrong” rationale retired in place. §§1–4 and §§6–7 of this ADR unchanged. -->
+
+Undo lives on the **device** (the sole writer, §1). The mechanism is counterpart **inverse-op per
+document-epoch session** ([ADR-0032](./ADR-0032-inverse-op-undo.md)), not whole-tree snapshots.
+Depth **20**; viewport, tool, and selection still do not push. Inverse payloads store **absolute**
+pre-op parent, index, and field values, applied only when the node’s `lastOpId` matches the entry’s
+forward `opId`. Skip and fail-safe no-op are success paths. Infini keeps **no** undo stack.
+
+Retired in place: ADR-0013 §5 snapshot ring “moved to the device unchanged”; the claim that inverse
+algebra cannot restore reparent / coordinate-space exactly.
 
 ### 6. Node semantics are shared, not duplicated
 
@@ -135,7 +142,7 @@ reason: one rule at every zoom, on both peers. It now executes on the device.
 | ADR-0013 §2 `stroke_begin.intent` | **Superseded** — no intent crosses the wire; the device interprets its own stroke |
 | ADR-0013 §3 Infini is the single writer | **Reversed** — the device is |
 | ADR-0013 §4 `pickables` + `tool_intent` + advisory ghost | **Superseded** — the device hit-tests its own tree and manipulates real ink |
-| ADR-0013 §5 snapshot undo, depth 20 | **Kept, re-homed** to the device |
+| ADR-0013 §5 snapshot undo, depth 20 | **Superseded as a mechanism** by [ADR-0032](./ADR-0032-inverse-op-undo.md). Depth 20 and “not covered” (viewport/tool/selection) **kept**; inverse-op on the device, not snapshots |
 | ADR-0013 §6 world-unit enclose guard, 48 units | **Kept** — now executed on the device |
 
 ## Alternatives Considered

@@ -8,6 +8,12 @@ supersedes: null
 source: tool system refactor planning
 ---
 
+Implementation catalog and current type names (code is truth):
+[`.docs/modules/epaper/tool-system/`](../modules/epaper/tool-system/index.md). This ADR stays the
+conceptual overview. Where names drifted (`PenMode` → `InkMode`, HandTouch profiles →
+`PointerRole` + Mode allow-lists, Transform as exclusive Mode → Move/Resize Operations), follow
+the implementation view.
+
 # Question
 
 Context: We have a primary toolbar. Each tool will have different logic. We need to analyze the abstraction before going deeper and adding more tools.
@@ -915,8 +921,12 @@ If yes, you have probably found the right abstraction boundary.
 
 # Decision
 
-Accepted for epaper device implementation (2026-08-26). Full working design notes:
-[`.docs/memory/epaper-tool-system-refactor.md`](../memory/epaper-tool-system-refactor.md).
+Accepted for epaper device implementation (2026-08-26).
+
+**Current names and registration:** [tool-system architect view](../modules/epaper/tool-system/index.md)
+(`epaper/drawing/tools/`). Historical working notes:
+[`.docs/memory/plan_epaper-tool-system-refactor.md`](../memory/plan_epaper-tool-system-refactor.md)
+(not the catalog).
 
 ## Locks
 

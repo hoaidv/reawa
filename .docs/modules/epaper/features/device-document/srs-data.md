@@ -1,7 +1,7 @@
 ---
 feature: device-document
 parent_req: [REQ-04, REQ-07]
-version: 0.1.0
+version: 0.2.0
 lifecycle: active
 ---
 
@@ -42,7 +42,7 @@ field arriving on the desktop is a mirror-suspect condition, not a graceful exte
 | Structure | Shape | Notes |
 |---|---|---|
 | `DeviceDocument` | Tree per the domain doc, world coordinates | In-memory only; no file form on device |
-| Undo ring entry | `{ snapshot, opId, kind }` × depth 20 | Whole-document snapshot; see [SRS-EP-07](./srs-logic.md#srs-ep-07-device-document) |
+| Undo ring entry | `{ forwardOpId, seq, inverses, targets: [{ nodeId, prevLastOpId }] }` × depth 20 | Inverse of the committed gesture, not a whole-tree snapshot. See [SRS-EP-07](./srs-logic.md#srs-ep-07-device-document). `prevLastOpId` is the node’s last **forward** id before this gesture. Undo restores it; redo restamps `forwardOpId`. Publish may use `undo:N` / `redo:N` as wire `opId` only. `inverses` are ordinary tree ops with absolute pre-op values |
 | Publish queue entry | `{ seq, baseSeq, opId, op, committedAt }` | Ordered; drains on `drain_ack` |
 | Session epoch | `{ epochId, lastSeq, queuedCount, loadState }` | Reset on an accepted `doc_load` |
 | Selection | `{ nodeId?, handle? }` | UI state, not document state ([SRS-EP-11](../ink-box/srs-logic.md)) |

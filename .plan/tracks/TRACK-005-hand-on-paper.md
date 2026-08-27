@@ -43,7 +43,11 @@ stories:
   - STORY-EP-056
   - STORY-EP-057
   - STORY-EP-058
-cursor: "WAIT Product Manager adopt ADR-0032 (CHL-0026); no code; follow field test still outstanding"
+  - STORY-EP-059
+  - STORY-EP-060
+  - STORY-EP-061
+  - STORY-IN-038
+cursor: "wait human — EP-059…061 done; IN-038 cancelled; W3 frozen; remaining follow field test"
 paused_reason: ""
 interrupts: []
 ---
@@ -92,18 +96,24 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 | [IN-035](../iter-005/stories/STORY-IN-035.md) | implement | — | **cancelled** — Infini persist retired |
 | [EP-057](../iter-005/stories/STORY-EP-057.md) | implement | P0 | persist Device Settings on device |
 | [EP-058](../iter-005/stories/STORY-EP-058.md) | implement | P0 | Settings page (Pen buttons) |
+| [EP-059](../iter-005/stories/STORY-EP-059.md) | implement | P0 | inverse ring + lastOpId — **done** |
+| [EP-060](../iter-005/stories/STORY-EP-060.md) | implement | P0 | F20/F21 skip/no-op · depends EP-059 — **done** |
+| [EP-061](../iter-005/stories/STORY-EP-061.md) | implement | P0 | device undo queue counterpart/compound — **done** |
+| [IN-038](../iter-005/stories/STORY-IN-038.md) | implement | — | **cancelled** — tablet→desktop undo apply deferred |
 
-W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). EP-037 and IN-034 are **ready**. Other committed stories stay **draft** until their wave. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) **done** 2026-08-20.
+W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). Hand-touch and follow implement stories that shipped are **done**. Other committed stories stay **draft** until their wave. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) **done** 2026-08-20.
 
 ## Cursor
 
-**WAIT** Product Manager adopt [ADR-0032](../../../.docs/adr/ADR-0032-inverse-op-undo.md) (Inverse-op undo per session) — **proposed**, verdict READY-WITH-CONCERNS. **No application code.** Do **not** start W3 erase design or Device Settings unless the human says so. Remaining Infini + Epaper **follow** field test is still outstanding (human).
+**NOW:** Wait human. [STORY-EP-059](../iter-005/stories/STORY-EP-059.md) (Device inverse undo ring and lastOpId), [STORY-EP-060](../iter-005/stories/STORY-EP-060.md) (Undo fail-safe skip and no-op catalogue), and [STORY-EP-061](../iter-005/stories/STORY-EP-061.md) (Device undo queue is counterpart compound not restore snapshot) are **done**. [STORY-IN-038](../iter-005/stories/STORY-IN-038.md) **cancelled** — tablet→desktop undo apply waits for a later independent sync algorithm. Do **not** start W3 unless the human says so. Remaining Infini follow field test still outstanding.
 
-## Freeze note (W3 / code still frozen)
+Tool-system interrupt [TRACK-006](./TRACK-006-tool-system-refactor.md) is **done** (2026-08-27). Default pointer map is Primary=Pen, Secondary=Finger under [ADR-0033](../../../.docs/adr/ADR-0033-tool-abstraction.md).
 
-- In flight: [ADR-0032](../../../.docs/adr/ADR-0032-inverse-op-undo.md) **proposed**. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) (Infini applies tablet viewport only while following) **done** (host).
-- Open files / risks: [CHL-0026](../iter-005/challenges/CHL-0026-inverse-op-undo.md); no RM2 panel / no live TCP `:9877` in the agent host; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open.
-- Resume W3 checklist: Architecture Decision Record accepted + stories sliced **or** human explicitly picks erase / Device Settings. Follow field-test notes still wanted.
+## Freeze note (W3 still frozen; inverse-undo code allowed)
+
+- In flight: none. EP-059…061 **done**. IN-038 **cancelled**.
+- Open files / risks: [CHL-0027](../iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md) still open; no RM2 panel / no live TCP `:9877`; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open. Leftover snapshot wording in deprecated Infini [SRS-IN-12](../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) — do not implement.
+- Resume W3 checklist: human explicitly picks erase / Device Settings. Follow field-test notes still wanted. Do **not** reopen TRACK-006.
 
 ## Execution board
 
@@ -124,3 +134,7 @@ W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SR
 | 2026-08-20 | IN-033 **done** (host tests). Human: pause and deploy Infini + Epaper. Track **paused**. |
 | 2026-08-20 | Human **approved hand-touch**. PRD 0.12.0-draft; architecture 20 mm / 178 du; UI-EP-06 HT + 20 mm. Track still **paused** for Infini follow score. |
 | 2026-08-21 | Human: snapshot undo is **wrong**. Inverse-op + per-session stack + fail-safe no-op + no undo-through. [CHL-0026](../iter-005/challenges/CHL-0026-inverse-op-undo.md). [ADR-0032](../../../.docs/adr/ADR-0032-inverse-op-undo.md) **proposed** (READY-WITH-CONCERNS). Cursor → Product Manager adopt. **No code.** |
+| 2026-08-24 | Informal interrupt: tool-system refactor (later [TRACK-006](./TRACK-006-tool-system-refactor.md)). [CHL-0027](../iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md) opened. |
+| 2026-08-27 | Human closed TRACK-006. This track is the **only active stream** again. Cursor unchanged: WAIT Product Manager adopt ADR-0032. |
+| 2026-08-27 | Human **go** EP-060 + EP-061. [STORY-IN-038](../iter-005/stories/STORY-IN-038.md) **cancelled** — skip tablet→desktop undo apply until an independent sync algorithm. Cursor → Quality Assurance Engineer EP-060 + EP-061. |
+| 2026-08-27 | EP-060 + EP-061 **done** (Quality Assurance Engineer PASS). Inverse-undo local complete. Cursor → wait human. W3 still frozen. |

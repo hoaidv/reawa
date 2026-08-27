@@ -58,11 +58,7 @@ static void appendInk(DeviceDocument &doc, const std::string &id,
     payload.emplace_back("id", JsonValue::string(id));
     payload.emplace_back("samples", JsonValue::array(std::move(arr)));
     payload.emplace_back("style", JsonValue::object(std::move(style)));
-    DocOp op;
-    op.opId = "append_ink:" + id;
-    op.type = "append_ink";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(op).applied);
+        CHECK(doc.commitJson(opEnvelope("append_ink:" + id, "append_ink", JsonValue::object(std::move(payload)))).applied);
 }
 
 static void createSg(DeviceDocument &doc, const std::string &id, double tx, double ty, double w,
@@ -107,11 +103,7 @@ static void createSg(DeviceDocument &doc, const std::string &id, double tx, doub
     payload.emplace_back("transform", JsonValue::object(std::move(t)));
     payload.emplace_back("inkScaleMode", JsonValue::string("fixedInk"));
     payload.emplace_back("children", JsonValue::array(std::move(children)));
-    DocOp op;
-    op.opId = "create_smart_group:" + id;
-    op.type = "create_smart_group";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(op).applied);
+        CHECK(doc.commitJson(opEnvelope("create_smart_group:" + id, "create_smart_group", JsonValue::object(std::move(payload)))).applied);
 }
 
 static void test_join_with_uv_bounds_unchanged()
@@ -233,11 +225,7 @@ static void test_no_reflow_existing()
     payload.emplace_back("bounds", JsonValue::object(std::move(b)));
     payload.emplace_back("transform", JsonValue::object(std::move(t)));
     payload.emplace_back("children", JsonValue::array(std::move(children)));
-    DocOp op;
-    op.opId = "create_smart_group:sg_1";
-    op.type = "create_smart_group";
-    op.payload = JsonValue::object(std::move(payload));
-    CHECK(doc2.commitOp(op).applied);
+        CHECK(doc2.commitJson(opEnvelope("create_smart_group:sg_1", "create_smart_group", JsonValue::object(std::move(payload)))).applied);
 
     std::vector<std::pair<double, double>> beforeUv;
     std::vector<std::pair<double, double>> beforeSample0;
@@ -321,11 +309,7 @@ static void test_fixed_ink_join_ignores_parent_scale()
     JsonValue::Object payload;
     payload.emplace_back("id", JsonValue::string("sg_1"));
     payload.emplace_back("transform", JsonValue::object(std::move(t)));
-    DocOp rz;
-    rz.opId = "set_smart_transform:sg_1";
-    rz.type = "set_smart_transform";
-    rz.payload = JsonValue::object(std::move(payload));
-    CHECK(doc.commitOp(rz).applied);
+        CHECK(doc.commitJson(opEnvelope("set_smart_transform:sg_1", "set_smart_transform", JsonValue::object(std::move(payload)))).applied);
     // World point 40px in from the box origin; paint is local+translate (no scale).
     appendInk(doc, "ink", pts({{80, 90}, {90, 95}}));
     CHECK(tryDrawIntoMembership(doc, "ink").kind == MembershipKind::Joined);

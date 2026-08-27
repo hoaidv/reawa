@@ -2,7 +2,7 @@
 title: Vector document — shared domain model
 lifecycle: active
 owner: architect
-source: [ADR-0010, ADR-0011, ADR-0014]
+source: [ADR-0010, ADR-0011, ADR-0014, ADR-0032]
 implemented_by:
   - epaper — device-side working document (C++/Qt)
   - infini — mirror + persistence (TypeScript)
@@ -18,7 +18,8 @@ single place their meaning is defined; each module's SRS binds its implementatio
 Authority: [ADR-0010](../adr/ADR-0010-tree-of-vectors.md) (structure) ·
 [ADR-0011](../adr/ADR-0011-smart-group.md) (SmartGroup) ·
 [ADR-0014](../adr/ADR-0014-document-ownership-inversion.md) (who writes) ·
-[ADR-0015](../adr/ADR-0015-one-way-sync-contract.md) (how changes travel).
+[ADR-0015](../adr/ADR-0015-one-way-sync-contract.md) (how changes travel) ·
+[ADR-0032](../adr/ADR-0032-inverse-op-undo.md) (inverse-op undo, node `lastOpId`).
 
 ## Node kinds
 
@@ -38,8 +39,19 @@ Authority: [ADR-0010](../adr/ADR-0010-tree-of-vectors.md) (structure) ·
 - `Frame` exists only at the document root; frames do not nest.
 - A `Group` with zero children is invalid on commit.
 - A `SmartGroup` whose last child is removed is removed itself; its ink returns to the parent.
-- Node ids are stable across serialization, sync, and undo.
+- Node ids are stable across serialization, sync, and undo. Do **not** reuse a node id inside a document epoch.
+- Each node carries `lastOpId` — see [Node revision](#node-revision).
 - Stroke width is in **world units** everywhere ([ADR-0012](../adr/ADR-0012-world-stroke-viewport-parity.md)).
+
+## Node revision
+
+`lastOpId` is the `opId` of the last **forward** document-semantic mutation still in effect on that node. New nodes start at the creating op’s `opId`. Undo entries store each target’s `prevLastOpId` (the forward id before this gesture). Undo restores it; redo restamps the original `forwardOpId`. A mismatch vs the entry’s forward `opId` at undo time is **skip**, not clobber ([ADR-0032](../adr/ADR-0032-inverse-op-undo.md)). History publish ids (`undo:N` / `redo:N`) are not written onto nodes.
+
+**Counts as a change** (must update `lastOpId`): parent id or sibling index; geometry (transform, bounds, ink samples including erase, `inkScaleMode`, `layoutOffset`); connector stored fields (`from` / `to`, rest shape `S`, `warpStyle`, `terminal`, attachments); text runs; primitive geometry; kind-specific author fields.
+
+**Does not count** (must **not** update `lastOpId`): derived paint, hit caches, warped polyline `V`, attachment world pose; connector last-live-pose cache when an endpoint is missing; selection, tool mode, viewport, follow, publish-queue metadata; clipboard slot; envelope `seq`.
+
+`lastOpId` is working-document anatomy. It is not required on SVG persist (session stacks empty on `doc_load`). Infini applies it for mirror fidelity when present; Infini does not author an undo stack.
 
 ## SmartGroup (ink-box)
 
@@ -89,7 +101,9 @@ apply is a no-op and an unknown op type must not crash.
 | `set_ink_scale_mode` | Switch `withBounds` ↔ `fixedInk` |
 | `reparent` | Move a node between parents (draw-into membership) |
 | `remove` | Delete a node |
-| `restore_snapshot` | Replace the document wholesale — how undo publishes ([ADR-0014](../adr/ADR-0014-document-ownership-inversion.md) §5) |
+| `set_ink_samples` | Replace an Ink node’s samples (stroke-erase and its inverse) |
+| `compound` | Apply several tree ops as one atomic gesture (multi-inverse undo/redo) |
+| `restore_snapshot` | Last-resort wholesale replace — **not** the undo path ([ADR-0032](../adr/ADR-0032-inverse-op-undo.md)). Tests / emergency only |
 | `set_connector_end_style` | Set `terminal[end].style` on one connector end ([ADR-0026](../adr/ADR-0026-endpoint-ink-membership.md) Path A) |
 | `bind_endpoint_ink` | Bind a stroke as `terminal[end].ink` (Path B); does not rebake rest spine |
 | `bind_attachment` | Bind `nodeId` to connector rest-spine `t` ([ADR-0027](../adr/ADR-0027-attachment-t-rest-spine.md)) |
@@ -125,7 +139,7 @@ The connector remains **not** a spatial parent. Attachment world pose is derived
 
 ## Device clipboard (not a document node)
 
-The in-document clipboard slot is **session state on Epaper**, not a tree kind and not SVG ([ADR-0024](../adr/ADR-0024-in-document-clipboard.md)). Infini never authors it; it only applies the `duplicate_subtree` / `remove` ops that paste and cut publish.
+The in-document clipboard slot is **session state on Epaper**, not a tree kind and not SVG ([ADR-0024](../adr/ADR-0024-in-document-clipboard.md)). Infini never authors it; it only applies the `duplicate_subtree` / `remove` ops that paste and cut publish. The **session undo stack** is also device-local (one document-epoch LIFO pair, depth 20); Infini has none ([SRS-IN-12](../modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) stays deprecated).
 
 ## Ownership and authority
 
@@ -144,7 +158,7 @@ Persistence is a **serialization** of the model, not a second source of truth du
 |---|---|---|
 | Working document | **Yes** — the authority in-session | Mirror only |
 | Recognition + transforms | **Yes** | No (deprecated — [infini REQ-04](../modules/infini/prd.md#smart-group)) |
-| Undo | **Yes** — snapshot ring, depth 20 | No |
+| Undo | **Yes** — inverse-op ring, depth 20, `lastOpId` skip ([ADR-0032](../adr/ADR-0032-inverse-op-undo.md)). `restore_snapshot` is last-resort **non-undo** | No |
 | SVG serialize / parse | No | **Yes** |
 | Change publishing | **Yes** — emits | Applies |
 

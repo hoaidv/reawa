@@ -54,6 +54,7 @@ public:
     void commitSetSmartTransform(const std::string &opId, const std::string &nodeId,
                                  const epaper::document::SmartTransform &t,
                                  const epaper::document::SmartBounds *bounds) override;
+    epaper::document::ApplyResult applyEdit(epaper::document::DocEdit &edit) override;
     void refreshConnectorsBoundTo(const std::string &nodeId) override;
     void refreshAllConnectorWarps() override;
 
@@ -154,7 +155,18 @@ inline void SessionDocContext::commitSetSmartTransform(const std::string &opId, 
                                                 const epaper::document::SmartTransform &t,
                                                 const epaper::document::SmartBounds *bounds)
 {
-    document().commitOp(epaper::document::makeSetSmartTransformOp(opId, nodeId, t, bounds));
+    epaper::document::SetSmartTransformEdit edit;
+    edit.setId(opId);
+    edit.setNodeId(nodeId);
+    edit.setTo(t, bounds);
+    if (const auto *n = document().find(nodeId))
+        edit.setFrom(n->transform, n->smartBounds);
+    document().commitEdit(edit);
+}
+
+inline epaper::document::ApplyResult SessionDocContext::applyEdit(epaper::document::DocEdit &edit)
+{
+    return document().commitEdit(edit);
 }
 
 inline void SessionDocContext::refreshConnectorsBoundTo(const std::string &nodeId)
@@ -394,8 +406,10 @@ inline void SessionDocContext::toggleInkScaleMode(const std::string &nodeId)
         return;
     const std::string next = selected->inkScaleMode == "fixedInk" ? "withBounds" : "fixedInk";
     static int seq = 0;
-    document().commitOp(
-        makeSetInkScaleModeOp(std::string("ism-") + std::to_string(++seq), selected->id, next));
+    SetInkScaleModeEdit edit(selected->id, next);
+    edit.setId(std::string("ism-") + std::to_string(++seq));
+    edit.setOldMode(selected->inkScaleMode);
+    document().commitEdit(edit);
     noteDocumentMutated();
     notifyHistory();
     flushWire();

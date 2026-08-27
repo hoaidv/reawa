@@ -60,7 +60,7 @@ gesture.
 |---|---|
 | `seq` | Monotonic per session, assigned by the device |
 | `opId` | Stable, unique — the idempotency key |
-| `op` | An ADR-0010 tree op (`create_smart_group`, `set_smart_transform`, `append_ink`, `reparent`, `remove`, `restore_snapshot`) |
+| `op` | An ADR-0010 tree op (`create_smart_group`, `set_smart_transform`, `append_ink`, `reparent`, `remove`, `set_ink_samples`, `compound`, `restore_snapshot`) |
 | `baseSeq` | The `seq` the device believed current when committing — lets the mirror detect a gap |
 
 Rationale: the ≤300 ms mirror target is comfortable for one message per gesture (gestures are
@@ -68,8 +68,10 @@ human-paced), and an op stream keeps the desktop's existing idempotent-apply-by-
 ([SRS-IN-04]) rather than inventing a diff format. Coalesced state would have to be recomputed on
 every op *and* would lose the undo unit, which is per-gesture by product rule.
 
-`restore_snapshot` is how undo publishes: the device already restores wholesale (ADR-0014 §5), so it
-emits the restore as an op rather than trying to synthesize inverse ops it does not compute.
+Undo and redo publish the **counterpart** op, or `compound { ops: […] }` when one gesture has
+several inverses ([ADR-0032](./ADR-0032-inverse-op-undo.md) §4). `restore_snapshot` remains in the
+grammar as a **last-resort, non-undo** wholesale replace (tests / emergency). Undo and redo **must
+not** emit it.
 
 ### 3. Ordering, gaps, and idempotency
 
@@ -164,7 +166,7 @@ repaint, not a corrected gesture.
 | Risk | Severity | Mitigation |
 |---|---|---|
 | Queue grows unbounded during a long disconnect | Low | Ops are per-gesture and small; bound it and surface pressure before it matters |
-| `restore_snapshot` ops are large (whole-document) | Medium | Only emitted on undo; measure against the ≤300 ms target and split if needed |
+| Last-resort `restore_snapshot` is large (whole-document) | Low | **Not** the undo path ([ADR-0032](./ADR-0032-inverse-op-undo.md)). Undo emits counterpart / `compound` (order-of-forward-op). If a non-undo wholesale replace is ever emitted, measure against the ≤300 ms target |
 | Gap detection fires spuriously and triggers resyncs | Medium | Resync is visible and safe (queue drains first); tune `baseSeq` handling with trace evidence |
 | Preview and real node briefly both visible | Low | Keyed by stroke id; replace, do not append |
 

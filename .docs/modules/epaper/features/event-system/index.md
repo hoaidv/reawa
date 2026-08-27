@@ -18,6 +18,8 @@ folder records *how the routing that satisfies them is wired, and why each knob 
 - [event-flow.md](./event-flow.md) — the stack, component roles, pen and finger sequences, every
   tuning knob with the bug it bought, the document gestures at the end of the flow, and the history
   of gotchas
+- After `canvasInput` reaches C++: [tool-system](../../tool-system/index.md) (`InputHub`, Modes,
+  Operations). Do not look for gesture bodies on `TabletCanvasItem`.
 
 Two standing rules for this area:
 

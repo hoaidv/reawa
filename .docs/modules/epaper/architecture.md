@@ -61,11 +61,12 @@ Three layers, ordered by how much the ink budget protects them.
    ([SRS-EP-08](./features/device-document/srs-logic.md),
    [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md)).
 
-The strategy is deliberately boring where it can be: the undo ring is whole-document snapshots
-(depth 20) rather than inverse-op algebra, with a matching linear redo stack
-([ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)), and the change stream is one op per
-gesture rather than a diff format. Both choices buy correctness with memory and bytes, which is the
-right trade on a device whose scarce resource is *latency*, not storage.
+The strategy is deliberately boring where it can be: the undo ring is counterpart **inverse-op per
+session** (depth 20, `lastOpId` skip) rather than whole-document snapshots
+([ADR-0032](../../adr/ADR-0032-inverse-op-undo.md)), with a matching linear redo stack of forward
+counterparts ([ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md) chrome unchanged), and the
+change stream is one op per gesture (`compound` when a gesture has several inverses) rather than a
+diff format or a tree dump. Both choices buy correctness-under-later-edits and a small wire unit.
 
 ## Domain entities (consumed)
 
@@ -103,7 +104,7 @@ flowchart TB
   subgraph device["Epaper Qt"]
     input["TabletAppFilter — pen + touch"]
     ink["Local ink + Round 19 map — SRS-EP-01"]
-    tools["Tool state — SRS-EP-04"]
+    tools["Tool system — SRS-EP-04 / ADR-0033"]
     doc["DeviceDocument + undo ring — SRS-EP-07"]
     recog["Recognition + membership — SRS-EP-10"]
     manip["Hit-test + transforms — SRS-EP-11"]
@@ -153,12 +154,15 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 ## Decisions
 
 - [ADR-0019](../../adr/ADR-0019-selection-chrome-layers.md) — CanvasLayer / ToolCanvasLayer / ToolLayer (Pen / Mono / UI)
+- [ADR-0033](../../adr/ADR-0033-tool-abstraction.md) — Mode / Operation / Modifier / overlay split (overview)
+- **Implementation view:** [tool-system/](./tool-system/index.md) — current `epaper/drawing/tools/` catalog, routing, how to add tools
 - [ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md) — independent cameras + exclusive one-way follow (supersedes [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md))
 - [ADR-0024](../../adr/ADR-0024-in-document-clipboard.md) — in-document clipboard (one slot)
 - [ADR-0025](../../adr/ADR-0025-barrel-vs-eraser-nib.md) — barrel channel ≠ eraser nib
 - [ADR-0026](../../adr/ADR-0026-endpoint-ink-membership.md) — endpoint-ink vs spine vs empty
 - [ADR-0027](../../adr/ADR-0027-attachment-t-rest-spine.md) — attachment `t` on rest spine
 - [ADR-0028](../../adr/ADR-0028-pen-button-map-settings-channel.md) — **superseded** by [ADR-0030](../../adr/ADR-0030-tablet-authors-pen-button-map.md); persist split **superseded** by [ADR-0031](../../adr/ADR-0031-device-settings-persist-on-epaper.md) (persist on Epaper; 0 Infini copies)
+- [ADR-0032](../../adr/ADR-0032-inverse-op-undo.md) — inverse-op undo per session (amends ADR-0014 §5)
 - [ADR-0014](../../adr/ADR-0014-document-ownership-inversion.md) — the device owns the working document
 - [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md) — one-way sync contract v1
 - [ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) — §1 device-local tool state and §6 world-unit enclose guard survive; §2–§5 superseded
@@ -174,7 +178,7 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 |---|---|---|---|
 | Document + hit-test cannot fit under the ≤30 ms ink budget | Quality goal 1 — **invalidates the rework** | M×H | Measure before the first REQ-04 story; a miss is a `CHL-*`, not a design workaround |
 | C++/TS geometry divergence | Document fidelity | M×H | Shared fixtures (`ops/`, `enclose/`, `fixed-ink/`, `round-trip/`) + the domain doc |
-| Undo ring memory (20 whole-tree snapshots) | Ink latency | M×M | Measured in [SRS-EP-13](./features/device-document/srs-quality.md); shrink the ring before slowing ink |
+| Undo ring memory (20 inverse entries, not 20 whole trees) | Ink latency | L×M | Measured in [SRS-EP-13](./features/device-document/srs-quality.md); shrink depth before slowing ink. Bodies of huge removes still sit on the ring |
 | Live manipulation exceeds the partial-refresh budget | Gesture feel | M×M | ≥5 Hz / 0 full-panel bar; CHL-0006 established that slow is acceptable |
 | Selection chrome painted on CanvasLayer (full `update()`) | Lasso lag / refresh discipline | **H×M** | **Closed [CHL-0017](../../../.plan/iter-003/challenges/CHL-0017-selection-chrome-layers.md) / [ADR-0019](../../adr/ADR-0019-selection-chrome-layers.md)** — ToolCanvasLayer Mono + ToolLayer QML |
 | Live SmartGroup painted on CanvasLayer during drag | Duplicate origin + trail wipe | **H×M** | **Closed [CHL-0018](../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md)** — live node on ToolCanvasLayer; option 2 deferred |
