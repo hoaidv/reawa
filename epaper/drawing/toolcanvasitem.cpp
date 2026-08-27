@@ -11,9 +11,10 @@
 #include "document/surround_create.hpp"
 #include "rendering/rendering_qt.hpp"
 #include "tools/finger_host.hpp"
-#include "tools/operations/finger_resize_operation.hpp"
+#include "tools/manip_host.hpp"
 #include "tools/operations/move_operation.hpp"
 #include "tools/operations/navigation_operation.hpp"
+#include "tools/operations/resize_operation.hpp"
 #include "tools/operations/select_operation.hpp"
 
 #include <memory>
@@ -165,18 +166,18 @@ void ToolCanvasItem::syncToolHost()
     syncHandTouchFactories();
 }
 
-/** Register cached HandTouch Operations (Phase 3). */
+/** Register cached HandTouch Operations (Phase 3–4). */
 void ToolCanvasItem::syncHandTouchFactories()
 {
     using namespace epaper::tools;
     m_hub.clearFingerOperations();
-    const FingerHost host = makeFingerHost();
+    const FingerHost fingerHost = makeFingerHost();
+    const ManipHost manipHost = makeManipHost();
     m_hub.setFingerOperation(OperationKind::Navigation,
-                             std::make_unique<NavigationOperation>(host));
-    m_hub.setFingerOperation(OperationKind::Move, std::make_unique<MoveOperation>(host));
-    m_hub.setFingerOperation(OperationKind::Resize,
-                             std::make_unique<FingerResizeOperation>(host));
-    m_hub.setFingerOperation(OperationKind::Select, std::make_unique<SelectOperation>(host));
+                             std::make_unique<NavigationOperation>(fingerHost));
+    m_hub.setFingerOperation(OperationKind::Move, std::make_unique<MoveOperation>(manipHost));
+    m_hub.setFingerOperation(OperationKind::Resize, std::make_unique<ResizeOperation>(manipHost));
+    m_hub.setFingerOperation(OperationKind::Select, std::make_unique<SelectOperation>(fingerHost));
 }
 
 /** Activate PenMode or SelectionMode from exclusive chip. */
@@ -282,6 +283,138 @@ epaper::tools::FingerHost ToolCanvasItem::makeFingerHost()
     host.endSelectionGesture = [this]() { endSelectionGesture(); };
     host.manipActive = [this]() { return m_manip.active; };
     return host;
+}
+
+/** Host bag for Move/Resize Operations (ManipSession). */
+epaper::tools::ManipHost ToolCanvasItem::makeManipHost()
+{
+    epaper::tools::ManipHost host;
+    host.manip = &m_manip;
+    host.selection = &m_selection;
+    host.penHandleHitDu = epaper::document::kHandleHitDu;
+    host.fingerHandleHitDu = epaper::handtouch::kFingerHandleHitDu;
+    host.handleIndexAtPanel = [this](QPointF p, double hitDu) {
+        return handleIndexAtPanel(p, hitDu);
+    };
+    host.beginHandleDrag = [this](int idx, QPointF panel) {
+        beginHandleDrag(idx, panelToWorld(panel));
+    };
+    host.beginMoveFromPanel = [this](QPointF panel, bool arm) {
+        return beginMoveFromPanel(panel, arm);
+    };
+    host.applyDragFromPanel = [this](QPointF panel) {
+        applyDragWorld(panelToWorld(panel));
+    };
+    host.commitTransform = [this]() { endSelectionGesture(); };
+    host.abortTransform = [this]() {
+        if (m_manip.active || m_selection.isLiveManip())
+            abortFingerManip();
+        else {
+            m_selection.gesture = epaper::selection::Gesture::None;
+            m_finger.gesture = epaper::fingergesture::Kind::None;
+        }
+    };
+    return host;
+}
+
+/** Pick-move only (no marquee); used by MoveOperation. */
+bool ToolCanvasItem::beginMoveFromPanel(const PanelPt &panel, bool armSelFreeform)
+{
+    using namespace epaper::document;
+    if (armSelFreeform && m_session)
+        m_session->setExclusiveTool(QStringLiteral("sel_freeform"));
+    m_encloseRefuseReason.clear();
+    m_manipUnavailable.clear();
+    m_manipUnavailableRect = QRectF();
+    const WorldPt world = panelToWorld(panel);
+
+    std::vector<const DocNode *> pick;
+    collectPickable(doc().rootChildren, pick);
+    const DocNode *hit = nullptr;
+    for (int i = int(pick.size()) - 1; i >= 0; --i) {
+        const DocNode *n = pick[size_t(i)];
+        if (!n || !descriptorFor(n->kind).has(Verb::Move))
+            continue;
+        SmartBounds b;
+        if (!boundsOf(*n, b))
+            continue;
+        if (world.x >= b.x && world.x <= b.x + b.width && world.y >= b.y
+            && world.y <= b.y + b.height) {
+            hit = n;
+            break;
+        }
+    }
+
+    CapabilityDescriptor cap;
+    bool lodOk = true;
+    if (hit) {
+        cap = descriptorFor(hit->kind);
+        SmartBounds wb;
+        if (boundsOf(*hit, wb))
+            lodOk = lodOkPanel(wb);
+    }
+
+    const GestureKind kind = resolvePress(cap, lodOk, false, false, hit != nullptr);
+    if (kind == GestureKind::Unavailable) {
+        SmartBounds wb;
+        if (hit && boundsOf(*hit, wb))
+            showManipUnavailable(wb);
+        else {
+            m_manipUnavailable = QStringLiteral("Too far out to move");
+            emit selectionChromeChanged();
+            damageToolChrome(m_manipUnavailableRect);
+        }
+        return false;
+    }
+    if (kind == GestureKind::SelectMove && hit) {
+        if (armSelFreeform)
+            m_finger.gesture = epaper::fingergesture::Kind::Move;
+        startLiveManip(hit, ResizeHandle::None, world);
+        return true;
+    }
+    return false;
+}
+
+/** Pen selection: lock Move/Resize Operation when knob or pick hit. */
+bool ToolCanvasItem::tryDispatchSelectionPointer(const PanelPt &panel, qreal pressure)
+{
+    epaper::tools::FingerDownContext ctx;
+    ctx.sample.panel = panel;
+    ctx.sample.pressure = pressure;
+    ctx.sample.device = epaper::tools::PointerDevice::Pen;
+    ctx.knobHit = handleIndexAtPanel(panel, epaper::document::kHandleHitDu) >= 0;
+    ctx.boxHit = fingerHitsBox(panel);
+    return m_hub.dispatchSelectionPointerDown(ctx);
+}
+
+/** Register resize knob HitTargets from settled selection chrome. */
+void ToolCanvasItem::syncSelectionHitTargets()
+{
+    m_hub.clearHitRegions();
+    if (m_handleCount != 8)
+        return;
+    const QRectF r = m_selectionBoundsRect;
+    if (r.width() <= 0.0 || r.height() <= 0.0)
+        return;
+    const PanelPt pts[8] = {
+        {r.left(), r.top()},
+        {r.center().x(), r.top()},
+        {r.right(), r.top()},
+        {r.right(), r.center().y()},
+        {r.right(), r.bottom()},
+        {r.center().x(), r.bottom()},
+        {r.left(), r.bottom()},
+        {r.left(), r.center().y()},
+    };
+    const double hitDu = epaper::document::kHandleHitDu;
+    const qreal half = hitDu * 0.5;
+    for (int i = 0; i < 8; ++i) {
+        epaper::tools::HitRegion hr;
+        hr.panelRect = QRectF(pts[i].x() - half, pts[i].y() - half, hitDu, hitDu);
+        hr.priority = 60;
+        hr.ownerToken = reinterpret_cast<void *>(static_cast<intptr_t>(i));
+        m_hub.registerHitRegion(hr);
+    }
 }
 
 /** Commit metadata for HandTouch postHandling. */
@@ -461,6 +594,13 @@ void ToolCanvasItem::beginSelectionGesture(const PanelPt &canvasPos)
 /** Drag while marquee/lasso/move/resize is active. */
 void ToolCanvasItem::updateSelectionGesture(const PanelPt &canvasPos)
 {
+    if (m_hub.lockedOperation()) {
+        epaper::tools::PointerSample s;
+        s.panel = canvasPos;
+        s.device = epaper::tools::PointerDevice::Pen;
+        m_hub.dispatchPointerMove(s);
+        return;
+    }
     if (!selectionGestureActive())
         return;
     if (m_selectStroke) {
@@ -582,10 +722,9 @@ void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen)
         return;
     const PanelPt panel(x, y);
     if (pen) {
-        // Handle / selection stay on Tool; only ink uses Tablet ingest.
-        if (tryBeginHandleAtPanel(panel, epaper::document::kHandleHitDu))
-            return;
         if (selectionToolArmed()) {
+            if (tryDispatchSelectionPointer(panel, pressure))
+                return;
             beginSelectionGesture(panel);
             return;
         }
@@ -606,6 +745,14 @@ void ToolCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen)
         return;
     const PanelPt panel(x, y);
     if (pen) {
+        if (m_hub.lockedOperation()) {
+            epaper::tools::PointerSample s;
+            s.panel = panel;
+            s.pressure = pressure;
+            s.device = epaper::tools::PointerDevice::Pen;
+            if (m_hub.dispatchPointerMove(s))
+                return;
+        }
         if (selectionGestureActive()) {
             updateSelectionGesture(panel);
             return;
@@ -623,6 +770,14 @@ void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen)
         return;
     const PanelPt panel(x, y);
     if (pen) {
+        if (m_hub.lockedOperation()) {
+            epaper::tools::PointerSample s;
+            s.panel = panel;
+            s.device = epaper::tools::PointerDevice::Pen;
+            m_hub.dispatchPointerUp(s, {});
+            m_surface->clearStash();
+            return;
+        }
         if (selectionGestureActive()) {
             endSelectionGesture();
             m_surface->clearStash();
@@ -660,8 +815,8 @@ void ToolCanvasItem::onPointerCancel()
         m_inkStroke.reset();
     } else if (m_surface && m_surface->strokeActive())
         m_surface->cancelActiveStroke();
-    else if (m_hub.lockedOperation() && m_hub.handTouch().armed())
-        m_hub.dispatchFingerCancel();
+    else if (m_hub.lockedOperation())
+        m_hub.dispatchPointerCancel();
     else if (m_selectStroke) {
         if (auto *sink = dynamic_cast<epaper::tools::RawPointerSink *>(m_selectStroke.get()))
             sink->onCancel();
@@ -779,7 +934,7 @@ void ToolCanvasItem::updateFingerTouch(const PanelPt &canvasPos, int fingerCount
     epaper::tools::PointerSample s;
     s.panel = canvasPos;
     s.device = epaper::tools::PointerDevice::Finger;
-    if (!m_hub.dispatchFingerMove(s, fingerCount))
+    if (!m_hub.dispatchPointerMove(s, fingerCount))
         return;
     if (before == Kind::EmptyPending && m_finger.gesture == Kind::EmptyPan) {
         qInfo().noquote() << QStringLiteral("[hand] pan promote at (%1,%2)")
@@ -804,7 +959,7 @@ void ToolCanvasItem::endFingerTouch(const PanelPt &canvasPos)
     epaper::tools::HandTouchCommitInfo commit;
     if (const epaper::tools::Operation *op = m_hub.lockedOperation())
         commit = makeHandTouchCommitInfo(op->kind());
-    m_hub.dispatchFingerUp(s, commit);
+    m_hub.dispatchPointerUp(s, commit);
 }
 
 /** Revert live manip geometry (second contact / cancel). */
@@ -882,7 +1037,7 @@ void ToolCanvasItem::cancelHandTouch()
         return;
     }
     if (m_hub.lockedOperation())
-        m_hub.dispatchFingerCancel();
+        m_hub.dispatchPointerCancel();
     else
         applyFingerIntent(m_finger.cancel(m_manip.active));
 }
@@ -1400,6 +1555,7 @@ void ToolCanvasItem::refreshSelectionChrome()
     }
     emit selectionChromeChanged();
     syncToolCanvasPresence();
+    syncSelectionHitTargets();
     damageToolChrome(m_selectionChromeDirty);
 }
 

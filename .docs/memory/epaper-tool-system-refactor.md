@@ -532,6 +532,7 @@ ToolCanvasItem = **Interaction Router host**: QML entry, `HostCaps`, switch Mode
 ### Phase 4 — MoveOperation + ResizeOperation (+ overlays)
 
 - From ManipSession; HitTargets; punch; settled chrome from SelectionContext when no Op locked.
+- **Status (2026-08-27):** done — `ManipHost`, pen+finger `MoveOperation`/`ResizeOperation` (HitTarget match → RawPointer drag); `syncSelectionHitTargets()` on chrome refresh; pen path via `tryDispatchSelectionPointer`.
 
 ### Phase 5 — Thin router host + CMake + verify
 

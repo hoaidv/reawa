@@ -1,8 +1,8 @@
 #include "input_hub.hpp"
 
-#include "operations/finger_resize_operation.hpp"
 #include "operations/move_operation.hpp"
 #include "operations/navigation_operation.hpp"
+#include "operations/resize_operation.hpp"
 #include "operations/select_operation.hpp"
 
 #include <climits>
@@ -14,7 +14,6 @@ void inputHubLinkAnchor() {}
 
 namespace {
 
-/** Global priority order — highest first for early-exit when only one can match. */
 constexpr OperationKind kMatchOrder[] = {
     OperationKind::Resize,
     OperationKind::Move,
@@ -74,14 +73,16 @@ void InputHub::applyHitContext(Operation *op, const FingerDownContext &ctx)
         nav->setHitContext(ctx.knobHit, ctx.boxHit);
     else if (auto *mv = dynamic_cast<MoveOperation *>(op))
         mv->setHitContext(ctx.boxHit);
-    else if (auto *rs = dynamic_cast<FingerResizeOperation *>(op))
+    else if (auto *rs = dynamic_cast<ResizeOperation *>(op))
         rs->setHitContext(ctx.knobHit);
 }
 
 Operation *InputHub::matchOperation(StrategyKind channel, const PointerSample &s,
-                                    const FingerDownContext *fingerCtx)
+                                    const FingerDownContext *fingerCtx, PointerDevice device)
 {
-    if (!m_hand.armed() || !m_activeMode)
+    if (!m_activeMode)
+        return nullptr;
+    if (device == PointerDevice::Finger && !m_hand.armed())
         return nullptr;
 
     Operation *best = nullptr;
@@ -94,15 +95,17 @@ Operation *InputHub::matchOperation(StrategyKind channel, const PointerSample &s
         if (it == m_fingerOps.end())
             continue;
         Operation *op = it->second.get();
-        if (!op->descriptor().acceptFinger)
+        const OperationDescriptor &d = op->descriptor();
+        if (device == PointerDevice::Pen && !d.acceptPen)
+            continue;
+        if (device == PointerDevice::Finger && !d.acceptFinger)
             continue;
         if (fingerCtx)
             applyHitContext(op, *fingerCtx);
         if (!op->match(channel, s))
             continue;
-        const int pri = op->descriptor().priority;
-        if (pri > bestPriority) {
-            bestPriority = pri;
+        if (d.priority > bestPriority) {
+            bestPriority = d.priority;
             best = op;
         }
     }
@@ -144,7 +147,8 @@ bool InputHub::dispatchFingerDown(const FingerDownContext &ctx)
         return true;
     }
 
-    Operation *winner = matchOperation(StrategyKind::RawPointer, ctx.sample, &ctx);
+    Operation *winner =
+        matchOperation(StrategyKind::RawPointer, ctx.sample, &ctx, PointerDevice::Finger);
     if (!winner)
         return false;
     m_lockedOp = winner;
@@ -152,7 +156,31 @@ bool InputHub::dispatchFingerDown(const FingerDownContext &ctx)
     return true;
 }
 
-bool InputHub::dispatchFingerMove(const PointerSample &s, int fingerCount)
+bool InputHub::dispatchSelectionPointerDown(const FingerDownContext &ctx)
+{
+    if (m_lockedOp) {
+        feedRawDown(m_lockedOp, ctx.sample);
+        return true;
+    }
+
+    Operation *winner = nullptr;
+    if (ctx.knobHit) {
+        winner = matchOperation(StrategyKind::HitTarget, ctx.sample, &ctx, ctx.sample.device);
+        if (!winner) {
+            winner = matchOperation(StrategyKind::RawPointer, ctx.sample, &ctx, ctx.sample.device);
+        }
+    }
+    if (!winner && ctx.boxHit) {
+        winner = matchOperation(StrategyKind::RawPointer, ctx.sample, &ctx, ctx.sample.device);
+    }
+    if (!winner)
+        return false;
+    m_lockedOp = winner;
+    feedRawDown(m_lockedOp, ctx.sample);
+    return true;
+}
+
+bool InputHub::dispatchPointerMove(const PointerSample &s, int fingerCount)
 {
     if (!m_lockedOp)
         return false;
@@ -160,17 +188,18 @@ bool InputHub::dispatchFingerMove(const PointerSample &s, int fingerCount)
     return true;
 }
 
-bool InputHub::dispatchFingerUp(const PointerSample &s, const HandTouchCommitInfo &commit)
+bool InputHub::dispatchPointerUp(const PointerSample &s, const HandTouchCommitInfo &commit)
 {
     if (!m_lockedOp)
         return false;
     feedRawUp(m_lockedOp, s);
-    runPostHandling(commit);
+    if (s.device == PointerDevice::Finger)
+        runPostHandling(commit);
     m_lockedOp = nullptr;
     return true;
 }
 
-void InputHub::dispatchFingerCancel()
+void InputHub::dispatchPointerCancel()
 {
     if (!m_lockedOp)
         return;
@@ -182,8 +211,6 @@ bool InputHub::dispatchFingerTap(const PointerSample &s, const HandTouchCommitIn
 {
     (void)commit;
     (void)s;
-    // TapHandler path: use the same down/up cycle as DragHandler so knob/box hit-test runs.
-    // SelectOperation (Tap-only, box=false) cannot pick nodes — see toolcanvasitem onFingerTap.
     return false;
 }
 
@@ -199,7 +226,8 @@ bool InputHub::dispatchPinchBegin(const PinchContext &ctx)
 
     FingerDownContext fingerCtx;
     fingerCtx.sample = s;
-    Operation *winner = matchOperation(StrategyKind::Pinch, s, &fingerCtx);
+    Operation *winner =
+        matchOperation(StrategyKind::Pinch, s, &fingerCtx, PointerDevice::Finger);
     if (!winner)
         return false;
 

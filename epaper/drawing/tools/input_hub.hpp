@@ -77,14 +77,17 @@ public:
     /** HandTouch one-finger down: match among profile allow-list, lock, onDown. */
     bool dispatchFingerDown(const FingerDownContext &ctx);
 
+    /** Pen (or finger) selection transform down: HitTarget resize, then move pick. */
+    bool dispatchSelectionPointerDown(const FingerDownContext &ctx);
+
     /** Feed locked RawPointer sink; returns false if nothing locked. */
-    bool dispatchFingerMove(const PointerSample &s, int fingerCount);
+    bool dispatchPointerMove(const PointerSample &s, int fingerCount = 1);
 
-    /** onUp + postHandling + clear lock. */
-    bool dispatchFingerUp(const PointerSample &s, const HandTouchCommitInfo &commit);
+    /** onUp + optional postHandling + clear lock. */
+    bool dispatchPointerUp(const PointerSample &s, const HandTouchCommitInfo &commit);
 
-    /** Cancel locked finger Operation. */
-    void dispatchFingerCancel();
+    /** Cancel locked pointer Operation. */
+    void dispatchPointerCancel();
 
     /** Stationary tap → Tap strategy match (SelectOperation). */
     bool dispatchFingerTap(const PointerSample &s, const HandTouchCommitInfo &commit);
@@ -108,7 +111,7 @@ private:
     bool kindAllowed(OperationKind kind) const;
     bool shouldTryKind(OperationKind kind, const FingerDownContext *ctx) const;
     Operation *matchOperation(StrategyKind channel, const PointerSample &s,
-                              const FingerDownContext *fingerCtx);
+                              const FingerDownContext *fingerCtx, PointerDevice device);
 
     void applyHitContext(Operation *op, const FingerDownContext &ctx);
     void feedRawDown(Operation *op, const PointerSample &s);

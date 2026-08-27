@@ -8,9 +8,8 @@ Interaction Router. Modes / Operations / HandTouch live under
 [`epaper/drawing/tools/`](tools/). Design notes:
 [`.docs/memory/epaper-tool-system-refactor.md`](../../.docs/memory/epaper-tool-system-refactor.md).
 
-Phase 0–3: contracts + `InputHub` match/lock; PenMode/InkStroke; SelectionMode/Marquee/Lasso;
-HandTouch finger dispatch via Operations (Navigation, Move, Resize, Select). Move/Resize
-ManipSession extraction and HitTarget overlays remain Phase 4.
+Phase 0–4: contracts + InputHub; Pen/Ink; Selection/Marquee/Lasso; HandTouch dispatch;
+Move/Resize via ManipHost + HitTarget knob regions. Phase 5 thins the router host.
 
 Input enters through `ToolCanvas.qml` handlers (and a few `Input` Connections in
 `Main.qml`). **Tool decides** whether a stylus sample is selection/handle work or

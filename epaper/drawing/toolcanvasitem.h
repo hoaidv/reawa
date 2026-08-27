@@ -24,6 +24,7 @@
 #include "tools/finger_host.hpp"
 #include "tools/ink_box_recognizer_modifier.hpp"
 #include "tools/input_hub.hpp"
+#include "tools/manip_host.hpp"
 #include "tools/modes/pen_mode.hpp"
 #include "tools/modes/selection_mode.hpp"
 #include "tools/operation.hpp"
@@ -126,9 +127,13 @@ private:
     void feedInkStroke(QEvent::Type type, const PanelPt &panel, qreal pressure);
     epaper::tools::SelectionStrokeHost makeSelectionStrokeHost();
     epaper::tools::FingerHost makeFingerHost();
+    epaper::tools::ManipHost makeManipHost();
     epaper::tools::HandTouchCommitInfo makeHandTouchCommitInfo(
         epaper::tools::OperationKind kind) const;
     void feedSelectStroke(QEvent::Type type, const PanelPt &panel);
+    bool beginMoveFromPanel(const PanelPt &panel, bool armSelFreeform);
+    bool tryDispatchSelectionPointer(const PanelPt &panel, qreal pressure);
+    void syncSelectionHitTargets();
 
     QString exclusiveTool() const;
     epaper::document::DeviceDocument &doc();
