@@ -150,12 +150,34 @@ void ToolCanvasItem::setSession(CanvasSession *session)
     syncActiveMode();
 }
 
-/** Rebuild HostCaps + InkSink when session/surface change. */
+/** Rebuild HostCaps + capability ports when session/surface change. */
 void ToolCanvasItem::syncToolHost()
 {
+    if (!m_docCtx)
+        m_docCtx = std::make_unique<epaper::tools::SessionDocContext>(m_session, m_surface);
+    else {
+        m_docCtx->setSession(m_session);
+        m_docCtx->setSurface(m_surface);
+    }
+    if (!m_toolCtx)
+        m_toolCtx = std::make_unique<epaper::tools::ToolCanvasContext>(this);
+    else
+        m_toolCtx->setHost(this);
+
+    m_manipApplier.setDoc(m_docCtx.get());
+    m_manipApplier.setTool(m_toolCtx.get());
+    m_selApplier.setTool(m_toolCtx.get());
+    m_selApplier.setResetManip([this]() { m_manip.reset(); });
+    m_selApplier.setInteractionDebug([this](const std::string &line) {
+        if (m_surface)
+            m_surface->setInteractionDebug(QString::fromStdString(line));
+    });
+
     m_inkSink = std::make_unique<epaper::tools::TabletInkSink>(m_surface);
     epaper::tools::HostCaps caps;
     caps.ink = m_inkSink.get();
+    caps.doc = m_docCtx.get();
+    caps.toolUi = m_toolCtx.get();
     caps.selection = &m_selCtx;
     caps.setExclusiveTool = [this](const QString &id) {
         if (m_surface)
@@ -236,7 +258,7 @@ epaper::tools::SelectionStrokeHost ToolCanvasItem::makeSelectionStrokeHost()
     host.session = &m_selection;
     host.minGesture = kMinMarqueeGesture;
     host.applyIntent = [this](const epaper::selection::SelectionResult &r) {
-        applySelectionIntent(r);
+        m_selApplier.apply(r);
     };
     host.document = [this]() -> const epaper::document::DeviceDocument & { return doc(); };
     host.panelToWorld = [this](double px, double py, double *wx, double *wy) {
@@ -1133,97 +1155,57 @@ void ToolCanvasItem::setSelection(const std::vector<std::string> &ids)
     m_selection.setIds(ids);
 }
 
-/** SelectionIntent → chrome damage / waveform / refresh. */
+/** SelectionIntent → ToolContext applier (Phase 5). */
 void ToolCanvasItem::applySelectionIntent(const epaper::selection::SelectionResult &r)
 {
-    using epaper::selection::SelectionIntent;
-    using epaper::selection::has;
-    if (has(r.intent, SelectionIntent::ResetDrag))
-        m_manip.reset();
-    if (has(r.intent, SelectionIntent::StrokeWaveformOn) )
-        setStrokeWaveform(true);
-    if (has(r.intent, SelectionIntent::StrokeWaveformOff) )
-        setStrokeWaveform(false);
-    if (has(r.intent, SelectionIntent::ChromeChanged)) {
-        m_encloseVisible = false;
-        m_handleCount = 0;
-        m_modeChipVisible = false;
-        emit selectionChromeChanged();
-    }
-    if (has(r.intent, SelectionIntent::SyncToolCanvas))
-        syncToolCanvasPresence();
-    if (has(r.intent, SelectionIntent::DamageLive) && r.hasDamage) {
-        const QRectF live =
-            QRectF(QPointF(r.damageA.x, r.damageA.y), QPointF(r.damageB.x, r.damageB.y))
-                .normalized()
-                .adjusted(-8, -8, 8, 8);
-        damageToolChrome(live);
-    }
-    if (has(r.intent, SelectionIntent::DamageSegment) && r.hasDamage) {
-        const QRectF seg =
-            QRectF(QPointF(r.damageA.x, r.damageA.y), QPointF(r.damageB.x, r.damageB.y))
-                .normalized()
-                .adjusted(-8, -8, 8, 8);
-        damageToolChromeSegment(seg);
-    }
-    if (has(r.intent, SelectionIntent::DebugChanged) && !r.debugInfo.empty()) {
-        m_surface->setInteractionDebug(QString::fromStdString(r.debugInfo));
-    }
-    if (has(r.intent, SelectionIntent::RefreshChrome))
-        refreshSelectionChrome();
+    m_selApplier.apply(r);
 }
 
-/** ManipIntent → live geometry, commit op, preview, wire. */
+/** ManipIntent → DocContext + ToolContext applier (Phase 5). */
 void ToolCanvasItem::applyManipIntent(const epaper::manip::ManipResult &r, bool restoreOrigin)
 {
-    using epaper::manip::ManipIntent;
-    using epaper::manip::has;
-    if (has(r.intent, ManipIntent::BeginGesture))
-        doc().beginGesture();
-    if (has(r.intent, ManipIntent::ApplyLiveGeometry)) {
-        if (restoreOrigin)
-            doc().applyLiveSmartGeometry(m_manip.nodeId, m_manip.originT, m_manip.originB);
-        else
-            doc().applyLiveSmartGeometry(m_manip.nodeId, m_manip.liveT, m_manip.liveB);
-    }
-    if (has(r.intent, ManipIntent::RefreshBoundConnectors))
-        refreshConnectorsBoundTo(doc(), m_manip.nodeId);
-    if (has(r.intent, ManipIntent::PreviewFrame))
-        doc().previewManipulationFrame();
-    if (has(r.intent, ManipIntent::SendPreview))
-        sendManipPreviewToInfini();
-    if (has(r.intent, ManipIntent::RefreshAllConnectors)
-        && !has(r.intent, ManipIntent::CommitTransform))
-        refreshAllConnectorWarps(doc());
-    if (has(r.intent, ManipIntent::AbortGesture))
-        doc().abortGesture();
-    if (has(r.intent, ManipIntent::CommitTransform)) {
-        ++m_toolIntentSeq;
-        const std::string opId = std::string("sst-") + std::to_string(m_toolIntentSeq);
-        const epaper::document::SmartBounds liveB = m_manip.liveB;
-        const epaper::document::SmartBounds *bptr = r.resized ? &liveB : nullptr;
-        doc().commitOp(
-            epaper::document::makeSetSmartTransformOp(opId, m_manip.nodeId, m_manip.liveT, bptr));
-        m_originPanelRect = QRectF();
-        if (m_session)
-            m_session->clearLiveManipSuppressIds();
-    }
-    if (has(r.intent, ManipIntent::RefreshAllConnectors)
-        && has(r.intent, ManipIntent::CommitTransform))
-        refreshAllConnectorWarps(doc());
-    if (has(r.intent, ManipIntent::ScheduleRasterize) && m_session) {
-        if (has(r.intent, ManipIntent::AbortGesture))
-            m_session->clearLiveManipSuppressIds();
-        m_session->noteDocumentMutated();
-    }
-    if (has(r.intent, ManipIntent::RefreshChrome))
-        refreshSelectionChrome();
-    if (has(r.intent, ManipIntent::Redraw))
-        redrawLiveManipRegion();
-    if (has(r.intent, ManipIntent::NotifyHistory))
-        m_surface->notifyHistory();
-    if (has(r.intent, ManipIntent::FlushWire))
-        m_surface->flushWire();
+    m_manipApplier.apply(r, m_manip, restoreOrigin, &m_toolIntentSeq);
+}
+
+void ToolCanvasItem::damageToolChromeForContext(const QRectF &panelRect)
+{
+    damageToolChrome(panelRect);
+}
+
+void ToolCanvasItem::damageToolChromeSegmentForContext(const QRectF &panelRect)
+{
+    damageToolChromeSegment(panelRect);
+}
+
+void ToolCanvasItem::resetTransientChromeFlagsForContext()
+{
+    m_encloseVisible = false;
+    m_handleCount = 0;
+    m_modeChipVisible = false;
+}
+
+void ToolCanvasItem::emitSelectionChromeChangedForContext()
+{
+    emit selectionChromeChanged();
+}
+
+void ToolCanvasItem::sendManipPreviewForContext(bool resizeGesture)
+{
+    if (!m_surface)
+        return;
+    const epaper::document::SmartBounds *bptr = resizeGesture ? &m_manip.liveB : nullptr;
+    m_surface->publishManipPreview(m_manip.nodeId, m_manip.liveT, bptr);
+}
+
+void ToolCanvasItem::setInteractionDebugForContext(const std::string &line)
+{
+    if (m_surface)
+        m_surface->setInteractionDebug(QString::fromStdString(line));
+}
+
+void ToolCanvasItem::clearOriginPanelRectForContext()
+{
+    m_originPanelRect = QRectF();
 }
 
 /** Topmost SmartGroup under a world point. */
@@ -1473,16 +1455,6 @@ int ToolCanvasItem::handleIndexAtPanel(const PanelPt &panel, double hitDu) const
             return i;
     }
     return -1;
-}
-
-/** Surface publishManipPreview for live ghost on host. */
-void ToolCanvasItem::sendManipPreviewToInfini()
-{
-    if (!m_surface)
-        return;
-    const epaper::document::SmartBounds *bptr =
-        m_selection.gesture == epaper::selection::Gesture::Resize ? &m_manip.liveB : nullptr;
-    m_surface->publishManipPreview(m_manip.nodeId, m_manip.liveT, bptr);
 }
 
 /** LOD refuse banner when manip is blocked. */

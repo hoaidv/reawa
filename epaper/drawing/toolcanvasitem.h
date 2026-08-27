@@ -33,6 +33,10 @@
 #include "tools/operations/marquee_operation.hpp"
 #include "tools/selection_context_host.hpp"
 #include "tools/selection_stroke_host.hpp"
+#include "tools/manip_intent_applier.hpp"
+#include "tools/selection_intent_applier.hpp"
+#include "tools/session_doc_context.hpp"
+#include "tools/tool_canvas_context.hpp"
 #include "tools/tablet_ink_sink.hpp"
 
 #include <memory>
@@ -114,6 +118,17 @@ public:
 
     Q_INVOKABLE void cancelInteraction();
 
+    /** Called by tools::ToolCanvasContext (Phase 5). */
+    void damageToolChromeForContext(const QRectF &panelRect);
+    void damageToolChromeSegmentForContext(const QRectF &panelRect);
+    void resetTransientChromeFlagsForContext();
+    void emitSelectionChromeChangedForContext();
+    void sendManipPreviewForContext(bool resizeGesture);
+    void setInteractionDebugForContext(const std::string &line);
+    void clearOriginPanelRectForContext();
+
+    friend class epaper::tools::ToolCanvasContext;
+
 signals:
     void surfaceChanged();
     void sessionChanged();
@@ -148,6 +163,10 @@ private:
     epaper::tools::SelectionMode m_selectionMode;
     epaper::tools::SelectionContextHost m_selCtx;
     std::unique_ptr<epaper::tools::TabletInkSink> m_inkSink;
+    std::unique_ptr<epaper::tools::SessionDocContext> m_docCtx;
+    std::unique_ptr<epaper::tools::ToolCanvasContext> m_toolCtx;
+    epaper::tools::ManipIntentApplier m_manipApplier;
+    epaper::tools::SelectionIntentApplier m_selApplier;
     std::unique_ptr<epaper::tools::InkStrokeOperation> m_inkStroke;
     std::unique_ptr<epaper::tools::Operation> m_selectStroke;
     std::unique_ptr<epaper::tools::InkBoxRecognizerModifier> m_inkBoxRecog;
@@ -308,7 +327,6 @@ private:
     int handleIndexAtPanel(const PanelPt &panel, double hitDu) const;
 
     void showManipUnavailable(const epaper::document::SmartBounds &wb);
-    void sendManipPreviewToInfini();
 
     epaper::selection::SelectionSession m_selection;
     epaper::manip::ManipSession m_manip;

@@ -536,6 +536,10 @@ ToolCanvasItem = **Interaction Router host**: QML entry, `HostCaps`, switch Mode
 
 ### Phase 5 — Thin router host + CMake + verify
 
+- `SessionDocContext` + `ToolCanvasContext` implement `DocContext` / `ToolContext`; wired into `HostCaps`.
+- `SelectionIntentApplier` + `ManipIntentApplier` own intent sinks; `applySelectionIntent` / `applyManipIntent` delegate.
+- **Status (2026-08-27):** done — build-warn clean; dead `sendManipPreviewToInfini` removed (preview via `ToolContext::sendManipPreview`).
+
 ## Verification
 
 - build-warn; pen ink; recog latch; pen+hand select→SwitchMode Selection; Lasso/Marquee commit→SelectionContext settled rect; ResizeOperation lock from knob; pinch Navigation; pen-near cancels Op; undo after transform command.

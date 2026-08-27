@@ -8,8 +8,9 @@ Interaction Router. Modes / Operations / HandTouch live under
 [`epaper/drawing/tools/`](tools/). Design notes:
 [`.docs/memory/epaper-tool-system-refactor.md`](../../.docs/memory/epaper-tool-system-refactor.md).
 
-Phase 0–4: contracts + InputHub; Pen/Ink; Selection/Marquee/Lasso; HandTouch dispatch;
-Move/Resize via ManipHost + HitTarget knob regions. Phase 5 thins the router host.
+Phase 0–5: contracts + InputHub; Pen/Ink; Selection/Marquee/Lasso; HandTouch dispatch;
+Move/Resize via ManipHost + HitTarget knob regions; DocContext/ToolContext adapters +
+intent appliers (`applySelectionIntent` / `applyManipIntent` delegate to `tools/`).
 
 Input enters through `ToolCanvas.qml` handlers (and a few `Input` Connections in
 `Main.qml`). **Tool decides** whether a stylus sample is selection/handle work or
@@ -52,9 +53,14 @@ flowchart TB
     BML[beginMarqueeOrLasso / finish…]
   end
 
-  subgraph sinks [Intent sinks]
-    ASI[applySelectionIntent]
-    AMI[applyManipIntent]
+  subgraph sinks [Intent sinks — tools/ appliers]
+    ASI[SelectionIntentApplier]
+    AMI[ManipIntentApplier]
+  end
+
+  subgraph ctx [Context ports]
+    DOC[SessionDocContext]
+    TUI[ToolCanvasContext]
   end
 
   subgraph out [Outcomes]
@@ -103,9 +109,15 @@ flowchart TB
   SLM --> AMI
   ADW --> AMI
   ASI --> CHROME
+  ASI --> TUI
   AMI --> CHROME
+  AMI --> DOC
+  AMI --> TUI
   AMI --> SURF
   AMI --> SESS
+  DOC --> SESS
+  DOC --> SURF
+  TUI --> CHROME
 ```
 
 ## Normal paths
