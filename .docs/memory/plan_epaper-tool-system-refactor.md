@@ -14,6 +14,11 @@ related:
 > **Project memory — draft / active.** Working design for the tool-system refactor.
 > Normative locks also recorded in [ADR-0033](../adr/ADR-0033-tool-abstraction.md) Decision.
 > Revise here as implementation learns; keep ADR Decision in sync for locks.
+>
+> **Not a complete extraction plan.** This file is the taxonomy (Router / Mode / Operation).
+> Bodies moved in [plan_dissolve_host_bags.md](./plan_dissolve_host_bags.md). Leftovers in
+> [plan_toolaction_context_ui.md](./plan_toolaction_context_ui.md). How that gap happened:
+> [refactoring-skills/](./refactoring-skills/SKILL.md).
 
 ## Goal
 
