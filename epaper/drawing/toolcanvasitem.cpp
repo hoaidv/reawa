@@ -14,6 +14,16 @@
 #include <QDebug>
 #include <QEvent>
 
+/**
+ * ToolCanvasItem — Qt entry + interaction router (ADR-0033).
+ *
+ * Owns session bags (selection, manip, finger machine) and delegates effects to
+ * DocContext / ToolContext / InputHub. Q_PROPERTY getters below are pure forwarders
+ * to ToolChrome state and are intentionally uncommented.
+ */
+
+/** Constructor — QQuickPaintedItem overlay setup; attach SelectionContext; sync HandTouch armed.
+ *  Simplify: no — Qt item policy belongs here until a thin QML shell wraps a C++ router. */
 ToolCanvasItem::ToolCanvasItem(QQuickItem *parent)
     : QQuickPaintedItem(parent)
 {
@@ -35,11 +45,15 @@ void ToolCanvasItem::paint(QPainter *painter)
         m_toolCtx->paintOverlay(painter);
 }
 
+/** ADR-0019 waveform — toggles Pen vs Mono overlay mode on EPScreen via EpaperBridge.
+ *  Simplify: no — bridge is device/Qt integration, not ToolContext chrome. */
 void ToolCanvasItem::setStrokeWaveform(bool penInFlight)
 {
     EpaperBridge::instance()->setOverlayStrokePen(penInFlight);
 }
 
+/** ADR-0019 — register this item as the Mono-mode damage region for lasso/marquee waveform.
+ *  Simplify: no — EpaperBridge attachment is Qt/device glue. */
 void ToolCanvasItem::componentComplete()
 {
     QQuickPaintedItem::componentComplete();
@@ -47,6 +61,8 @@ void ToolCanvasItem::componentComplete()
         qInfo() << "[tool-canvas] Mono attach failed — tight bbox fallback (ADR-0019)";
 }
 
+/** Re-attach Mono region when panel geometry changes (Tablet owns frame panel size).
+ *  Simplify: no — same as componentComplete; stays on Qt item. */
 void ToolCanvasItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
 {
     QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
@@ -54,6 +70,8 @@ void ToolCanvasItem::geometryChange(const QRectF &newGeometry, const QRectF &old
         EpaperBridge::instance()->attachMonoModeRegion(this);
 }
 
+/** Inject Tablet Surface (ink/rasterize/wire) and rebuild tool host wiring.
+ *  Simplify: partially — could become `m_hostBinder.onSurfaceChanged(surface)` one-liner. */
 void ToolCanvasItem::setSurface(TabletCanvasItem *surface)
 {
     if (m_surface == surface)
@@ -63,6 +81,8 @@ void ToolCanvasItem::setSurface(TabletCanvasItem *surface)
     emit surfaceChanged();
 }
 
+/** Inject CanvasSession; connect document/camera/tool signals; rebuild host wiring.
+ *  Simplify: partially — signal connects are host-lifecycle; extract to ToolHostBinder. */
 void ToolCanvasItem::setSession(CanvasSession *session)
 {
     if (m_session == session)
@@ -92,6 +112,8 @@ void ToolCanvasItem::setSession(CanvasSession *session)
     emit sessionChanged();
 }
 
+/** Composition root — wire DocContext, ToolContext, appliers, SelectionManip, HostCaps, finger ops.
+ *  Simplify: yes — prime candidate for `ToolHostBinder::sync(session, surface, …)`; keep one-liner here. */
 void ToolCanvasItem::syncToolHost()
 {
     if (!m_docCtx)
@@ -177,6 +199,8 @@ void ToolCanvasItem::syncToolHost()
     syncHandTouchFactories();
 }
 
+/** Register cached HandTouch Operations (Navigation/Move/Resize/Select) on InputHub.
+ *  Simplify: yes — move into ToolHostBinder or InputHub::registerDefaultFingerOps. */
 void ToolCanvasItem::syncHandTouchFactories()
 {
     using namespace epaper::tools;
@@ -190,6 +214,8 @@ void ToolCanvasItem::syncHandTouchFactories()
     m_hub.setFingerOperation(OperationKind::Select, std::make_unique<SelectOperation>(fingerHost));
 }
 
+/** Map exclusive chip → PenMode or SelectionMode; activate/deactivate on InputHub.
+ *  Simplify: yes — belongs in InputHub or a ModeRegistry; host calls `m_hub.syncActiveMode(id)`. */
 void ToolCanvasItem::syncActiveMode()
 {
     const bool wantPen = m_docCtx && m_docCtx->exclusiveTool() == QLatin1String("pen");
@@ -211,6 +237,8 @@ void ToolCanvasItem::syncActiveMode()
     }
 }
 
+/** Factory bag for Marquee/Lasso Operations — session + applier + DocContext frame helpers.
+ *  Simplify: yes — collapse into ToolHostBinder; not repeated per call site. */
 epaper::tools::SelectionStrokeHost ToolCanvasItem::makeSelectionStrokeHost()
 {
     epaper::tools::SelectionStrokeHost host;
@@ -230,6 +258,8 @@ epaper::tools::SelectionStrokeHost ToolCanvasItem::makeSelectionStrokeHost()
     return host;
 }
 
+/** Factory bag for finger Operations — FingerGestureMachine + DocContext + applier lambdas.
+ *  Simplify: yes — largest wiring block; move to ToolHostBinder / FingerHostBuilder. */
 epaper::tools::FingerHost ToolCanvasItem::makeFingerHost()
 {
     epaper::tools::FingerHost host;
@@ -271,6 +301,8 @@ epaper::tools::FingerHost ToolCanvasItem::makeFingerHost()
     return host;
 }
 
+/** Factory bag for Move/Resize Operations — ManipSession + chrome hit-test + SelectionManip.
+ *  Simplify: yes — move to ToolHostBinder / ManipHostBuilder. */
 epaper::tools::ManipHost ToolCanvasItem::makeManipHost()
 {
     epaper::tools::ManipHost host;
@@ -297,6 +329,8 @@ epaper::tools::ManipHost ToolCanvasItem::makeManipHost()
     return host;
 }
 
+/** Build HandTouchCommitInfo for profile postHandling (SwitchMode after select/move).
+ *  Simplify: yes — move to InputHub or HandTouchModifier; host shouldn't know commit shape. */
 epaper::tools::HandTouchCommitInfo ToolCanvasItem::makeHandTouchCommitInfo(
     epaper::tools::OperationKind kind) const
 {
@@ -311,6 +345,8 @@ epaper::tools::HandTouchCommitInfo ToolCanvasItem::makeHandTouchCommitInfo(
     return info;
 }
 
+/** Pen ink path — lazily create InkStrokeOperation and map Qt tablet phase → onDown/Move/Up.
+ *  Simplify: partially — could be `m_hub.dispatchPenInk(type, sample)`; keep thin adapter here. */
 void ToolCanvasItem::feedInkStroke(QEvent::Type type, const PanelPt &panel, qreal pressure)
 {
     if (!m_inkSink)
@@ -337,6 +373,8 @@ void ToolCanvasItem::feedInkStroke(QEvent::Type type, const PanelPt &panel, qrea
     }
 }
 
+/** Marquee/Lasso stroke path — map Qt phase → locked RawPointerSink on m_selectStroke.
+ *  Simplify: partially — could live on SelectionManipController; host holds op unique_ptr today. */
 void ToolCanvasItem::feedSelectStroke(QEvent::Type type, const PanelPt &panel)
 {
     auto *sink = dynamic_cast<epaper::tools::RawPointerSink *>(m_selectStroke.get());
@@ -372,6 +410,8 @@ void ToolCanvasItem::cancelInteraction()
     onPointerCancel();
 }
 
+/** True when exclusive chip is sel_rect or sel_freeform.
+ *  Simplify: yes — `return m_docCtx->isSelectionTool()` one-liner on SessionDocContext. */
 bool ToolCanvasItem::isSelectionTool() const
 {
     if (!m_docCtx)
@@ -380,6 +420,8 @@ bool ToolCanvasItem::isSelectionTool() const
     return m == QLatin1String("sel_rect") || m == QLatin1String("sel_freeform");
 }
 
+/** Pen selection press — build hit context (knob/box) and try InputHub Move/Resize lock first.
+ *  Simplify: yes — move to InputHub::dispatchPenSelectionDown; host passes panel only. */
 bool ToolCanvasItem::tryDispatchSelectionPointer(const PanelPt &panel, qreal pressure)
 {
     epaper::tools::FingerDownContext ctx;
@@ -391,6 +433,8 @@ bool ToolCanvasItem::tryDispatchSelectionPointer(const PanelPt &panel, qreal pre
     return m_hub.dispatchSelectionPointerDown(ctx);
 }
 
+/** Panel → world pick test for finger/pen Move Operation matching.
+ *  Simplify: yes — inline at call sites via DocContext::fingerHitsBox(panel) helper. */
 bool ToolCanvasItem::fingerHitsBox(const PanelPt &panel) const
 {
     if (!m_docCtx)
@@ -399,6 +443,9 @@ bool ToolCanvasItem::fingerHitsBox(const PanelPt &panel) const
     return m_docCtx->fingerHitsBox(w.x, w.y);
 }
 
+/** Primary pointer-down router (ToolCanvas.qml). Pen: hub lock → selection gesture → ink.
+ *  Finger: hub finger down. This is core routing — keep here or move wholesale to InputHub.
+ *  Simplify: partially — extract pen/finger branches to InputHub::onPointerStart if hub owns policy. */
 void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen)
 {
     if (!m_surface)
@@ -419,6 +466,8 @@ void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen)
     beginFingerTouch(panel);
 }
 
+/** Primary pointer-move router. Pen: locked op → selection gesture → ink. Finger: hub move.
+ *  Simplify: partially — same as onPointerStart; policy table belongs in InputHub long-term. */
 void ToolCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen)
 {
     if (!m_surface)
@@ -445,6 +494,8 @@ void ToolCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen)
     updateFingerTouch(panel, 1);
 }
 
+/** Primary pointer-up router. Pen: locked op / selection gesture / ink. Finger: hub up.
+ *  Simplify: partially — mirror of onPointerMove; consolidate trio into InputHub dispatch. */
 void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen)
 {
     if (!m_surface)
@@ -474,6 +525,8 @@ void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen)
     endFingerTouch(panel);
 }
 
+/** Stationary tap — synthesize finger down+up (DragHandler tap path).
+ *  Simplify: yes — `m_hub.dispatchFingerTap(panel)` once hub accepts Tap strategy end-to-end. */
 void ToolCanvasItem::onFingerTap(qreal x, qreal y)
 {
     if (m_finger.lockedUntilLift)
@@ -483,6 +536,9 @@ void ToolCanvasItem::onFingerTap(qreal x, qreal y)
     endFingerTouch(panel);
 }
 
+/** Escape hatch — priority cancel: ink stroke → tablet stroke → locked op → select stroke →
+ *  selection gesture → hand touch. Clears stash and finger lock.
+ *  Simplify: partially — belongs in InputHub::cancelAll(); host triggers from QML pen-near. */
 void ToolCanvasItem::onPointerCancel()
 {
     if (m_inkStroke) {
@@ -504,6 +560,8 @@ void ToolCanvasItem::onPointerCancel()
     m_finger.lockedUntilLift = false;
 }
 
+/** Second capacitive contact — abort one-finger manip via FingerGestureMachine → applier.
+ *  Simplify: yes — InputHub::onSecondContact or HandTouchModifier; bypasses hub today. */
 void ToolCanvasItem::onSecondContact()
 {
     const bool manip = m_finger.isLiveManip() || m_manip.active;
@@ -511,11 +569,15 @@ void ToolCanvasItem::onSecondContact()
     qInfo().noquote() << QStringLiteral("[hand] second contact manip=%1").arg(manip ? 1 : 0);
 }
 
+/** All contacts lifted — clear FingerGestureMachine lock state (Main.qml contactCount).
+ *  Simplify: no — thin state reset; could move with m_finger into HandTouchModifier. */
 void ToolCanvasItem::onContactsCleared()
 {
     m_finger.contactsCleared();
 }
 
+/** PinchHandler start — arming guard, abort live manip, synthetic two-finger contacts → hub.
+ *  Simplify: partially — pinch arm math + policy could move to NavigationOperation/PinchSink setup. */
 void ToolCanvasItem::onPinchStart(qreal x, qreal y, qreal scale)
 {
     if (!m_finger.armed || m_finger.gesture == epaper::fingergesture::Kind::Chip) {
@@ -531,6 +593,8 @@ void ToolCanvasItem::onPinchStart(qreal x, qreal y, qreal scale)
                                          pinchArmPoint(x, y, scale, false));
 }
 
+/** PinchHandler update — forward synthetic contact pair to hub unless ignored.
+ *  Simplify: yes — collapse with onPinchEnd into InputHub::dispatchPinch*. */
 void ToolCanvasItem::onPinchUpdate(qreal x, qreal y, qreal scale)
 {
     if (m_pinchIgnore)
@@ -538,6 +602,8 @@ void ToolCanvasItem::onPinchUpdate(qreal x, qreal y, qreal scale)
     updateTwoFingerTouch(pinchArmPoint(x, y, scale, true), pinchArmPoint(x, y, scale, false));
 }
 
+/** PinchHandler end — settle two-finger navigation.
+ *  Simplify: yes — InputHub::dispatchPinchEnd from QML directly. */
 void ToolCanvasItem::onPinchEnd()
 {
     if (!m_pinchIgnore)
@@ -545,6 +611,8 @@ void ToolCanvasItem::onPinchEnd()
     m_pinchIgnore = false;
 }
 
+/** Synthetic contact offset around pinch centroid for two-finger UV math.
+ *  Simplify: yes — move to PinchContext builder inside InputHub or NavigationOperation. */
 ToolCanvasItem::PanelPt ToolCanvasItem::pinchArmPoint(qreal x, qreal y, qreal scale,
                                                       bool positive) const
 {
@@ -553,6 +621,8 @@ ToolCanvasItem::PanelPt ToolCanvasItem::pinchArmPoint(qreal x, qreal y, qreal sc
     return PanelPt(x + (positive ? arm : -arm), y);
 }
 
+/** One-finger down — hit prefilter (knob/box) then InputHub match→lock→Operation onDown.
+ *  Simplify: yes — InputHub::dispatchFingerDown should accept panel and resolve hits internally. */
 bool ToolCanvasItem::beginFingerTouch(const PanelPt &canvasPos)
 {
     if (!m_finger.armed)
@@ -565,6 +635,8 @@ bool ToolCanvasItem::beginFingerTouch(const PanelPt &canvasPos)
     return m_hub.dispatchFingerDown(ctx);
 }
 
+/** One-finger move — respect FingerGestureMachine ignore gate, then hub dispatch.
+ *  Simplify: yes — gate belongs in HandTouchModifier once machine moves off host. */
 void ToolCanvasItem::updateFingerTouch(const PanelPt &canvasPos, int fingerCount)
 {
     if (m_finger.ignoresOneFingerUpdate())
@@ -575,6 +647,8 @@ void ToolCanvasItem::updateFingerTouch(const PanelPt &canvasPos, int fingerCount
     m_hub.dispatchPointerMove(s, fingerCount);
 }
 
+/** One-finger up — attach HandTouchCommitInfo for profile postHandling, hub dispatch.
+ *  Simplify: yes — InputHub builds commit info from locked op; host passes sample only. */
 void ToolCanvasItem::endFingerTouch(const PanelPt &canvasPos)
 {
     epaper::tools::PointerSample s;
@@ -586,6 +660,8 @@ void ToolCanvasItem::endFingerTouch(const PanelPt &canvasPos)
     m_hub.dispatchPointerUp(s, commit);
 }
 
+/** Two-finger down — build PinchContext and dispatch NavigationOperation lock.
+ *  Simplify: yes — InputHub::dispatchPinchBegin from onPinchStart directly. */
 bool ToolCanvasItem::beginTwoFingerTouch(const PanelPt &a, const PanelPt &b)
 {
     epaper::tools::PinchContext ctx;
@@ -595,6 +671,8 @@ bool ToolCanvasItem::beginTwoFingerTouch(const PanelPt &a, const PanelPt &b)
     return m_hub.dispatchPinchBegin(ctx);
 }
 
+/** Two-finger move — hub pinch update.
+ *  Simplify: yes — merge into onPinchUpdate → hub one-liner. */
 void ToolCanvasItem::updateTwoFingerTouch(const PanelPt &a, const PanelPt &b)
 {
     epaper::tools::PinchContext ctx;
@@ -603,6 +681,8 @@ void ToolCanvasItem::updateTwoFingerTouch(const PanelPt &a, const PanelPt &b)
     m_hub.dispatchPinchUpdate(ctx);
 }
 
+/** Two-finger up — hub pinch end with commit info for postHandling.
+ *  Simplify: yes — InputHub builds commit; host one-liner. */
 void ToolCanvasItem::endTwoFingerTouch()
 {
     epaper::tools::HandTouchCommitInfo commit;
@@ -611,6 +691,8 @@ void ToolCanvasItem::endTwoFingerTouch()
     m_hub.dispatchPinchEnd(commit);
 }
 
+/** ToolChip hand-touch toggle — sync armed on machine + HandTouchModifier; cancel if off.
+ *  Simplify: partially — UI action stays Q_INVOKABLE; core could be HandTouchModifier::toggle(). */
 void ToolCanvasItem::toggleHandTouch()
 {
     m_finger.setArmed(!m_finger.armed);
@@ -620,6 +702,8 @@ void ToolCanvasItem::toggleHandTouch()
     emit handTouchArmedChanged();
 }
 
+/** Pen-near / disarm escape — two-finger end, hub cancel, or machine cancel → applier.
+ *  Simplify: partially — unify with onPointerCancel via InputHub::cancelHandTouch(). */
 void ToolCanvasItem::cancelHandTouch()
 {
     if (m_finger.isTwoFinger()) {
