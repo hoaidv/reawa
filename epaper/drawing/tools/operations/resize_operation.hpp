@@ -50,7 +50,7 @@ public:
         m_caps->toolUi->clearManipUnavailable();
         const HitRegion *hit = m_hub->overlayHitAt(s.panel);
         const int idx = hit ? int(reinterpret_cast<intptr_t>(hit->ownerToken)) : -1;
-        const epaper::document::ResizeHandle handle = epaper::manip::handleFromIndex(idx);
+        const epaper::document::ResizeHandle handle = handleFromIndex(idx);
         if (handle == epaper::document::ResizeHandle::None)
             return;
         const epaper::document::DocNode *selected =

@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- * MoveOperation — pick-move; owns ManipSession via TransformGesture.
+ * MoveOperation — pick-move; owns TransformGesture.
  * @implements [SRS-EP-11] @implements [SRS-EP-21]
  */
 

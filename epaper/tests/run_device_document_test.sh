@@ -41,7 +41,7 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/canvas_frame_test.cpp -o /tmp/canvas_
 /tmp/canvas_frame_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/stroke_capture_test.cpp -o /tmp/stroke_capture_test
 /tmp/stroke_capture_test
-c++ -std=c++17 -Wall -Wextra -O2 -I. tests/manip_session_test.cpp -o /tmp/manip_session_test
-/tmp/manip_session_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/transform_session_test.cpp -o /tmp/transform_session_test
+/tmp/transform_session_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. rendering/rendering.cpp tests/rendering_test.cpp -o /tmp/rendering_test
 /tmp/rendering_test
