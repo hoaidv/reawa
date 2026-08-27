@@ -538,7 +538,13 @@ ToolCanvasItem = **Interaction Router host**: QML entry, `HostCaps`, switch Mode
 
 - `SessionDocContext` + `ToolCanvasContext` implement `DocContext` / `ToolContext`; wired into `HostCaps`.
 - `SelectionIntentApplier` + `ManipIntentApplier` own intent sinks; `applySelectionIntent` / `applyManipIntent` delegate.
-- **Status (2026-08-27):** done — build-warn clean; dead `sendManipPreviewToInfini` removed (preview via `ToolContext::sendManipPreview`).
+- **Status (2026-08-27):** done — build-warn clean.
+
+### Phase 6 — Extract finger/selection/chrome from host
+
+- `FingerIntentApplier`, `SelectionManipController`, `ToolChrome`; frame/pick/camera on `SessionDocContext`.
+- `ToolCanvasContext` owns chrome refresh/paint/damage (not forwarders to host).
+- **Status (2026-08-27):** done — `toolcanvasitem.cpp` ~700 lines (Qt router + hub dispatch only).
 
 ## Verification
 
