@@ -8,10 +8,10 @@
 #include "action.hpp"
 #include "document/capability.hpp"
 #include "document/manipulate.hpp"
-#include "../doc_context.hpp"
+#include "../contexts/doc_context.hpp"
 #include "../host_caps.hpp"
-#include "../selection_context.hpp"
-#include "../tool_context.hpp"
+#include "../contexts/selection_context.hpp"
+#include "../contexts/tool_context.hpp"
 
 namespace epaper {
 namespace tools {

@@ -6,7 +6,7 @@
  * @implements [SRS-EP-04] @implements [SRS-EP-21]
  */
 
-#include "hand_touch_modifier.hpp"
+#include "modifiers/hand_touch_modifier.hpp"
 #include "host_caps.hpp"
 #include "interventions.hpp"
 #include "mode.hpp"

@@ -1,12 +1,12 @@
 #include "tool_canvas_context.hpp"
 
-#include "../tabletcanvasitem.h"
-#include "../toolcanvasitem.h"
-#include "input_hub.hpp"
-#include "operation.hpp"
+#include "../../tabletcanvasitem.h"
+#include "../../toolcanvasitem.h"
+#include "../input_hub.hpp"
+#include "../operation.hpp"
+#include "../ui/selection_context_bar.hpp"
 #include "selection_context.hpp"
 #include "session_doc_context.hpp"
-#include "ui/selection_context_bar.hpp"
 
 #include <QPainter>
 #include <string>

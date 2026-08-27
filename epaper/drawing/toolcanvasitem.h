@@ -6,10 +6,10 @@
 #include "tools/input_hub.hpp"
 #include "tools/modes/pen_mode.hpp"
 #include "tools/modes/selection_mode.hpp"
-#include "tools/selection_context.hpp"
-#include "tools/session_doc_context.hpp"
+#include "tools/contexts/selection_context.hpp"
+#include "tools/contexts/session_doc_context.hpp"
 #include "tools/tablet_ink_sink.hpp"
-#include "tools/tool_canvas_context.hpp"
+#include "tools/contexts/tool_canvas_context.hpp"
 #include "tools/ui/selection_context_bar.hpp"
 
 #include <QPainter>

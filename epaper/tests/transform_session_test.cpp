@@ -2,7 +2,7 @@
  * TransformSession host tests (no Qt). Geometry + commit moved/resized.
  */
 
-#include "drawing/tools/transform_session.hpp"
+#include "drawing/tools/operations/transform_session.hpp"
 
 #include <cmath>
 #include <iostream>

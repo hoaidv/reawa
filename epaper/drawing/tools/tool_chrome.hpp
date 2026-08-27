@@ -6,8 +6,8 @@
  */
 
 #include "document/manipulate.hpp"
-#include "selection_context.hpp"
-#include "session_doc_context.hpp"
+#include "contexts/selection_context.hpp"
+#include "contexts/session_doc_context.hpp"
 
 #include <QPointF>
 #include <QRectF>

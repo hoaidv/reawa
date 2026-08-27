@@ -7,7 +7,7 @@
 
 #include "action.hpp"
 #include "../host_caps.hpp"
-#include "../selection_context.hpp"
+#include "../contexts/selection_context.hpp"
 
 namespace epaper {
 namespace tools {

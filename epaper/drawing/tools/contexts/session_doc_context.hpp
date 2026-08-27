@@ -5,18 +5,18 @@
  * @implements [SRS-EP-07]
  */
 
-#include "../canvas_frame.hpp"
+#include "../../canvas_frame.hpp"
+#include "../viewport.hpp"
 #include "doc_context.hpp"
 #include "document/hand_touch.hpp"
-#include "viewport.hpp"
 
 #include <QPointF>
 #include <QRectF>
 #include <QString>
 #include <vector>
 
-#include "../canvas_session.h"
-#include "../tabletcanvasitem.h"
+#include "../../canvas_session.h"
+#include "../../tabletcanvasitem.h"
 #include "debug/debug_log_format.hpp"
 #include "document/capability.hpp"
 #include "document/connector_warp.hpp"

@@ -9,8 +9,8 @@
 #include "transform_session.hpp"
 #include "debug/ui_stall.hpp"
 #include "document/manipulate.hpp"
-#include "host_caps.hpp"
-#include "selection_context.hpp"
+#include "../host_caps.hpp"
+#include "../contexts/selection_context.hpp"
 
 #include <QElapsedTimer>
 #include <QRectF>

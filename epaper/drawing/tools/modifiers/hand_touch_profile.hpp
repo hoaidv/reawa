@@ -7,9 +7,9 @@
  * @implements [SRS-EP-21] @implements [SRS-EP-23]
  */
 
-#include "host_caps.hpp"
-#include "mode.hpp"
-#include "operation.hpp"
+#include "../host_caps.hpp"
+#include "../mode.hpp"
+#include "../operation.hpp"
 
 #include <functional>
 #include <vector>

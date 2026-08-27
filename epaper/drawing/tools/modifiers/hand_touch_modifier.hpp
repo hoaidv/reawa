@@ -6,15 +6,16 @@
  */
 
 #include "hand_touch_profile.hpp"
+#include "tool_modifier.hpp"
 
 #include <unordered_map>
 
 namespace epaper {
 namespace tools {
 
-class HandTouchModifier {
+class HandTouchModifier : public ToolModifier {
 public:
-    bool armed() const { return m_armed; }
+    bool armed() const override { return m_armed; }
     void setArmed(bool on)
     {
         m_armed = on;

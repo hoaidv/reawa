@@ -6,8 +6,8 @@
  * @implements [SRS-EP-04] @implements [SRS-EP-11]
  */
 
-#include "../hand_touch_modifier.hpp"
-#include "../hand_touch_profile.hpp"
+#include "../modifiers/hand_touch_modifier.hpp"
+#include "../modifiers/hand_touch_profile.hpp"
 #include "../input_hub.hpp"
 #include "../mode.hpp"
 #include "../operation.hpp"

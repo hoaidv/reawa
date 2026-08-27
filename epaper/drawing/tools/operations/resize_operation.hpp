@@ -8,7 +8,7 @@
 #include "../host_caps.hpp"
 #include "../input_hub.hpp"
 #include "../operation.hpp"
-#include "../transform_gesture.hpp"
+#include "transform_gesture.hpp"
 #include "document/capability.hpp"
 #include "document/manipulate.hpp"
 

@@ -5,7 +5,7 @@
  * @implements [SRS-EP-11]
  */
 
-#include "../canvas_frame.hpp"
+#include "../../canvas_frame.hpp"
 #include "document/manipulate.hpp"
 
 #include <cmath>

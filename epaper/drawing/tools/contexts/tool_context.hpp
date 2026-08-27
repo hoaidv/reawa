@@ -5,7 +5,7 @@
  * @implements [SRS-EP-12] @implements [ADR-0019]
  */
 
-#include "../canvas_frame.hpp"
+#include "../../canvas_frame.hpp"
 #include "document/manipulate.hpp"
 
 #include <QPointF>
