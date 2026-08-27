@@ -63,9 +63,9 @@ public:
         caps->doc->applyLiveSmartGeometry(m_live.nodeId, m_live.liveT, m_live.liveB);
         caps->doc->refreshConnectorsBoundTo(m_live.nodeId);
         caps->doc->previewManipulationFrame();
+        caps->toolUi->redrawLiveManip(m_live.resizing());
         if (previewDue) {
             caps->toolUi->sendManipPreview(m_live.resizing());
-            caps->toolUi->redrawLiveManip(m_live.resizing());
             m_ghost.restart();
         }
     }

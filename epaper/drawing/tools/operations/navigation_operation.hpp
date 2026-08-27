@@ -28,8 +28,8 @@ public:
         m_desc.matchOn = StrategyKind::RawPointer;
         m_desc.receive = StrategyKind::RawPointer;
         m_desc.priority = 30;
-        m_desc.acceptPen = false;
-        m_desc.acceptFinger = true;
+        m_desc.acceptPrimary = false;
+        m_desc.acceptSecondary = true;
         m_pinchDesc = m_desc;
         m_pinchDesc.matchOn = StrategyKind::Pinch;
         m_pinchDesc.receive = StrategyKind::Pinch;

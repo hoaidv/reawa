@@ -20,8 +20,8 @@ public:
         m_desc.matchOn = StrategyKind::Tap;
         m_desc.receive = StrategyKind::Tap;
         m_desc.priority = 20;
-        m_desc.acceptPen = false;
-        m_desc.acceptFinger = true;
+        m_desc.acceptPrimary = false;
+        m_desc.acceptSecondary = true;
     }
 
     OperationKind kind() const override { return OperationKind::Select; }

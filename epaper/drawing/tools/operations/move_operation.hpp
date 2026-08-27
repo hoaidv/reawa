@@ -23,8 +23,8 @@ public:
         m_desc.matchOn = StrategyKind::RawPointer;
         m_desc.receive = StrategyKind::RawPointer;
         m_desc.priority = 50;
-        m_desc.acceptPen = true;
-        m_desc.acceptFinger = true;
+        m_desc.acceptPrimary = true;
+        m_desc.acceptSecondary = true;
     }
 
     OperationKind kind() const override { return OperationKind::Move; }
@@ -44,8 +44,6 @@ public:
         if (!m_caps || !m_caps->doc || !m_caps->toolUi || !m_caps->selection)
             return;
         m_gesture.resetMutate();
-        if (s.device == PointerDevice::Finger && m_caps->setExclusiveTool)
-            m_caps->setExclusiveTool(QStringLiteral("sel_freeform"));
         m_caps->toolUi->clearManipUnavailable();
         const auto w = m_caps->toolUi->panelToWorld(s.panel);
         const epaper::document::DocNode *hit = m_caps->doc->hitMoveTarget(w.x, w.y);

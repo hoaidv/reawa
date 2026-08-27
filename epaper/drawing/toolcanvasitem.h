@@ -4,7 +4,7 @@
 #include <QString>
 
 #include "tools/input_hub.hpp"
-#include "tools/modes/pen_mode.hpp"
+#include "tools/modes/ink_mode.hpp"
 #include "tools/modes/selection_mode.hpp"
 #include "tools/contexts/selection_context.hpp"
 #include "tools/contexts/session_doc_context.hpp"
@@ -62,7 +62,7 @@ protected:
     Q_INVOKABLE void onPinchUpdate(qreal x, qreal y, qreal scale);
     Q_INVOKABLE void onPinchEnd();
 
-    bool handTouchArmed() const { return m_hub.handTouch().armed(); }
+    bool handTouchArmed() const { return m_hub.secondary().armed(); }
     Q_INVOKABLE void toggleHandTouch();
     Q_INVOKABLE void cancelHandTouch();
 
@@ -82,7 +82,7 @@ private:
     CanvasSession *m_session = nullptr;
     TabletCanvasItem *m_surface = nullptr;
     epaper::tools::InputHub m_hub;
-    epaper::tools::PenMode m_penMode;
+    epaper::tools::InkMode m_inkMode;
     epaper::tools::SelectionMode m_selectionMode;
     epaper::tools::SelectionContext m_selCtx;
     epaper::tools::SelectionContextBar m_selBar;

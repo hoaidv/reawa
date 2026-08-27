@@ -23,12 +23,39 @@ enum class StrategyKind {
 enum class PointerDevice {
     Pen,
     Finger,
+    Mouse,
+};
+
+enum class PointerRole {
+    Primary,
+    Secondary,
 };
 
 struct PointerSample {
     QPointF panel;
     qreal pressure = 1.0;
     PointerDevice device = PointerDevice::Pen;
+    PointerRole role = PointerRole::Primary;
+};
+
+struct DeviceMap {
+    PointerDevice primary = PointerDevice::Pen;
+    PointerDevice secondary = PointerDevice::Finger;
+
+    bool tryRole(PointerDevice d, PointerRole *out) const
+    {
+        if (!out)
+            return false;
+        if (d == primary) {
+            *out = PointerRole::Primary;
+            return true;
+        }
+        if (d == secondary) {
+            *out = PointerRole::Secondary;
+            return true;
+        }
+        return false;
+    }
 };
 
 /** Narrow sink — Operation implements at most one receive strategy. */

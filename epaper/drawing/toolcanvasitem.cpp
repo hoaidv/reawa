@@ -158,27 +158,27 @@ void ToolCanvasItem::registerInterventions()
                                 [this] { return m_hub.lockedOperation() != nullptr; },
                                 [this] {
                                     m_hub.cancelAll();
-                                    m_hub.handTouch().setLockedUntilLift(true);
+                                    m_hub.secondary().setLockedUntilLift(true);
                                 }});
 }
 
 void ToolCanvasItem::syncActiveMode()
 {
-    const bool wantPen = m_docCtx && m_docCtx->exclusiveTool() == QLatin1String("pen");
+    const bool wantInk = m_docCtx && m_docCtx->exclusiveTool() == QLatin1String("pen");
     const bool wantSel = m_toolCtx && m_toolCtx->isSelectionTool();
     epaper::tools::InteractionMode *want = nullptr;
-    if (wantPen)
-        want = &m_penMode;
+    if (wantInk)
+        want = &m_inkMode;
     else if (wantSel)
         want = &m_selectionMode;
 
     if (m_hub.activeMode() == want)
         return;
     if (m_hub.activeMode())
-        m_hub.activeMode()->deactivate(m_hub, m_hub.handTouch());
+        m_hub.activeMode()->deactivate(m_hub);
     m_hub.setActiveMode(nullptr);
     if (want) {
-        want->activate(m_hub.hostCaps(), m_hub, m_hub.handTouch());
+        want->activate(m_hub.hostCaps(), m_hub);
         m_hub.setActiveMode(want);
     }
 }
@@ -233,7 +233,7 @@ void ToolCanvasItem::onSecondContact()
 
 void ToolCanvasItem::onContactsCleared()
 {
-    m_hub.handTouch().setLockedUntilLift(false);
+    m_hub.secondary().setLockedUntilLift(false);
 }
 
 void ToolCanvasItem::onPinchStart(qreal x, qreal y, qreal scale)
@@ -253,8 +253,8 @@ void ToolCanvasItem::onPinchEnd()
 
 void ToolCanvasItem::toggleHandTouch()
 {
-    m_hub.handTouch().setArmed(!m_hub.handTouch().armed());
-    if (!m_hub.handTouch().armed())
+    m_hub.secondary().setArmed(!m_hub.secondary().armed());
+    if (!m_hub.secondary().armed())
         cancelHandTouch();
     emit handTouchArmedChanged();
 }

@@ -139,9 +139,6 @@ public:
  */
 
 public:
-    /** Digitizer → panel. Distinct types, so the mapped point cannot be remapped. */
-    PanelPt mapInputToCanvas(RawPt raw) const;
-
     /** Panel (canvas item) → document world. */
     WorldPt panelToWorld(const PanelPt &panel) const;
 
@@ -229,20 +226,13 @@ private:
  * Pen stroke capture and ingest
  * 
  * Cycles: 
- *      sample entry (ingestPoint ×2, ingestMappedTablet); 
+ *      sample entry (ingestMappedTablet); 
  *      stroke life (beginStroke → appendPoint → endStroke → ingestCurrentStroke)
  * =================================================================================================
  */
 public:
     int strokeCount() const { return m_stroke.strokeCount; }
     QPointF lastPoint() const { return PanelPt(m_stroke.lastPanelX, m_stroke.lastPanelY); }
-
-    /**
-     * @p pos is raw, not panel — it is QPointF because Q_INVOKABLE marshals through
-     * moc, which cannot carry RawPt. Converted on entry.
-     */
-    Q_INVOKABLE void ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure);
-    void ingestPoint(QEvent::Type type, const QPointF &pos, const IngestChannels &ch);
 
     void ingestMappedTablet(QEvent::Type type, const PanelPt &canvasPos, RawPt rawPos,
         const IngestChannels &ch);

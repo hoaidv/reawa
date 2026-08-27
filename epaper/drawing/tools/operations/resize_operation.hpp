@@ -27,8 +27,8 @@ public:
         m_desc.matchOn = StrategyKind::HitTarget;
         m_desc.receive = StrategyKind::RawPointer;
         m_desc.priority = 60;
-        m_desc.acceptPen = true;
-        m_desc.acceptFinger = true;
+        m_desc.acceptPrimary = true;
+        m_desc.acceptSecondary = true;
     }
 
     OperationKind kind() const override { return OperationKind::Resize; }

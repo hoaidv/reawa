@@ -21,8 +21,8 @@ public:
         m_desc.matchOn = StrategyKind::RawPointer;
         m_desc.receive = StrategyKind::RawPointer;
         m_desc.priority = 10;
-        m_desc.acceptPen = true;
-        m_desc.acceptFinger = false;
+        m_desc.acceptPrimary = true;
+        m_desc.acceptSecondary = false;
     }
 
     OperationKind kind() const override { return OperationKind::InkStroke; }
@@ -30,7 +30,8 @@ public:
 
     bool match(StrategyKind channel, const PointerSample &s) const override
     {
-        return channel == StrategyKind::RawPointer && s.device == PointerDevice::Pen;
+        (void)s;
+        return channel == StrategyKind::RawPointer;
     }
 
     void onDown(const PointerSample &s) override
@@ -38,8 +39,14 @@ public:
         if (!ink())
             return;
         RawPt raw;
-        auto ch = stash(s.panel, &raw);
-        ch.pressure = s.pressure;
+        epaper::input::PenSample ch;
+        if (s.device == PointerDevice::Pen) {
+            ch = stash(s.panel, &raw);
+            ch.pressure = s.pressure;
+        } else {
+            raw = {s.panel.x(), s.panel.y()};
+            ch.pressure = s.pressure;
+        }
         ink()->ingestPen(QEvent::TabletPress, s.panel, raw, ch);
     }
 
@@ -48,8 +55,14 @@ public:
         if (!ink())
             return;
         RawPt raw;
-        auto ch = stash(s.panel, &raw);
-        ch.pressure = s.pressure;
+        epaper::input::PenSample ch;
+        if (s.device == PointerDevice::Pen) {
+            ch = stash(s.panel, &raw);
+            ch.pressure = s.pressure;
+        } else {
+            raw = {s.panel.x(), s.panel.y()};
+            ch.pressure = s.pressure;
+        }
         ink()->ingestPen(QEvent::TabletMove, s.panel, raw, ch);
     }
 
@@ -58,7 +71,12 @@ public:
         if (!ink())
             return;
         RawPt raw;
-        const auto ch = stash(s.panel, &raw);
+        epaper::input::PenSample ch;
+        if (s.device == PointerDevice::Pen) {
+            ch = stash(s.panel, &raw);
+        } else {
+            raw = {s.panel.x(), s.panel.y()};
+        }
         ink()->ingestPen(QEvent::TabletRelease, s.panel, raw, ch);
         ink()->clearStash();
     }

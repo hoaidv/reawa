@@ -2,7 +2,7 @@
 
 /**
  * ToolModifier — orthogonal Mode behavior (not an exclusive Mode, not an Operation).
- * HandTouch changes who gets finger events; recognizers change the pen-up pipeline.
+ * SecondaryDeviceModifier gates Secondary pointer ops; recognizers change the pen-up pipeline.
  * @implements [SRS-EP-04] @implements [ADR-0033]
  */
 

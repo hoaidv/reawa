@@ -68,19 +68,21 @@ void ToolChrome::syncPresence(SelectionContext &selection, bool isSelectionTool,
                               const std::function<void(bool visible)> &setVisible,
                               const std::function<void(bool penWaveform)> &setStrokeWaveform)
 {
-    // Keep the overlay attached for the whole Selection mode so the first lasso
-    // pen-down does not pay Mono-attach / waveform switch (ADR-0019).
+    // Selection mode keeps the overlay attached (lasso must not pay Mono-attach).
+    // Transforming also needs it in InkMode: tablet suppress punches a hole until
+    // the overlay paints the live node.
+    const bool show =
+        isSelectionTool || selection.phase() == SelectionPhase::Transforming;
     if (setVisible)
-        setVisible(isSelectionTool);
-    if (isSelectionTool && setStrokeWaveform)
+        setVisible(show);
+    if (show && setStrokeWaveform)
         setStrokeWaveform(penWaveform);
-    (void)selection;
 }
 
 void ToolChrome::paint(QPainter *painter, SelectionContext &selection, SessionDocContext &doc,
                        bool isSelectionTool)
 {
-    if (!isSelectionTool)
+    if (!isSelectionTool && selection.phase() != SelectionPhase::Transforming)
         return;
 
     painter->save();

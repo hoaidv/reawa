@@ -31,8 +31,8 @@ public:
         m_desc.matchOn = StrategyKind::RawPointer;
         m_desc.receive = StrategyKind::RawPointer;
         m_desc.priority = 40;
-        m_desc.acceptPen = true;
-        m_desc.acceptFinger = true;
+        m_desc.acceptPrimary = true;
+        m_desc.acceptSecondary = true;
     }
 
     OperationKind kind() const override { return OperationKind::Lasso; }
@@ -41,7 +41,8 @@ public:
 
     bool match(StrategyKind channel, const PointerSample &s) const override
     {
-        if (channel != StrategyKind::RawPointer || s.device != PointerDevice::Pen)
+        (void)s;
+        if (channel != StrategyKind::RawPointer)
             return false;
         if (!m_caps || !m_caps->toolUi)
             return false;

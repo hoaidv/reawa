@@ -6,10 +6,10 @@
  * @implements [SRS-EP-04] @implements [SRS-EP-21]
  */
 
-#include "modifiers/hand_touch_modifier.hpp"
 #include "host_caps.hpp"
 #include "interventions.hpp"
 #include "mode.hpp"
+#include "modifiers/secondary_device_modifier.hpp"
 #include "operation.hpp"
 #include "strategy.hpp"
 
@@ -27,8 +27,12 @@ public:
     HostCaps &hostCaps() { return m_caps; }
     const HostCaps &hostCaps() const { return m_caps; }
 
-    HandTouchModifier &handTouch() { return m_hand; }
-    const HandTouchModifier &handTouch() const { return m_hand; }
+    DeviceMap &deviceMap() { return m_devices; }
+    const DeviceMap &deviceMap() const { return m_devices; }
+    void setDeviceMap(DeviceMap map) { m_devices = map; }
+
+    SecondaryDeviceModifier &secondary() { return m_secondary; }
+    const SecondaryDeviceModifier &secondary() const { return m_secondary; }
 
     void setActiveMode(InteractionMode *mode) { m_activeMode = mode; }
     InteractionMode *activeMode() const { return m_activeMode; }
@@ -63,8 +67,8 @@ public:
     void dispatchPinchEnd();
 
 private:
-    const HandTouchProfile *activeProfile() const;
-    bool kindAllowed(OperationKind kind, PointerDevice device) const;
+    bool stampRole(PointerSample *s) const;
+    bool kindAllowed(OperationKind kind, PointerRole role) const;
     Operation *opFor(OperationKind kind) const;
     Operation *matchOperation(StrategyKind channel, const PointerSample &s);
 
@@ -72,10 +76,11 @@ private:
     void feedRawMove(Operation *op, const PointerSample &s);
     void feedRawUp(Operation *op, const PointerSample &s);
     void feedRawCancel(Operation *op);
-    void runCommitPostHandling();
+    void runSecondaryCommit();
 
     HostCaps m_caps;
-    HandTouchModifier m_hand;
+    DeviceMap m_devices;
+    SecondaryDeviceModifier m_secondary;
     InteractionMode *m_activeMode = nullptr;
     Operation *m_lockedOp = nullptr;
     std::unordered_map<int, std::unique_ptr<Operation>> m_ops;

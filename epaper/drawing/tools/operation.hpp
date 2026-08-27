@@ -32,8 +32,8 @@ struct OperationDescriptor {
     StrategyKind matchOn = StrategyKind::RawPointer;
     StrategyKind receive = StrategyKind::RawPointer;
     int priority = 0;
-    bool acceptPen = true;
-    bool acceptFinger = true;
+    bool acceptPrimary = true;
+    bool acceptSecondary = true;
 };
 
 /**

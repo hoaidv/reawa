@@ -78,11 +78,18 @@ void armDocProbeFromEnv()
 void runDocProbeSynth(TabletCanvasItem *canvas)
 {
     auto stroke = [canvas](qreal x0, qreal y0, int n) {
-        canvas->ingestPoint(QEvent::TabletPress, QPointF(x0, y0), 0.6);
+        TabletCanvasItem::IngestChannels ch;
+        ch.pressure = 0.6;
+        const TabletCanvasItem::PanelPt p0(x0, y0);
+        canvas->ingestMappedTablet(QEvent::TabletPress, p0, {p0.x(), p0.y()}, ch);
         for (int i = 1; i < n; ++i) {
-            canvas->ingestPoint(QEvent::TabletMove, QPointF(x0 + i * 12.0, y0 + i * 4.0), 0.55);
+            ch.pressure = 0.55;
+            const TabletCanvasItem::PanelPt p(x0 + i * 12.0, y0 + i * 4.0);
+            canvas->ingestMappedTablet(QEvent::TabletMove, p, {p.x(), p.y()}, ch);
         }
-        canvas->ingestPoint(QEvent::TabletRelease, QPointF(x0 + n * 12.0, y0 + n * 4.0), 0.0);
+        ch.pressure = 0.0;
+        const TabletCanvasItem::PanelPt pe(x0 + n * 12.0, y0 + n * 4.0);
+        canvas->ingestMappedTablet(QEvent::TabletRelease, pe, {pe.x(), pe.y()}, ch);
     };
     for (int s = 0; s < 40; ++s)
         stroke(200.0 + s * 30.0, 400.0 + (s % 8) * 80.0, 20);
@@ -233,19 +240,6 @@ QSGNode *TabletCanvasItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData
  * FrameIntent becomes ToolChip re-layout (and related Qt effects).
  * =================================================================================================
  */
-
-/** Digitizer raw → panel via frame orientation. */
-TabletCanvasItem::PanelPt TabletCanvasItem::mapInputToCanvas(RawPt raw) const
-{
-    // Shared with the raw input filter, which maps before Qt delivers the point.
-    qreal w = width();
-    qreal h = height();
-    if (w < 2.0 && window())
-        w = window()->width();
-    if (h < 2.0 && window())
-        h = window()->height();
-    return epaper::input::mapPanel(QPointF(raw.x, raw.y), w, h);
-}
 
 /** Panel pixel → document world through the current camera. */
 TabletCanvasItem::WorldPt TabletCanvasItem::panelToWorld(const PanelPt &panel) const
@@ -524,74 +518,11 @@ void TabletCanvasItem::applyHistoryRestore(bool isUndo)
  * =================================================================================================
  * Pen stroke capture and ingest
  *
- * Digitizer samples enter via ingestPoint / ingestMappedTablet (also Surface ingestPen).
+ * Digitizer samples enter via ingestMappedTablet (also Surface ingestPen).
  * StrokeCapture owns the stroke. Selection/handle presses are decided on Tool before
  * ingestPen; this path is ink only.
  * =================================================================================================
  */
-
-/** Q_INVOKABLE raw point with pressure only. */
-void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, qreal pressure)
-{
-    IngestChannels ch;
-    ch.pressure = pressure;
-    ingestPoint(type, pos, ch);
-}
-
-/** Raw point + full PenSample channels. */
-void TabletCanvasItem::ingestPoint(QEvent::Type type, const QPointF &pos, const IngestChannels &ch)
-{
-    EpaperBridge::instance()->traceArrival();
-
-    const qreal p = qBound<qreal>(0.0, ch.pressure, 1.0);
-    IngestChannels bounded = ch;
-    bounded.pressure = p;
-    // Q_INVOKABLE, so the wire type stays QPointF; it is raw and named so here.
-    const RawPt raw{pos.x(), pos.y()};
-    const PanelPt canvasPos = mapInputToCanvas(raw);
-    m_stroke.setPanelHeight(double(ingestPanelHeight()));
-    m_stroke.noteContact(canvasPos.x(), canvasPos.y(), raw.x, raw.y);
-
-    const bool isPress = (type == QEvent::TabletPress || type == QEvent::MouseButtonPress);
-    const bool isMove = (type == QEvent::TabletMove || type == QEvent::MouseMove);
-    const bool isRelease = (type == QEvent::TabletRelease || type == QEvent::MouseButtonRelease);
-    const bool stale = m_stroke.sampleStale(canvasPos.x(), canvasPos.y(), raw.x, raw.y);
-    // @fix [STORY-EP-033] reject origin/stale first sample on pen-down
-    const auto guard = m_stroke.guardContact(isPress, isMove, isRelease, stale);
-    if (guard == epaper::ingest::OriginGuardAction::Discard
-        || guard == epaper::ingest::OriginGuardAction::DropContact) {
-        return;
-    }
-    const bool treatAsPress =
-        isPress || guard == epaper::ingest::OriginGuardAction::PromoteToPress;
-
-    // @implements [SRS-EP-13] hit-test probe on ingest, not in paint()
-    if (g_docProbe) {
-        epaper::latencyprobe::harness().onIngest(float(canvasPos.x()), float(canvasPos.y()),
-                                                 treatAsPress);
-    }
-
-    if (treatAsPress) {
-        applyContactPress(canvasPos, bounded);
-        return;
-    }
-
-    switch (type) {
-    case QEvent::TabletMove:
-    case QEvent::MouseMove:
-        // @implements [SRS-EP-10] mid-stroke tool switch does not change the latch
-        if (m_stroke.active)
-            appendPoint(canvasPos, bounded);
-        break;
-    case QEvent::TabletRelease:
-    case QEvent::MouseButtonRelease:
-        if (m_stroke.active)
-            endStroke();
-        break;
-    default:
-        break;
-    }
-}
 
 /** Already-mapped panel sample: guard → press/move/release. */
 void TabletCanvasItem::ingestMappedTablet(QEvent::Type type, const PanelPt &canvasPos,
