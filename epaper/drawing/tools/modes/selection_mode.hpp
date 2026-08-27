@@ -24,8 +24,12 @@ public:
     std::vector<OperationKind> secondaryOps() const override
     {
         return {
-            OperationKind::Navigation, OperationKind::Select,  OperationKind::Lasso,
-            OperationKind::Marquee,    OperationKind::Move,    OperationKind::Resize,
+            OperationKind::Navigation,
+            OperationKind::Select,
+            // OperationKind::Lasso,
+            // OperationKind::Marquee,
+            OperationKind::Move,
+            OperationKind::Resize,
             OperationKind::Rotate,
         };
     }
