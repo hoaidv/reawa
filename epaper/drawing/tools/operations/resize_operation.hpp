@@ -6,19 +6,22 @@
  */
 
 #include "../host_caps.hpp"
+#include "../input_hub.hpp"
 #include "../operation.hpp"
 #include "../transform_gesture.hpp"
 #include "document/capability.hpp"
-#include "document/hand_touch.hpp"
 #include "document/manipulate.hpp"
+
+#include <cstdint>
 
 namespace epaper {
 namespace tools {
 
 class ResizeOperation final : public Operation, public RawPointerSink {
 public:
-    explicit ResizeOperation(HostCaps *caps)
+    ResizeOperation(HostCaps *caps, InputHub *hub)
         : m_caps(caps)
+        , m_hub(hub)
     {
         m_desc.kind = OperationKind::Resize;
         m_desc.matchOn = StrategyKind::HitTarget;
@@ -34,24 +37,19 @@ public:
 
     bool match(StrategyKind channel, const PointerSample &s) const override
     {
-        if (!m_caps || !m_caps->toolUi)
+        if (!m_hub || (channel != StrategyKind::HitTarget && channel != StrategyKind::RawPointer))
             return false;
-        const double hitDu = s.device == PointerDevice::Pen ? epaper::document::kHandleHitDu
-                                                            : epaper::handtouch::kFingerHandleHitDu;
-        if (m_caps->toolUi->handleIndexAtPanel(s.panel, hitDu) < 0)
-            return false;
-        return channel == StrategyKind::HitTarget || channel == StrategyKind::RawPointer;
+        return m_hub->overlayHitAt(s.panel) != nullptr;
     }
 
     void onDown(const PointerSample &s) override
     {
-        if (!m_caps || !m_caps->doc || !m_caps->toolUi || !m_caps->selection)
+        if (!m_caps || !m_caps->doc || !m_caps->toolUi || !m_caps->selection || !m_hub)
             return;
         m_gesture.resetMutate();
         m_caps->toolUi->clearManipUnavailable();
-        const double hitDu = s.device == PointerDevice::Pen ? epaper::document::kHandleHitDu
-                                                            : epaper::handtouch::kFingerHandleHitDu;
-        const int idx = m_caps->toolUi->handleIndexAtPanel(s.panel, hitDu);
+        const HitRegion *hit = m_hub->overlayHitAt(s.panel);
+        const int idx = hit ? int(reinterpret_cast<intptr_t>(hit->ownerToken)) : -1;
         const epaper::document::ResizeHandle handle = epaper::manip::handleFromIndex(idx);
         if (handle == epaper::document::ResizeHandle::None)
             return;
@@ -90,6 +88,7 @@ public:
 
 private:
     HostCaps *m_caps = nullptr;
+    InputHub *m_hub = nullptr;
     TransformGesture m_gesture;
     OperationDescriptor m_desc;
 };

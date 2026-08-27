@@ -8,10 +8,12 @@
 
 #include "hand_touch_modifier.hpp"
 #include "host_caps.hpp"
+#include "interventions.hpp"
 #include "mode.hpp"
 #include "operation.hpp"
 #include "strategy.hpp"
 
+#include <QPointF>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -42,6 +44,11 @@ public:
 
     void registerHitRegion(const HitRegion &r) { m_hits.push_back(r); }
     void clearHitRegions() { m_hits.clear(); }
+    const HitRegion *overlayHitAt(const QPointF &panel) const;
+
+    void registerIntervention(Intervention iv) { m_interventions.push_back(std::move(iv)); }
+    void clearInterventions() { m_interventions.clear(); }
+    void dispatchIntervention(InterventionGate gate);
 
     bool dispatchPointerDown(const PointerSample &s);
     bool dispatchPointerMove(const PointerSample &s);
@@ -73,6 +80,7 @@ private:
     Operation *m_lockedOp = nullptr;
     std::unordered_map<int, std::unique_ptr<Operation>> m_ops;
     std::vector<HitRegion> m_hits;
+    std::vector<Intervention> m_interventions;
 };
 
 } // namespace tools

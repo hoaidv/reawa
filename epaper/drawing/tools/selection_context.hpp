@@ -1,8 +1,8 @@
 #pragma once
 
 /**
- * SelectionContext — durable selection state machine host (ids + phase).
- * Ephemeral lasso/marquee geometry lives on Operations, not here.
+ * SelectionContext — durable ids + phase (ADR-0033).
+ * Ephemeral lasso/marquee geometry lives on Operations.
  * @implements [SRS-EP-11]
  */
 
@@ -21,13 +21,31 @@ enum class SelectionPhase {
 
 class SelectionContext {
 public:
-    virtual ~SelectionContext() = default;
-    virtual SelectionPhase phase() const = 0;
-    virtual const std::vector<std::string> &ids() const = 0;
-    virtual const std::string &pickableId() const = 0;
-    virtual void clear() = 0;
-    virtual void setIds(const std::vector<std::string> &ids) = 0;
-    virtual void setPhase(SelectionPhase phase) = 0;
+    SelectionPhase phase() const { return m_phase; }
+    const std::vector<std::string> &ids() const { return m_ids; }
+    const std::string &pickableId() const { return m_pickableId; }
+
+    void clear()
+    {
+        m_ids.clear();
+        m_pickableId.clear();
+        m_phase = SelectionPhase::Idle;
+    }
+
+    void setIds(const std::vector<std::string> &ids)
+    {
+        m_ids = ids;
+        m_pickableId = m_ids.empty() ? std::string{} : m_ids.front();
+        if (m_phase != SelectionPhase::Transforming && m_phase != SelectionPhase::Selecting)
+            m_phase = m_ids.empty() ? SelectionPhase::Idle : SelectionPhase::Selected;
+    }
+
+    void setPhase(SelectionPhase phase) { m_phase = phase; }
+
+private:
+    std::vector<std::string> m_ids;
+    std::string m_pickableId;
+    SelectionPhase m_phase = SelectionPhase::Idle;
 };
 
 } // namespace tools

@@ -1,6 +1,7 @@
 #include "tool_chrome.hpp"
 
 #include "document/capability.hpp"
+#include "document/hand_touch.hpp"
 #include "document/manipulate.hpp"
 #include "input_hub.hpp"
 #include "rendering/rendering.hpp"
@@ -8,16 +9,6 @@
 
 #include <QPainter>
 #include <QtMath>
-
-namespace {
-QRectF modeChipRect(const QRectF &box)
-{
-    constexpr qreal w = 120.0;
-    constexpr qreal h = 36.0;
-    constexpr qreal gap = 32.0;
-    return QRectF(box.center().x() - w * 0.5, box.bottom() + gap, w, h);
-}
-} // namespace
 
 namespace epaper {
 namespace tools {
@@ -37,34 +28,21 @@ void ToolChrome::refresh(SelectionContext &selection, SessionDocContext &doc, bo
     }
     const bool stroke = selection.phase() == SelectionPhase::Selecting;
     const bool transforming = selection.phase() == SelectionPhase::Transforming;
-    m_state.encloseVisible = isSelectionTool && ids.size() >= 2 && !stroke;
-    if (m_state.encloseVisible && !bounds.isEmpty())
-        m_state.encloseCtaRect =
-            QRectF(bounds.center().x() - 32.0, bounds.bottom() + 36.0, 64.0, 64.0);
+    QRectF dirty = bounds;
+    if (!bounds.isEmpty() && !stroke)
+        dirty = bounds.adjusted(-12, -12, 12, 84);
     else
-        m_state.encloseCtaRect = QRectF();
-    m_state.selectionChromeDirty = bounds.united(m_state.encloseCtaRect);
-    if (ids.size() == 1 && !bounds.isEmpty())
-        m_state.selectionChromeDirty = m_state.selectionChromeDirty.united(modeChipRect(bounds));
-    m_state.selectionChromeDirty.adjust(-12, -12, 12, 12);
+        dirty.adjust(-12, -12, 12, 12);
+    m_state.selectionChromeDirty = dirty;
     m_state.selectionBoundsRect = bounds;
     m_state.liveDirtyPrev = QRectF();
     m_state.handleCount = 0;
     m_state.handleSize = 16.0;
-    m_state.modeChipVisible = false;
-    m_state.modeChipLabel.clear();
-    m_state.modeChipRect = QRectF();
     if (isSelectionTool && !ids.empty() && !bounds.isEmpty() && !stroke && !transforming) {
         const DocNode *one = ids.size() == 1 ? doc.document().find(ids[0]) : nullptr;
         const bool manipChrome = one && descriptorFor(one->kind).has(Verb::Resize);
         m_state.handleCount = manipChrome ? 8 : 6;
         m_state.handleSize = manipChrome ? kHandleVisualDu : 16.0;
-        if (manipChrome && one) {
-            m_state.modeChipVisible = true;
-            m_state.modeChipLabel = QString::fromStdString(
-                one->inkScaleMode == "fixedInk" ? "Keep size" : "Scale ink");
-            m_state.modeChipRect = modeChipRect(bounds);
-        }
     }
 }
 
@@ -154,13 +132,6 @@ void ToolChrome::paint(QPainter *painter, SelectionContext &selection, SessionDo
                     painter->setPen(solid);
                     for (const QPointF &pt : pts)
                         painter->drawRect(QRectF(pt.x() - h * 0.5, pt.y() - h * 0.5, h, h));
-                    const QRectF chip = modeChipRect(r);
-                    painter->fillRect(chip, Qt::white);
-                    painter->drawRect(chip);
-                    painter->drawText(chip, Qt::AlignCenter,
-                                      QString::fromStdString(n->inkScaleMode == "fixedInk"
-                                                                 ? "Keep size"
-                                                                 : "Scale ink"));
                 }
             }
         }
@@ -233,38 +204,12 @@ void ToolChrome::redrawLiveManip(SelectionContext &selection, SessionDocContext 
         m_state.handleCount = 0;
     else
         m_state.handleCount = 8;
-    m_state.modeChipVisible = false;
     if (emitChanged)
         emitChanged();
     damage(toolDirty, repaint);
 }
 
-int ToolChrome::handleIndexAtPanel(const QPointF &panel, double hitDu) const
-{
-    if (m_state.handleCount != 8)
-        return -1;
-    const QRectF r = m_state.selectionBoundsRect;
-    if (r.width() <= 0.0 || r.height() <= 0.0)
-        return -1;
-    const QPointF pts[8] = {
-        {r.left(), r.top()},
-        {r.center().x(), r.top()},
-        {r.right(), r.top()},
-        {r.right(), r.center().y()},
-        {r.right(), r.bottom()},
-        {r.center().x(), r.bottom()},
-        {r.left(), r.bottom()},
-        {r.left(), r.center().y()},
-    };
-    const qreal half = hitDu * 0.5;
-    for (int i = 0; i < 8; ++i) {
-        if (qAbs(panel.x() - pts[i].x()) <= half && qAbs(panel.y() - pts[i].y()) <= half)
-            return i;
-    }
-    return -1;
-}
-
-void ToolChrome::syncHitTargets(InputHub &hub) const
+void ToolChrome::publishOverlayHits(InputHub &hub) const
 {
     hub.clearHitRegions();
     if (m_state.handleCount != 8)
@@ -282,7 +227,7 @@ void ToolChrome::syncHitTargets(InputHub &hub) const
         {r.left(), r.bottom()},
         {r.left(), r.center().y()},
     };
-    const double hitDu = epaper::document::kHandleHitDu;
+    const double hitDu = epaper::handtouch::kFingerHandleHitDu;
     const qreal half = hitDu * 0.5;
     for (int i = 0; i < 8; ++i) {
         HitRegion hr;
@@ -315,9 +260,7 @@ void ToolChrome::showManipUnavailable(const epaper::document::SmartBounds &wb,
 
 void ToolChrome::resetTransientFlags()
 {
-    m_state.encloseVisible = false;
     m_state.handleCount = 0;
-    m_state.modeChipVisible = false;
 }
 
 } // namespace tools

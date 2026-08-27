@@ -14,8 +14,9 @@ qt_add_executable(epaper_bin
     drawing/toolcanvasitem.cpp
     drawing/tools/input_hub.cpp
     drawing/tools/tool_chrome.cpp
-    drawing/tools/session_doc_context.cpp
     drawing/tools/tool_canvas_context.cpp
+    drawing/tools/ui/action_list_model.cpp
+    drawing/tools/ui/selection_context_bar.cpp
     drawing/tabletwindow.cpp
     rendering/rendering.cpp
     regionsync/strokesync.cpp
@@ -29,10 +30,12 @@ qt_add_executable(epaper_bin
 set_source_files_properties(drawing/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 set_source_files_properties(drawing/ResizeKnob.qml PROPERTIES QT_RESOURCE_ALIAS ResizeKnob.qml)
 set_source_files_properties(drawing/ToolCanvas.qml PROPERTIES QT_RESOURCE_ALIAS ToolCanvas.qml)
+set_source_files_properties(drawing/tools/ui/SelectionContextToolbar.qml PROPERTIES QT_RESOURCE_ALIAS SelectionContextToolbar.qml)
 qt_add_qml_module(epaper_bin
     URI epaper
     VERSION 1.0
     QML_FILES drawing/Main.qml drawing/ResizeKnob.qml drawing/ToolCanvas.qml
+              drawing/tools/ui/SelectionContextToolbar.qml
 )
 
 # Designer icons (rasterized from .plan/.../system/assets/icon-epaper-*.svg)
@@ -68,6 +71,7 @@ qt_add_resources(epaper_bin "epaper_tool_icons"
 )
 
 target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network Threads::Threads ${CMAKE_DL_LIBS})
+target_include_directories(epaper_bin PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(epaper_bin PRIVATE -Wno-psabi)
 set_target_properties(epaper_bin PROPERTIES
     OUTPUT_NAME epaper

@@ -57,11 +57,40 @@ Operation *InputHub::opFor(OperationKind kind) const
     return it == m_ops.end() ? nullptr : it->second.get();
 }
 
+const HitRegion *InputHub::overlayHitAt(const QPointF &panel) const
+{
+    const HitRegion *best = nullptr;
+    int bestPriority = INT_MIN;
+    for (const HitRegion &r : m_hits) {
+        if (!r.panelRect.contains(panel))
+            continue;
+        if (r.priority > bestPriority) {
+            bestPriority = r.priority;
+            best = &r;
+        }
+    }
+    return best;
+}
+
+void InputHub::dispatchIntervention(InterventionGate gate)
+{
+    for (const Intervention &iv : m_interventions) {
+        if (iv.gate != gate)
+            continue;
+        if (iv.match && !iv.match())
+            continue;
+        if (iv.apply)
+            iv.apply();
+    }
+}
+
 Operation *InputHub::matchOperation(StrategyKind channel, const PointerSample &s)
 {
     if (!m_activeMode)
         return nullptr;
     if (s.device == PointerDevice::Finger && !m_hand.armed())
+        return nullptr;
+    if (channel == StrategyKind::HitTarget && !overlayHitAt(s.panel))
         return nullptr;
 
     Operation *best = nullptr;

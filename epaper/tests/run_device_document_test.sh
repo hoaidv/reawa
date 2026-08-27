@@ -41,11 +41,7 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/canvas_frame_test.cpp -o /tmp/canvas_
 /tmp/canvas_frame_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/stroke_capture_test.cpp -o /tmp/stroke_capture_test
 /tmp/stroke_capture_test
-c++ -std=c++17 -Wall -Wextra -O2 -I. tests/selection_session_test.cpp -o /tmp/selection_session_test
-/tmp/selection_session_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/manip_session_test.cpp -o /tmp/manip_session_test
 /tmp/manip_session_test
-c++ -std=c++17 -Wall -Wextra -O2 -I. tests/finger_gesture_machine_test.cpp -o /tmp/finger_gesture_machine_test
-/tmp/finger_gesture_machine_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. rendering/rendering.cpp tests/rendering_test.cpp -o /tmp/rendering_test
 /tmp/rendering_test

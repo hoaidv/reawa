@@ -8,7 +8,7 @@
  */
 
 #include "host_caps.hpp"
-#include "mode_id.hpp"
+#include "mode.hpp"
 #include "operation.hpp"
 
 #include <functional>

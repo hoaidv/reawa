@@ -3,6 +3,7 @@
 #include "canvas_session.h"
 #include "epaperbridge.h"
 #include "tabletcanvasitem.h"
+#include "tools/interventions.hpp"
 #include "tools/operations/ink_stroke_operation.hpp"
 #include "tools/operations/lasso_operation.hpp"
 #include "tools/operations/marquee_operation.hpp"
@@ -11,10 +12,8 @@
 #include "tools/operations/resize_operation.hpp"
 #include "tools/operations/select_operation.hpp"
 
-#include "document/capability.hpp"
-#include "document/manipulate.hpp"
-
 #include <QDebug>
+#include <QPainter>
 
 /**
  * ToolCanvasItem — Qt entry; InputHub owns match/lock/feed (ADR-0033).
@@ -23,7 +22,6 @@
 ToolCanvasItem::ToolCanvasItem(QQuickItem *parent)
     : QQuickPaintedItem(parent)
 {
-    m_selCtx.attach(&m_selection);
     setAntialiasing(false);
     setRenderTarget(QQuickPaintedItem::Image);
     setOpaquePainting(false);
@@ -80,10 +78,14 @@ void ToolCanvasItem::setSession(CanvasSession *session)
         disconnect(m_toolConn);
     m_session = session;
     if (m_session) {
-        m_docConn = connect(m_session, &CanvasSession::documentMutated, this,
-                            &ToolCanvasItem::onDocumentOrCameraChanged);
-        m_camConn = connect(m_session, &CanvasSession::cameraChanged, this,
-                            &ToolCanvasItem::onDocumentOrCameraChanged);
+        m_docConn = connect(m_session, &CanvasSession::documentMutated, this, [this] {
+            if (m_toolCtx)
+                m_toolCtx->onDocumentOrCameraChanged();
+        });
+        m_camConn = connect(m_session, &CanvasSession::cameraChanged, this, [this] {
+            if (m_toolCtx)
+                m_toolCtx->onDocumentOrCameraChanged();
+        });
         m_toolConn = connect(m_session, &CanvasSession::exclusiveToolChanged, this, [this]() {
             syncActiveMode();
             if (m_toolCtx)
@@ -111,6 +113,7 @@ void ToolCanvasItem::syncToolHost()
     m_toolCtx->setDoc(m_docCtx.get());
     m_toolCtx->setSelection(&m_selCtx);
     m_toolCtx->setHub(&m_hub);
+    m_toolCtx->setSelectionBar(&m_selBar);
     m_toolCtx->setRepaint([this](const QRectF &r) { update(r.toAlignedRect()); });
     m_toolCtx->setSetVisible([this](bool on) { setVisible(on); });
     m_toolCtx->setEmitChromeChanged([this]() { emit selectionChromeChanged(); });
@@ -128,6 +131,7 @@ void ToolCanvasItem::syncToolHost()
     };
     m_hub.setHostCaps(caps);
     registerOperations();
+    registerInterventions();
 }
 
 void ToolCanvasItem::registerOperations()
@@ -139,10 +143,23 @@ void ToolCanvasItem::registerOperations()
     m_hub.setOperation(OperationKind::Lasso, std::make_unique<LassoOperation>(&caps));
     m_hub.setOperation(OperationKind::Marquee, std::make_unique<MarqueeOperation>(&caps));
     m_hub.setOperation(OperationKind::Move, std::make_unique<MoveOperation>(&caps));
-    m_hub.setOperation(OperationKind::Resize, std::make_unique<ResizeOperation>(&caps));
+    m_hub.setOperation(OperationKind::Resize, std::make_unique<ResizeOperation>(&caps, &m_hub));
     m_hub.setOperation(OperationKind::Select, std::make_unique<SelectOperation>(&caps));
     m_hub.setOperation(OperationKind::Navigation,
                        std::make_unique<NavigationOperation>(&caps, m_docCtx.get()));
+}
+
+void ToolCanvasItem::registerInterventions()
+{
+    using namespace epaper::tools;
+    m_hub.clearInterventions();
+    m_hub.registerIntervention({InterventionGate::PenProximity, {}, [this] { m_hub.cancelAll(); }});
+    m_hub.registerIntervention({InterventionGate::SecondContact,
+                                [this] { return m_hub.lockedOperation() != nullptr; },
+                                [this] {
+                                    m_hub.cancelAll();
+                                    m_hub.handTouch().setLockedUntilLift(true);
+                                }});
 }
 
 void ToolCanvasItem::syncActiveMode()
@@ -173,21 +190,6 @@ epaper::tools::PointerSample ToolCanvasItem::sample(qreal x, qreal y, qreal pres
     s.pressure = pressure;
     s.device = pen ? epaper::tools::PointerDevice::Pen : epaper::tools::PointerDevice::Finger;
     return s;
-}
-
-void ToolCanvasItem::onDocumentOrCameraChanged()
-{
-    if (!m_docCtx)
-        return;
-    std::vector<std::string> keep;
-    keep.reserve(m_selCtx.ids().size());
-    for (const std::string &id : m_selCtx.ids()) {
-        if (m_docCtx->document().find(id))
-            keep.push_back(id);
-    }
-    m_selCtx.setIds(keep);
-    if (m_toolCtx)
-        m_toolCtx->requestChromeRefresh();
 }
 
 void ToolCanvasItem::cancelInteraction()
@@ -226,8 +228,7 @@ void ToolCanvasItem::onPointerCancel()
 
 void ToolCanvasItem::onSecondContact()
 {
-    m_hub.cancelAll();
-    m_hub.handTouch().setLockedUntilLift(true);
+    m_hub.dispatchIntervention(epaper::tools::InterventionGate::SecondContact);
 }
 
 void ToolCanvasItem::onContactsCleared()
@@ -260,97 +261,5 @@ void ToolCanvasItem::toggleHandTouch()
 
 void ToolCanvasItem::cancelHandTouch()
 {
-    m_hub.cancelAll();
-}
-
-void ToolCanvasItem::encloseSelection()
-{
-    if (!m_docCtx || !m_toolCtx)
-        return;
-    if (!m_toolCtx->chrome().state().encloseVisible)
-        return;
-    QString refuse;
-    if (!m_docCtx->encloseSelection(m_selCtx.ids(), &refuse)) {
-        m_toolCtx->chrome().state().encloseRefuseReason = refuse;
-        m_toolCtx->emitChromeChanged();
-        m_toolCtx->damageChrome(m_toolCtx->chrome().state().selectionChromeDirty);
-        return;
-    }
-    m_selCtx.clear();
-    m_toolCtx->chrome().state().encloseVisible = false;
-    m_toolCtx->chrome().state().encloseCtaRect = QRectF();
-    m_toolCtx->chrome().state().encloseRefuseReason.clear();
-    m_toolCtx->requestChromeRefresh();
-}
-
-void ToolCanvasItem::tapModeChip()
-{
-    if (!m_docCtx || !m_toolCtx)
-        return;
-    const epaper::document::DocNode *selected =
-        m_docCtx->document().find(m_selCtx.pickableId());
-    if (!selected)
-        return;
-    epaper::document::SmartBounds wb;
-    if (epaper::document::boundsOf(*selected, wb) && !m_toolCtx->lodOkPanel(wb)) {
-        m_toolCtx->showManipUnavailable(wb);
-        return;
-    }
-    m_docCtx->toggleInkScaleMode(m_selCtx.pickableId());
-    m_toolCtx->requestChromeRefresh();
-}
-
-QRectF ToolCanvasItem::encloseCtaRect() const
-{
-    return m_toolCtx ? m_toolCtx->chrome().state().encloseCtaRect : QRectF();
-}
-
-bool ToolCanvasItem::encloseVisible() const
-{
-    return m_toolCtx && m_toolCtx->chrome().state().encloseVisible;
-}
-
-QString ToolCanvasItem::encloseRefuseReason() const
-{
-    return m_toolCtx ? m_toolCtx->chrome().state().encloseRefuseReason : QString();
-}
-
-QRectF ToolCanvasItem::selectionBoundsRect() const
-{
-    return m_toolCtx ? m_toolCtx->chrome().state().selectionBoundsRect : QRectF();
-}
-
-int ToolCanvasItem::handleCount() const
-{
-    return m_toolCtx ? m_toolCtx->chrome().state().handleCount : 0;
-}
-
-qreal ToolCanvasItem::handleSize() const
-{
-    return m_toolCtx ? m_toolCtx->chrome().state().handleSize : 16.0;
-}
-
-bool ToolCanvasItem::modeChipVisible() const
-{
-    return m_toolCtx && m_toolCtx->chrome().state().modeChipVisible;
-}
-
-QString ToolCanvasItem::modeChipLabel() const
-{
-    return m_toolCtx ? m_toolCtx->chrome().state().modeChipLabel : QString();
-}
-
-QRectF ToolCanvasItem::modeChipRectProp() const
-{
-    return m_toolCtx ? m_toolCtx->chrome().state().modeChipRect : QRectF();
-}
-
-QString ToolCanvasItem::manipulationUnavailable() const
-{
-    return m_toolCtx ? m_toolCtx->chrome().state().manipUnavailable : QString();
-}
-
-QRectF ToolCanvasItem::manipulationUnavailableRect() const
-{
-    return m_toolCtx ? m_toolCtx->chrome().state().manipUnavailableRect : QRectF();
+    m_hub.dispatchIntervention(epaper::tools::InterventionGate::PenProximity);
 }

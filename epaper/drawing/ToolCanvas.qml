@@ -10,22 +10,10 @@ Item {
     property alias session: tool.session
 
     property alias handTouchArmed: tool.handTouchArmed
-    property alias encloseCtaRect: tool.encloseCtaRect
-    property alias encloseVisible: tool.encloseVisible
-    property alias encloseRefuseReason: tool.encloseRefuseReason
-    property alias selectionBoundsRect: tool.selectionBoundsRect
-    property alias handleCount: tool.handleCount
-    property alias handleSize: tool.handleSize
-    property alias modeChipVisible: tool.modeChipVisible
-    property alias modeChipLabel: tool.modeChipLabel
-    property alias modeChipRect: tool.modeChipRect
-    property alias manipulationUnavailable: tool.manipulationUnavailable
-    property alias manipulationUnavailableRect: tool.manipulationUnavailableRect
+    property alias selectionBar: tool.selectionBar
 
     function toggleHandTouch() { tool.toggleHandTouch() }
     function cancelHandTouch() { tool.cancelHandTouch() }
-    function encloseSelection() { tool.encloseSelection() }
-    function tapModeChip() { tool.tapModeChip() }
     function onSecondContact() { tool.onSecondContact() }
     function onContactsCleared() { tool.onContactsCleared() }
 
@@ -125,5 +113,11 @@ Item {
                     tool.onPinchUpdate(centroid.position.x, centroid.position.y, activeScale)
             }
         }
+    }
+
+    SelectionContextToolbar {
+        anchors.fill: parent
+        z: 2
+        bar: tool.selectionBar
     }
 }

@@ -19,6 +19,7 @@ namespace tools {
 class SessionDocContext;
 class InputHub;
 class SelectionContext;
+class SelectionContextBar;
 
 class ToolCanvasContext final : public ToolContext {
 public:
@@ -30,6 +31,7 @@ public:
     void setDoc(SessionDocContext *doc) { m_doc = doc; }
     void setSelection(SelectionContext *sel) { m_selection = sel; }
     void setHub(InputHub *hub) { m_hub = hub; }
+    void setSelectionBar(SelectionContextBar *bar) { m_bar = bar; }
 
     void setRepaint(std::function<void(const QRectF &)> fn) { m_repaint = std::move(fn); }
     void setSetVisible(std::function<void(bool)> fn) { m_setVisible = std::move(fn); }
@@ -58,12 +60,13 @@ public:
     QPointF worldToPanel(double wx, double wy) const override;
     bool lodOkPanel(const epaper::document::SmartBounds &wb) const override;
     QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const override;
-    int handleIndexAtPanel(const QPointF &panel, double hitDu) const override;
     QString exclusiveTool() const override;
     bool isSelectionTool() const override;
     QSizeF hostSize() const override;
     void showManipUnavailable(const epaper::document::SmartBounds &wb) override;
     void clearManipUnavailable() override;
+    void setRefuseReason(const QString &reason) override;
+    void onDocumentOrCameraChanged() override;
 
 private:
     ToolCanvasItem *m_host = nullptr;
@@ -71,6 +74,7 @@ private:
     SessionDocContext *m_doc = nullptr;
     SelectionContext *m_selection = nullptr;
     InputHub *m_hub = nullptr;
+    SelectionContextBar *m_bar = nullptr;
 
     std::function<void(const QRectF &)> m_repaint;
     std::function<void(bool)> m_setVisible;

@@ -38,12 +38,13 @@ public:
     virtual QPointF worldToPanel(double wx, double wy) const = 0;
     virtual bool lodOkPanel(const epaper::document::SmartBounds &wb) const = 0;
     virtual QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const = 0;
-    virtual int handleIndexAtPanel(const QPointF &panel, double hitDu) const = 0;
     virtual QString exclusiveTool() const = 0;
     virtual bool isSelectionTool() const = 0;
     virtual QSizeF hostSize() const = 0;
     virtual void showManipUnavailable(const epaper::document::SmartBounds &wb) = 0;
     virtual void clearManipUnavailable() = 0;
+    virtual void setRefuseReason(const QString &reason) = 0;
+    virtual void onDocumentOrCameraChanged() = 0;
 };
 
 } // namespace tools

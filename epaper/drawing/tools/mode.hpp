@@ -6,13 +6,18 @@
  */
 
 #include "host_caps.hpp"
-#include "mode_id.hpp"
 #include "operation.hpp"
 
 #include <vector>
 
 namespace epaper {
 namespace tools {
+
+enum class ModeId {
+    Pen,
+    Selection, // sel_rect / sel_freeform arms under this id for HandTouch
+    Eraser,    // later
+};
 
 class InputHub;
 class HandTouchModifier;

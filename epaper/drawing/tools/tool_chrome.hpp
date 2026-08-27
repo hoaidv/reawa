@@ -22,15 +22,10 @@ namespace tools {
 class InputHub;
 
 struct ToolChromeState {
-    QRectF encloseCtaRect;
-    bool encloseVisible = false;
     QString encloseRefuseReason;
     QRectF selectionBoundsRect;
     int handleCount = 0;
     qreal handleSize = 16.0;
-    bool modeChipVisible = false;
-    QString modeChipLabel;
-    QRectF modeChipRect;
     QString manipUnavailable;
     QRectF manipUnavailableRect;
     QRectF selectionChromeDirty;
@@ -54,8 +49,7 @@ public:
     void redrawLiveManip(SelectionContext &selection, SessionDocContext &doc, bool resizing,
                          const std::function<void(const QRectF &)> &repaint,
                          const std::function<void()> &emitChanged);
-    int handleIndexAtPanel(const QPointF &panel, double hitDu) const;
-    void syncHitTargets(InputHub &hub) const;
+    void publishOverlayHits(InputHub &hub) const;
     void showManipUnavailable(const epaper::document::SmartBounds &wb, SessionDocContext &doc,
                               qreal hostWidth, qreal hostHeight,
                               const std::function<void(const QRectF &)> &repaint,

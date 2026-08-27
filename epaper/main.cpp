@@ -11,6 +11,8 @@
 
 #include "drawing/tabletcanvasitem.h"
 #include "drawing/toolcanvasitem.h"
+#include "drawing/tools/ui/action_list_model.hpp"
+#include "drawing/tools/ui/selection_context_bar.hpp"
 #include "drawing/tabletwindow.h"
 #include "drawing/canvas_session.h"
 #include "epaperbridge.h"
@@ -64,6 +66,12 @@ int main(int argc, char *argv[])
 
     qmlRegisterType<TabletCanvasItem>("epaper", 1, 0, "TabletCanvas");
     qmlRegisterType<ToolCanvasItem>("epaper", 1, 0, "ToolCanvasItem");
+    qmlRegisterUncreatableType<epaper::tools::SelectionContextBar>(
+        "epaper", 1, 0, "SelectionContextBar",
+        QStringLiteral("Owned by ToolCanvasItem"));
+    qmlRegisterUncreatableType<epaper::tools::ActionListModel>(
+        "epaper", 1, 0, "ActionListModel",
+        QStringLiteral("Owned by SelectionContextBar"));
     qmlRegisterType<TabletWindow>("epaper", 1, 0, "TabletWindow");
     qmlRegisterUncreatableType<CanvasSession>(
         "epaper", 1, 0, "CanvasSession",

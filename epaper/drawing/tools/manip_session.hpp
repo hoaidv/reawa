@@ -7,7 +7,7 @@
  * @implements [SRS-EP-11] selection hit-test move resize
  */
 
-#include "canvas_frame.hpp"
+#include "../canvas_frame.hpp"
 #include "document/manipulate.hpp"
 
 #include <cmath>

@@ -5,6 +5,7 @@ updated: 2026-08-26
 source: Cursor plan tool_system_refactor — implementation in progress (Phase 0+)
 related:
   - ../adr/ADR-0033-tool-abstraction.md
+  - ./plan_dissolve_host_bags.md
   - ../../epaper/drawing/toolcanvasitem.md
 ---
 

@@ -3,7 +3,7 @@
  * begin/apply/commit/abort intents and move/resize geometry.
  */
 
-#include "drawing/manip_session.hpp"
+#include "drawing/tools/manip_session.hpp"
 
 #include <cmath>
 #include <iostream>

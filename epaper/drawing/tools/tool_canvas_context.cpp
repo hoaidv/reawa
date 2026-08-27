@@ -5,8 +5,11 @@
 #include "input_hub.hpp"
 #include "operation.hpp"
 #include "session_doc_context.hpp"
+#include "ui/selection_context_bar.hpp"
 
 #include <QPainter>
+#include <string>
+#include <vector>
 
 namespace epaper {
 namespace tools {
@@ -53,11 +56,13 @@ void ToolCanvasContext::requestChromeRefresh()
     if (!m_doc || !m_selection)
         return;
     m_chrome.refresh(*m_selection, *m_doc, isSelectionTool());
+    if (m_hub && m_bar)
+        m_bar->refresh(m_hub->hostCaps(), m_chrome.state());
     if (m_emitChanged)
         m_emitChanged();
     syncOverlayPresence();
     if (m_hub)
-        m_chrome.syncHitTargets(*m_hub);
+        m_chrome.publishOverlayHits(*m_hub);
     damageChrome(m_chrome.state().selectionChromeDirty);
 }
 
@@ -77,6 +82,8 @@ void ToolCanvasContext::redrawLiveManip(bool resizing)
     if (!m_doc || !m_selection)
         return;
     m_chrome.redrawLiveManip(*m_selection, *m_doc, resizing, m_repaint, m_emitChanged);
+    if (m_hub && m_bar)
+        m_bar->refresh(m_hub->hostCaps(), m_chrome.state());
     syncOverlayPresence();
 }
 
@@ -130,11 +137,6 @@ QRectF ToolCanvasContext::worldBoundsToPanel(const epaper::document::SmartBounds
     return m_doc ? m_doc->worldBoundsToPanel(wb) : QRectF();
 }
 
-int ToolCanvasContext::handleIndexAtPanel(const QPointF &panel, double hitDu) const
-{
-    return m_chrome.handleIndexAtPanel(panel, hitDu);
-}
-
 QString ToolCanvasContext::exclusiveTool() const
 {
     return m_doc ? m_doc->exclusiveTool() : QStringLiteral("pen");
@@ -164,6 +166,30 @@ void ToolCanvasContext::clearManipUnavailable()
     m_chrome.state().encloseRefuseReason.clear();
     m_chrome.state().manipUnavailable.clear();
     m_chrome.state().manipUnavailableRect = QRectF();
+}
+
+void ToolCanvasContext::setRefuseReason(const QString &reason)
+{
+    m_chrome.state().encloseRefuseReason = reason;
+    if (m_hub && m_bar)
+        m_bar->refresh(m_hub->hostCaps(), m_chrome.state());
+    if (m_emitChanged)
+        m_emitChanged();
+    damageChrome(m_chrome.state().selectionChromeDirty);
+}
+
+void ToolCanvasContext::onDocumentOrCameraChanged()
+{
+    if (!m_doc || !m_selection)
+        return;
+    std::vector<std::string> keep;
+    keep.reserve(m_selection->ids().size());
+    for (const std::string &id : m_selection->ids()) {
+        if (m_doc->document().find(id))
+            keep.push_back(id);
+    }
+    m_selection->setIds(keep);
+    requestChromeRefresh();
 }
 
 } // namespace tools

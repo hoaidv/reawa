@@ -6,7 +6,7 @@
  * @implements [SRS-EP-11]
  */
 
-#include "../manip_session.hpp"
+#include "manip_session.hpp"
 #include "debug/ui_stall.hpp"
 #include "document/capability.hpp"
 #include "document/manipulate.hpp"
