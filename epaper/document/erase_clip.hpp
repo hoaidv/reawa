@@ -16,9 +16,9 @@
 namespace epaper {
 namespace document {
 
-constexpr double kEraseBrushDiameterMm = 8.0;
-constexpr double kEraseBrushRadiusMm = 4.0;
-constexpr double kEraseHoverStrokeMm = 0.5;
+constexpr double kEraseBrushDiameterMm = 6.0;
+constexpr double kEraseBrushRadiusMm = 3.0;
+constexpr double kEraseHoverStrokeMm = 0.125;
 constexpr double kEraseRemnantFloorMm = 1.0;
 constexpr double kEraseClipScanMm = 0.25;
 

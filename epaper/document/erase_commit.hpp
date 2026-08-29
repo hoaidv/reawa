@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace epaper {
@@ -109,6 +110,20 @@ inline std::unique_ptr<AppendInkEdit> makeRemnantAppend(const std::string &opId,
     return e;
 }
 
+/** `{base}_rN` unused in the tree and this gesture. @implements [SRS-EP-55] remnant ids */
+inline std::string allocEraseRemnantId(const DeviceDocument &doc, const std::string &base,
+                                       std::unordered_set<std::string> *used)
+{
+    for (int n = 1; n < 1000000; ++n) {
+        const std::string nid = base + "_r" + std::to_string(n);
+        if (used->count(nid) || doc.find(nid))
+            continue;
+        used->insert(nid);
+        return nid;
+    }
+    return base + "_rx";
+}
+
 /**
  * Plan clip edits against the current tree. Empty vector = no-op (0 undo).
  * Clip never mutates SmartGroup::boundaryPolyline.
@@ -128,7 +143,7 @@ inline std::vector<std::unique_ptr<DocEdit>> planEraseEdits(DeviceDocument &doc,
             sgInkRemain[ref.smartGroup->id] += 1;
     }
 
-    int extraSerial = 0;
+    std::unordered_set<std::string> remnantIds;
     for (const auto &ref : inks) {
         const DocNode &ink = *ref.ink;
         const std::string role = ink.role ? *ink.role : std::string("content");
@@ -168,8 +183,7 @@ inline std::vector<std::unique_ptr<DocEdit>> planEraseEdits(DeviceDocument &doc,
         for (size_t i = 0; i < remnants.size(); ++i) {
             if (i == longest)
                 continue;
-            ++extraSerial;
-            const std::string nid = ink.id + "_r" + std::to_string(extraSerial);
+            const std::string nid = allocEraseRemnantId(doc, ink.id, &remnantIds);
             auto e = makeRemnantAppend(opId, nid, ref.parentId, afterId, ink, remnants[i]);
             if (ref.smartGroup && role == "content")
                 e->setLayoutOffset(seedLayoutOffset(remnants[i], ref.smartGroup->smartBounds));

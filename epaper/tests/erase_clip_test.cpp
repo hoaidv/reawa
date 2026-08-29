@@ -362,6 +362,22 @@ static void test_clip_geometry_not_sample_drop()
     CHECK(std::abs(r.remnants[0].back().x - 46) < 1.0);
 }
 
+static void test_second_split_skips_taken_remnant_id()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitJson(makeInk("ink-1", "I1", {{0, 0}, {200, 0}})).applied);
+    CHECK(commitEraseRegion(doc, "erase-1", capsuleRegion({{50, 0}}, 4.0)).applied);
+    CHECK(doc.find("I1_r1"));
+    CHECK(doc.inkCount() == 2);
+    const ApplyResult r = commitEraseRegion(doc, "erase-2", capsuleRegion({{150, 0}}, 4.0));
+    CHECK(r.applied);
+    CHECK(r.reason.find("duplicate_id") == std::string::npos);
+    CHECK(doc.find("I1"));
+    CHECK(doc.find("I1_r1"));
+    CHECK(doc.find("I1_r2"));
+    CHECK(doc.inkCount() == 3);
+}
+
 static void test_mm_to_world_is_226dpi_du()
 {
     const double eight = eraseMmToWorld(8.0);
@@ -403,6 +419,7 @@ int main()
 {
     test_mm_to_world_is_226dpi_du();
     test_clip_geometry_not_sample_drop();
+    test_second_split_skips_taken_remnant_id();
     test_split_two_remnants_longest_keeps_id();
     test_remnant_below_floor_dropped();
     test_empty_removes_ink();

@@ -2,8 +2,11 @@
 
 /**
  * BrushErase — capsule clip of Ink along the primary stroke.
+ * Ghost is stamped into a persistent overlay image (same pattern as live ink)
+ * so paint is O(dirty) rather than O(samples).
  * @implements [SRS-EP-56] brush erase
  * @implements [SRS-EP-54] erase_brush exclusive
+ * @implements [SRS-EP-59] erase quality
  */
 
 #include "../host_caps.hpp"
@@ -13,11 +16,14 @@
 #include "debug/ui_stall.hpp"
 
 #include <QDebug>
+#include <QImage>
 #include <QPainter>
-#include <QPainterPath>
 #include <QPen>
 #include <QPointF>
+#include <QRectF>
+#include <QSize>
 #include <QString>
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -54,28 +60,38 @@ public:
     void onDown(const PointerSample &s) override
     {
         m_world.clear();
-        m_panel.clear();
-        append(s);
+        m_ghost = QImage();
+        m_ghostDirty = QRectF();
+        m_lastPanel = s.panel;
+        m_hasPanel = true;
+        appendWorld(s);
+        stampGhost(s.panel, s.panel);
+        m_ghostDirty = ghostDirty(s.panel);
         if (m_caps && m_caps->toolUi) {
             m_caps->toolUi->syncOverlayPresence();
-            m_caps->toolUi->damageChrome(ghostDirty(s.panel));
+            m_caps->toolUi->damageChrome(m_ghostDirty);
         }
     }
 
     void onMove(const PointerSample &s) override
     {
-        const QPointF prev = m_panel.empty() ? s.panel : m_panel.back();
-        append(s);
+        const QPointF prev = m_hasPanel ? m_lastPanel : s.panel;
+        appendWorld(s);
+        stampGhost(prev, s.panel);
+        m_lastPanel = s.panel;
+        m_hasPanel = true;
         if (m_caps && m_caps->toolUi) {
             const double pad = ghostPad();
-            m_caps->toolUi->damageChromeSegment(
-                QRectF(prev, s.panel).normalized().adjusted(-pad, -pad, pad, pad));
+            const QRectF seg =
+                QRectF(prev, s.panel).normalized().adjusted(-pad, -pad, pad, pad);
+            m_ghostDirty = m_ghostDirty.united(seg);
+            m_caps->toolUi->damageChromeSegment(seg);
         }
     }
 
     void onUp(const PointerSample &s) override
     {
-        append(s);
+        appendWorld(s);
         commit();
     }
 
@@ -84,40 +100,25 @@ public:
     void cancel() override
     {
         m_world.clear();
-        m_panel.clear();
+        dropGhost();
         if (m_caps && m_caps->toolUi)
             m_caps->toolUi->requestChromeRefresh();
     }
 
     void paintOverlay(QPainter *painter) override
     {
-        if (!painter || m_panel.size() < 1 || !m_caps || !m_caps->toolUi)
+        if (!painter || m_ghost.isNull())
             return;
-        painter->save();
-        QPen pen(Qt::white);
-        pen.setWidthF(std::max(1.0, epaper::document::eraseMmToWorld(
-                                        epaper::document::kEraseBrushDiameterMm) *
-                                        m_caps->toolUi->panelScale()));
-        pen.setCapStyle(Qt::RoundCap);
-        pen.setJoinStyle(Qt::RoundJoin);
-        painter->setPen(pen);
-        painter->setBrush(Qt::NoBrush);
-        if (m_panel.size() == 1) {
-            painter->drawPoint(m_panel.front());
-        } else {
-            QPainterPath path;
-            path.moveTo(m_panel.front());
-            for (size_t i = 1; i < m_panel.size(); ++i)
-                path.lineTo(m_panel[i]);
-            painter->drawPath(path);
-        }
-        painter->restore();
+        const QRectF clip = painter->clipBoundingRect();
+        if (clip.isEmpty())
+            painter->drawImage(0, 0, m_ghost);
+        else
+            painter->drawImage(clip.topLeft(), m_ghost, clip);
     }
 
 private:
-    void append(const PointerSample &s)
+    void appendWorld(const PointerSample &s)
     {
-        m_panel.push_back(s.panel);
         if (!m_caps || !m_caps->toolUi)
             return;
         const auto w = m_caps->toolUi->panelToWorld(s.panel);
@@ -128,6 +129,62 @@ private:
                 return;
         }
         m_world.push_back(p);
+    }
+
+    QPen ghostPen() const
+    {
+        QPen pen(Qt::white);
+        const double w = (!m_caps || !m_caps->toolUi)
+            ? 1.0
+            : epaper::document::eraseMmToWorld(epaper::document::kEraseBrushDiameterMm) *
+                  m_caps->toolUi->panelScale();
+        pen.setWidthF(std::max(1.0, w));
+        pen.setCapStyle(Qt::RoundCap);
+        pen.setJoinStyle(Qt::RoundJoin);
+        return pen;
+    }
+
+    void ensureGhost()
+    {
+        if (!m_caps || !m_caps->toolUi)
+            return;
+        const QSizeF hs = m_caps->toolUi->hostSize();
+        const QSize sz(std::max(1, int(hs.width())), std::max(1, int(hs.height())));
+        if (m_ghost.size() == sz)
+            return;
+        QImage next(sz, QImage::Format_ARGB32_Premultiplied);
+        next.fill(Qt::transparent);
+        if (!m_ghost.isNull()) {
+            QPainter p(&next);
+            p.setCompositionMode(QPainter::CompositionMode_Source);
+            p.drawImage(0, 0, m_ghost);
+        }
+        m_ghost = next;
+    }
+
+    void stampGhost(const QPointF &from, const QPointF &to)
+    {
+        ensureGhost();
+        if (m_ghost.isNull())
+            return;
+        QPainter p(&m_ghost);
+        p.setRenderHint(QPainter::Antialiasing, false);
+        p.setPen(ghostPen());
+        p.setBrush(Qt::NoBrush);
+        if (from == to)
+            p.drawPoint(from);
+        else
+            p.drawLine(from, to);
+    }
+
+    void dropGhost()
+    {
+        const QRectF dirty = m_ghostDirty;
+        m_ghost = QImage();
+        m_ghostDirty = QRectF();
+        m_hasPanel = false;
+        if (!dirty.isEmpty() && m_caps && m_caps->toolUi)
+            m_caps->toolUi->damageChrome(dirty);
     }
 
     double ghostPad() const
@@ -150,7 +207,7 @@ private:
         using namespace epaper::document;
         std::vector<ErasePt> path = m_world;
         m_world.clear();
-        m_panel.clear();
+        dropGhost();
         if (!m_caps || !m_caps->doc || !m_caps->toolUi)
             return;
         m_caps->toolUi->requestChromeRefresh();
@@ -179,7 +236,10 @@ private:
 
     HostCaps *m_caps = nullptr;
     std::vector<epaper::document::ErasePt> m_world;
-    std::vector<QPointF> m_panel;
+    QImage m_ghost;
+    QRectF m_ghostDirty;
+    QPointF m_lastPanel;
+    bool m_hasPanel = false;
     OperationDescriptor m_desc;
 };
 
