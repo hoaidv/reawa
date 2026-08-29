@@ -48,15 +48,6 @@ public:
     }
 
     /**
-     * Path A stroke-erase: set_ink_samples; remove_node only if emptied.
-     * Never restore_snapshot.
-     * @implements [SRS-EP-08] Path A set_ink_samples / compound queue
-     */
-    ApplyResult commitPathAErase(const std::string &opId, const std::string &inkId,
-                                 const std::vector<std::pair<double, double>> &worldHits,
-                                 double nibRadius = 8.0);
-
-    /**
      * @implements [SRS-EP-07] undo applies counterpart inverses
      */
     UndoResult undo()
@@ -744,6 +735,10 @@ public:
                 n.transform.scaleY = t->has("scaleY") ? t->getNumber("scaleY") : 1;
             }
             n.inkScaleMode = j.getString("inkScaleMode", "fixedInk");
+            if (const JsonValue *bp = j.get("boundaryPolyline"); bp && bp->isArray()) {
+                for (const auto &s : bp->asArray())
+                    n.boundaryPolyline.push_back(sampleFromJson(s));
+            }
             if (const JsonValue *ch = j.get("children"); ch && ch->isArray()) {
                 for (const auto &c : ch->asArray())
                     n.children.push_back(nodeFromJson(c));
@@ -890,6 +885,12 @@ public:
             t.emplace_back("scaleY", JsonValue::number(n.transform.scaleY));
             o.emplace_back("transform", JsonValue::object(std::move(t)));
             o.emplace_back("inkScaleMode", JsonValue::string(n.inkScaleMode));
+            if (!n.boundaryPolyline.empty()) {
+                JsonValue::Array bp;
+                for (const auto &s : n.boundaryPolyline)
+                    bp.push_back(sampleToJson(s));
+                o.emplace_back("boundaryPolyline", JsonValue::array(std::move(bp)));
+            }
             JsonValue::Array kids;
             for (const auto &c : n.children)
                 kids.push_back(nodeToJson(c));
@@ -1184,40 +1185,6 @@ inline ApplyResult DeviceDocument::commitParts(const std::string &opId,
     m_gestureInFlight = false;
     runLatchedHistory();
     return {true, {}};
-}
-
-inline ApplyResult DeviceDocument::commitPathAErase(const std::string &opId, const std::string &inkId,
-                                                    const std::vector<std::pair<double, double>> &worldHits,
-                                                    double nibRadius)
-{
-    const DocNode *ink = find(inkId);
-    if (!ink || ink->kind != NodeKind::Ink)
-        return {false, std::string("not_ink:") + inkId};
-    std::vector<InkSample> remaining;
-    remaining.reserve(ink->samples.size());
-    const double r2 = nibRadius * nibRadius;
-    for (const auto &s : ink->samples) {
-        bool hit = false;
-        for (const auto &h : worldHits) {
-            const double dx = s.x - h.first;
-            const double dy = s.y - h.second;
-            if (dx * dx + dy * dy <= r2) {
-                hit = true;
-                break;
-            }
-        }
-        if (!hit)
-            remaining.push_back(s);
-    }
-    auto setSamples = std::make_unique<SetInkSamplesEdit>(inkId, remaining);
-    setSamples->setId(opId);
-    if (!remaining.empty())
-        return commitEdit(*setSamples);
-    CompoundEdit compound;
-    compound.setId(opId);
-    compound.addPart(std::move(setSamples));
-    compound.addPart(makeRemoveEdit(opId, inkId));
-    return commitEdit(compound);
 }
 
 } // namespace document

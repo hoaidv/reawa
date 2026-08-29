@@ -186,6 +186,7 @@ static void test_successful_enclose_local()
     CHECK(near(sg->transform.x, 40));
     CHECK(near(sg->transform.y, 40));
     CHECK(sg->inkScaleMode == "fixedInk");
+    CHECK(sg->boundaryPolyline.size() >= 2);
 
     const DocNode *boundary = nullptr;
     const DocNode *content = nullptr;

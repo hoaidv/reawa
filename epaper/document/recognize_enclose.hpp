@@ -383,6 +383,7 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
     edit.setInkScaleMode("fixedInk");
     edit.setCaptureIds(std::move(captureIds));
     edit.setChildren(std::move(children));
+    edit.setBoundaryPolyline(closedPolylineCopy(boundarySamples));
 
     const ApplyResult r = doc.commitEdit(edit);
     if (!r.applied) {

@@ -11,6 +11,9 @@
 #include "tools/operations/navigation_operation.hpp"
 #include "tools/operations/resize_operation.hpp"
 #include "tools/operations/select_operation.hpp"
+#include "tools/operations/brush_erase_operation.hpp"
+#include "tools/operations/area_erase_operation.hpp"
+#include "tools/operations/object_erase_operation.hpp"
 
 #include <QDebug>
 #include <QPainter>
@@ -147,6 +150,9 @@ void ToolCanvasItem::registerOperations()
     m_hub.setOperation(OperationKind::Select, std::make_unique<SelectOperation>(&caps));
     m_hub.setOperation(OperationKind::Navigation,
                        std::make_unique<NavigationOperation>(&caps, m_docCtx.get()));
+    m_hub.setOperation(OperationKind::BrushErase, std::make_unique<BrushEraseOperation>(&caps));
+    m_hub.setOperation(OperationKind::AreaErase, std::make_unique<AreaEraseOperation>(&caps));
+    m_hub.setOperation(OperationKind::ObjectErase, std::make_unique<ObjectEraseOperation>(&caps));
 }
 
 void ToolCanvasItem::registerInterventions()
@@ -164,13 +170,17 @@ void ToolCanvasItem::registerInterventions()
 
 void ToolCanvasItem::syncActiveMode()
 {
-    const bool wantInk = m_docCtx && m_docCtx->exclusiveTool() == QLatin1String("pen");
+    const QString ex = m_docCtx ? m_docCtx->exclusiveTool() : QStringLiteral("pen");
+    const bool wantInk = ex == QLatin1String("pen");
     const bool wantSel = m_toolCtx && m_toolCtx->isSelectionTool();
+    const bool wantErase = m_toolCtx && m_toolCtx->isEraserTool();
     epaper::tools::InteractionMode *want = nullptr;
     if (wantInk)
         want = &m_inkMode;
     else if (wantSel)
         want = &m_selectionMode;
+    else if (wantErase)
+        want = &m_eraserMode;
 
     if (m_hub.activeMode() == want)
         return;
@@ -183,12 +193,14 @@ void ToolCanvasItem::syncActiveMode()
     }
 }
 
-epaper::tools::PointerSample ToolCanvasItem::sample(qreal x, qreal y, qreal pressure, bool pen) const
+epaper::tools::PointerSample ToolCanvasItem::sample(qreal x, qreal y, qreal pressure, bool pen,
+                                                    bool eraserNib) const
 {
     epaper::tools::PointerSample s;
     s.panel = QPointF(x, y);
     s.pressure = pressure;
     s.device = pen ? epaper::tools::PointerDevice::Pen : epaper::tools::PointerDevice::Finger;
+    s.eraserNib = eraserNib;
     return s;
 }
 
@@ -197,21 +209,39 @@ void ToolCanvasItem::cancelInteraction()
     onPointerCancel();
 }
 
-void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen)
+void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen, bool eraserNib)
 {
-    m_hub.dispatchPointerDown(sample(x, y, pressure, pen));
+    if (eraserNib && m_session && !m_nibArmed)
+        m_nibArmed = m_session->beginNibErase();
+    m_hub.dispatchPointerDown(sample(x, y, pressure, pen, eraserNib));
 }
 
-void ToolCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen)
+void ToolCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen, bool eraserNib)
 {
-    m_hub.dispatchPointerMove(sample(x, y, pressure, pen));
+    m_hub.dispatchPointerMove(sample(x, y, pressure, pen, eraserNib));
 }
 
-void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen)
+void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen, bool eraserNib)
 {
-    m_hub.dispatchPointerUp(sample(x, y, 0, pen));
+    m_hub.dispatchPointerUp(sample(x, y, 0, pen, eraserNib));
+    if (m_nibArmed && m_session) {
+        m_session->endNibErase();
+        m_nibArmed = false;
+    }
     if (m_surface)
         m_surface->clearStash();
+}
+
+void ToolCanvasItem::onHoverMove(qreal x, qreal y)
+{
+    if (m_toolCtx)
+        m_toolCtx->setEraseHoverPanel(QPointF(x, y));
+}
+
+void ToolCanvasItem::onHoverLeave()
+{
+    if (m_toolCtx)
+        m_toolCtx->clearEraseHover();
 }
 
 void ToolCanvasItem::onFingerTap(qreal x, qreal y)
@@ -222,6 +252,10 @@ void ToolCanvasItem::onFingerTap(qreal x, qreal y)
 void ToolCanvasItem::onPointerCancel()
 {
     m_hub.cancelAll();
+    if (m_nibArmed && m_session) {
+        m_session->endNibErase();
+        m_nibArmed = false;
+    }
     if (m_surface)
         m_surface->clearStash();
 }

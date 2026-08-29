@@ -4,7 +4,7 @@ title: Geometric clip, remnant split, boundary polyline
 kind: implement
 parent_srs: [SRS-EP-55, SRS-EP-59]
 parent_req: [REQ-11]
-status: draft
+status: in-review
 priority: P0
 iter: iter-005
 estimate: 8

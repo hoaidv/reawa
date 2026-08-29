@@ -215,6 +215,13 @@ export function commitStrokeWithEncloseRecognition(
       inkScaleMode: "fixedInk",
       captureIds: capturable.map((c) => c.id),
       children: [boundary, ...contentChildren],
+      boundaryPolyline: (() => {
+        const poly = boundarySamples.map((s) => ({ ...s }));
+        const a = poly[0];
+        const b = poly[poly.length - 1];
+        if (poly.length >= 2 && Math.hypot(a.x - b.x, a.y - b.y) > 1e-6) poly.push({ ...a });
+        return poly;
+      })(),
     },
   });
 

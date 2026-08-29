@@ -16,7 +16,7 @@ namespace tools {
 enum class ModeId {
     Ink,
     Selection, // sel_rect / sel_freeform arms under this id
-    Eraser,    // later
+    Eraser,
 };
 
 class InputHub;

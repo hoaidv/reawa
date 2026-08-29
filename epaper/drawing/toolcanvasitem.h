@@ -5,6 +5,7 @@
 
 #include "tools/input_hub.hpp"
 #include "tools/modes/ink_mode.hpp"
+#include "tools/modes/eraser_mode.hpp"
 #include "tools/modes/selection_mode.hpp"
 #include "tools/contexts/selection_context.hpp"
 #include "tools/contexts/session_doc_context.hpp"
@@ -51,10 +52,14 @@ protected:
 
     Q_INVOKABLE void cancelInteraction();
 
-    Q_INVOKABLE void onPointerStart(qreal x, qreal y, qreal pressure, bool pen);
-    Q_INVOKABLE void onPointerMove(qreal x, qreal y, qreal pressure, bool pen);
-    Q_INVOKABLE void onPointerEnd(qreal x, qreal y, bool pen);
+    Q_INVOKABLE void onPointerStart(qreal x, qreal y, qreal pressure, bool pen,
+                                    bool eraserNib = false);
+    Q_INVOKABLE void onPointerMove(qreal x, qreal y, qreal pressure, bool pen,
+                                   bool eraserNib = false);
+    Q_INVOKABLE void onPointerEnd(qreal x, qreal y, bool pen, bool eraserNib = false);
     Q_INVOKABLE void onPointerCancel();
+    Q_INVOKABLE void onHoverMove(qreal x, qreal y);
+    Q_INVOKABLE void onHoverLeave();
     Q_INVOKABLE void onFingerTap(qreal x, qreal y);
     Q_INVOKABLE void onSecondContact();
     Q_INVOKABLE void onContactsCleared();
@@ -77,13 +82,16 @@ private:
     void syncActiveMode();
     void registerOperations();
     void registerInterventions();
-    epaper::tools::PointerSample sample(qreal x, qreal y, qreal pressure, bool pen) const;
+    epaper::tools::PointerSample sample(qreal x, qreal y, qreal pressure, bool pen,
+                                        bool eraserNib = false) const;
 
     CanvasSession *m_session = nullptr;
     TabletCanvasItem *m_surface = nullptr;
     epaper::tools::InputHub m_hub;
     epaper::tools::InkMode m_inkMode;
     epaper::tools::SelectionMode m_selectionMode;
+    epaper::tools::EraserMode m_eraserMode;
+    bool m_nibArmed = false;
     epaper::tools::SelectionContext m_selCtx;
     epaper::tools::SelectionContextBar m_selBar;
     std::unique_ptr<epaper::tools::TabletInkSink> m_inkSink;

@@ -162,6 +162,16 @@ export function createSmartGroupFromSelection(
       inkScaleMode: "fixedInk",
       captureIds: orderedInks.map((i) => i.id),
       children: [boundary, ...contentNodes],
+      boundaryPolyline: (() => {
+        const src = boundary.samples;
+        const poly = src.map((s) => ({ ...s }));
+        if (poly.length >= 2) {
+          const a = poly[0];
+          const b = poly[poly.length - 1];
+          if (Math.hypot(a.x - b.x, a.y - b.y) > 1e-6) poly.push({ ...a });
+        }
+        return poly;
+      })(),
     },
   });
 

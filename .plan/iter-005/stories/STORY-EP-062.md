@@ -4,7 +4,7 @@ title: Eraser mode, ToolChip, barrel last-used
 kind: implement
 parent_srs: [SRS-EP-54, SRS-EP-59]
 parent_req: [REQ-11, REQ-03, REQ-18, REQ-10, REQ-20]
-status: draft
+status: in-review
 priority: P0
 iter: iter-005
 estimate: 5

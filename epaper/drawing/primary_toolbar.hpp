@@ -1,8 +1,9 @@
 #pragma once
 
-// @implements [SRS-EP-05] ToolChip 3 tools + hand-touch toggle + 2 recognizers + Undo/Redo
+// @implements [SRS-EP-05] ToolChip exclusive tools + hand-touch + recognizers + Undo/Redo
 // @implements [SRS-EP-04] exclusive tools, recognizer toggles, pen-down latch
 // @implements [SRS-EP-22] btn.hand_touch first primary tile
+// @implements [SRS-EP-54] six exclusives + eraser last-used + recog dim
 
 #include <string>
 
@@ -16,7 +17,17 @@ constexpr double kHeight = 64.0;
 
 inline double chipWidth()
 {
-    return kPublish + kTile * 4.0 + kGap + kTile * 2.0 + kGap + kTile * 2.0;
+    return kPublish + kTile * 4.0 + kGap + kTile * 2.0 + kGap + kTile * 3.0 + kGap + kTile * 2.0;
+}
+
+inline bool isEraserId(const std::string &id)
+{
+    return id == "erase_brush" || id == "erase_area" || id == "erase_object";
+}
+
+inline bool isExclusiveId(const std::string &id)
+{
+    return id == "pen" || id == "sel_rect" || id == "sel_freeform" || isEraserId(id);
 }
 
 enum class Hit {
@@ -29,6 +40,9 @@ enum class Hit {
     Pen,
     RecogInkBox,
     RecogConnector,
+    EraseBrush,
+    EraseArea,
+    EraseObject,
     Undo,
     Redo
 };
@@ -52,6 +66,12 @@ inline const char *hitId(Hit h)
         return "tgl.recog.ink_box";
     case Hit::RecogConnector:
         return "tgl.recog.connector";
+    case Hit::EraseBrush:
+        return "erase_brush";
+    case Hit::EraseArea:
+        return "erase_area";
+    case Hit::EraseObject:
+        return "erase_object";
     case Hit::Undo:
         return "undo";
     case Hit::Redo:
@@ -95,6 +115,18 @@ inline Hit hitAtRelX(double relX)
         return Hit::Gap;
     x -= kGap;
     if (x < kTile)
+        return Hit::EraseBrush;
+    x -= kTile;
+    if (x < kTile)
+        return Hit::EraseArea;
+    x -= kTile;
+    if (x < kTile)
+        return Hit::EraseObject;
+    x -= kTile;
+    if (x < kGap)
+        return Hit::Gap;
+    x -= kGap;
+    if (x < kTile)
         return Hit::Undo;
     x -= kTile;
     if (x < kTile)
@@ -111,13 +143,21 @@ struct ChipModel {
     bool latchedInkBox = true;
     bool latchedConnector = true;
     bool strokeActive = false;
+    /** Last armed eraser; default brush. Persisted on-device, not in SVG. */
+    std::string lastUsedEraser = "erase_brush";
+    /** Hover circle while erase_brush + pen near. Kill-switch, default on. */
+    bool eraseBrushHover = true;
+    std::string tempRestore;
+    std::string nibRestore;
 
     bool isSelection() const
     {
         return exclusive == "sel_rect" || exclusive == "sel_freeform";
     }
 
-    bool recogDimmed() const { return isSelection(); }
+    bool isEraser() const { return isEraserId(exclusive); }
+
+    bool recogDimmed() const { return isSelection() || isEraser(); }
 
     bool setExclusive(const std::string &mode)
     {
@@ -126,8 +166,10 @@ struct ChipModel {
             next = "sel_rect";
         if (next == "ink_box")
             next = "pen";
-        if (next != "pen" && next != "sel_rect" && next != "sel_freeform")
+        if (!isExclusiveId(next))
             next = "pen";
+        if (isEraserId(next))
+            lastUsedEraser = next;
         if (exclusive == next)
             return false;
         exclusive = next;
@@ -159,6 +201,56 @@ struct ChipModel {
     }
 
     void penUp() { strokeActive = false; }
+
+    /** Pen ↔ last-used eraser. */
+    bool togglePenEraser()
+    {
+        if (isEraser())
+            return setExclusive("pen");
+        return setExclusive(lastUsedEraser.empty() ? "erase_brush" : lastUsedEraser);
+    }
+
+    /** From pen only; already-in-eraser is a no-op. */
+    bool beginTempErase()
+    {
+        if (isEraser())
+            return false;
+        if (!tempRestore.empty())
+            return false;
+        tempRestore = exclusive;
+        setExclusive(lastUsedEraser.empty() ? "erase_brush" : lastUsedEraser);
+        return true;
+    }
+
+    bool endTempErase()
+    {
+        if (tempRestore.empty())
+            return false;
+        const std::string prev = tempRestore;
+        tempRestore.clear();
+        setExclusive(prev);
+        return true;
+    }
+
+    /** Force erase_brush while the inverted nib is reported. */
+    bool beginNibErase()
+    {
+        if (!nibRestore.empty())
+            return false;
+        nibRestore = exclusive;
+        setExclusive("erase_brush");
+        return true;
+    }
+
+    bool endNibErase()
+    {
+        if (nibRestore.empty())
+            return false;
+        const std::string prev = nibRestore;
+        nibRestore.clear();
+        setExclusive(prev);
+        return true;
+    }
 
     std::string dispatchTuple() const
     {

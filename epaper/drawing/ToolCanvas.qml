@@ -14,6 +14,8 @@ Item {
 
     function toggleHandTouch() { tool.toggleHandTouch() }
     function cancelHandTouch() { tool.cancelHandTouch() }
+    function cancelInteraction() { tool.cancelInteraction() }
+    function onHoverLeave() { tool.onHoverLeave() }
     function onSecondContact() { tool.onSecondContact() }
     function onContactsCleared() { tool.onContactsCleared() }
 
@@ -38,19 +40,35 @@ Item {
             target: null
             dragThreshold: 0
             acceptedDevices: PointerDevice.Stylus
-            acceptedPointerTypes: PointerDevice.Pen
+            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Eraser
             grabPermissions: PointerHandler.ApprovesTakeOverByAnything
+            property bool eraserNib: false
             onActiveChanged: {
                 if (active)
+                    eraserNib = centroid.pointerType === PointerDevice.Eraser
+                if (active)
                     tool.onPointerStart(centroid.position.x, centroid.position.y,
-                                        centroid.pressure, true)
+                                        centroid.pressure, true, eraserNib)
                 else
-                    tool.onPointerEnd(centroid.position.x, centroid.position.y, true)
+                    tool.onPointerEnd(centroid.position.x, centroid.position.y, true, eraserNib)
             }
             onCentroidChanged: {
                 if (active)
                     tool.onPointerMove(centroid.position.x, centroid.position.y,
-                                       centroid.pressure, true)
+                                       centroid.pressure, true, eraserNib)
+            }
+        }
+
+        HoverHandler {
+            id: penHover
+            acceptedDevices: PointerDevice.Stylus
+            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Eraser
+            enabled: session && session.exclusiveTool === "erase_brush"
+                     && session.eraseBrushHover
+            onPointChanged: tool.onHoverMove(point.position.x, point.position.y)
+            onHoveredChanged: {
+                if (!hovered)
+                    tool.onHoverLeave()
             }
         }
 

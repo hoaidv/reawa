@@ -70,6 +70,12 @@ qt_add_resources(epaper_bin "epaper_tool_icons"
         icons/icon-epaper-viewport-follow-inv.png
         icons/icon-epaper-hand.png
         icons/icon-epaper-hand-inv.png
+        icons/icon-epaper-erase-brush.png
+        icons/icon-epaper-erase-brush-inv.png
+        icons/icon-epaper-erase-area.png
+        icons/icon-epaper-erase-area-inv.png
+        icons/icon-epaper-erase-object.png
+        icons/icon-epaper-erase-object-inv.png
 )
 
 target_link_libraries(epaper_bin PRIVATE Qt6::Quick Qt6::Network Threads::Threads ${CMAKE_DL_LIBS})

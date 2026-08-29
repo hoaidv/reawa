@@ -25,6 +25,9 @@ enum class OperationKind : std::uint8_t {
     Resize,
     Rotate,
     Navigation,
+    BrushErase,
+    AreaErase,
+    ObjectErase,
 };
 
 struct OperationDescriptor {

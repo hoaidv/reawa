@@ -131,6 +131,11 @@ struct DocNode {
     SmartBounds smartBounds;
     SmartTransform transform;
     std::string inkScaleMode = "withBounds";
+    /**
+     * Invisible enclose polygon (group-local). Never clipped; missing on old groups.
+     * @implements [SRS-EP-55] SmartGroup boundary polyline
+     */
+    std::vector<InkSample> boundaryPolyline;
     std::string fromNodeId;
     std::string toNodeId;
     ConnectorAnchor fromAnchor;
@@ -178,6 +183,19 @@ inline bool isStructuralOp(const std::string &type)
 inline Style defaultStyle()
 {
     return Style{};
+}
+
+/** Closed copy of a polyline (appends first sample when the ring is open). */
+inline std::vector<InkSample> closedPolylineCopy(const std::vector<InkSample> &in)
+{
+    std::vector<InkSample> out = in;
+    if (out.size() < 2)
+        return out;
+    const InkSample &a = out.front();
+    const InkSample &b = out.back();
+    if (std::hypot(a.x - b.x, a.y - b.y) > 1e-6)
+        out.push_back(a);
+    return out;
 }
 
 inline Style styleFromJson(const JsonValue *p)

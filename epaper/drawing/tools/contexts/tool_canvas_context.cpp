@@ -7,8 +7,11 @@
 #include "../ui/selection_context_bar.hpp"
 #include "selection_context.hpp"
 #include "session_doc_context.hpp"
+#include "document/erase_clip.hpp"
+#include "../../canvas_session.h"
 
 #include <QPainter>
+#include <QPen>
 #include <string>
 #include <vector>
 
@@ -24,6 +27,7 @@ void ToolCanvasContext::paintOverlay(QPainter *painter)
 {
     if (m_hub && m_hub->lockedOperation())
         m_hub->lockedOperation()->paintOverlay(painter);
+    paintEraseHover(painter);
     if (!m_doc || !m_selection)
         return;
     m_chrome.paint(painter, *m_selection, *m_doc, isSelectionTool());
@@ -46,7 +50,7 @@ void ToolCanvasContext::syncOverlayPresence()
     const bool penWaveform = isSelectionTool() && exclusiveTool() == QLatin1String("sel_freeform")
         && m_selection->phase() != SelectionPhase::Selected
         && m_selection->phase() != SelectionPhase::Transforming;
-    m_chrome.syncPresence(*m_selection, isSelectionTool(), penWaveform, m_setVisible,
+    m_chrome.syncPresence(*m_selection, isSelectionTool() || isEraserTool(), penWaveform, m_setVisible,
                           m_setStrokeWaveform);
 }
 
@@ -149,6 +153,73 @@ bool ToolCanvasContext::isSelectionTool() const
 {
     const QString m = exclusiveTool();
     return m == QLatin1String("sel_rect") || m == QLatin1String("sel_freeform");
+}
+
+bool ToolCanvasContext::isEraserTool() const
+{
+    const QString m = exclusiveTool();
+    return m.startsWith(QLatin1String("erase_"));
+}
+
+double ToolCanvasContext::panelScale() const
+{
+    return m_doc ? m_doc->frame().panelScale() : 1.0;
+}
+
+bool ToolCanvasContext::eraseHoverEnabled() const
+{
+    return m_doc && m_doc->session() && m_doc->session()->chip.eraseBrushHover;
+}
+
+void ToolCanvasContext::setEraseHoverPanel(const QPointF &panel)
+{
+    if (!eraseHoverEnabled() || exclusiveTool() != QLatin1String("erase_brush")) {
+        clearEraseHover();
+        return;
+    }
+    const double scale = panelScale();
+    const double d = epaper::document::kEraseBrushDiameterMm * scale;
+    const double stroke = epaper::document::kEraseHoverStrokeMm * scale;
+    const double pad = d * 0.5 + stroke + 2.0;
+    const QRectF next = QRectF(panel, panel).adjusted(-pad, -pad, pad, pad);
+    QRectF dirty = next;
+    if (m_eraseHoverValid)
+        dirty = dirty.united(m_eraseHoverDirty);
+    m_eraseHoverPanel = panel;
+    m_eraseHoverValid = true;
+    m_eraseHoverDirty = next;
+    syncOverlayPresence();
+    damageChrome(dirty);
+}
+
+void ToolCanvasContext::clearEraseHover()
+{
+    if (!m_eraseHoverValid)
+        return;
+    const QRectF dirty = m_eraseHoverDirty;
+    m_eraseHoverValid = false;
+    m_eraseHoverDirty = QRectF();
+    damageChrome(dirty);
+}
+
+void ToolCanvasContext::paintEraseHover(QPainter *painter)
+{
+    if (!painter || !m_eraseHoverValid || !eraseHoverEnabled())
+        return;
+    if (exclusiveTool() != QLatin1String("erase_brush"))
+        return;
+    if (m_hub && m_hub->lockedOperation())
+        return;
+    const double scale = panelScale();
+    const double d = epaper::document::kEraseBrushDiameterMm * scale;
+    const double stroke = std::max(1.0, epaper::document::kEraseHoverStrokeMm * scale);
+    painter->save();
+    QPen pen(Qt::black);
+    pen.setWidthF(stroke);
+    painter->setPen(pen);
+    painter->setBrush(Qt::white);
+    painter->drawEllipse(m_eraseHoverPanel, d * 0.5, d * 0.5);
+    painter->restore();
 }
 
 QSizeF ToolCanvasContext::hostSize() const

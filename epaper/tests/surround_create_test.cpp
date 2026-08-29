@@ -77,6 +77,7 @@ int main()
         CHECK(r.boundaryId == "outer");
         const DocNode *sg = doc.find(r.smartGroupId);
         CHECK(sg && sg->kind == NodeKind::SmartGroup);
+        CHECK(sg->boundaryPolyline.size() >= 2);
         CHECK(std::abs(sg->smartBounds.width - 100) < 1e-6);
         bool innerContent = false;
         for (const auto &c : sg->children) {

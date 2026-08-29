@@ -23,6 +23,8 @@ class CanvasSession : public QObject
     Q_PROPERTY(bool recogInkBox READ recogInkBox NOTIFY recogChanged)
     Q_PROPERTY(bool recogConnector READ recogConnector NOTIFY recogChanged)
     Q_PROPERTY(QString followDirection READ followDirection NOTIFY followChanged)
+    Q_PROPERTY(bool eraseBrushHover READ eraseBrushHover WRITE setEraseBrushHover NOTIFY
+                   eraseBrushHoverChanged)
 
 public:
     explicit CanvasSession(QObject *parent = nullptr);
@@ -41,6 +43,13 @@ public:
     bool setExclusiveTool(const QString &mode);
     bool flipRecogInkBox();
     bool flipRecogConnector();
+    bool togglePenEraser();
+    bool beginTempErase();
+    bool endTempErase();
+    bool beginNibErase();
+    bool endNibErase();
+    bool eraseBrushHover() const { return chip.eraseBrushHover; }
+    void setEraseBrushHover(bool on);
 
     void applyCamera(const epaper::handtouch::WorldAabb &region, bool markValid);
     void noteDocumentMutated();
@@ -63,8 +72,12 @@ signals:
     void cameraChanged();
     void documentMutated();
     void followChanged();
+    void eraseBrushHoverChanged();
 
 private:
+    void loadPersisted();
+    void persistLastUsed() const;
+
     QString m_followDirection = QStringLiteral("none");
     std::unordered_set<std::string> m_liveManipSuppressIds;
 };

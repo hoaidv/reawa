@@ -30,7 +30,7 @@ constexpr const char *kFollowControlId = "btn.viewport_follow";
 constexpr const char *kFollowRegion = "FollowToggle";
 constexpr const char *kToolChipRegion = "ToolChip";
 constexpr const char *kDeviceScreenRegion = "DeviceScreen";
-constexpr int kToolChipExclusiveCount = 3;
+constexpr int kToolChipExclusiveCount = 6;
 constexpr double kFollowTileDu = 64.0;
 constexpr double kFollowInsetDu = 8.0;
 /** Trailing row, index 0 = USB (rightmost), 1 = Follow, 2 = Debug. */

@@ -40,6 +40,8 @@ public:
     virtual QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const = 0;
     virtual QString exclusiveTool() const = 0;
     virtual bool isSelectionTool() const = 0;
+    virtual bool isEraserTool() const = 0;
+    virtual double panelScale() const = 0;
     virtual QSizeF hostSize() const = 0;
     virtual void showManipUnavailable(const epaper::document::SmartBounds &wb) = 0;
     virtual void clearManipUnavailable() = 0;

@@ -4,7 +4,7 @@ title: Brush erase capsule clip
 kind: implement
 parent_srs: [SRS-EP-56, SRS-EP-59]
 parent_req: [REQ-11]
-status: draft
+status: in-review
 priority: P0
 iter: iter-005
 estimate: 5

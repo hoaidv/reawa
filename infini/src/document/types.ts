@@ -169,6 +169,8 @@ export interface SmartGroupNode {
   transform: SmartTransform;
   inkScaleMode: "withBounds" | "fixedInk";
   children: InkNode[];
+  /** Invisible enclose polygon (group-local). Never clipped. */
+  boundaryPolyline?: InkSample[];
 }
 
 export interface FrameNode {

@@ -330,7 +330,10 @@ public:
 
     QString toolMode() const { return m_session.exclusiveTool(); }
     void setToolMode(const QString &mode);
-    Q_INVOKABLE void armTool(const QString &mode);  
+    Q_INVOKABLE void armTool(const QString &mode);
+    Q_INVOKABLE bool togglePenEraser();
+    Q_INVOKABLE bool beginTempErase();
+    Q_INVOKABLE bool endTempErase();  
     
     bool recogInkBoxArmed() const { return m_session.chip.recogInkBox; }
     bool recogConnectorArmed() const { return m_session.chip.recogConnector; }

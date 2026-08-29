@@ -8,21 +8,6 @@ namespace tools {
 
 void inputHubLinkAnchor() {}
 
-namespace {
-
-constexpr OperationKind kMatchOrder[] = {
-    OperationKind::Resize,
-    OperationKind::Move,
-    OperationKind::Lasso,
-    OperationKind::Marquee,
-    OperationKind::Navigation,
-    OperationKind::Select,
-    OperationKind::InkStroke,
-    OperationKind::Rotate,
-};
-
-} // namespace
-
 bool InputHub::stampRole(PointerSample *s) const
 {
     return s && m_devices.tryRole(s->device, &s->role);
@@ -86,10 +71,10 @@ Operation *InputHub::matchOperation(StrategyKind channel, const PointerSample &s
     Operation *best = nullptr;
     int bestPriority = INT_MIN;
 
-    // Need to optimize this matching logic: m_activeMode already provided
-    // available operations, we just match against it
+    const std::vector<OperationKind> &list =
+        s.role == PointerRole::Primary ? m_activeMode->primaryOps() : m_activeMode->secondaryOps();
 
-    for (OperationKind kind : kMatchOrder) {
+    for (OperationKind kind : list) {
         if (!kindAllowed(kind, s.role))
             continue;
         Operation *op = opFor(kind);

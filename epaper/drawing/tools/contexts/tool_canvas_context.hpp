@@ -8,6 +8,8 @@
 #include "../tool_chrome.hpp"
 #include "tool_context.hpp"
 
+#include <QPointF>
+#include <QRectF>
 #include <functional>
 
 class QPainter;
@@ -62,13 +64,22 @@ public:
     QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const override;
     QString exclusiveTool() const override;
     bool isSelectionTool() const override;
+    bool isEraserTool() const override;
+    double panelScale() const override;
     QSizeF hostSize() const override;
+
+    void setEraseHoverPanel(const QPointF &panel);
+    void clearEraseHover();
+    bool eraseHoverEnabled() const;
+
     void showManipUnavailable(const epaper::document::SmartBounds &wb) override;
     void clearManipUnavailable() override;
     void setRefuseReason(const QString &reason) override;
     void onDocumentOrCameraChanged() override;
 
 private:
+    void paintEraseHover(QPainter *painter);
+
     ToolCanvasItem *m_host = nullptr;
     ToolChrome m_chrome;
     SessionDocContext *m_doc = nullptr;
@@ -80,6 +91,9 @@ private:
     std::function<void(bool)> m_setVisible;
     std::function<void()> m_emitChanged;
     std::function<void(bool)> m_setStrokeWaveform;
+    QPointF m_eraseHoverPanel;
+    bool m_eraseHoverValid = false;
+    QRectF m_eraseHoverDirty;
 };
 
 } // namespace tools

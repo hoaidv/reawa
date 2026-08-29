@@ -28,7 +28,8 @@ using epaper::toolchip::kTile;
 int main()
 {
     CHECK(kTile == 64.0);
-    CHECK(std::fabs(chipWidth() - (12.0 + 64.0 * 4.0 + 32.0 + 64.0 * 2.0 + 32.0 + 64.0 * 2.0))
+    CHECK(std::fabs(chipWidth() - (12.0 + 64.0 * 4.0 + 32.0 + 64.0 * 2.0 + 32.0 + 64.0 * 3.0
+                                   + 32.0 + 64.0 * 2.0))
           < 0.001);
 
     CHECK(hitAtRelX(0) == Hit::Publish);
@@ -48,8 +49,15 @@ int main()
 
     const double afterRecog = afterTools + kGap + kTile * 2.0;
     CHECK(hitAtRelX(afterRecog + 1) == Hit::Gap);
-    CHECK(hitAtRelX(afterRecog + kGap + 1) == Hit::Undo);
-    CHECK(hitAtRelX(afterRecog + kGap + kTile + 1) == Hit::Redo);
+    CHECK(hitAtRelX(afterRecog + kGap + 1) == Hit::EraseBrush);
+    CHECK(hitAtRelX(afterRecog + kGap + kTile + 1) == Hit::EraseArea);
+    CHECK(hitAtRelX(afterRecog + kGap + kTile * 2 + 1) == Hit::EraseObject);
+    CHECK(std::string(hitId(Hit::EraseBrush)) == "erase_brush");
+
+    const double afterErase = afterRecog + kGap + kTile * 3.0;
+    CHECK(hitAtRelX(afterErase + 1) == Hit::Gap);
+    CHECK(hitAtRelX(afterErase + kGap + 1) == Hit::Undo);
+    CHECK(hitAtRelX(afterErase + kGap + kTile + 1) == Hit::Redo);
     CHECK(hitAtRelX(chipWidth()) == Hit::None);
     CHECK(hitAtRelX(-1) == Hit::None);
 
@@ -87,8 +95,32 @@ int main()
     chip.penUp();
 
     const std::string beforeUndo = chip.exclusive;
-    CHECK(hitAtRelX(afterRecog + kGap + 1) == Hit::Undo);
+    CHECK(hitAtRelX(afterErase + kGap + 1) == Hit::Undo);
     CHECK(chip.exclusive == beforeUndo);
+
+    CHECK(chip.lastUsedEraser == "erase_brush");
+    CHECK(chip.setExclusive("erase_area"));
+    CHECK(chip.exclusive == "erase_area");
+    CHECK(chip.isEraser());
+    CHECK(chip.recogDimmed());
+    CHECK(chip.lastUsedEraser == "erase_area");
+    CHECK(!chip.flipRecogInkBox());
+    CHECK(chip.togglePenEraser());
+    CHECK(chip.exclusive == "pen");
+    CHECK(chip.togglePenEraser());
+    CHECK(chip.exclusive == "erase_area");
+    CHECK(chip.setExclusive("pen"));
+    CHECK(chip.beginTempErase());
+    CHECK(chip.exclusive == "erase_area");
+    CHECK(chip.endTempErase());
+    CHECK(chip.exclusive == "pen");
+    CHECK(chip.setExclusive("erase_brush"));
+    CHECK(!chip.beginTempErase());
+    CHECK(chip.exclusive == "erase_brush");
+    CHECK(chip.beginNibErase());
+    CHECK(chip.exclusive == "erase_brush");
+    CHECK(chip.endNibErase());
+    CHECK(chip.exclusive == "erase_brush");
 
     std::printf("toolchip_layout_test ok tiles=64 chipW=%.0f\n", chipWidth());
     return 0;

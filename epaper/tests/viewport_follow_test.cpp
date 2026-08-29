@@ -25,6 +25,7 @@ using epaper::toolchip::chipWidth;
 using epaper::toolchip::hitAtRelX;
 using epaper::toolchip::hitId;
 using epaper::toolchip::kHeight;
+using epaper::toolchip::kGap;
 using epaper::toolchip::kPublish;
 using epaper::toolchip::kTile;
 using epaper::document::parseJson;
@@ -53,6 +54,13 @@ static int exclusiveToolCount()
         ++n;
     if (hitAtRelX(kPublish + kTile * 3 + 1) == Hit::Pen)
         ++n;
+    const double afterRecog = kPublish + kTile * 4.0 + kGap + kTile * 2.0 + kGap;
+    if (hitAtRelX(afterRecog + 1) == Hit::EraseBrush)
+        ++n;
+    if (hitAtRelX(afterRecog + kTile + 1) == Hit::EraseArea)
+        ++n;
+    if (hitAtRelX(afterRecog + kTile * 2 + 1) == Hit::EraseObject)
+        ++n;
     return n;
 }
 
@@ -69,7 +77,7 @@ static void test_enable_from_both_off_applies_infini_viewport()
     CHECK(kFollowTileDu == kTile);
     CHECK(kFollowTileDu >= 64.0);
     CHECK(exclusiveToolCount() == kToolChipExclusiveCount);
-    CHECK(exclusiveToolCount() == 3);
+    CHECK(exclusiveToolCount() == 6);
     CHECK(std::string(hitId(Hit::Pen)) == "pen");
     CHECK(std::string(hitId(Hit::SelRect)) != kFollowControlId);
 

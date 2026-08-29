@@ -88,7 +88,11 @@ function serializeNode(node: DocNode, indent: string): string {
         `${indent}<g data-infini-kind="smart-group" ${id} ` +
         `data-infini-bounds="${b.x},${b.y},${b.width},${b.height}" ` +
         `data-infini-transform="${t.x},${t.y},${t.rotation},${t.scaleX},${t.scaleY}" ` +
-        `data-infini-ink-scale-mode="${node.inkScaleMode}">`;
+        `data-infini-ink-scale-mode="${node.inkScaleMode}"` +
+        (node.boundaryPolyline
+          ? ` data-infini-boundary-polyline="${escAttr(JSON.stringify(node.boundaryPolyline))}"`
+          : "") +
+        `>`;
       const kids = node.children.map((c) => serializeNode(c, indent + "  ")).join("\n");
       return `${open}\n${kids}\n${indent}</g>`;
     }
@@ -372,6 +376,15 @@ function decodeNode(el: XmlEl, warnings: string[]): DocNode | null {
         inkScaleMode: mode,
         children,
       };
+      const bpRaw = el.attrs["data-infini-boundary-polyline"];
+      if (bpRaw) {
+        try {
+          const parsed = JSON.parse(bpRaw) as InkSample[];
+          if (Array.isArray(parsed)) node.boundaryPolyline = parsed;
+        } catch {
+          warnings.push("bad data-infini-boundary-polyline");
+        }
+      }
       return node;
     }
     case "ink": {

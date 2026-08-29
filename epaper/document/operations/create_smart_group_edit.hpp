@@ -32,6 +32,7 @@ public:
     void setInkScaleMode(std::string m) { m_inkScaleMode = std::move(m); }
     void setCaptureIds(std::vector<std::string> ids) { m_captureIds = std::move(ids); }
     void setChildren(std::vector<DocNode> ch) { m_children = std::move(ch); }
+    void setBoundaryPolyline(std::vector<InkSample> p) { m_boundaryPolyline = std::move(p); }
 
     const std::string &nodeId() const { return m_nodeId; }
     const std::vector<std::string> &captureIds() const { return m_captureIds; }
@@ -48,6 +49,7 @@ private:
     std::string m_inkScaleMode = "fixedInk";
     std::vector<std::string> m_captureIds;
     std::vector<DocNode> m_children;
+    std::vector<InkSample> m_boundaryPolyline;
 };
 
 inline ApplyResult CreateSmartGroupEdit::doApply(DeviceDocument &doc)
@@ -67,6 +69,16 @@ inline ApplyResult CreateSmartGroupEdit::doApply(DeviceDocument &doc)
     n.transform = m_transform;
     n.inkScaleMode = m_inkScaleMode.empty() ? "fixedInk" : m_inkScaleMode;
     n.children = m_children;
+    n.boundaryPolyline = m_boundaryPolyline;
+    if (n.boundaryPolyline.empty()) {
+        for (const auto &c : n.children) {
+            const std::string role = c.role ? *c.role : std::string();
+            if (role == "boundary" && c.samples.size() >= 2) {
+                n.boundaryPolyline = closedPolylineCopy(c.samples);
+                break;
+            }
+        }
+    }
     doc.insertUnder(m_parentId, std::move(n));
     return {true, {}};
 }
@@ -113,6 +125,8 @@ inline JsonValue CreateSmartGroupEdit::serialize() const
     p.emplace_back("inkScaleMode", JsonValue::string(m_inkScaleMode));
     p.emplace_back("captureIds", JsonValue::array(std::move(cap)));
     p.emplace_back("children", JsonValue::array(std::move(children)));
+    if (!m_boundaryPolyline.empty())
+        p.emplace_back("boundaryPolyline", samplesToJsonArray(m_boundaryPolyline));
     return envelope(JsonValue::object(std::move(p)));
 }
 
@@ -146,6 +160,8 @@ CreateSmartGroupEdit::fromPayload(const JsonValue &envelope, const JsonValue &pa
             children.push_back(DeviceDocument::nodeFromJson(c));
     }
     e->setChildren(std::move(children));
+    if (const JsonValue *bp = payload.get("boundaryPolyline"); bp && bp->isArray())
+        e->setBoundaryPolyline(samplesFromJsonArray(bp));
     return e;
 }
 

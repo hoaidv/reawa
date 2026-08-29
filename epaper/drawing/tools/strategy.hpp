@@ -36,6 +36,7 @@ struct PointerSample {
     qreal pressure = 1.0;
     PointerDevice device = PointerDevice::Pen;
     PointerRole role = PointerRole::Primary;
+    bool eraserNib = false;
 };
 
 struct DeviceMap {

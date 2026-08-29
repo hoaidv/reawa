@@ -1034,65 +1034,7 @@ static void test_multi_inverse_undo_records_one_compound()
     CHECK(doc.restoreSnapshotQueued() == 0);
 }
 
-/** @SRS-EP-08 Path A stroke-erase commit and undo use set_ink_samples */
-static void test_path_a_erase_commit_and_undo_set_ink_samples()
-{
-    DeviceDocument doc;
-    CHECK(doc.commitJson(makeInkSamplesOp("op-ink-1", "I1", {{0, 0}, {10, 0}, {20, 0}, {30, 0}}))
-              .applied);
-    const DocNode *i0 = doc.find("I1");
-    CHECK(i0 && i0->lastOpId == "op-ink-1");
-    const std::size_t q0 = doc.publishQueue().size();
-
-    CHECK(doc.commitPathAErase("op-erase-1", "I1", {{20, 0}, {30, 0}}).applied);
-    const DocNode *i1 = doc.find("I1");
-    CHECK(i1 && samplesMatch(i1, {{0, 0}, {10, 0}}));
-    CHECK(i1->lastOpId == "op-erase-1");
-    CHECK(doc.publishQueue().size() == q0 + 1);
-    CHECK(doc.publishQueue().back().op.getString("type") == "set_ink_samples");
-    CHECK(doc.publishQueue().back().op.getString("type") != "remove_node");
-    CHECK(doc.restoreSnapshotQueued() == 0);
-
-    const std::size_t q1 = doc.publishQueue().size();
-    CHECK(doc.undo().restored);
-    const DocNode *i2 = doc.find("I1");
-    CHECK(i2 && samplesMatch(i2, {{0, 0}, {10, 0}, {20, 0}, {30, 0}}));
-    CHECK(doc.publishQueue().size() == q1 + 1);
-    CHECK(doc.publishQueue().back().op.getString("type") == "set_ink_samples");
-    CHECK(doc.restoreSnapshotQueued() == 0);
-}
-
-/** @SRS-EP-08 Path A emptying erase uses set_ink_samples and remove_node */
-static void test_path_a_emptying_erase_compound_and_undo()
-{
-    DeviceDocument doc;
-    CHECK(doc.commitJson(makeInkSamplesOp("op-ink-1", "I1", {{0, 0}, {10, 0}})).applied);
-    const std::size_t q0 = doc.publishQueue().size();
-
-    CHECK(doc.commitPathAErase("op-erase-empty-1", "I1", {{0, 0}, {10, 0}}).applied);
-    CHECK(!doc.find("I1"));
-    CHECK(doc.publishQueue().size() == q0 + 1);
-    const JsonValue &eraseChange = doc.publishQueue().back().op;
-    CHECK(eraseChange.getString("type") == "compound");
-    CHECK(compoundContains(eraseChange, "set_ink_samples"));
-    CHECK(compoundContains(eraseChange, "remove_node"));
-    CHECK(doc.restoreSnapshotQueued() == 0);
-
-    const std::size_t q1 = doc.publishQueue().size();
-    CHECK(doc.undo().restored);
-    const DocNode *i1 = doc.find("I1");
-    CHECK(i1 && samplesMatch(i1, {{0, 0}, {10, 0}}));
-    CHECK(doc.publishQueue().size() == q1 + 1);
-    const JsonValue &undoChange = doc.publishQueue().back().op;
-    CHECK(undoChange.getString("type") != "restore_snapshot");
-    CHECK(undoChange.getString("type") == "compound" || undoChange.getString("type") == "set_ink_samples"
-          || undoChange.getString("type") == "reparent" || undoChange.getString("type") == "remove_node");
-    if (undoChange.getString("type") == "compound") {
-        CHECK(!compoundContains(undoChange, "restore_snapshot"));
-        CHECK(compoundInnerTypes(undoChange).size() >= 1);
-    }
-    CHECK(doc.restoreSnapshotQueued() == 0);
-}
+/** Path A sample-drop erase retired — remnant clip lives in erase_clip_test.cpp. */
 
 /** Own later undo must unwind lastOpId to the previous forward, not stamp undo:N. */
 static void seedAB(DeviceDocument &doc)
@@ -1214,8 +1156,6 @@ int main()
     test_matching_undo_records_counterpart();
     test_matching_redo_records_counterpart();
     test_multi_inverse_undo_records_one_compound();
-    test_path_a_erase_commit_and_undo_set_ink_samples();
-    test_path_a_emptying_erase_compound_and_undo();
     test_lastopid_unwind_allows_older_own_gestures();
     test_lastopid_f20_still_skips_when_later_live();
     test_lastopid_redo_restamps_forward();

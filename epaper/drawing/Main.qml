@@ -68,6 +68,8 @@ TabletWindow {
             if (Input.penNear) {
                 toolCanvas.cancelHandTouch()
                 toolCanvas.cancelInteraction()
+            } else {
+                toolCanvas.onHoverLeave()
             }
         }
 
@@ -140,7 +142,7 @@ TabletWindow {
         }
     }
 
-    // Floating tool chip — hand-touch toggle + 3 exclusive tools + 2 recognizer toggles + Undo/Redo.
+    // Floating tool chip — HT + 3 tools + recognizers + 3 erasers + Undo/Redo.
     Item {
         id: toolChip
         z: 20
@@ -327,6 +329,57 @@ TabletWindow {
                                     else
                                         drawCanvas.toggleRecogConnector()
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                id: eraseCluster
+                width: 64 * 3
+                height: parent.height
+                color: "white"
+                border.color: "black"
+                border.width: 1
+
+                Row {
+                    anchors.fill: parent
+                    spacing: 0
+
+                    Repeater {
+                        model: [
+                            { id: "erase_brush", icon: "icon-epaper-erase-brush" },
+                            { id: "erase_area", icon: "icon-epaper-erase-area" },
+                            { id: "erase_object", icon: "icon-epaper-erase-object" }
+                        ]
+                        delegate: Rectangle {
+                            width: 64
+                            height: 64
+                            color: drawCanvas.toolMode === modelData.id ? "black" : "white"
+                            border.color: "black"
+                            border.width: 1
+
+                            readonly property bool armed: drawCanvas.toolMode === modelData.id
+
+                            Image {
+                                anchors.centerIn: parent
+                                width: parent.width * 0.62
+                                height: parent.height * 0.62
+                                fillMode: Image.PreserveAspectFit
+                                smooth: false
+                                source: armed
+                                       ? ("qrc:/icons/icons/" + modelData.icon + "-inv.png")
+                                       : ("qrc:/icons/icons/" + modelData.icon + ".png")
+                            }
+
+                            TapHandler {
+                                acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+                                acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                grabPermissions: PointerHandler.CanTakeOverFromItems
+                                                 | PointerHandler.ApprovesCancellation
+                                onTapped: drawCanvas.armTool(modelData.id)
                             }
                         }
                     }

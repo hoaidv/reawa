@@ -670,9 +670,11 @@ void TabletCanvasItem::applyStrokeIntent(const epaper::strokecapture::StrokeResu
         m_session.chip.penUp();
 }
 
-/** Pen-down for ink only — Tool already branched selection/handle away. */
+/** Pen-down for ink only — Tool already branched selection/handle/erase away. */
 void TabletCanvasItem::applyContactPress(const PanelPt &canvasPos, const IngestChannels &ch)
 {
+    if (m_session.chip.exclusive != "pen")
+        return;
     beginStroke(canvasPos, ch);
 }
 
@@ -747,7 +749,7 @@ void TabletCanvasItem::ingestCurrentStroke(const epaper::document::FinishedStrok
     };
 
     const std::string tool = m_session.chip.latchedTool;
-    if (tool == "sel_rect" || tool == "sel_freeform")
+    if (tool == "sel_rect" || tool == "sel_freeform" || epaper::toolchip::isEraserId(tool))
         return;
 
     RecogLatch latch;
@@ -1040,6 +1042,21 @@ void TabletCanvasItem::setToolMode(const QString &mode)
 void TabletCanvasItem::armTool(const QString &mode)
 {
     setToolMode(mode);
+}
+
+bool TabletCanvasItem::togglePenEraser()
+{
+    return m_session.togglePenEraser();
+}
+
+bool TabletCanvasItem::beginTempErase()
+{
+    return m_session.beginTempErase();
+}
+
+bool TabletCanvasItem::endTempErase()
+{
+    return m_session.endTempErase();
 }
 
 /** Flip ink-box recog arm on session chip. */
@@ -1450,7 +1467,7 @@ void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
 /** Recompute chrome rects from panel size + orientation. */
 void TabletCanvasItem::updateToolChipRect()
 {
-    // UI-EP-04 + ADR-0021: 3 exclusive tools + 12 px publish + 2 toggles + Undo/Redo.
+    // UI-EP-04 + ADR-0021: six exclusive tools + 12 px publish + 2 toggles + Undo/Redo.
     // @implements [SRS-EP-05] floating ToolChip hit bounds (64×64 tiles, CHL-0019)
     const qreal chipH = epaper::toolchip::kHeight;
     const qreal chipW = epaper::toolchip::chipWidth();

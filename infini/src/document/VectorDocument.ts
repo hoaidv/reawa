@@ -353,7 +353,11 @@ export class VectorDocument {
       style: cloneJson((p.style as Style) ?? DEFAULT_STYLE),
       role: p.role as InkNode["role"],
     };
-    this.insertUnder(p.parentId as string | undefined, node);
+    this.insertAt(
+      p.parentId as string | undefined,
+      node,
+      typeof p.index === "number" ? (p.index as number) : undefined,
+    );
   }
 
   /**
@@ -425,6 +429,18 @@ export class VectorDocument {
       inkScaleMode: (p.inkScaleMode as SmartGroupNode["inkScaleMode"]) ?? "fixedInk",
       children,
     };
+    if (Array.isArray(p.boundaryPolyline)) {
+      node.boundaryPolyline = cloneJson(p.boundaryPolyline as InkSample[]);
+    } else {
+      const bound = children.find((c) => c.role === "boundary");
+      if (bound && bound.samples.length >= 2) {
+        const poly = bound.samples.map((s) => ({ ...s }));
+        const a = poly[0];
+        const b = poly[poly.length - 1];
+        if (Math.hypot(a.x - b.x, a.y - b.y) > 1e-6) poly.push({ ...a });
+        node.boundaryPolyline = poly;
+      }
+    }
     this.insertUnder(p.parentId as string | undefined, node);
   }
 
@@ -680,8 +696,10 @@ export class VectorDocument {
     if (parent.kind === "smart_group") {
       if (node.kind !== "ink") throw new Error("smart_group_ink_only");
       const ink: InkNode = cloneJson(node);
-      ink.role = "content";
-      ink.layoutOffset = seedLayoutOffset(ink.samples, parent.bounds);
+      if (ink.role == null) ink.role = "content";
+      if (ink.role === "content") {
+        ink.layoutOffset = seedLayoutOffset(ink.samples, parent.bounds);
+      }
       if (index == null || index >= parent.children.length) {
         parent.children.push(ink);
       } else {
