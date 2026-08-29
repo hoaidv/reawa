@@ -38,8 +38,8 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Scope | epaper ink-box, tool-modes, connector-ink, region-sync, local-pen-ink, device-document, erase; infini canvas, tablet-sync, vector-document | REQ-10…14, 17, 18 + infini REQ-05 |
 | Stop line | **verified** | design → BDD → implement → human confirm |
 | Autonomy | **bounded** | Run inside lock; sink REQ-15 / REQ-08 |
-| WIP | **2** | Erase implement stories **draft** (EP-062…066). Wait human review before Developer. [STORY-IN-038](./iter-005/stories/STORY-IN-038.md) **cancelled**. Clipboard W3 still frozen. |
-| Validated | — | Follow toggles EP-055 + IN-037 **done**; EP-038 + EP-039 **done**; **hand-touch human-approved** 2026-08-20 (20 mm / HT); IN-033 **done** (host); Device Settings on-device (REQ-20 / ADR-0031). Tool system [ADR-0033](../.docs/adr/ADR-0033-tool-abstraction.md) accepted. Inverse-op undo product + bind **done**; **human verified device undo/redo** 2026-08-27. Erase product [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) **adopted**; [ADR-0034](../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**. |
+| WIP | **2** | Brush erase [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-064](./iter-005/stories/STORY-EP-064.md) **done** (human-verified 2026-08-29). NOW [STORY-EP-067](./iter-005/stories/STORY-EP-067.md) (singleton generateNodeId). Area/object EP-065/066 still **draft**. Clipboard W3 frozen. |
+| Validated | — | Follow toggles EP-055 + IN-037 **done**; EP-038 + EP-039 **done**; **hand-touch human-approved** 2026-08-20 (20 mm / HT); IN-033 **done** (host); Device Settings on-device (REQ-20 / ADR-0031). Tool system [ADR-0033](../.docs/adr/ADR-0033-tool-abstraction.md) accepted. Inverse-op undo product + bind **done**; **human verified device undo/redo** 2026-08-27. Erase product [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) **adopted**; [ADR-0034](../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**. Brush erase **human-verified** 2026-08-29. |
 
 **Out-of-scope log**
 
@@ -67,7 +67,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 ### Goal & capacity
 
 - Goal: **Hand-on-paper** plus **viewport follow** (human 2026-08-20). Cameras independent by default.
-- Capacity: committed stories include EP-053…066 / IN-036…038. [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) **done**. [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) **adopted**. Erase implement EP-062…066 **draft** — wait human review. IN-038 **cancelled**. Clipboard W3 still frozen.
+- Capacity: committed stories include EP-053…067 / IN-036…038. [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) **done**. [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) **adopted**. Brush [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-064](./iter-005/stories/STORY-EP-064.md) **done** (human-verified 2026-08-29). [STORY-EP-067](./iter-005/stories/STORY-EP-067.md) **ready**. Area/object EP-065/066 **draft**. IN-038 **cancelled**. Clipboard W3 still frozen.
 - Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); [CHL-0027](./iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md); remaining Infini follow field test; device/Qt `epaper_bin` not built in this environment. Deprecated Infini snapshot rows — do not implement.
 
 ### Tracks
@@ -75,7 +75,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
 | TRACK-001…004 | planned | **done** | — | [tracks](./tracks/) |
-| TRACK-005 | planned | **active** | Wait human review of erase implement stories EP-062…066. Do not start Developer until the human says so. Clipboard W3 frozen. Remaining follow field test outstanding. | [track](./tracks/TRACK-005-hand-on-paper.md) |
+| TRACK-005 | planned | **active** | NOW [STORY-EP-067](./iter-005/stories/STORY-EP-067.md) (singleton generateNodeId). Brush EP-062…064 **done**. Area/object EP-065/066 still draft. Clipboard W3 frozen. Remaining follow field test outstanding. | [track](./tracks/TRACK-005-hand-on-paper.md) |
 | TRACK-006 | expedite | **done** | Closed 2026-08-27. Interrupted TRACK-005 (tool system / ADR-0033). Do not continue. | [track](./tracks/TRACK-006-tool-system-refactor.md) |
 
 ### Open challenges / blocked
@@ -83,7 +83,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 - CHL-0011 / CHL-0012 / REQ-08 **not this lock**.
 - [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md) (Shipped “no device pan / no arrowheads” prose vs TRACK-005) — open; implement against new ids until Product Manager adopts.
 - [CHL-0026](./iter-005/challenges/CHL-0026-inverse-op-undo.md) (Inverse-op undo, not whole-tree snapshots) — **adopted** 2026-08-27; ADR-0032 accepted; EP-059…061 **done** and **human-verified**; IN-038 **cancelled**.
-- [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) (Three exclusive erasers replace Path A / Path B) — **adopted** 2026-08-29; [prd-erase.md](../.docs/modules/epaper/prd-erase.md); [ADR-0034](../.docs/adr/ADR-0034-erase-clip-remnants.md); EP-062…066 **draft**.
+- [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) (Three exclusive erasers replace Path A / Path B) — **adopted** 2026-08-29; [prd-erase.md](../.docs/modules/epaper/prd-erase.md); [ADR-0034](../.docs/adr/ADR-0034-erase-clip-remnants.md); brush EP-062…064 **done**; area/object EP-065/066 **draft**; node ids [STORY-EP-067](./iter-005/stories/STORY-EP-067.md) **ready**.
 - [CHL-0027](./iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md) (Palm rest by 20 mm travel, not 3-contact eat) — open; Product Manager triage; [SRS-EP-21](../.docs/modules/epaper/features/ink-box/srs-logic.md) still says ≥3 contacts.
 - EP-032 parked in iter-004.
 
@@ -98,18 +98,18 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [iter-005 execution-board](./iter-005/execution-board.md) — **NOW** wait human **review** of [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-066](./iter-005/stories/STORY-EP-066.md). Do not start Developer. Clipboard W3 still frozen.
+- [iter-005 execution-board](./iter-005/execution-board.md) — **NOW** [STORY-EP-067](./iter-005/stories/STORY-EP-067.md) (singleton generateNodeId). Brush EP-062…064 **done**. Clipboard W3 still frozen.
 
 ### Freeze notes
 
 - TRACK-004 **done**. Gate: [pm-retro-gate-pass](./iter-004/handoffs/2026-08-16-pm-retro-gate-pass.md).
-- TRACK-005 field-test pause 2026-08-20: [sm-to-human-field-test](./iter-005/handoffs/2026-08-20-sm-to-human-field-test.md). Hand-touch join: [sm-to-human-hand-touch-verified](./iter-005/handoffs/2026-08-20-sm-to-human-hand-touch-verified.md). Inverse-op undo **adopted + bound** 2026-08-27 ([CHL-0026](./iter-005/challenges/CHL-0026-inverse-op-undo.md)). Device undo/redo **human-verified** 2026-08-27. Erase product **adopted** 2026-08-29 ([CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md)); implement stories **draft** pending human review. Clipboard W3 still frozen.
+- TRACK-005 field-test pause 2026-08-20: [sm-to-human-field-test](./iter-005/handoffs/2026-08-20-sm-to-human-field-test.md). Hand-touch join: [sm-to-human-hand-touch-verified](./iter-005/handoffs/2026-08-20-sm-to-human-hand-touch-verified.md). Inverse-op undo **adopted + bound** 2026-08-27 ([CHL-0026](./iter-005/challenges/CHL-0026-inverse-op-undo.md)). Device undo/redo **human-verified** 2026-08-27. Erase product **adopted** 2026-08-29 ([CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md)); brush **human-verified** 2026-08-29. Clipboard W3 still frozen.
 - TRACK-006 tool-system interrupt **closed** 2026-08-27: [sm-to-human-resume-track-005](./iter-005/handoffs/2026-08-27-sm-to-human-resume-track-005.md).
 
 ## Forward
 
 - Inverse-op undo (device): [ADR-0032](../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. [STORY-EP-059](./iter-005/stories/STORY-EP-059.md), [STORY-EP-060](./iter-005/stories/STORY-EP-060.md), and [STORY-EP-061](./iter-005/stories/STORY-EP-061.md) **done** and **human-verified** 2026-08-27. [STORY-IN-038](./iter-005/stories/STORY-IN-038.md) **cancelled** (tablet→desktop undo apply deferred until an independent sync algorithm).
 - After remaining follow field test: still outstanding (does not block erase story review).
-- Erase implement: review [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-066](./iter-005/stories/STORY-EP-066.md), then say `/dev`. Do **not** start clipboard / Device Settings unless the human says so.
+- Erase: brush [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-064](./iter-005/stories/STORY-EP-064.md) **done**. NOW [STORY-EP-067](./iter-005/stories/STORY-EP-067.md) (generateNodeId). Then area [STORY-EP-065](./iter-005/stories/STORY-EP-065.md) and object [STORY-EP-066](./iter-005/stories/STORY-EP-066.md). Do **not** start clipboard / Device Settings unless the human says so.
 - Parked: REQ-15, REQ-08, CHL-0011, CHL-0012, EP-035 measure, DeviceMap invert user interface, Mouse DragHandler, Infini undo apply (IN-038). Do **not** reopen TRACK-006.
 - Backlog: [backlog.md](./backlog.md)

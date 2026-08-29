@@ -17,7 +17,7 @@ Lock: **vertical · verified · wip 2**.
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 
-W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). 2026-08-27: [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. Inverse-undo local EP-059…061 **done** and **human-verified**. IN-038 **cancelled**. 2026-08-29: [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; erase implement [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-066](./stories/STORY-EP-066.md) **draft** pending human review. Clipboard W3 still frozen. Follow field test still outstanding. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **closed**.
+W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). 2026-08-27: [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. Inverse-undo local EP-059…061 **done** and **human-verified**. IN-038 **cancelled**. 2026-08-29: [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; brush [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-064](./stories/STORY-EP-064.md) **done** (human-verified). [STORY-EP-067](./stories/STORY-EP-067.md) **ready**. Area/object [STORY-EP-065](./stories/STORY-EP-065.md)/[STORY-EP-066](./stories/STORY-EP-066.md) **draft**. Clipboard W3 still frozen. Follow field test still outstanding. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **closed**.
 
 ## Committed
 
@@ -32,11 +32,12 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-EP-057](./stories/STORY-EP-057.md) — implement — 3 — persist Device Settings — **draft**
 - [STORY-EP-058](./stories/STORY-EP-058.md) — implement — 5 — Settings page Pen buttons — **draft**
 - [STORY-EP-040](./stories/STORY-EP-040.md) — design — 3 — erase chrome — **cancelled** (icons only)
-- [STORY-EP-062](./stories/STORY-EP-062.md) — implement — 5 — eraser mode + chip — **draft**
-- [STORY-EP-063](./stories/STORY-EP-063.md) — implement — 8 — clip engine — **draft**
-- [STORY-EP-064](./stories/STORY-EP-064.md) — implement — 5 — brush — **draft**
+- [STORY-EP-062](./stories/STORY-EP-062.md) — implement — 5 — eraser mode + chip — **done**
+- [STORY-EP-063](./stories/STORY-EP-063.md) — implement — 8 — clip engine — **done**
+- [STORY-EP-064](./stories/STORY-EP-064.md) — implement — 5 — brush — **done**
 - [STORY-EP-065](./stories/STORY-EP-065.md) — implement — 5 — area — **draft**
 - [STORY-EP-066](./stories/STORY-EP-066.md) — implement — 5 — object — **draft**
+- [STORY-EP-067](./stories/STORY-EP-067.md) — implement — 3 — singleton generateNodeId — **ready**
 - [STORY-EP-043](./stories/STORY-EP-043.md) — design — 3 — clipboard
 - [STORY-EP-045](./stories/STORY-EP-045.md) — design — 3 — connector ends
 - [STORY-EP-048](./stories/STORY-EP-048.md) — design — 3 — attachments

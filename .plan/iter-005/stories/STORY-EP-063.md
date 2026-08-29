@@ -4,7 +4,7 @@ title: Geometric clip, remnant split, boundary polyline
 kind: implement
 parent_srs: [SRS-EP-55, SRS-EP-59]
 parent_req: [REQ-11]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 8
@@ -49,3 +49,4 @@ Human is QA this wave: host tests + human confirm. No BDD ceremony required befo
 - Boundary polyline persisted, never clipped
 - Last visible ink gone → SmartGroup `remove_node`
 - One undo restores when wired through a caller (brush/area stories)
+- **Human verified 2026-08-29**: remnant split on brush; `duplicate_id:{id}_r1` on second nick fixed via skip-taken remnant ids (fold into [STORY-EP-067](./STORY-EP-067.md))

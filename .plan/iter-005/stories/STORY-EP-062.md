@@ -4,7 +4,7 @@ title: Eraser mode, ToolChip, barrel last-used
 kind: implement
 parent_srs: [SRS-EP-54, SRS-EP-59]
 parent_req: [REQ-11, REQ-03, REQ-18, REQ-10, REQ-20]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -49,3 +49,4 @@ Human is QA this wave: host tests + human confirm. No BDD ceremony required befo
 - Last-used persist; Click / Hold-move / nib rules from SRS-EP-54
 - Secondary in eraser modes = Navigation only
 - Quality: chip arm p95 ≤300 ms ([SRS-EP-59](../../../.docs/modules/epaper/features/erase/srs-logic.md#srs-ep-59-erase-quality))
+- **Human verified 2026-08-29** (human is Quality Assurance Engineer this wave): brush eraser path on device

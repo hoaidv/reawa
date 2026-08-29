@@ -5,13 +5,13 @@ track: TRACK-005
 owner: sm
 date: 2026-08-29
 lock: vertical · verified · wip 2
-wave: W3-erase-review
-verdict: "Erase product adopted (CHL-0028). Implement stories EP-062…066 draft. NOW wait human review. Do not start Developer. Clipboard W3 frozen."
+wave: W3-erase-ids
+verdict: "Brush erase EP-062…064 done (human-verified 2026-08-29). NOW STORY-EP-067 generateNodeId ready. Area/object EP-065/066 draft. Clipboard W3 frozen."
 ---
 
 # Execution board — hand-on-paper
 
-**Canonical board** for [TRACK-005](../tracks/TRACK-005-hand-on-paper.md). Track **active**. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **done** 2026-08-27. Inverse-undo implement **done**. Erase product bound 2026-08-29. Clipboard W3 still frozen.
+**Canonical board** for [TRACK-005](../tracks/TRACK-005-hand-on-paper.md). Track **active**. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **done** 2026-08-27. Inverse-undo implement **done**. Erase product bound 2026-08-29. Brush **human-verified** 2026-08-29. Clipboard W3 still frozen.
 
 ---
 
@@ -20,9 +20,9 @@ verdict: "Erase product adopted (CHL-0028). Implement stories EP-062…066 draft
 | Band | Count | Meaning |
 |---|---|---|
 | Design **done** | 5 current | [UI-EP-06](../../.docs/design/index.md) hand-touch (EP-054; field-test delta 20 mm + HT) · [UI-EP-07](../../.docs/design/index.md) follow Epaper · [UI-IN-04](../../.docs/design/index.md) follow Infini · [UI-EP-08](../../.docs/design/index.md) Device Settings · Pen buttons |
-| Wave **NOW** | — | **Wait human review** of erase implement [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-066](./stories/STORY-EP-066.md) (**draft**). Do **not** start Developer. |
+| Wave **NOW** | 1 | [STORY-EP-067](./stories/STORY-EP-067.md) (Singleton generateNodeId for all tree nodes) **ready** |
 | Closed interrupt | TRACK-006 | Tablet/Tool split + [ADR-0033](../../.docs/adr/ADR-0033-tool-abstraction.md) + pointer roles. Do **not** continue. |
-| Queued | — | Clipboard / Device Settings still wait. Follow hardware score still outstanding. Infini undo apply parked (IN-038 cancelled). |
+| Queued | — | Area/object erase still draft. Clipboard / Device Settings still wait. Follow hardware score still outstanding. Infini undo apply parked (IN-038 cancelled). |
 
 Cameras independent by default. [ADR-0029](../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md) accepted. [ADR-0023](../../.docs/adr/ADR-0023-viewport-last-writer.md) superseded.
 
@@ -42,10 +42,10 @@ wip: 2
 out_of_scope: backlog
 modules: epaper, infini
 features: epaper/ink-box; epaper/tool-modes; epaper/connector-ink; epaper/region-sync; epaper/local-pen-ink; epaper/device-document; epaper/erase; infini/infinity-canvas; infini/tablet-sync; infini/vector-document
-personas: wait human
+personas: developer, human
 forbidden: REQ-15 tables; REQ-08; CHL-0011; CHL-0012; EP-032; AI; last-writer ADR-0023; TRACK-006 reopen; DeviceMap invert UI; Mouse DragHandler; STORY-IN-038; infini undo apply; tablet-to-desktop undo sync
-NOW: wait human review of STORY-EP-062…066 (draft); do not start Developer
-cursor: wait human story review; do not start clipboard W3; do not continue TRACK-006; IN-038 cancelled
+NOW: STORY-EP-067 generateNodeId (ready); do not start clipboard; area/object EP-065/066 stay draft until ids land
+cursor: STORY-EP-067; brush EP-062…064 done; do not start clipboard W3; do not continue TRACK-006; IN-038 cancelled
 ```
 
 ---
@@ -71,7 +71,7 @@ cursor: wait human story review; do not start clipboard W3; do not continue TRAC
 | **W-undo-skip** | merged into W-undo-local | — | EP-060 |
 | **W-undo-wire** | **dropped** | — | Infini apply cancelled (IN-038). Device queue is EP-061 in W-undo-local |
 | **W-undo-local** | **done** 2026-08-27 | serial (one Quality Assurance Engineer then one Developer; both stories) | [STORY-EP-060](./stories/STORY-EP-060.md) + [STORY-EP-061](./stories/STORY-EP-061.md) **done**. Human verified device undo/redo 2026-08-27. No `infini/` |
-| **W3** | **review** | | erase implement EP-062…066 **draft** — wait human; clipboard design still queued |
+| **W3** | **partial** | | brush EP-062…064 **done**; area/object EP-065/066 **draft**; [STORY-EP-067](./stories/STORY-EP-067.md) **NOW** |
 | **W4** | queued | | connector ends / attachments |
 | **W5** | queued | | barrel BDD then EP-052 / EP-058 / EP-057. IN-035 cancelled. |
 | **W6** | queued | | manual create |
@@ -81,10 +81,10 @@ cursor: wait human story review; do not start clipboard W3; do not continue TRAC
 
 | Lane | Story | Writes | Conflicts |
 |---|---|---|---|
-| **wait** | none | — | do not start Developer; do not start clipboard; do not edit `infini/`; IN-038 cancelled |
-| **human** | Review EP-062…066 | stories | no agent writes until `/dev` |
+| **A** | [STORY-EP-067](./stories/STORY-EP-067.md) | `epaper/document/`, `epaper/drawing/stroke_capture.hpp`, remnant ids; Infini apply-id only | do not start area/object until ids land; do not start clipboard; do not edit Infini undo apply; IN-038 cancelled |
+| **human** | Quality Assurance Engineer for EP-067 | confirm | — |
 
-Work-in-progress 2 = campaign capacity. No implement lane in flight. Human reviews erase stories. Do not spawn Developer until the human says go.
+Work-in-progress 2 = campaign capacity. One implement lane: generateNodeId. Area/object wait so remnant extras use the singleton.
 
 ### Full task table
 
@@ -96,7 +96,7 @@ Work-in-progress 2 = campaign capacity. No implement lane in flight. Human revie
 | F-18 | REQ-18 barrel accelerators | Must | PRD 0.11.0-draft | IN-034 historical; [STORY-EP-056](./stories/STORY-EP-056.md) **done** [UI-EP-08](./design/pen-button-map/) | design done | W-pen-map | Quality Assurance Engineer then [STORY-EP-052](./stories/STORY-EP-052.md) | — | Catalogues/dispatch. Settings shell is REQ-20. **Queued until after field test.** |
 | F-20 | REQ-20 Device Settings | Must | PRD 0.11.0-draft; ADR-0031 | EP-056 painted; persist/UI implement draft | bind done | W-pen-map | Quality Assurance Engineer then EP-058 / EP-057 | — | On-device persist. [CHL-0025](./challenges/CHL-0025-pen-map-settings-page.md) adopted. GAP-01 adopted. **Queued until after field test.** |
 | F-IN-05 | Infini REQ-05 persist map | — | **retired** | [STORY-IN-035](./stories/STORY-IN-035.md) **cancelled** | cancelled | — | — | — | Persist moved to REQ-20 / EP-057. |
-| F-11 | REQ-11 erase | Must | [prd-erase.md](../../.docs/modules/epaper/prd-erase.md); [SRS-EP-54](../../.docs/modules/epaper/features/erase/srs-logic.md)…59; [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) | Icons only (no EP-040 package) | EP-062…066 **draft** | W3-erase-review | human review then Developer | — | Path A/B cancelled (EP-040/041/042). Human is Quality Assurance. Do not start Developer until review. |
+| F-11 | REQ-11 erase | Must | [prd-erase.md](../../.docs/modules/epaper/prd-erase.md); [SRS-EP-54](../../.docs/modules/epaper/features/erase/srs-logic.md)…59; [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) | Icons only (no EP-040 package) | brush **done**; area/object **draft** | W3-erase-ids | Developer on EP-067 then EP-065/066 | — | Path A/B cancelled. Human is Quality Assurance Engineer. Brush human-verified 2026-08-29. Gotcha: second nick failed with `duplicate_id:s-3_r1` — see [.docs/memory/erase-brush-commit.md](../../.docs/memory/erase-brush-commit.md). |
 | F-12 | REQ-12 clipboard | Must | — | EP-043 queued | queued | W3 | designer | — | Do not start until human says go. |
 | F-13 | REQ-13 endpoint styles | Should | — | EP-045 queued | queued | W4 | designer | — | — |
 | F-14 | REQ-14 attachments | Should | — | EP-048 queued | queued | W4 | designer | — | — |
@@ -111,20 +111,22 @@ Work-in-progress 2 = campaign capacity. No implement lane in flight. Human revie
 | STORY-EP-061 | Device undo queue is counterpart compound not restore snapshot | P0 | SRS-EP-08 | — | **done** | W-undo-local | — | A | Quality Assurance Engineer PASS 2026-08-27. 5 queue scenarios. `infini/` not edited. Human verified 2026-08-27. |
 | STORY-IN-038 | Infini applies compound and set ink samples | P0 | SRS-IN-09 / IN-07 / IN-06 | — | **cancelled** | — | — | — | Human 2026-08-27: skip tablet→desktop undo sync until independent sync algorithm. |
 | CHORE-6 | Tool-system refactor (ADR-0033) | — | ADR-0033 **accepted** | none (no story) | **done** 2026-08-27 | W-tool-sys | — | — | [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) closed. Pointer roles Primary/Secondary landed (`dc379d6`). Finger lasso/marquee off (`dd57741`). Do not reopen. |
-| STORY-EP-062 | Eraser mode, ToolChip, barrel last-used | P0 | SRS-EP-54 | icons delivered (no design story) | **draft** | W3-erase-review | human review | — | Chip + EraserMode + HT-on-chip + dim + last-used persist. Wait review. |
-| STORY-EP-063 | Geometric clip, remnant split, boundary polyline | P0 | SRS-EP-55 | — | **draft** | W3-erase-review | human review | — | Clip engine. Parallel with EP-062 after go. |
-| STORY-EP-064 | Brush erase capsule clip | P0 | SRS-EP-56 | — | **draft** | W3-erase-review | human review | — | Depends EP-062 + EP-063 |
-| STORY-EP-065 | Area erase clip and fully-inside remove | P0 | SRS-EP-57 | — | **draft** | W3-erase-review | human review | — | Depends EP-062 + EP-063 |
-| STORY-EP-066 | Object erase 80 percent table | P0 | SRS-EP-58 | — | **draft** | W3-erase-review | human review | — | Depends EP-062 |
-| CHORE-7 | Three exclusive erasers (CHL-0028) | Must | [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted** | icons only | product+bind **done**; stories **draft** | W3-erase-review | human | — | Path A/B retired. Human is Quality Assurance. |
+| STORY-EP-062 | Eraser mode, ToolChip, barrel last-used | P0 | SRS-EP-54 | icons delivered (no design story) | **done** | W3-erase-ids | — | — | Human-verified 2026-08-29 with brush path. |
+| STORY-EP-063 | Geometric clip, remnant split, boundary polyline | P0 | SRS-EP-55 | — | **done** | W3-erase-ids | — | — | Human-verified 2026-08-29. Remnant `{id}_rN` skip-taken is a stopgap for EP-067. |
+| STORY-EP-064 | Brush erase capsule clip | P0 | SRS-EP-56 | — | **done** | W3-erase-ids | — | — | Human-verified 2026-08-29: ghost + commit. Commit failure was duplicate remnant ids, not clip miss. |
+| STORY-EP-065 | Area erase clip and fully-inside remove | P0 | SRS-EP-57 | — | **draft** | W3 | Developer after EP-067 | — | Wait generateNodeId so extras do not collide. |
+| STORY-EP-066 | Object erase 80 percent table | P0 | SRS-EP-58 | — | **draft** | W3 | Developer after EP-067 | — | Wait generateNodeId. |
+| STORY-EP-067 | Singleton generateNodeId for all tree nodes | P0 | SRS-EP-07 / EP-08 / EP-55 / IN-09 | — | **ready** | W3-erase-ids | Developer | A | Fold `allocEraseRemnantId`, `s-` strokeSeq, `conn_`, `sg_sel_`. Infini apply inbound ids, no remint. |
+| CHORE-7 | Three exclusive erasers (CHL-0028) | Must | [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted** | icons only | brush **done**; area/object **draft** | W3-erase-ids | Developer EP-067 | — | Path A/B retired. Human is Quality Assurance Engineer. |
 
 ### Current-wave sub-agent roster
 
 | Lane | Agent role | Story | Writes | Done when |
 |---|---|---|---|---|
-| — | — | none in flight | — | Wait human review of EP-062…066. Do not start Developer. Do not implement IN-038. Do not edit `infini/`. |
+| A | Developer | [STORY-EP-067](./stories/STORY-EP-067.md) | document id allocator + call sites; Infini apply-id only | Host test second remnant split; 0 `duplicate_id` on repeated nick; Infini keeps device ids |
+| human | Quality Assurance Engineer | EP-067 | confirm | Human confirm |
 
-Wait: erase stories **draft**. Do **not** start Developer until the human says go. Do **not** start clipboard. Do **not** implement IN-038. Do **not** edit `infini/`.
+Wait: do **not** start area/object until generateNodeId lands. Do **not** start clipboard. Do **not** implement IN-038.
 
 ### Backlog sink
 
@@ -145,4 +147,4 @@ Wait: erase stories **draft**. Do **not** start Developer until the human says g
 
 ## Verdict
 
-[STORY-EP-059](./stories/STORY-EP-059.md)…[STORY-EP-061](./stories/STORY-EP-061.md) **done** (human-verified 2026-08-27). [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**. [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**. Erase implement [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-066](./stories/STORY-EP-066.md) **draft**. **NOW** wait human review. Do **not** start Developer. Clipboard W3 stays queued.
+[STORY-EP-059](./stories/STORY-EP-059.md)…[STORY-EP-061](./stories/STORY-EP-061.md) **done** (human-verified 2026-08-27). [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-064](./stories/STORY-EP-064.md) **done** (human-verified 2026-08-29). [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**. [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**. **NOW** [STORY-EP-067](./stories/STORY-EP-067.md). Area/object [STORY-EP-065](./stories/STORY-EP-065.md)/[STORY-EP-066](./stories/STORY-EP-066.md) **draft**. Clipboard W3 stays queued.

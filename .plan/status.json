@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-29T04:55:10+00:00",
+  "generated_at": "2026-08-29T16:12:06+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 18,
-    "ready": 1,
+    "draft": 15,
+    "ready": 2,
     "in-progress": 0,
     "in-review": 0,
-    "done": 132,
+    "done": 135,
     "blocked": 13,
     "cancelled": 6
   },
@@ -18,8 +18,8 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 66,
-      "done": 38,
+      "total": 67,
+      "done": 41,
       "in_review": 0
     },
     "infini": {
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "wait human review \u2014 erase implement EP-062\u2026066 draft; do not start Developer; clipboard W3 frozen; remaining follow field test",
+      "cursor": "NOW STORY-EP-067 generateNodeId; brush EP-062\u2026064 done; area/object EP-065/066 draft; clipboard W3 frozen; remaining follow field test",
       "iter": "iter-005"
     },
     {

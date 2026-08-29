@@ -53,7 +53,8 @@ stories:
   - STORY-EP-064
   - STORY-EP-065
   - STORY-EP-066
-cursor: "wait human review — erase implement EP-062…066 draft; do not start Developer; clipboard W3 frozen; remaining follow field test"
+  - STORY-EP-067
+cursor: "NOW STORY-EP-067 generateNodeId; brush EP-062…064 done; area/object EP-065/066 draft; clipboard W3 frozen; remaining follow field test"
 paused_reason: ""
 interrupts: []
 ---
@@ -106,25 +107,26 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 | [EP-060](../iter-005/stories/STORY-EP-060.md) | implement | P0 | F20/F21 skip/no-op · depends EP-059 — **done** |
 | [EP-061](../iter-005/stories/STORY-EP-061.md) | implement | P0 | device undo queue counterpart/compound — **done** |
 | [IN-038](../iter-005/stories/STORY-IN-038.md) | implement | — | **cancelled** — tablet→desktop undo apply deferred |
-| [EP-062](../iter-005/stories/STORY-EP-062.md) | implement | P0 | Eraser mode + ToolChip + barrel last-used — **draft** |
-| [EP-063](../iter-005/stories/STORY-EP-063.md) | implement | P0 | Clip engine + remnants + boundary polyline — **draft** |
-| [EP-064](../iter-005/stories/STORY-EP-064.md) | implement | P0 | Brush — **draft** · depends EP-062, EP-063 |
+| [EP-062](../iter-005/stories/STORY-EP-062.md) | implement | P0 | Eraser mode + ToolChip + barrel last-used — **done** |
+| [EP-063](../iter-005/stories/STORY-EP-063.md) | implement | P0 | Clip engine + remnants + boundary polyline — **done** |
+| [EP-064](../iter-005/stories/STORY-EP-064.md) | implement | P0 | Brush — **done** · depends EP-062, EP-063 |
 | [EP-065](../iter-005/stories/STORY-EP-065.md) | implement | P0 | Area — **draft** · depends EP-062, EP-063 |
 | [EP-066](../iter-005/stories/STORY-EP-066.md) | implement | P0 | Object 80% — **draft** · depends EP-062 |
+| [EP-067](../iter-005/stories/STORY-EP-067.md) | implement | P0 | Singleton generateNodeId — **ready** |
 
 W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). Hand-touch and follow implement stories that shipped are **done**. Other committed stories stay **draft** until their wave. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) **done** 2026-08-20.
 
 ## Cursor
 
-**NOW:** Wait human **review** of erase implement stories [STORY-EP-062](../iter-005/stories/STORY-EP-062.md)…[STORY-EP-066](../iter-005/stories/STORY-EP-066.md) (**draft**). Do **not** start Developer until the human says `/dev`. Clipboard / Device Settings stay queued. Remaining Infini follow field test still outstanding.
+**NOW:** [STORY-EP-067](../iter-005/stories/STORY-EP-067.md) (Singleton generateNodeId for all tree nodes) is **ready**. Brush [STORY-EP-062](../iter-005/stories/STORY-EP-062.md)…[STORY-EP-064](../iter-005/stories/STORY-EP-064.md) **done** (human-verified 2026-08-29). Area [STORY-EP-065](../iter-005/stories/STORY-EP-065.md) and object [STORY-EP-066](../iter-005/stories/STORY-EP-066.md) stay **draft**. Clipboard / Device Settings stay queued. Remaining Infini follow field test still outstanding.
 
 Tool-system interrupt [TRACK-006](./TRACK-006-tool-system-refactor.md) is **done** (2026-08-27). Default pointer map is Primary=Pen, Secondary=Finger under [ADR-0033](../../../.docs/adr/ADR-0033-tool-abstraction.md).
 
-## Freeze note (clipboard W3 frozen; erase stories in review)
+## Freeze note (clipboard W3 frozen; brush done)
 
-- In flight: none. Erase implement EP-062…066 **draft** — wait human review. EP-059…061 **done**, human verified undo/redo. IN-038 **cancelled**.
+- In flight: none until Developer picks [STORY-EP-067](../iter-005/stories/STORY-EP-067.md). Brush EP-062…064 **done**, human verified. EP-059…061 **done**, human verified undo/redo. IN-038 **cancelled**.
 - Open files / risks: [CHL-0027](../iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md) still open; no RM2 panel / no live TCP `:9877`; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open. Leftover snapshot wording in deprecated Infini [SRS-IN-12](../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) — do not implement.
-- Resume Developer: human says `/dev` after story review. Clipboard / Device Settings still need an explicit pick. Follow field-test notes still wanted. Do **not** reopen TRACK-006.
+- Resume: implement generateNodeId next (this chat can spawn Developer). Then area/object. Clipboard / Device Settings still need an explicit pick. Follow field-test notes still wanted. Do **not** reopen TRACK-006.
 
 ## Execution board
 

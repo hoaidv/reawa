@@ -4,7 +4,7 @@ title: Brush erase capsule clip
 kind: implement
 parent_srs: [SRS-EP-56, SRS-EP-59]
 parent_req: [REQ-11]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -46,3 +46,4 @@ Human is QA this wave: host tests + human confirm. No BDD ceremony required befo
 - Ink clipped; other kinds no-op; Frame/connector 0 mutations
 - Hover + ghost world millimetres; ghost teardown with damage
 - p95 ≤50 ms after up; 0 chords; one undo
+- **Human verified 2026-08-29**: brush eraser fully works on device (ghost + commit)
