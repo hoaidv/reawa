@@ -29,7 +29,7 @@ which is the largest single increase in device scope so far.
    ([SRS-EP-03](./features/region-sync/srs-quality.md)).
 5. **Document fidelity** — a document authored here round-trips through desktop save/open unchanged
    (±1 world unit @ 100% zoom).
-6. **Hand-on-paper bars (TRACK-005)** — tool switch p95 ≤300 ms; live-direct 0 px / ≥5 Hz; two-finger map apply p95 ≤100 ms; erase p95 ≤50 ms ([SRS-EP-25](./features/ink-box/srs-quality.md), [SRS-EP-26](./features/region-sync/srs-quality.md), [SRS-EP-30](./features/local-pen-ink/srs-quality.md)).
+6. **Hand-on-paper bars (TRACK-005)** — tool switch p95 ≤300 ms; live-direct 0 px / ≥5 Hz; two-finger map apply p95 ≤100 ms; erase p95 ≤50 ms ([SRS-EP-25](./features/ink-box/srs-quality.md), [SRS-EP-26](./features/region-sync/srs-quality.md), [SRS-EP-59](./features/erase/srs-logic.md#srs-ep-59-erase-quality)).
 
 ## Constraints
 
@@ -163,6 +163,8 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 - [ADR-0027](../../adr/ADR-0027-attachment-t-rest-spine.md) — attachment `t` on rest spine
 - [ADR-0028](../../adr/ADR-0028-pen-button-map-settings-channel.md) — **superseded** by [ADR-0030](../../adr/ADR-0030-tablet-authors-pen-button-map.md); persist split **superseded** by [ADR-0031](../../adr/ADR-0031-device-settings-persist-on-epaper.md) (persist on Epaper; 0 Infini copies)
 - [ADR-0032](../../adr/ADR-0032-inverse-op-undo.md) — inverse-op undo per session (amends ADR-0014 §5)
+- [ADR-0033](../../adr/ADR-0033-tool-abstraction.md) — InteractionMode / Operation / pointer roles
+- [ADR-0034](../../adr/ADR-0034-erase-clip-remnants.md) — geometric ink clip + remnant nodes (REQ-11)
 - [ADR-0014](../../adr/ADR-0014-document-ownership-inversion.md) — the device owns the working document
 - [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md) — one-way sync contract v1
 - [ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) — §1 device-local tool state and §6 world-unit enclose guard survive; §2–§5 superseded

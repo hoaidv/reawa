@@ -21,7 +21,7 @@ inherits semantics from the deprecated infini sections listed in the
 - Logic: [srs-logic.md](./srs-logic.md) — [SRS-EP-07](./srs-logic.md#srs-ep-07-device-document) device document, ingestion, undo ·
   [SRS-EP-08](./srs-logic.md#srs-ep-08-one-way-sync) one-way sync (load handshake, publish queue) ·
   [SRS-EP-15](./srs-logic.md#srs-ep-15-debug-log-ship) debug-log ship TCP `:9878` (not a document channel) ·
-  [SRS-EP-28](./srs-logic.md#srs-ep-28-selection-erase) selection-erase ·
+  [SRS-EP-28](./srs-logic.md#srs-ep-28-selection-erase) **retired** (Path B; see [erase](../erase/index.md)) ·
   [SRS-EP-31](./srs-logic.md#srs-ep-31-clipboard) clipboard ·
   [SRS-EP-45](./srs-logic.md#srs-ep-45-manual-insert) manual Frame/Primitive
 - Data: [srs-data.md](./srs-data.md) — [SRS-EP-09] device structures + wire binding; the grammar

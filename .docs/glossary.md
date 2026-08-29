@@ -21,7 +21,9 @@ Durable ubiquitous language. Anatomy lives in `.docs/domain/`; this file is voca
 | Pen-button map | Per-button Click + Hold-move bindings; tablet authors the live map and persists it on this Epaper device; not Infini, not the document | barrel map | [pen-button-map](./domain/pen-button-map.md) · [ADR-0031](./adr/ADR-0031-device-settings-persist-on-epaper.md) |
 | Hold-move | Barrel button down + movement past threshold until release; temporary-tool catalogue | hold | [pen-button-map](./domain/pen-button-map.md) |
 | Click (barrel) | Barrel button down+up with movement below threshold; discrete catalogue | barrel click | [pen-button-map](./domain/pen-button-map.md) |
-| Eraser nib | Distinct stylus **tool** report (hardware invert); not a barrel button | eraser end | [ADR-0025](./adr/ADR-0025-barrel-vs-eraser-nib.md) |
+| Eraser nib | Distinct stylus **tool** report (hardware invert); not a barrel button | eraser end | [ADR-0025](./adr/ADR-0025-barrel-vs-eraser-nib.md) · [prd-erase.md](./modules/epaper/prd-erase.md) |
+| Boundary polyline | Invisible closed SmartGroup polygon for object-erase area; not visible ink | — | [vector-document](./domain/vector-document.md) · [ADR-0034](./adr/ADR-0034-erase-clip-remnants.md) |
+| Last-used eraser | Last armed of `erase_brush` \| `erase_area` \| `erase_object`; barrel Click/Hold target | — | [prd-erase.md](./modules/epaper/prd-erase.md) |
 | Finger-eligible | Hit target ≥ **primary ToolChip tile** (64 du / CHL-0019). Resize knobs must meet this floor so finger can resize ([CHL-0024](../.plan/iter-005/challenges/CHL-0024-finger-resize-knobs.md)) | 64 du rule | [CHL-0019](../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md) |
 | InteractionMode | Exclusive chip tool as an object with Primary/Secondary Operation allow-lists | Mode | [tool-system](./modules/epaper/tool-system/concepts.md) · [ADR-0033](./adr/ADR-0033-tool-abstraction.md) |
 | Operation | One locked pointer gesture (not a chip tile) | Op | [tool-system](./modules/epaper/tool-system/concepts.md) |

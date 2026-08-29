@@ -43,4 +43,4 @@ Human 2026-08-27: **do not** implement tablet→desktop apply this iter. [STORY-
 - `compound` / `set_ink_samples` recorded on the device as specified
 - `infini/` not edited
 
-Verified 2026-08-27: Quality Assurance Engineer **PASS**. Host map: `.docs/modules/epaper/features/device-document/bdd/undo-queue.feature` (5 scenarios). Infini apply remains cancelled ([STORY-IN-038](./STORY-IN-038.md)).
+Verified 2026-08-27: Quality Assurance Engineer **PASS**. Host map: `.docs/modules/epaper/features/device-document/bdd/undo-queue.feature` (5 scenarios). Infini apply remains cancelled ([STORY-IN-038](./STORY-IN-038.md)). Human verified on device 2026-08-27.

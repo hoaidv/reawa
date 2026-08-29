@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.13.0-draft
+version: 0.14.0-draft
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -79,7 +79,7 @@ viewed at scale, and saved.
 | Hand-touch toggle | Default **on**; off disables canvas pick/move/pan/pinch; chrome taps still work; pen near or in contact still disables canvas hand-touch | Manual QA — REQ-10 |
 | Device Settings persist | After Epaper restart on the same device, next barrel gesture uses the last map; 0 Infini copies; 0 SVG copies | Manual QA — REQ-20 |
 | Viewport-follow toggle | Enabling one peer’s follow disables the other with p95 ≤300 ms; 0 dual-follow; disconnect forces off | Manual QA — REQ-19 |
-| Erase stroke / selection-erase | p95 ≤50 ms after gesture end; 1 undo restores; 0 accidental ink | Manual QA — **iter-005 draft** |
+| Erase (brush / area / object) | p95 ≤50 ms after pointer-up; 1 undo restores; 0 chords; Frame never removed | Manual QA — [prd-erase.md](./prd-erase.md) |
 | Paste fidelity | Pasted subtree geometry ±1 px @ 100% zoom vs source | Manual QA — **iter-005 draft** |
 | Connector end style + warp | Style survives bound-node drag; endpoint ink stays on the end (0 orphaned ink) | Manual QA — **iter-005 draft** |
 | Mid-attachment follows warp | Attachment stays on spine; 0 px jump on pen-up vs last preview | Manual QA — **iter-005 draft** |
@@ -135,19 +135,20 @@ viewed at scale, and saved.
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
 - The creator decides **on the device** what the pen does, without reaching for the desktop.
-  A minimal, always-visible toolbar:
-  **Selection rect | Selection freeform | Pen ⟨space⟩ Ink-box recognition | Connector recognition ⟨space⟩ Undo | Redo**
-  ([ADR-0021](../../adr/ADR-0021-connector-toolchip.md),
-  [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)).
+  A minimal, always-visible toolbar. Inventory **as of [CHL-0028](../../../.plan/iter-005/challenges/CHL-0028-eraser-three-tools.md)** is specified in
+  [prd-erase.md §3](./prd-erase.md) (HT toggle on-chip; six exclusives including three erasers).
+  Prior three-tool chip: [ADR-0021](../../adr/ADR-0021-connector-toolchip.md),
+  [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md).
   Switched by **finger touch** on the chip, so the pen stays free for content. `Pen` is the default and
   leaves [REQ-01](#local-pen-ink) local ink behaviour unchanged. Canvas **hand-touch** (finger on
-  ink, not on the chip) is [REQ-10](#hand-touch). Viewport-follow is a **separate icon toggle**
+  ink, not on the chip) is [REQ-10](#hand-touch); the HT **toggle** lives on the ToolChip first cluster
+  ([prd-erase.md](./prd-erase.md)). Viewport-follow is a **separate icon toggle**
   ([REQ-19](#viewport-follow)) — **not** a ToolChip exclusive tool, recognizer, or hand-tool tile.
-- **Exclusive tools** (exactly three): `sel_rect` · `sel_freeform` · `pen`. There is no
-  `ink_box` tool. The two Selection arms still replace a single mouse-like Selection button.
+- **Exclusive tools:** `sel_rect` · `sel_freeform` · `pen` · `erase_brush` · `erase_area` · `erase_object`.
+  There is no `ink_box` tool. Full chip layout and recognizer-dim-under-eraser: [prd-erase.md](./prd-erase.md).
 - **Recognizer toggles** (independent, not tools): `recog.ink_box` ("Ink-box recognition")
   and `recog.connector` ("Connector recognition"). Both **ship armed**. While a Selection
-  tool is active they are **dimmed** (armed state kept). Tool and both toggles **latch at
+  **or any eraser** is active they are **dimmed** (armed state kept). Tool and both toggles **latch at
   pen-down** for the whole stroke.
 - Tools act on the **device's own document** ([REQ-04](#device-document)): `Pen` adds ink and,
   when a recognizer is armed, may enclose ([REQ-05](#device-ink-box)) or create a connector
@@ -166,11 +167,12 @@ viewed at scale, and saved.
   linked case (editing is local; only publishing waits).
 - Given both recognizer toggles, When the creator taps one, Then it flips armed/disarmed with p95 ≤300 ms
   and does not change the exclusive tool.
-- Given `sel_rect` or `sel_freeform` active, When the chip is shown, Then both recognizer toggles are
+- Given `sel_rect` or `sel_freeform` **or any eraser** active, When the chip is shown, Then both recognizer toggles are
   dimmed and retain their armed state; switching back to `Pen` restores them as they were.
+- Chip layout, HT-on-chip, and the three eraser exclusives: [prd-erase.md §14 Chip / barrel](./prd-erase.md).
 - Given Undo / Redo, When tapped, Then they remain **actions** (not `toolMode`) per
   [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md).
-- **UI states / journeys to design:** three exclusive tools; two toggles armed / disarmed / dimmed;
+- **UI states / journeys to design:** six exclusive tools + HT toggle (see [prd-erase.md](./prd-erase.md)); two toggles armed / disarmed / dimmed under Selection **or eraser**;
   Undo/Redo enabled / empty no-op; publish status on the same chip; ToolChip during a trailing panel
   refresh; orientation-top placement; link down with queued changes; document reloading after reconnect.
 - Given any tool, When the pen passes over the floating ToolChip, Then no ink is drawn there
@@ -588,7 +590,7 @@ viewed at scale, and saved.
 - **Outcome:** the creator on the tablet can **opt in** to matching Infini’s drawing region — and
   works on an independent camera by default. Follow is a **choice**, not the session.
 - **Affordance:** a viewport-follow **icon toggle button** on Epaper. **Not** a ToolChip exclusive
-  tool, recognizer, or hand-tool tile ([REQ-03](#tool-modes) stays three exclusive tools).
+  tool, recognizer, or hand-tool tile ([REQ-03](#tool-modes) exclusive tools are listed in [prd-erase.md](./prd-erase.md)).
 - **States:**
   - **Off** (default, and after disconnect): local camera; Infini pan does not drive the tablet
     ([REQ-02](#region-sync)).
@@ -655,22 +657,20 @@ viewed at scale, and saved.
   mixed multi-selection.
 
 ## [REQ-11] Erase like paper {#erase}
-<!-- campaign: iter-005-draft — BS-0002. Not TRACK-004. Do not slice until iter-004 retro-gate. -->
+<!-- revised: 2026-08-29 — CHL-0028. Path A/B retired. Canonical spec is prd-erase.md (do not scatter). -->
 - **Priority:** Must · **Traces:** [BRD-07]
-- Needs design: yes
-- **Campaign:** iter-005 **draft**. Not in the current lock.
-- **Outcome:** a mark the creator no longer wants is gone the way pencil paper works — flip or stroke it away, or delete what is already selected — without a round trip.
-- **Path A — hardware eraser nib** (when the stylus reports a distinct eraser tool): rubbing with that nib removes intersecting **ink samples** (and may delete a node that has no remaining samples). Does not start a new ink stroke.
-- **Path B — selection-erase:** with a non-empty selection, an **Erase** command (chip, barrel-click if bound, or equivalent) deletes the selected nodes. One undo applies the counterpart of that erase ([REQ-04](#device-document) skip/no-op).
-- Barrel **hold-move = temporary erase** is an accelerator of Path A’s stroke-erase feel, bound via [REQ-18](#pen-buttons) — not a third grammar.
+- Needs design: no *(three ToolChip glyphs delivered 2026-08-29; interaction chrome is specified in [prd-erase.md](./prd-erase.md))*
+- **Campaign:** iter-005. Adopted [CHL-0028](../../../.plan/iter-005/challenges/CHL-0028-eraser-three-tools.md).
+- **Canonical specification:** [prd-erase.md](./prd-erase.md) — one document; UI/UX included. Module SRS binds; it does not rewrite the job.
+- **Outcome:** a mark the creator no longer wants is gone the way pencil-on-paper works — stroke it away, wipe a region, or lift whole objects — without a round trip. One completed gesture is one undo.
+- Three exclusive tools: **brush** (capsule clip of Ink), **area** (freeform: clip Ink; remove other kinds if fully inside), **object** (80% table, whole nodes). **Frame** never destroyed. Path B (erase selected nodes) **retired**.
 
-**Acceptance**
-- Given a stylus with an eraser nib and ink on the panel, When the creator rubs the nib across that ink, Then intersecting samples are gone with p95 ≤50 ms after the gesture ends, **0** new Ink nodes are created, and one undo applies the counterpart of that erase (rev-match → pre-erase marks back, geometry ±1 px @ 100% zoom; skip/no-op per [REQ-04](#device-document)).
-- Given a stylus **without** an eraser nib, When the creator uses the pen tip, Then Path A does not fire (0 accidental erases); erase is Path B and/or a bound [REQ-18](#pen-buttons) hold-move.
-- Given a non-empty selection, When the creator invokes Erase, Then every selected node is removed from the local document (0 leftovers on the next settled frame) and one undo applies the counterpart of that erase ([REQ-04](#device-document) skip/no-op).
-- Given empty selection, When Erase is invoked, Then 0 nodes change (no-op).
-- Given **no session**, When any erase path runs, Then the result matches the linked case.
-- **UI states / journeys to design:** eraser-nib in progress; selection-erase CTA; empty selection no-op; undo after erase; missing nib.
+**Acceptance** — normative list is [prd-erase.md §14](./prd-erase.md). Headline:
+- Given `erase_brush` and world ink, When Primary draws a capsule across a stroke, Then intersecting geometry is gone, remnants ≥1 mm are separate Ink nodes, p95 ≤50 ms after up, and one undo restores the pre-erase tree (skip/no-op per [REQ-04](#device-document)).
+- Given `erase_area` and an open freeform, When pointer-up, Then Ink in the even-odd interior is clipped and non-Ink nodes **fully inside** are removed (Frame excepted).
+- Given `erase_object` and the 80% table in prd-erase §9.2, When commit, Then matching nodes are removed whole (0 leftovers) and Frame is never removed.
+- Given a non-empty selection, When looking for an Erase-selected-nodes control, Then it does not exist.
+- Given **no session**, When any of the three erasers commits, Then the local result matches the linked case.
 
 ## [REQ-12] Copy, cut, and paste on the device {#clipboard}
 <!-- campaign: iter-005-draft — BS-0002 -->
@@ -763,10 +763,10 @@ viewed at scale, and saved.
 - **Outcome:** optional Wacom barrel buttons (0, 1, or 2) speed up erase / select / drag **without** making those the only path. Each present button has two slots — **Click** and **Hold-move** — each bound to **exactly one** item from a **closed catalogue**. The creator binds those slots **on the tablet** as the **Pen buttons** detail of Device Settings ([REQ-20](#device-settings)) — not Infini, not a document, not a sheet. **Never** three jobs on one hold-while-moving gesture. Persist of the map is [REQ-20](#device-settings) (on this device). Infini [REQ-05](../infini/prd.md#pen-button-map) persist/restore is **retired**.
 - **Click** (button down+up, movement below threshold) — discrete toggle; closed catalogue **only**:
   - Current primary tool ↔ Freeform Select (`sel_freeform`)
-  - Current primary tool ↔ Eraser (erase arm — **not** the nib; [REQ-11](#erase))
+  - Current primary tool ↔ **last-used eraser** (`erase_brush` | `erase_area` | `erase_object` — **not** the nib; [prd-erase.md §12](./prd-erase.md))
   - Off
 - **Hold-move** (button down + movement past threshold until release) — temporary while the button is held **and** moving; closed catalogue **only**:
-  - Temporary eraser
+  - Temporary **last-used eraser** (from ink-mode only; [prd-erase.md §12](./prd-erase.md))
   - Drag node under tip (miss → no-op, **0** lasso)
   - Off
 - **Why Hold-move is not temporary freeform (or rect).** Hold-move is a **temporary** overlay: on release the exclusive tool snaps back to whatever it was. Temporary freeform is meaningless if we do nothing after it and immediately switch back to the current tool — the selection gesture never becomes a lasting tool change. Same for temporary rect. Those items are **removed** from Hold-move (`temp_sel_freeform` and `temp_sel_rect` are not in the catalogue). Lasting select stays a **Click** toggle (current primary ↔ Freeform Select) or the ToolChip ([REQ-03](#tool-modes)).
@@ -777,7 +777,7 @@ viewed at scale, and saved.
 
 **Acceptance**
 - Given a 1-button pen and default map, When the creator **clicks** the button (no move), Then the exclusive tool toggles current primary ↔ `sel_freeform` with p95 ≤300 ms and **0** hold-move gesture runs.
-- Given the same pen and default map, When the creator **hold-moves** with the button down, Then **temporary erase** runs until release ([REQ-11](#erase) Path A feel) and **0** click toggle fires on release.
+- Given the same pen and default map, When the creator **hold-moves** with the button down, Then **temporary last-used eraser** runs until release ([prd-erase.md §12](./prd-erase.md)) and **0** click toggle fires on release.
 - Given a 2-button pen and defaults, When B2 is hold-moved, Then temporary erase runs until release and B1 is unchanged.
 - Given the creator rebinds Hold-move to “drag node under tip”, When they hold-move starting on a hittable node, Then that node moves with the [REQ-06](#device-manipulation) live-direct bar; when they start on empty canvas, Then 0 nodes move and 0 lasso starts.
 - Given a 0-button pen, When the creator draws, Then 0 button gestures fire and [REQ-03](#tool-modes) still works.
@@ -870,7 +870,7 @@ viewed at scale, and saved.
   ToolChip ([REQ-03](#tool-modes) / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)).
 - A general on-device tool palette — no brushes, colors, layers, or document browser.
   [REQ-17](#manual-create) is a **closed** insert set (frame, connector, attachment, primitive),
-  not an illustration suite. ToolChip exclusive tools stay three unless a later ADR adds an entry.
+  not an illustration suite. ToolChip exclusives are **six** as of [prd-erase.md](./prd-erase.md) ([CHL-0028](../../../.plan/iter-005/challenges/CHL-0028-eraser-three-tools.md)).
 - Production use of `regionsync/` `append_ink` NetSink until wired into the Qt binary
   (library remains the future ADR-0009 shape).
 

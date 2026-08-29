@@ -66,25 +66,8 @@ square into the ink image; together with the `paint=` counter this distinguishes
 
 ## [SRS-EP-27] Hardware eraser-nib stroke-erase {#srs-ep-27-eraser-nib}
 
-<!-- lifecycle: active -->
+<!-- lifecycle: retired -->
+<!-- superseded-by: [SRS-EP-56] -->
+<!-- note: 2026-08-29 CHL-0028 / ADR-0034. Path A sample-delete retired. Brush is SRS-EP-56. -->
 
-**Parent:** [REQ-11](../../prd.md#erase) Path A. **Decision:** [ADR-0025](../../../../adr/ADR-0025-barrel-vs-eraser-nib.md). **Barrel `temp_erase`** uses this **mutation** but **not** this HID path ([SRS-EP-41](../tool-modes/srs-logic.md#srs-ep-41-barrel-dispatch)). Path B: [SRS-EP-28](../device-document/srs-logic.md#srs-ep-28-selection-erase).
-
-| Rule | Value |
-|---|---|
-| Trigger | Digitizer reports a distinct **eraser tool** / inverted nib (not barrel button) |
-| During rub | Remove **ink samples** whose world position intersects the nib footprint (radius start: **8 u** or reported width). Partial-refresh damaged AABB only |
-| After gesture | p95 ≤50 ms until intersecting samples are gone ([SRS-EP-30](./srs-quality.md#srs-ep-30-erase-quality)) |
-| New Ink | **0** Ink nodes created |
-| Empty node | If an Ink (or other sample-holding) node has **no remaining samples**, `remove_node` that node |
-| Undo | One undo restores the pre-erase document via inverse of `set_ink_samples` and, if the forward also `remove_node`’d an emptied ink, restore of that body. Exactness when `lastOpId` matches ([SRS-EP-07](../device-document/srs-logic.md#srs-ep-07-device-document)); geometry ±1 px @ 100% zoom vs stored samples |
-| No nib | Path A **does not fire** (0 accidental erases). Pen tip never erases |
-| No session | Same local result; publish `set_ink_samples` and/or `remove_node` (`compound` if both) when linked ([REQ-07](../../prd.md#one-way-sync)). Never `restore_snapshot` |
-| Ink latency | Must not put I/O on the pen-tip hot path ([SRS-EP-01](#srs-ep-01)); eraser nib is a **different** tool report |
-
-### UI-driving fields
-
-| Field | Drives |
-|---|---|
-| `stylus.tool` | `pen` \| `eraser_nib` |
-| `erase.in_progress` | [SRS-EP-29](../tool-modes/srs-ui.md#srs-ep-29-erase-ui) nib-in-progress state |
+**Retired.** Do not implement. Canonical: [prd-erase.md](../../prd-erase.md) · [SRS-EP-56](../erase/srs-logic.md#srs-ep-56-brush).

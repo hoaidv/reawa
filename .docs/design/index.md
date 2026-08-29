@@ -37,4 +37,4 @@ lifecycle: active
 | 2026-08-19 | pen-button-map | — | iter-005 UI-IN-03 | STORY-IN-034 W1-B (Infini desktop — superseded) |
 | 2026-08-20 | viewport-follow-epaper | — | iter-005 UI-EP-07 | STORY-EP-053 |
 | 2026-08-20 | viewport-follow-infini | — | iter-005 UI-IN-04 | STORY-IN-036 |
-| 2026-08-20 | pen-button-map | iter-005 UI-EP-08 | iter-005 UI-EP-08 | CHL-0025 one Settings page, master-detail |
+| 2026-08-29 | Eraser ToolChip glyphs | — | iter-005 assets | Three 1-bit icons only (`icon-epaper-erase-brush` / `erase-area` / `erase-object`). No erase-chrome package. Promoted to `.docs/design/system/assets/` |

@@ -15,7 +15,8 @@ emitting intent to a peer ([CHL-0008](../../../../../.plan/iter-003/challenges/C
 - Viewport-follow is [SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow) / [SRS-EP-50](../region-sync/srs-ui.md) — **not** a ToolChip exclusive, recognizer, or hand-tool tile.
 - Logic: [srs-logic.md](./srs-logic.md) — [SRS-EP-04] · [SRS-EP-23] finger tool switch ·
   [SRS-EP-41] barrel dispatch · [SRS-EP-53] author + persist on device · [SRS-EP-44] manual create routing
-- UI: [srs-ui.md](./srs-ui.md) — [SRS-EP-05] floating ToolChip · [SRS-EP-29] erase chrome ·
+- Erase exclusives: [erase](../erase/index.md) — [SRS-EP-54](../erase/srs-logic.md#srs-ep-54-erase-mode) (not this folder’s Path A/B chrome)
+- UI: [srs-ui.md](./srs-ui.md) — [SRS-EP-05] floating ToolChip · [SRS-EP-29] **retired** (see [prd-erase.md](../../prd-erase.md)) ·
   [SRS-EP-42] chip temp tool (**not** the Settings page) · [SRS-EP-52] Device Settings · Pen buttons (`needs_design: yes`) ·
   [SRS-EP-47] manual create
 - Scene graph: [srs-ui-multi-scene.md](./srs-ui-multi-scene.md) — Keep = `scene.pen_map_editor` only

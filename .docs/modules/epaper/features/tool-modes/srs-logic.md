@@ -108,7 +108,7 @@ QA can write: *Given `pen` active and a box at/above LOD, When finger-down insid
 
 <!-- lifecycle: active -->
 
-**Parent:** [REQ-18](../../prd.md#pen-buttons). **Decisions:** [ADR-0025](../../../../adr/ADR-0025-barrel-vs-eraser-nib.md), [ADR-0031](../../../../adr/ADR-0031-device-settings-persist-on-epaper.md) (supersedes [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md)). **Map anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). **Authoring is not this section** — [SRS-EP-53](#srs-ep-53-pen-map-author). **Nib erase is not this section** — [SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib).
+**Parent:** [REQ-18](../../prd.md#pen-buttons). **Decisions:** [ADR-0025](../../../../adr/ADR-0025-barrel-vs-eraser-nib.md), [ADR-0031](../../../../adr/ADR-0031-device-settings-persist-on-epaper.md) (supersedes [ADR-0030](../../../../adr/ADR-0030-tablet-authors-pen-button-map.md)), [ADR-0034](../../../../adr/ADR-0034-erase-clip-remnants.md). **Map anatomy:** [domain/pen-button-map](../../../../domain/pen-button-map.md). **Authoring is not this section** — [SRS-EP-53](#srs-ep-53-pen-map-author). **Erase mutation is not this section** — [SRS-EP-54](../erase/srs-logic.md#srs-ep-54-erase-mode).
 
 ### Classifier
 
@@ -135,7 +135,7 @@ Threshold is device-local (start: **12 du** of tip travel while button is down).
 
 ### Defaults
 
-See domain doc. 1-button Hold-move default is **`temp_erase`** (not temporary freeform). 0-button: **0** barrel gestures; ToolChip still complete. 2-button B2 hold-move `temp_erase` uses Path A **mutation** ([SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib)) via the **barrel channel**, not the nib HID flag.
+See domain doc. 1-button Hold-move default is **`temp_erase`** (not temporary freeform). 0-button: **0** barrel gestures; ToolChip still complete. `toggle_pen_eraser` and `temp_erase` target **last-used eraser** ([SRS-EP-54](../erase/srs-logic.md#srs-ep-54-erase-mode)), via the **barrel channel**, not the nib HID flag.
 
 ### Chip during hold-move
 

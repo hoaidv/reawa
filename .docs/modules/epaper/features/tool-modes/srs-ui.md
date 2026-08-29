@@ -202,30 +202,11 @@ disarmed.
 
 ## [SRS-EP-29] Erase chrome {#srs-ep-29-erase-ui}
 
-<!-- lifecycle: active -->
-<!-- needs_design: yes -->
+<!-- lifecycle: retired -->
+<!-- superseded-by: [SRS-EP-54] -->
+<!-- note: 2026-08-29 CHL-0028. Chrome is prd-erase.md + SRS-EP-54…56. -->
 
-**Parent:** [REQ-11](../../prd.md#erase). **Logic:** [SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib), [SRS-EP-28](../device-document/srs-logic.md#srs-ep-28-selection-erase). **Platform:** epaper-device.
-
-### Closed erase paths (Designer must not add a third grammar)
-
-| id | Path |
-|---|---|
-| `erase.nib` | Hardware eraser nib in progress |
-| `cta.erase` | Selection-erase (chip or overlay) — **64 du** if finger |
-| `erase.empty_noop` | Empty selection + Erase |
-| `erase.no_nib` | Pen without eraser tool — Path A absent |
-
-Barrel hold-move temp erase is REQ-18 chrome ([SRS-EP-42](#srs-ep-42-chip-temp-tool)), not a fourth path.
-
-### States
-
-`erase.nib_active` · `erase.selection_cta` · `erase.empty_noop` · `erase.undo` · `erase.missing_nib`
-
-### Anti-patterns
-
-- Treating barrel 2 as the nib
-- Banner on empty-selection no-op (status on chip is enough)
+**Retired.** Do not implement Path A/B chrome. Canonical: [prd-erase.md](../../prd-erase.md) · [SRS-EP-54](../erase/srs-logic.md#srs-ep-54-erase-mode).
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 iter: iter-005
 goal: "Hand-on-paper (REQ-10…18 except REQ-15) plus independent cameras and optional viewport follow"
-committed_points: 93
+committed_points: 110
 start: 2026-08-16
 end: ""
 capacity: 72
@@ -17,7 +17,7 @@ Lock: **vertical · verified · wip 2**.
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 
-W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). 2026-08-27: [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. Inverse-undo local EP-059…061 **done**. IN-038 **cancelled**. W3 frozen. Follow field test still outstanding. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **closed**.
+W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). 2026-08-27: [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. Inverse-undo local EP-059…061 **done** and **human-verified**. IN-038 **cancelled**. 2026-08-29: [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; erase implement [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-066](./stories/STORY-EP-066.md) **draft** pending human review. Clipboard W3 still frozen. Follow field test still outstanding. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **closed**.
 
 ## Committed
 
@@ -31,7 +31,12 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-EP-054](./stories/STORY-EP-054.md) — design — 3 — hand-touch empty pan delta — **done** (20 mm / HT package amend 2026-08-20)
 - [STORY-EP-057](./stories/STORY-EP-057.md) — implement — 3 — persist Device Settings — **draft**
 - [STORY-EP-058](./stories/STORY-EP-058.md) — implement — 5 — Settings page Pen buttons — **draft**
-- [STORY-EP-040](./stories/STORY-EP-040.md) — design — 3 — erase
+- [STORY-EP-040](./stories/STORY-EP-040.md) — design — 3 — erase chrome — **cancelled** (icons only)
+- [STORY-EP-062](./stories/STORY-EP-062.md) — implement — 5 — eraser mode + chip — **draft**
+- [STORY-EP-063](./stories/STORY-EP-063.md) — implement — 8 — clip engine — **draft**
+- [STORY-EP-064](./stories/STORY-EP-064.md) — implement — 5 — brush — **draft**
+- [STORY-EP-065](./stories/STORY-EP-065.md) — implement — 5 — area — **draft**
+- [STORY-EP-066](./stories/STORY-EP-066.md) — implement — 5 — object — **draft**
 - [STORY-EP-043](./stories/STORY-EP-043.md) — design — 3 — clipboard
 - [STORY-EP-045](./stories/STORY-EP-045.md) — design — 3 — connector ends
 - [STORY-EP-048](./stories/STORY-EP-048.md) — design — 3 — attachments
@@ -44,8 +49,8 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-IN-033](./stories/STORY-IN-033.md) — 3 — Infini apply while following · depends EP-039 + IN-037 — **done**
 - [STORY-EP-055](./stories/STORY-EP-055.md) — 5 — Epaper follow toggle · depends EP-053 — **done**
 - [STORY-IN-037](./stories/STORY-IN-037.md) — 5 — Infini follow toggle · depends IN-036 — **done**
-- [STORY-EP-041](./stories/STORY-EP-041.md) — 5 — eraser nib · depends EP-040
-- [STORY-EP-042](./stories/STORY-EP-042.md) — 3 — selection-erase · depends EP-040
+- [STORY-EP-041](./stories/STORY-EP-041.md) — 5 — eraser nib · depends EP-040 — **cancelled**
+- [STORY-EP-042](./stories/STORY-EP-042.md) — 3 — selection-erase · depends EP-040 — **cancelled**
 - [STORY-EP-044](./stories/STORY-EP-044.md) — 5 — clipboard ops · depends EP-043
 - [STORY-EP-046](./stories/STORY-EP-046.md) — 5 — end styles · depends EP-045
 - [STORY-EP-047](./stories/STORY-EP-047.md) — 5 — endpoint ink · depends EP-045
@@ -71,9 +76,9 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - CHL-0022 shipped “no pan” prose — Product Manager adopt
 - EP-037 package still empty=no-op until EP-054
 - PM `srs-product` BR-D08 still always-on viewport (architect flagged)
-- [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**; EP-059…061 **done**; IN-038 cancelled
+- [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**; EP-059…061 **done** and **human-verified**; IN-038 cancelled
 - [CHL-0027](./challenges/CHL-0027-palm-travel-not-contact-count.md) palm rest by travel — open; Product Manager triage
-- Vertical work-in-progress 2: wait human; W3 / Device Settings still frozen; TRACK-006 closed
+- Vertical work-in-progress 2: wait human **review** of EP-062…066; clipboard / Device Settings still frozen; TRACK-006 closed
 - Agent host has no RM2 panel / no live TCP `:9877`; remaining follow field test is still outstanding
 
 ## Links

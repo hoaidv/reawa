@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-27T11:28:20+00:00
+generated_at: 2026-08-29T04:55:10+00:00
 ---
 
 # Drift Report
@@ -10,6 +10,13 @@ generated_at: 2026-08-27T11:28:20+00:00
 ## Stories referencing deprecated / retired SRS
 | Story | SRS | Lifecycle |
 |---|---|---|
+| STORY-EP-040 | [SRS-EP-29] | retired |
+| STORY-EP-040 | [SRS-EP-27] | retired |
+| STORY-EP-040 | [SRS-EP-28] | retired |
+| STORY-EP-041 | [SRS-EP-27] | retired |
+| STORY-EP-041 | [SRS-EP-30] | retired |
+| STORY-EP-042 | [SRS-EP-28] | retired |
+| STORY-EP-042 | [SRS-EP-30] | retired |
 | STORY-IN-035 | [SRS-IN-23] | retired |
 | STORY-IN-035 | [SRS-IN-25] | retired |
 

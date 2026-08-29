@@ -40,4 +40,4 @@ TRACK-005. Depends on [STORY-EP-059](./STORY-EP-059.md). [SRS-EP-13](../../../.d
 - Skip/no-op consume the entry and do not push redo
 - 0 error UI
 
-Verified 2026-08-27: Quality Assurance Engineer **PASS**. Host map: `.docs/modules/epaper/features/device-document/bdd/undo-fail-safe.feature` (4 scenarios).
+Verified 2026-08-27: Quality Assurance Engineer **PASS**. Host map: `.docs/modules/epaper/features/device-document/bdd/undo-fail-safe.feature` (4 scenarios). Human verified on device 2026-08-27.

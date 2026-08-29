@@ -47,3 +47,5 @@ Honor the counterpart table: ungroup ≠ delete children; connector warp is deri
 - 0 whole-tree snapshots on the device ring
 - No on-panel chrome change
 - `infini/` not required for this story (host `DeviceDocument` tests)
+
+Human verified on device 2026-08-27 (undo/redo, including resize after move).

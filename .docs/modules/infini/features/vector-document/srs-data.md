@@ -190,7 +190,7 @@ Exact attribute grammar may tighten in an appendix without changing ADR-0010.
 | `duplicate_subtree` | `{ nodes: Node[], dxy: {x: 24, y: 24} }` ([ADR-0024](../../../../adr/ADR-0024-in-document-clipboard.md)) |
 | `create_frame` | `{ id, bounds }` root Frame |
 | `create_primitive` | `{ id, kind: "line"\|"rect"\|"ellipse", geometry }` — not a polyline stand-in |
-| `set_ink_samples` | `{ id, samples }` — Path A erase and its inverse ([ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md)) |
+| `set_ink_samples` | `{ id, samples }` — erase clip remnant keep-id and its inverse ([ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md), [ADR-0034](../../../../adr/ADR-0034-erase-clip-remnants.md)) |
 | `compound` | `{ ops: [ … ] }` — atomic multi-op gesture (undo/redo of N inverses). Unknown type still marks the mirror **suspect** |
 | `restore_snapshot` | `{ document }` — **last-resort, non-undo** wholesale replace (tests / emergency). Undo is **not** wholesale replace |
 

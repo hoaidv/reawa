@@ -4,16 +4,14 @@ title: Hardware eraser nib stroke-erase
 kind: implement
 parent_srs: [SRS-EP-27, SRS-EP-30]
 parent_req: [REQ-11]
-status: draft
+status: cancelled
 priority: P0
 iter: iter-005
 estimate: 5
 owner: dev
 depends_on: [STORY-EP-040]
 acceptance_criteria:
-  - "Given a stylus with eraser nib and ink on the panel, When the creator rubs the nib across that ink, Then intersecting samples are gone with p95 <=50 ms after gesture end, 0 new Ink nodes, one undo restores (+-1 px @ 100%)."
-  - "Given a stylus without an eraser nib, When the creator uses the pen tip, Then Path A does not fire (0 accidental erases)."
-  - "Given no session, When Path A runs, Then the result matches the linked case."
+  - "Cancelled — Path A sample-delete retired. Brush is STORY-EP-064."
 design_package: ""
 ui_spec: ""
 scenes: []
@@ -23,9 +21,9 @@ wireframe: ""
 
 # STORY-EP-041 — Hardware eraser nib stroke-erase
 
-TRACK-005. Parent [REQ-11]. [REQ-11](../../../.docs/modules/epaper/prd.md#erase) Path A.
+**Cancelled 2026-08-29 — do not implement.** Path A (delete samples, 0 new Ink nodes) retired by [CHL-0028](../challenges/CHL-0028-eraser-three-tools.md) / [ADR-0034](../../../.docs/adr/ADR-0034-erase-clip-remnants.md). Canonical brush: [STORY-EP-064](./STORY-EP-064.md) ([SRS-EP-56](../../../.docs/modules/epaper/features/erase/srs-logic.md#srs-ep-56-brush)).
 
-
+Keep this id.
 
 ## Kind
 
@@ -33,6 +31,4 @@ TRACK-005. Parent [REQ-11]. [REQ-11](../../../.docs/modules/epaper/prd.md#erase)
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Depends on | STORY-EP-040 |
-
-Stories stay **draft** until `/architect` binds dedicated SRS (current parent_srs is the nearest existing section).
+| Depends on | STORY-EP-040 (historical; this story is cancelled) |

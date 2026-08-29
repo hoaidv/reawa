@@ -62,7 +62,8 @@ children until a later ADR.
 |---|---|
 | Children | `Ink` only in v0, each tagged `role: content` or `role: boundary` |
 | `bounds` | Axis-aligned `(x, y, width, height)` in local space; recognized once at creation, updated on transform. Drives handles, hit-testing, connector ports |
-| Boundary ink | The creator's own enclose / surround stroke, preserved. **Always** transforms with the frame, never gated by `inkScaleMode`, never replaced by a synthetic rectangle |
+| Boundary ink | The creator's own enclose / surround stroke, preserved. **Always** transforms with the frame, never gated by `inkScaleMode`, never replaced by a synthetic rectangle. Brush/area may **clip** this ink ([ADR-0034](../adr/ADR-0034-erase-clip-remnants.md)); a broken surround is allowed |
+| Boundary polyline | Invisible closed polyline seeded at create from the enclose stroke. Transforms/resizes **with** boundary ink. **Persisted.** Never clipped by erase. Object-erase 80% uses this polygon’s **area** |
 | Transform | `{ translate, rotation, scaleX, scaleY }`; children authored in group-local coordinates. World draw = `groupTransform ∘ localSample` |
 | `inkScaleMode` | `withBounds` (default) — content scales with the group · `fixedInk` — content keeps sample size and tracks the box by its own UV |
 | `layoutOffset: {u, v}` | Per **content** ink. `u = (cx − bounds.x)/width`, `v = (cy − bounds.y)/height` of that ink's AABB centroid in group-local space, seeded at create / membership / selection-create |
@@ -101,7 +102,7 @@ apply is a no-op and an unknown op type must not crash.
 | `set_ink_scale_mode` | Switch `withBounds` ↔ `fixedInk` |
 | `reparent` | Move a node between parents (draw-into membership) |
 | `remove` | Delete a node |
-| `set_ink_samples` | Replace an Ink node’s samples (stroke-erase and its inverse) |
+| `set_ink_samples` | Replace an Ink node’s samples (erase clip remnant keep-id, and its inverse) |
 | `compound` | Apply several tree ops as one atomic gesture (multi-inverse undo/redo) |
 | `restore_snapshot` | Last-resort wholesale replace — **not** the undo path ([ADR-0032](../adr/ADR-0032-inverse-op-undo.md)). Tests / emergency only |
 | `set_connector_end_style` | Set `terminal[end].style` on one connector end ([ADR-0026](../adr/ADR-0026-endpoint-ink-membership.md) Path A) |

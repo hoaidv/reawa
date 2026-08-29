@@ -4,15 +4,14 @@ title: Selection-erase deletes selected nodes
 kind: implement
 parent_srs: [SRS-EP-28, SRS-EP-30]
 parent_req: [REQ-11]
-status: draft
+status: cancelled
 priority: P0
 iter: iter-005
 estimate: 3
 owner: dev
 depends_on: [STORY-EP-040]
 acceptance_criteria:
-  - "Given a non-empty selection, When Erase is invoked, Then every selected node is removed (0 leftovers on next settled frame) and one undo restores them."
-  - "Given empty selection, When Erase is invoked, Then 0 nodes change."
+  - "Cancelled — Path B erase-selected-nodes retired. Object erase is STORY-EP-066."
 design_package: ""
 ui_spec: ""
 scenes: []
@@ -22,9 +21,9 @@ wireframe: ""
 
 # STORY-EP-042 — Selection-erase deletes selected nodes
 
-TRACK-005. Parent [REQ-11]. [REQ-11](../../../.docs/modules/epaper/prd.md#erase) Path B.
+**Cancelled 2026-08-29 — do not implement.** Path B (erase current selection) retired by [CHL-0028](../challenges/CHL-0028-eraser-three-tools.md). Cut remains. Object erase: [STORY-EP-066](./STORY-EP-066.md) ([SRS-EP-58](../../../.docs/modules/epaper/features/erase/srs-logic.md#srs-ep-58-object)).
 
-
+Keep this id.
 
 ## Kind
 
@@ -32,6 +31,4 @@ TRACK-005. Parent [REQ-11]. [REQ-11](../../../.docs/modules/epaper/prd.md#erase)
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Depends on | STORY-EP-040 |
-
-Stories stay **draft** until `/architect` binds dedicated SRS (current parent_srs is the nearest existing section).
+| Depends on | STORY-EP-040 (historical; this story is cancelled) |

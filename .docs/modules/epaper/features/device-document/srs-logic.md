@@ -95,8 +95,8 @@ The device applies these locally; it never applies an inbound op except by whole
 | `set_smart_transform` | [SRS-EP-11](../ink-box/srs-logic.md) move / resize commit |
 | `set_ink_scale_mode` | [SRS-EP-11](../ink-box/srs-logic.md) toggle |
 | `reparent` | [SRS-EP-10](../ink-box/srs-logic.md) when membership cannot be expressed as `append_ink.parentId` |
-| `remove_node` | Empty-group cleanup ([SRS-EP-10](../ink-box/srs-logic.md)); a `SmartGroup` left with zero children is removed in the **same** gesture as the child removal; Path B selection-erase ([SRS-EP-28](#srs-ep-28-selection-erase)); cut ([SRS-EP-31](#srs-ep-31-clipboard)) |
-| `set_ink_samples` | Path A stroke-erase ([SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib)); sample restore on undo of that erase |
+| `remove_node` | Empty-group cleanup ([SRS-EP-10](../ink-box/srs-logic.md)); a `SmartGroup` left with zero children is removed in the **same** gesture as the child removal; erase remnant/object/area ([SRS-EP-55](../erase/srs-logic.md)–[SRS-EP-58](../erase/srs-logic.md)); cut ([SRS-EP-31](#srs-ep-31-clipboard)) |
+| `set_ink_samples` | Erase clip of an existing Ink ([SRS-EP-55](../erase/srs-logic.md#srs-ep-55-clip-remnants)); sample restore on undo of that erase |
 | `compound` | Undo/redo of a multi-inverse gesture — atomic on the mirror ([ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md) §4) |
 | `restore_snapshot` | **Last-resort, non-undo** wholesale replace (tests / emergency). Undo and redo **must not** emit it |
 
@@ -475,20 +475,11 @@ Example (informative):
 
 ## [SRS-EP-28] Selection-erase and undo {#srs-ep-28-selection-erase}
 
-<!-- lifecycle: active -->
+<!-- lifecycle: retired -->
+<!-- superseded-by: [SRS-EP-58] -->
+<!-- note: 2026-08-29 CHL-0028. Path B erase-selected-nodes retired. -->
 
-**Parent:** [REQ-11](../../prd.md#erase) Path B. **Links:** [SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib) Path A, [SRS-EP-07](#srs-ep-07-device-document) undo ring, [SRS-EP-41](../tool-modes/srs-logic.md#srs-ep-41-barrel-dispatch) if Click bound to erase.
-
-| Rule | Value |
-|---|---|
-| Trigger | **Erase** command: chip CTA, bound barrel Click that resolves to erase, or equivalent — **not** the nib |
-| Non-empty selection | `remove_node` every selected node (and SmartGroup cleanup per existing empty-group rules). **0** leftovers on the next settled frame |
-| Empty selection | **No-op**: 0 nodes change, 0 undo entries |
-| Undo | One undo restores the removed nodes via inverse of `remove_node` (stored bodies at stored `{parentId, index}`). Exactness when `lastOpId` matches; skip/no-op per [SRS-EP-07](#srs-ep-07-device-document). Geometry ±1 px @ 100% zoom vs stored pre-op fields |
-| No session | Same local result; publish when linked |
-| Does not | Start a new ink stroke; run Path A unless the command was `temp_erase` hold-move (that path is SRS-EP-27 mutation via barrel) |
-
-Additional device ops (extend the SRS-EP-07 table without replacing it): `remove_node` from this command. Path A stroke-erase ([SRS-EP-27](../local-pen-ink/srs-logic.md#srs-ep-27-eraser-nib)) publishes `set_ink_samples` and, when a node is emptied, `remove_node` in the same gesture (`compound` if both). Inverse is stored previous samples and/or restore of the removed body. **Do not** use `restore_snapshot` for Path A or Path B.
+**Retired.** Do not implement. Object erase: [SRS-EP-58](../erase/srs-logic.md#srs-ep-58-object). Product: [prd-erase.md](../../prd-erase.md).
 
 ---
 

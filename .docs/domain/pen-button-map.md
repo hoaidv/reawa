@@ -27,7 +27,7 @@ The assignment of each stylus **barrel button** to exactly one **Click** catalog
 | id | Meaning |
 |---|---|
 | `toggle_pen_freeform` | Toggle exclusive tool `pen` ↔ `sel_freeform` |
-| `toggle_pen_eraser` | Toggle `pen` ↔ eraser command (Path B / erase arm — not the nib) |
+| `toggle_pen_eraser` | Toggle `pen` ↔ **last-used eraser** (`erase_brush` \| `erase_area` \| `erase_object` — not the nib) |
 | `off` | No-op |
 
 **Not in v1:** `undo` (Undo stays on the ToolChip). Unknown ids apply as `off`.
@@ -36,7 +36,7 @@ The assignment of each stylus **barrel button** to exactly one **Click** catalog
 
 | id | Meaning |
 |---|---|
-| `temp_erase` | Temporary stroke-erase **feel** (Path A mutation; **not** the nib channel) until release, then snap back |
+| `temp_erase` | Temporary **last-used eraser** from `pen` until release, then snap back (**not** the nib channel). Already-in-eraser → no-op |
 | `drag_node_under_tip` | Move hittable node under tip; empty canvas → no-op, **0** lasso |
 | `off` | No-op |
 

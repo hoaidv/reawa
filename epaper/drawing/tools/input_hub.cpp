@@ -86,6 +86,9 @@ Operation *InputHub::matchOperation(StrategyKind channel, const PointerSample &s
     Operation *best = nullptr;
     int bestPriority = INT_MIN;
 
+    // Need to optimize this matching logic: m_activeMode already provided
+    // available operations, we just match against it
+
     for (OperationKind kind : kMatchOrder) {
         if (!kindAllowed(kind, s.role))
             continue;

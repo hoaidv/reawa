@@ -10,6 +10,8 @@ source: TRACK-005 / [REQ-11] / [REQ-18]
 
 # ADR-0025 — Barrel-button channel vs hardware eraser nib
 
+**Amended 2026-08-29.** Channel isolation (nib vs barrel) still stands. Path A sample-delete and Path B selection-erase **mutation** are retired: [ADR-0034](./ADR-0034-erase-clip-remnants.md), [prd-erase.md](../modules/epaper/prd-erase.md), [CHL-0028](../../.plan/iter-005/challenges/CHL-0028-eraser-three-tools.md). Nib = brush; barrel Click `toggle_pen_eraser` / Hold `temp_erase` = last-used eraser.
+
 ## Context
 
 [REQ-11](../modules/epaper/prd.md#erase) Path A is the **stylus eraser nib** (distinct tool report from the digitizer). Path B is selection-erase. Barrel **hold-move = temporary erase** is an accelerator of Path A’s *feel*, bound via [REQ-18](../modules/epaper/prd.md#pen-buttons) — “not a third grammar.” [REQ-18] also says eraser nib is **not** barrel 2.
