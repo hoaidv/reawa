@@ -10,11 +10,14 @@
 #include "../operation.hpp"
 #include "document/erase_clip.hpp"
 #include "document/erase_commit.hpp"
+#include "debug/ui_stall.hpp"
 
+#include <QDebug>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
 #include <QPointF>
+#include <QString>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -92,7 +95,9 @@ public:
             return;
         painter->save();
         QPen pen(Qt::white);
-        pen.setWidthF(std::max(1.0, epaper::document::kEraseBrushDiameterMm * m_caps->toolUi->panelScale()));
+        pen.setWidthF(std::max(1.0, epaper::document::eraseMmToWorld(
+                                        epaper::document::kEraseBrushDiameterMm) *
+                                        m_caps->toolUi->panelScale()));
         pen.setCapStyle(Qt::RoundCap);
         pen.setJoinStyle(Qt::RoundJoin);
         painter->setPen(pen);
@@ -129,7 +134,9 @@ private:
     {
         if (!m_caps || !m_caps->toolUi)
             return 12.0;
-        return epaper::document::kEraseBrushDiameterMm * m_caps->toolUi->panelScale() + 4.0;
+        return epaper::document::eraseMmToWorld(epaper::document::kEraseBrushDiameterMm) *
+                   m_caps->toolUi->panelScale() +
+               4.0;
     }
 
     QRectF ghostDirty(const QPointF &p) const
@@ -151,8 +158,17 @@ private:
             return;
         static int seq = 0;
         const std::string opId = std::string("erase-brush-") + std::to_string(++seq);
-        const ClipRegion region = capsuleRegion(std::move(path), kEraseBrushRadiusMm);
-        const ApplyResult r = commitEraseRegion(m_caps->doc->document(), opId, region);
+        const ClipRegion region =
+            capsuleRegion(std::move(path), eraseMmToWorld(kEraseBrushRadiusMm));
+        ApplyResult r;
+        {
+            epaper::UiStallSection stall("eraseCommit");
+            r = commitEraseRegion(m_caps->doc->document(), opId, region);
+        }
+        qInfo() << "[erase] commit" << QString::fromStdString(opId)
+                << "path" << int(region.path.size()) << "radius" << region.radius
+                << "inks" << int(m_caps->doc->document().inkCount())
+                << "reason" << QString::fromStdString(r.reason);
         if (r.applied && r.reason != "noop") {
             m_caps->doc->noteDocumentMutated();
             m_caps->doc->notifyHistory();

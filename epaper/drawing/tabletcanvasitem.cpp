@@ -851,7 +851,7 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
 {
     // Never full-redraw while the pen is down — white clear would erase live ink
     // and stall the GUI thread so later strokes miss the panel.
-    if (m_stroke.active) {
+    if (m_stroke.active || m_toolPointerActive) {
         if (sharp)
             m_rasterizeDeferredSharp = true;
         else if (!m_rasterizeDeferredSharp)
@@ -874,7 +874,7 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
         m_rasterizeSharp = false;
         const int token = ++m_settleFollowUpToken;
         QTimer::singleShot(int(kSettleFollowUpMs), this, [this, token]() {
-            if (token != m_settleFollowUpToken || m_stroke.active)
+            if (token != m_settleFollowUpToken || m_stroke.active || m_toolPointerActive)
                 return;
             rasterizeVectors(true);
         });
@@ -882,7 +882,7 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
     }
     m_rasterizePending = true;
     QTimer::singleShot(int(kRefreshMinIntervalMs), this, [this]() {
-        if (!m_rasterizePending || m_stroke.active)
+        if (!m_rasterizePending || m_stroke.active || m_toolPointerActive)
             return;
         m_rasterizePending = false;
         const bool doSharp = m_rasterizeSharp || m_rasterizeDeferredSharp;
@@ -1108,6 +1108,15 @@ TabletCanvasItem::IngestChannels TabletCanvasItem::stashedChannels(const PanelPt
 void TabletCanvasItem::clearStash()
 {
     m_stashValid = false;
+}
+
+void TabletCanvasItem::setToolPointerActive(bool on)
+{
+    if (m_toolPointerActive == on)
+        return;
+    m_toolPointerActive = on;
+    if (!on && (m_rasterizeDeferredSharp || m_rasterizePending || m_rasterizeSharp))
+        scheduleVectorRasterize(m_rasterizeDeferredSharp || m_rasterizeSharp);
 }
 
 /** Abort in-flight stroke (pointer cancel). */

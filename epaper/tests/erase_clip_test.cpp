@@ -8,6 +8,7 @@
 #include "document/erase_clip.hpp"
 #include "document/erase_commit.hpp"
 
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <string>
@@ -361,8 +362,46 @@ static void test_clip_geometry_not_sample_drop()
     CHECK(std::abs(r.remnants[0].back().x - 46) < 1.0);
 }
 
+static void test_mm_to_world_is_226dpi_du()
+{
+    const double eight = eraseMmToWorld(8.0);
+    CHECK(eight > 70.0 && eight < 72.0);
+    CHECK(std::abs(eight - 8.0 / 25.4 * epaper::handtouch::kPanelDpi) < 1e-9);
+    CHECK(std::abs(eraseMmToWorld(1.0) - epaper::handtouch::kPanelDpi / 25.4) < 1e-9);
+}
+
+static void bench_clip_hotspot()
+{
+    std::vector<InkSample> ink(200);
+    for (size_t i = 0; i < ink.size(); ++i) {
+        ink[i].x = static_cast<double>(i) * 2.0;
+        ink[i].y = 0;
+    }
+    std::vector<ErasePt> dense;
+    dense.reserve(400);
+    for (int i = 0; i < 400; ++i)
+        dense.push_back({200.0 + i * 0.4, 0});
+    const auto t0 = std::chrono::steady_clock::now();
+    int hits = 0;
+    for (int n = 0; n < 40; ++n) {
+        const ClipResult r = clipInkPolyline(ink, capsuleRegion(dense, 36.0));
+        if (r.hit)
+            ++hits;
+    }
+    const auto t1 = std::chrono::steady_clock::now();
+    const double ms =
+        std::chrono::duration<double, std::milli>(t1 - t0).count();
+    const auto resampled = capsuleRegion(dense, 36.0);
+    std::cout << "erase_clip_bench: loops=40 inksamples=200 densePath=400 resampled="
+              << resampled.path.size() << " hits=" << hits << " total_ms=" << ms
+              << " per_ms=" << (ms / 40.0) << "\n";
+    CHECK(resampled.path.size() < dense.size());
+    CHECK(ms / 40.0 < 50.0);
+}
+
 int main()
 {
+    test_mm_to_world_is_226dpi_du();
     test_clip_geometry_not_sample_drop();
     test_split_two_remnants_longest_keeps_id();
     test_remnant_below_floor_dropped();
@@ -372,6 +411,7 @@ int main()
     test_boundary_polyline_unchanged_when_boundary_ink_clipped();
     test_json_roundtrip_boundary_polyline();
     test_brush_skips_primitive_frame_connector();
+    bench_clip_hotspot();
 
     if (g_fails) {
         std::cerr << g_fails << " check(s) failed\n";

@@ -1,5 +1,6 @@
 #include "qtinputfilter.h"
 
+#include <QHoverEvent>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QEventPoint>
@@ -166,6 +167,8 @@ bool QtInputFilter::remapPen(QObject *watched, QTabletEvent *tablet)
     // injecting, so the canvas holds the full set when a handler calls back during
     // the synchronous delivery below.
     emit penSample(raw, channelsFrom(tablet));
+    if (tablet->type() != QEvent::TabletPress && tablet->buttons() == Qt::NoButton)
+        emit penHover(mapped.x(), mapped.y());
     return injectMapped(watched, w, tablet, mapped);
 }
 
@@ -193,6 +196,16 @@ bool QtInputFilter::eventFilter(QObject *watched, QEvent *event)
     case QEvent::TabletLeaveProximity:
         notePenLeave();
         return false;
+    case QEvent::HoverMove: {
+        if (!m_penNear || m_penDown)
+            return false;
+        auto *w = qobject_cast<QWindow *>(watched);
+        auto *hover = static_cast<QHoverEvent *>(event);
+        if (!w || !hover)
+            return false;
+        emit penHover(hover->position().x(), hover->position().y());
+        return false;
+    }
     case QEvent::TabletPress:
     case QEvent::TabletMove:
     case QEvent::TabletRelease: {

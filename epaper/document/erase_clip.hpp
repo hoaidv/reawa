@@ -7,6 +7,7 @@
  */
 
 #include "doc_model.hpp"
+#include "hand_touch.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -21,6 +22,12 @@ constexpr double kEraseHoverStrokeMm = 0.5;
 constexpr double kEraseRemnantFloorMm = 1.0;
 constexpr double kEraseClipScanMm = 0.25;
 
+/** PRD millimetres → document world. 1 mm ≈ 8.90 du @ 226 dpi ([SRS-EP-56]). */
+inline constexpr double eraseMmToWorld(double mm)
+{
+    return mm * (epaper::handtouch::kPanelDpi / 25.4);
+}
+
 struct ErasePt {
     double x = 0;
     double y = 0;
@@ -30,14 +37,17 @@ struct ClipRegion {
     enum class Kind { Capsule, Polygon };
     Kind kind = Kind::Capsule;
     std::vector<ErasePt> path;
-    double radius = kEraseBrushRadiusMm;
+    double radius = 0;
 };
 
-inline ClipRegion capsuleRegion(std::vector<ErasePt> spine, double radius = kEraseBrushRadiusMm)
+inline std::vector<ErasePt> resampleErasePath(std::vector<ErasePt> path, double minStep);
+
+inline ClipRegion capsuleRegion(std::vector<ErasePt> spine,
+                                double radius = eraseMmToWorld(kEraseBrushRadiusMm))
 {
     ClipRegion r;
     r.kind = ClipRegion::Kind::Capsule;
-    r.path = std::move(spine);
+    r.path = resampleErasePath(std::move(spine), std::max(0.5, radius * 0.35));
     r.radius = radius;
     return r;
 }
@@ -73,6 +83,70 @@ inline double eraseDistPointPolyline(double x, double y, const std::vector<Erase
         best = std::min(best, eraseDistPointSeg(x, y, poly[i - 1].x, poly[i - 1].y, poly[i].x,
                                                 poly[i].y));
     return best;
+}
+
+/** Drop near-duplicate capsule samples. Distance queries are O(path). */
+inline std::vector<ErasePt> resampleErasePath(std::vector<ErasePt> path, double minStep)
+{
+    if (path.size() < 2 || minStep <= 1e-9)
+        return path;
+    std::vector<ErasePt> out;
+    out.reserve(path.size());
+    out.push_back(path.front());
+    for (size_t i = 1; i < path.size(); ++i) {
+        const ErasePt &prev = out.back();
+        const ErasePt &p = path[i];
+        if (std::hypot(p.x - prev.x, p.y - prev.y) + 1e-9 >= minStep)
+            out.push_back(p);
+    }
+    const ErasePt &last = path.back();
+    if (std::hypot(out.back().x - last.x, out.back().y - last.y) > 1e-9)
+        out.push_back(last);
+    return out;
+}
+
+struct EraseAabb {
+    double minX = 0;
+    double minY = 0;
+    double maxX = 0;
+    double maxY = 0;
+    bool valid = false;
+};
+
+inline EraseAabb clipRegionAabb(const ClipRegion &r)
+{
+    EraseAabb b;
+    if (r.path.empty())
+        return b;
+    b.minX = b.maxX = r.path[0].x;
+    b.minY = b.maxY = r.path[0].y;
+    for (const auto &p : r.path) {
+        b.minX = std::min(b.minX, p.x);
+        b.minY = std::min(b.minY, p.y);
+        b.maxX = std::max(b.maxX, p.x);
+        b.maxY = std::max(b.maxY, p.y);
+    }
+    const double pad = r.kind == ClipRegion::Kind::Capsule ? r.radius : 0;
+    b.minX -= pad;
+    b.minY -= pad;
+    b.maxX += pad;
+    b.maxY += pad;
+    b.valid = true;
+    return b;
+}
+
+inline bool samplesOverlapAabb(const std::vector<InkSample> &s, const EraseAabb &b)
+{
+    if (!b.valid || s.empty())
+        return false;
+    double x0 = s[0].x, x1 = s[0].x, y0 = s[0].y, y1 = s[0].y;
+    for (const auto &p : s) {
+        x0 = std::min(x0, p.x);
+        x1 = std::max(x1, p.x);
+        y0 = std::min(y0, p.y);
+        y1 = std::max(y1, p.y);
+    }
+    return !(x1 < b.minX || x0 > b.maxX || y1 < b.minY || y0 > b.maxY);
 }
 
 inline bool erasePointInPolygon(double x, double y, const std::vector<ErasePt> &poly)
@@ -163,7 +237,8 @@ inline ClipResult clipInkPolyline(const std::vector<InkSample> &samples, const C
     auto segmentCrossings = [&](const InkSample &a, const InkSample &b) {
         std::vector<double> ts;
         const double len = std::hypot(b.x - a.x, b.y - a.y);
-        const int nsub = std::max(1, static_cast<int>(std::ceil(len / kEraseClipScanMm)));
+        const int nsub =
+            std::max(1, static_cast<int>(std::ceil(len / eraseMmToWorld(kEraseClipScanMm))));
         bool prev = contains(a);
         InkSample prevS = a;
         for (int k = 1; k <= nsub; ++k) {
@@ -188,7 +263,7 @@ inline ClipResult clipInkPolyline(const std::vector<InkSample> &samples, const C
 
     std::vector<InkSample> cur;
     auto flushRemnant = [&]() {
-        if (cur.size() >= 2 && polylineArcLength(cur) + 1e-9 >= kEraseRemnantFloorMm)
+        if (cur.size() >= 2 && polylineArcLength(cur) + 1e-9 >= eraseMmToWorld(kEraseRemnantFloorMm))
             out.remnants.push_back(cur);
         cur.clear();
     };

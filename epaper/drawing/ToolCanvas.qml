@@ -15,6 +15,7 @@ Item {
     function toggleHandTouch() { tool.toggleHandTouch() }
     function cancelHandTouch() { tool.cancelHandTouch() }
     function cancelInteraction() { tool.cancelInteraction() }
+    function onHoverMove(x, y) { tool.onHoverMove(x, y) }
     function onHoverLeave() { tool.onHoverLeave() }
     function onSecondContact() { tool.onSecondContact() }
     function onContactsCleared() { tool.onContactsCleared() }
@@ -56,19 +57,6 @@ Item {
                 if (active)
                     tool.onPointerMove(centroid.position.x, centroid.position.y,
                                        centroid.pressure, true, eraserNib)
-            }
-        }
-
-        HoverHandler {
-            id: penHover
-            acceptedDevices: PointerDevice.Stylus
-            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Eraser
-            enabled: session && session.exclusiveTool === "erase_brush"
-                     && session.eraseBrushHover
-            onPointChanged: tool.onHoverMove(point.position.x, point.position.y)
-            onHoveredChanged: {
-                if (!hovered)
-                    tool.onHoverLeave()
             }
         }
 

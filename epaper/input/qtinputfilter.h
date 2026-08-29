@@ -43,6 +43,8 @@ signals:
     /** Emitted before the mapped tablet event is delivered, so the canvas has the
      *  full channel set by the time a handler calls back. */
     void penSample(const QPointF &raw, const epaper::input::PenSample &channels);
+    /** Hover only (no contact). Mapped panel coordinates. */
+    void penHover(qreal x, qreal y);
     void contactCountChanged();
     void penNearChanged();
 

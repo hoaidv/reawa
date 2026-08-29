@@ -40,18 +40,7 @@ public:
     void setStrokeWaveform(bool penInFlight);
     epaper::tools::SelectionContextBar *selectionBar() { return &m_selBar; }
 
-protected:
-    void componentComplete() override;
-    void geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) override;
-
-    void setSession(CanvasSession *session);
-    CanvasSession *session() const { return m_session; }
-
-    void setSurface(TabletCanvasItem *surface);
-    TabletCanvasItem *surface() const { return m_surface; }
-
     Q_INVOKABLE void cancelInteraction();
-
     Q_INVOKABLE void onPointerStart(qreal x, qreal y, qreal pressure, bool pen,
                                     bool eraserNib = false);
     Q_INVOKABLE void onPointerMove(qreal x, qreal y, qreal pressure, bool pen,
@@ -66,10 +55,20 @@ protected:
     Q_INVOKABLE void onPinchStart(qreal x, qreal y, qreal scale);
     Q_INVOKABLE void onPinchUpdate(qreal x, qreal y, qreal scale);
     Q_INVOKABLE void onPinchEnd();
-
-    bool handTouchArmed() const { return m_hub.secondary().armed(); }
     Q_INVOKABLE void toggleHandTouch();
     Q_INVOKABLE void cancelHandTouch();
+
+protected:
+    void componentComplete() override;
+    void geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) override;
+
+    void setSession(CanvasSession *session);
+    CanvasSession *session() const { return m_session; }
+
+    void setSurface(TabletCanvasItem *surface);
+    TabletCanvasItem *surface() const { return m_surface; }
+
+    bool handTouchArmed() const { return m_hub.secondary().armed(); }
 
 signals:
     void surfaceChanged();

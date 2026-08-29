@@ -279,6 +279,8 @@ private:
     bool m_rasterizeSharp = false;
     /** Deferred sharp refresh queued while a stroke was in flight. */
     bool m_rasterizeDeferredSharp = false;
+    /** ToolCanvas primary/secondary pointer down — same GUI-stall guard as ink. */
+    bool m_toolPointerActive = false;
     int m_settleFollowUpToken = 0;
     epaper::render::DocumentRenderer m_renderer;
 
@@ -373,6 +375,7 @@ public:
     IngestChannels stashedChannels(const PanelPt &panel, RawPt *raw) const;
     void clearStash();
     bool strokeActive() const { return m_stroke.active; }
+    void setToolPointerActive(bool on);
     void cancelActiveStroke();
 
     void scheduleDocumentRasterize(bool sharp);

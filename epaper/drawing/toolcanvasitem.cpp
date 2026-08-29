@@ -211,6 +211,8 @@ void ToolCanvasItem::cancelInteraction()
 
 void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen, bool eraserNib)
 {
+    if (m_surface)
+        m_surface->setToolPointerActive(true);
     if (eraserNib && m_session && !m_nibArmed)
         m_nibArmed = m_session->beginNibErase();
     m_hub.dispatchPointerDown(sample(x, y, pressure, pen, eraserNib));
@@ -228,8 +230,10 @@ void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen, bool eraserNib)
         m_session->endNibErase();
         m_nibArmed = false;
     }
-    if (m_surface)
+    if (m_surface) {
         m_surface->clearStash();
+        m_surface->setToolPointerActive(false);
+    }
 }
 
 void ToolCanvasItem::onHoverMove(qreal x, qreal y)
@@ -256,8 +260,10 @@ void ToolCanvasItem::onPointerCancel()
         m_session->endNibErase();
         m_nibArmed = false;
     }
-    if (m_surface)
+    if (m_surface) {
         m_surface->clearStash();
+        m_surface->setToolPointerActive(false);
+    }
 }
 
 void ToolCanvasItem::onSecondContact()

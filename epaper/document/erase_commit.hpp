@@ -120,6 +120,7 @@ inline std::vector<std::unique_ptr<DocEdit>> planEraseEdits(DeviceDocument &doc,
     std::vector<std::unique_ptr<DocEdit>> parts;
     std::vector<EraseInkRef> inks;
     collectEraseInks(doc.rootChildren, "", nullptr, false, &inks);
+    const EraseAabb regionBox = clipRegionAabb(region);
 
     std::unordered_map<std::string, int> sgInkRemain;
     for (const auto &ref : inks) {
@@ -132,6 +133,8 @@ inline std::vector<std::unique_ptr<DocEdit>> planEraseEdits(DeviceDocument &doc,
         const DocNode &ink = *ref.ink;
         const std::string role = ink.role ? *ink.role : std::string("content");
         const std::vector<InkSample> world = worldInkSamples(ink, ref.smartGroup);
+        if (!samplesOverlapAabb(world, regionBox))
+            continue;
         const ClipResult clipped = clipInkPolyline(world, region);
         if (!clipped.hit)
             continue;

@@ -73,6 +73,14 @@ TabletWindow {
             }
         }
 
+        // @implements [SRS-EP-56] brush hover follows pen near; handlers never see proximity
+        function onPenHover(x, y) {
+            if (!drawCanvas.session || drawCanvas.session.exclusiveTool !== "erase_brush"
+                    || !drawCanvas.session.eraseBrushHover)
+                return
+            toolCanvas.onHoverMove(x, y)
+        }
+
         // @implements [SRS-EP-24] two contacts outrank a one-finger manip
         function onContactCountChanged() {
             if (Input.contactCount >= 2)

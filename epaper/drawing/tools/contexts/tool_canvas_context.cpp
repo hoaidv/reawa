@@ -47,9 +47,11 @@ void ToolCanvasContext::syncOverlayPresence()
 {
     if (!m_selection)
         return;
-    const bool penWaveform = isSelectionTool() && exclusiveTool() == QLatin1String("sel_freeform")
-        && m_selection->phase() != SelectionPhase::Selected
-        && m_selection->phase() != SelectionPhase::Transforming;
+    const bool penWaveform =
+        (isSelectionTool() && exclusiveTool() == QLatin1String("sel_freeform")
+         && m_selection->phase() != SelectionPhase::Selected
+         && m_selection->phase() != SelectionPhase::Transforming)
+        || exclusiveTool() == QLatin1String("erase_brush");
     m_chrome.syncPresence(*m_selection, isSelectionTool() || isEraserTool(), penWaveform, m_setVisible,
                           m_setStrokeWaveform);
 }
@@ -178,17 +180,19 @@ void ToolCanvasContext::setEraseHoverPanel(const QPointF &panel)
         return;
     }
     const double scale = panelScale();
-    const double d = epaper::document::kEraseBrushDiameterMm * scale;
-    const double stroke = epaper::document::kEraseHoverStrokeMm * scale;
+    const double d = epaper::document::eraseMmToWorld(epaper::document::kEraseBrushDiameterMm) * scale;
+    const double stroke = epaper::document::eraseMmToWorld(epaper::document::kEraseHoverStrokeMm) * scale;
     const double pad = d * 0.5 + stroke + 2.0;
     const QRectF next = QRectF(panel, panel).adjusted(-pad, -pad, pad, pad);
     QRectF dirty = next;
-    if (m_eraseHoverValid)
+    const bool wasValid = m_eraseHoverValid;
+    if (wasValid)
         dirty = dirty.united(m_eraseHoverDirty);
     m_eraseHoverPanel = panel;
     m_eraseHoverValid = true;
     m_eraseHoverDirty = next;
-    syncOverlayPresence();
+    if (!wasValid)
+        syncOverlayPresence();
     damageChrome(dirty);
 }
 
@@ -211,8 +215,9 @@ void ToolCanvasContext::paintEraseHover(QPainter *painter)
     if (m_hub && m_hub->lockedOperation())
         return;
     const double scale = panelScale();
-    const double d = epaper::document::kEraseBrushDiameterMm * scale;
-    const double stroke = std::max(1.0, epaper::document::kEraseHoverStrokeMm * scale);
+    const double d = epaper::document::eraseMmToWorld(epaper::document::kEraseBrushDiameterMm) * scale;
+    const double stroke =
+        std::max(1.0, epaper::document::eraseMmToWorld(epaper::document::kEraseHoverStrokeMm) * scale);
     painter->save();
     QPen pen(Qt::black);
     pen.setWidthF(stroke);
