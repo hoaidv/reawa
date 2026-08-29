@@ -49,7 +49,7 @@ Empty erase gesture: 0 tree ops, 0 undo entries.
 | Brush region | Capsule radius **4 mm** along gesture |
 | Area Ink region | Even-odd interior of auto-closed freeform (last→first); no min area |
 | Remnant floor | Arc length ≥ **1 mm** |
-| Split | Longest remnant keeps original `id`; others `append_ink`; 0 remnants `remove_node` |
+| Split | Longest remnant keeps original `id`; extras `append_ink` as unused `{id}_rN` (skip ids already in the tree); 0 remnants `remove_node` |
 | Gesture | One `compound` if >1 op; never `restore_snapshot` |
 | Content remnants | `role: content`; reseed `layoutOffset` |
 | Boundary ink remnants | `role: boundary`; broken surround allowed |
