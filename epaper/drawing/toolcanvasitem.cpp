@@ -211,8 +211,10 @@ void ToolCanvasItem::cancelInteraction()
 
 void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen, bool eraserNib)
 {
-    if (m_surface)
-        m_surface->setToolPointerActive(true);
+    // Erase only: deferring rasterize on move/resize leaves the origin node on
+    // TabletCanvas (suppress punch never runs). Nib erase starts as pen exclusive.
+    if (m_surface && (eraserNib || (m_toolCtx && m_toolCtx->isEraserTool())))
+        m_surface->setErasePointerActive(true);
     if (eraserNib && m_session && !m_nibArmed)
         m_nibArmed = m_session->beginNibErase();
     m_hub.dispatchPointerDown(sample(x, y, pressure, pen, eraserNib));
@@ -232,7 +234,7 @@ void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen, bool eraserNib)
     }
     if (m_surface) {
         m_surface->clearStash();
-        m_surface->setToolPointerActive(false);
+        m_surface->setErasePointerActive(false);
     }
 }
 
@@ -262,7 +264,7 @@ void ToolCanvasItem::onPointerCancel()
     }
     if (m_surface) {
         m_surface->clearStash();
-        m_surface->setToolPointerActive(false);
+        m_surface->setErasePointerActive(false);
     }
 }
 

@@ -4,13 +4,27 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QEventPoint>
+#include <QGuiApplication>
 #include <QList>
 #include <QPointF>
 #include <QPointingDevice>
+#include <QRectF>
+#include <QScreen>
+#include <QByteArray>
+#include <QDebug>
+#include <QString>
+#include <QSocketNotifier>
 #include <QTabletEvent>
 #include <QTouchEvent>
 #include <QVector>
 #include <QWindow>
+
+#if defined(Q_OS_LINUX)
+#include <fcntl.h>
+#include <linux/input.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#endif
 
 using epaper::input::PenSample;
 
@@ -21,9 +35,22 @@ QtInputFilter::QtInputFilter(QObject *parent)
     m_penIdle->setSingleShot(true);
     m_penIdle->setInterval(600);
     connect(m_penIdle, &QTimer::timeout, this, [this]() {
+        // Evdev near-tracking is authoritative when the tool is still in range.
+        // The idle timer only covers stacks that omit LeaveProximity.
+        if (m_stylus.phase() != epaper::input::StylusPhase::Away)
+            return;
         if (!m_penDown)
             setPenNear(false);
     });
+    attachStylusProximity();
+}
+
+QtInputFilter::~QtInputFilter()
+{
+#if defined(Q_OS_LINUX)
+    if (m_stylusFd >= 0)
+        ::close(m_stylusFd);
+#endif
 }
 
 void QtInputFilter::setPenNear(bool isNear)
@@ -167,13 +194,127 @@ bool QtInputFilter::remapPen(QObject *watched, QTabletEvent *tablet)
     // injecting, so the canvas holds the full set when a handler calls back during
     // the synchronous delivery below.
     emit penSample(raw, channelsFrom(tablet));
-    if (tablet->type() != QEvent::TabletPress && tablet->buttons() == Qt::NoButton)
+    // Qt evdevtablet only delivers TabletMove while BTN_TOUCH is (or just was)
+    // down. This branch is the lift-into-near frame; hover tracking is evdev.
+    if (!m_penDown)
         emit penHover(mapped.x(), mapped.y());
     return injectMapped(watched, w, tablet, mapped);
 }
 
+void QtInputFilter::noteWatchedWindow(QObject *watched)
+{
+    if (auto *w = qobject_cast<QWindow *>(watched))
+        m_lastWindow = w;
+}
+
+QWindow *QtInputFilter::hoverWindow() const
+{
+    if (m_lastWindow)
+        return m_lastWindow.data();
+    const auto windows = QGuiApplication::topLevelWindows();
+    return windows.isEmpty() ? nullptr : windows.first();
+}
+
+void QtInputFilter::emitMappedHover(double windowX, double windowY)
+{
+    auto *w = hoverWindow();
+    if (!w)
+        return;
+    const QPointF mapped = epaper::input::mapPanel(QPointF(windowX, windowY), w->width(), w->height());
+    if (mapped == m_lastHover)
+        return;
+    m_lastHover = mapped;
+    emit penHover(mapped.x(), mapped.y());
+}
+
+void QtInputFilter::applyStylusSyn()
+{
+    const auto phase = m_stylus.phase();
+    if (phase == epaper::input::StylusPhase::Away) {
+        m_lastHover = QPointF();
+        notePenLeave();
+        return;
+    }
+    setPenNear(true);
+    m_penIdle->stop();
+    if (!m_stylus.shouldEmitHover(m_penDown))
+        return;
+    auto *w = hoverWindow();
+    QRectF winRect(0, 0, w ? w->width() : 0, w ? w->height() : 0);
+    if (QScreen *screen = QGuiApplication::primaryScreen())
+        winRect = screen->geometry();
+    double gx = 0;
+    double gy = 0;
+    m_stylus.windowPos(winRect.width(), winRect.height(), &gx, &gy);
+    QPointF local(gx, gy);
+    if (w)
+        local = QPointF(gx - w->position().x(), gy - w->position().y());
+    emitMappedHover(local.x(), local.y());
+}
+
+void QtInputFilter::attachStylusProximity()
+{
+#if defined(Q_OS_LINUX)
+    for (int i = 0; i < 32 && m_stylusFd < 0; ++i) {
+        const QByteArray path = QByteArrayLiteral("/dev/input/event") + QByteArray::number(i);
+        const int fd = ::open(path.constData(), O_RDONLY | O_NONBLOCK);
+        if (fd < 0)
+            continue;
+        unsigned char keyBits[(KEY_MAX + 7) / 8] = {};
+        if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(keyBits)), keyBits) < 0) {
+            ::close(fd);
+            continue;
+        }
+        const auto has = [&](int bit) {
+            return keyBits[bit / 8] & static_cast<unsigned char>(1 << (bit % 8));
+        };
+        if (!has(BTN_TOOL_PEN) && !has(BTN_TOOL_RUBBER)) {
+            ::close(fd);
+            continue;
+        }
+        input_absinfo absX{};
+        input_absinfo absY{};
+        if (ioctl(fd, EVIOCGABS(ABS_X), &absX) < 0 || ioctl(fd, EVIOCGABS(ABS_Y), &absY) < 0) {
+            ::close(fd);
+            continue;
+        }
+        m_stylus.setAbsRange(absX.minimum, absX.maximum, absY.minimum, absY.maximum);
+        m_stylusFd = fd;
+        m_stylusNotifier = new QSocketNotifier(fd, QSocketNotifier::Read, this);
+        connect(m_stylusNotifier, &QSocketNotifier::activated, this,
+                [this](QSocketDescriptor, QSocketNotifier::Type) { onStylusReadable(); });
+        qInfo().noquote() << QStringLiteral("[input] stylus proximity %1").arg(QString::fromLatin1(path));
+        return;
+    }
+#else
+    (void)0;
+#endif
+}
+
+void QtInputFilter::onStylusReadable()
+{
+#if defined(Q_OS_LINUX)
+    input_event buffer[32];
+    for (;;) {
+        const ssize_t n = ::read(m_stylusFd, buffer, sizeof(buffer));
+        if (n <= 0)
+            break;
+        const int count = static_cast<int>(n / static_cast<ssize_t>(sizeof(input_event)));
+        for (int i = 0; i < count; ++i) {
+            const input_event &ev = buffer[i];
+            m_stylus.feed(ev.type, ev.code, ev.value);
+            if (ev.type == EV_SYN && ev.code == SYN_REPORT)
+                applyStylusSyn();
+        }
+        if (n < static_cast<ssize_t>(sizeof(buffer)))
+            break;
+    }
+#endif
+}
+
 bool QtInputFilter::eventFilter(QObject *watched, QEvent *event)
 {
+    noteWatchedWindow(watched);
     switch (event->type()) {
     case QEvent::TouchBegin:
     case QEvent::TouchUpdate:
@@ -203,7 +344,7 @@ bool QtInputFilter::eventFilter(QObject *watched, QEvent *event)
         auto *hover = static_cast<QHoverEvent *>(event);
         if (!w || !hover)
             return false;
-        emit penHover(hover->position().x(), hover->position().y());
+        emitMappedHover(hover->position().x(), hover->position().y());
         return false;
     }
     case QEvent::TabletPress:

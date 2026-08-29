@@ -3,13 +3,16 @@
 #include <QObject>
 #include <QEvent>
 #include <QPointF>
+#include <QPointer>
 #include <QTimer>
 
 #include "pen_sample.hpp"
+#include "stylus_proximity.hpp"
 
 class QTabletEvent;
 class QTouchEvent;
 class QWindow;
+class QSocketNotifier;
 
 /**
  * Raw input filter. It publishes the three facts Qt's pointer handlers cannot
@@ -35,6 +38,7 @@ class QtInputFilter : public QObject
 
 public:
     explicit QtInputFilter(QObject *parent = nullptr);
+    ~QtInputFilter() override;
 
     int contactCount() const { return m_contacts; }
     bool penNear() const { return m_penNear; }
@@ -60,6 +64,12 @@ private:
     bool remapPen(QObject *watched, QTabletEvent *tablet);
     bool injectMapped(QObject *watched, QWindow *w, QTabletEvent *tablet, const QPointF &mapped);
     epaper::input::PenSample channelsFrom(const QTabletEvent *tablet) const;
+    void noteWatchedWindow(QObject *watched);
+    QWindow *hoverWindow() const;
+    void emitMappedHover(double windowX, double windowY);
+    void attachStylusProximity();
+    void onStylusReadable();
+    void applyStylusSyn();
 
     bool m_penNear = false;
     bool m_penDown = false;
@@ -67,4 +77,9 @@ private:
     bool m_injectingCancel = false;
     int m_contacts = 0;
     QTimer *m_penIdle = nullptr;
+    epaper::input::StylusProximityTracker m_stylus;
+    QPointer<QWindow> m_lastWindow;
+    QPointF m_lastHover;
+    int m_stylusFd = -1;
+    QSocketNotifier *m_stylusNotifier = nullptr;
 };

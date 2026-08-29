@@ -45,5 +45,9 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/stroke_capture_test.cpp -o /tmp/strok
 /tmp/stroke_capture_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/transform_session_test.cpp -o /tmp/transform_session_test
 /tmp/transform_session_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/stylus_proximity_test.cpp -o /tmp/stylus_proximity_test
+/tmp/stylus_proximity_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. rendering/rendering.cpp tests/live_manip_overlay_test.cpp -o /tmp/live_manip_overlay_test
+/tmp/live_manip_overlay_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. rendering/rendering.cpp tests/rendering_test.cpp -o /tmp/rendering_test
 /tmp/rendering_test

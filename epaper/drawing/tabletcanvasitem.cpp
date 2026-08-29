@@ -10,6 +10,7 @@
 #include "debug/debug_log_format.hpp"
 #include "primary_toolbar.hpp"
 #include "ingest_origin_guard.hpp"
+#include "rasterize_gate.hpp"
 #include "rendering/rendering_qt.hpp"
 
 #include <QPainter>
@@ -841,17 +842,18 @@ qreal TabletCanvasItem::worldStrokeWidth(qreal pressure) const
  * =================================================================================================
  * Rasterize scheduling and document tree paint
  *
- * scheduleVectorRasterize queues a soft/sharp redraw of vectors into m_image. Skipped
- * while a stroke is active so live ink is not wiped.
+ * scheduleVectorRasterize queues a soft/sharp redraw of vectors into m_image.
+ * Deferred while live ink or an erase ghost owns the buffer (FullClear would
+ * wipe them). Live manip must still rasterize so suppressIds punch the origin.
  * =================================================================================================
  */
 
 /** Queue soft/sharp vector refresh (defer if pen down). */
 void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
 {
-    // Never full-redraw while the pen is down — white clear would erase live ink
-    // and stall the GUI thread so later strokes miss the panel.
-    if (m_stroke.active || m_toolPointerActive) {
+    // FullClear would wipe live ink / erase ghost and stall the GUI thread.
+    // Transform punch (suppressIds) must still run; erasePointerActive is eraser-only.
+    if (epaper::render::deferFullDocumentRasterize(m_stroke.active, m_erasePointerActive)) {
         if (sharp)
             m_rasterizeDeferredSharp = true;
         else if (!m_rasterizeDeferredSharp)
@@ -874,7 +876,8 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
         m_rasterizeSharp = false;
         const int token = ++m_settleFollowUpToken;
         QTimer::singleShot(int(kSettleFollowUpMs), this, [this, token]() {
-            if (token != m_settleFollowUpToken || m_stroke.active || m_toolPointerActive)
+            if (token != m_settleFollowUpToken
+                || epaper::render::deferFullDocumentRasterize(m_stroke.active, m_erasePointerActive))
                 return;
             rasterizeVectors(true);
         });
@@ -882,7 +885,8 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
     }
     m_rasterizePending = true;
     QTimer::singleShot(int(kRefreshMinIntervalMs), this, [this]() {
-        if (!m_rasterizePending || m_stroke.active || m_toolPointerActive)
+        if (!m_rasterizePending
+            || epaper::render::deferFullDocumentRasterize(m_stroke.active, m_erasePointerActive))
             return;
         m_rasterizePending = false;
         const bool doSharp = m_rasterizeSharp || m_rasterizeDeferredSharp;
@@ -1110,11 +1114,11 @@ void TabletCanvasItem::clearStash()
     m_stashValid = false;
 }
 
-void TabletCanvasItem::setToolPointerActive(bool on)
+void TabletCanvasItem::setErasePointerActive(bool on)
 {
-    if (m_toolPointerActive == on)
+    if (m_erasePointerActive == on)
         return;
-    m_toolPointerActive = on;
+    m_erasePointerActive = on;
     if (!on && (m_rasterizeDeferredSharp || m_rasterizePending || m_rasterizeSharp))
         scheduleVectorRasterize(m_rasterizeDeferredSharp || m_rasterizeSharp);
 }
