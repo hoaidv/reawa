@@ -41,7 +41,6 @@ App env forwarded to the device when set locally:
   EPAPER_DEBUG_PORT override debug sidecar port (default 9878)
   INFINI_DEBUG_PORT fallback debug port if EPAPER_DEBUG_PORT unset
   RM_INK_MODE      painted (default) | pool
-  RM_INK_BEACON    1 (default) | 0 — render-path probe squares
   RM_INK_TRACE     1 — latency instrumentation
   RM_DOC_PROBE     1 — 500-node / 50k-sample stub + hit-test on ingest (STORY-EP-013)
   RM_DOC_PROBE_SYNTH 1 — synthetic strokes then exit (device harness)
@@ -154,7 +153,7 @@ ssh_rm 'killall epaper rm-canvas-spike 2>/dev/null || true; sleep 0.3' || true
 echo "Deploying $(basename "$BIN") ($(ls -lh "$BIN" | awk '{print $5}')) to $HOST:$REMOTE ..."
 scp "${SSH_OPTS[@]}" "$BIN" "$HOST:$REMOTE"
 
-FORWARDED=(RM_SYNC_HOST RM_INK_MODE RM_INK_BEACON RM_INK_TRACE RM_EP_SWAP
+FORWARDED=(RM_SYNC_HOST RM_INK_MODE RM_INK_TRACE RM_EP_SWAP
            RM_EP_SCREEN_MODE RM_EP_CONTENT_TYPE
            RM_DOC_PROBE RM_DOC_PROBE_SYNTH RM_DOC_PROBE_EVERY_SAMPLE
            EPAPER_DEBUG_LOG EPAPER_DEBUG_PORT INFINI_DEBUG_PORT

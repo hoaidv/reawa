@@ -4,12 +4,12 @@ title: Area erase clip and fully-inside remove
 kind: implement
 parent_srs: [SRS-EP-57, SRS-EP-59]
 parent_req: [REQ-11]
-status: draft
+status: in-review
 priority: P0
 iter: iter-005
 estimate: 5
 owner: dev
-depends_on: [STORY-EP-062, STORY-EP-063]
+depends_on: [STORY-EP-062, STORY-EP-063, STORY-EP-067, STORY-EP-068]
 acceptance_criteria:
   - "Given erase_area and an open freeform across ink, When pointer-up, Then the polygon auto-closes last to first, even-odd interior ink is clipped, remnants follow remnant rules, and 0 minimum-area refusal."
   - "Given erase_area and a connector (or Primitive / Text / SmartGroup) fully inside the closed polygon, When commit, Then that node is removed (SmartGroup as a whole; connector attachments unbound per object-erase unbind rules)."
@@ -27,7 +27,7 @@ wireframe: ""
 
 `AreaErase` Operation. Ink = geometric clip ([STORY-EP-063](./STORY-EP-063.md)). Other kinds = `remove_node` if **fully inside**. Frame never. Connector unbind = same as [STORY-EP-066](./STORY-EP-066.md) § connector remove (implement unbind here or share a helper; do not convert to Ink).
 
-Canonical: [prd-erase.md](../../../.docs/modules/epaper/prd-erase.md) §8, §14 Area. Bind: [SRS-EP-57](../../../.docs/modules/epaper/features/erase/srs-logic.md#srs-ep-57-area). Preview: dotted polyline on ToolCanvas; no cover fill.
+Canonical: [prd-erase.md](../../../.docs/modules/epaper/prd-erase.md) §8, §14 Area. Bind: [SRS-EP-57](../../../.docs/modules/epaper/features/erase/srs-logic.md#srs-ep-57-area). Preview: dotted polyline on ToolCanvas via `AreaErase::paintOverlay` ([STORY-EP-068](./STORY-EP-068.md)); no cover fill. Do not add draw calls to `ToolCanvasContext`.
 
 Human is QA this wave: host tests + human confirm. No BDD ceremony required before implement.
 
@@ -37,7 +37,7 @@ Human is QA this wave: host tests + human confirm. No BDD ceremony required befo
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Depends on | STORY-EP-062, STORY-EP-063 |
+| Depends on | STORY-EP-062, STORY-EP-063, STORY-EP-067, STORY-EP-068 |
 
 ## Done when
 

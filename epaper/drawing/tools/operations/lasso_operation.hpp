@@ -49,6 +49,17 @@ public:
         return m_caps->toolUi->exclusiveTool() == QLatin1String("sel_freeform");
     }
 
+    bool paintsIdleOverlay() const override { return true; }
+    bool wantsPenWaveform() const override
+    {
+        if (!m_caps || !m_caps->toolUi || !m_caps->selection)
+            return false;
+        if (m_caps->toolUi->exclusiveTool() != QLatin1String("sel_freeform"))
+            return false;
+        const auto p = m_caps->selection->phase();
+        return p != SelectionPhase::Selected && p != SelectionPhase::Transforming;
+    }
+
     void onDown(const PointerSample &s) override
     {
         if (!m_caps || !m_caps->toolUi || !m_caps->selection)

@@ -1,0 +1,92 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="asgiref" />
+          <option value="certifi" />
+          <option value="cffi" />
+          <option value="charset-normalizer" />
+          <option value="defusedxml" />
+          <option value="Django" />
+          <option value="django-allauth" />
+          <option value="django-filter" />
+          <option value="djangorestframework" />
+          <option value="djangorestframework-simplejwt" />
+          <option value="django-auditlog" />
+          <option value="django-cleanup" />
+          <option value="idna" />
+          <option value="oauthlib" />
+          <option value="pycparser" />
+          <option value="python3-openid" />
+          <option value="pytz" />
+          <option value="requests" />
+          <option value="requests-oauthlib" />
+          <option value="social-auth-app-django" />
+          <option value="social-auth-core" />
+          <option value="sqlparse" />
+          <option value="tzdata" />
+          <option value="urllib3" />
+          <option value="python-decouple" />
+          <option value="psycopg2-binary" />
+          <option value="redis" />
+          <option value="pyjwt" />
+          <option value="cryptography" />
+          <option value="minio" />
+          <option value="boto3" />
+          <option value="channels" />
+          <option value="pdfminer.six" />
+          <option value="PyPDF2" />
+          <option value="PyDrive2" />
+          <option value="whitenoise" />
+          <option value="daphne" />
+          <option value="django-cors-headers" />
+          <option value="pydub" />
+          <option value="faiss-cpu" />
+          <option value="channels_redis" />
+          <option value="celery" />
+          <option value="django-celery-beat" />
+          <option value="amqp" />
+          <option value="numpy" />
+          <option value="python-docx" />
+          <option value="unidecode" />
+          <option value="gevent" />
+          <option value="python-socketio" />
+          <option value="dj-rest-auth" />
+          <option value="requests_toolbelt" />
+          <option value="pika" />
+          <option value="django-storages" />
+          <option value="six" />
+          <option value="python-magic" />
+          <option value="django-redis" />
+          <option value="tenacity" />
+          <option value="uvicorn" />
+          <option value="django-soft-delete" />
+          <option value="elasticsearch" />
+          <option value="pydantic" />
+          <option value="pydantic_core" />
+          <option value="openai" />
+          <option value="psycopg" />
+          <option value="PyMuPDF" />
+          <option value="openpyxl" />
+          <option value="xlsxwriter" />
+          <option value="pandas" />
+          <option value="beautifulsoup4" />
+          <option value="gTTS" />
+          <option value="Pillow" />
+          <option value="google-auth" />
+          <option value="gspread" />
+          <option value="django_auth_ldap" />
+          <option value="pymongo" />
+          <option value="pymilvus" />
+          <option value="django-csp" />
+          <option value="gotenberg-client" />
+          <option value="python-redis-lock" />
+          <option value="python-dateutil" />
+          <option value="django-prometheus" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

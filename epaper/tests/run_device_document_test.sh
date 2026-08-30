@@ -7,6 +7,8 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/device_document_test.cpp -o /tmp/devi
 /tmp/device_document_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/erase_clip_test.cpp -o /tmp/erase_clip_test
 /tmp/erase_clip_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/erase_area_object_test.cpp -o /tmp/erase_area_object_test
+/tmp/erase_area_object_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/enclose_test.cpp -o /tmp/enclose_test
 /tmp/enclose_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/membership_test.cpp -o /tmp/membership_test

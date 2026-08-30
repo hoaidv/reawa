@@ -110,27 +110,13 @@ inline std::unique_ptr<AppendInkEdit> makeRemnantAppend(const std::string &opId,
     return e;
 }
 
-/** `{base}_rN` unused in the tree and this gesture. @implements [SRS-EP-55] remnant ids */
-inline std::string allocEraseRemnantId(const DeviceDocument &doc, const std::string &base,
-                                       std::unordered_set<std::string> *used)
-{
-    for (int n = 1; n < 1000000; ++n) {
-        const std::string nid = base + "_r" + std::to_string(n);
-        if (used->count(nid) || doc.find(nid))
-            continue;
-        used->insert(nid);
-        return nid;
-    }
-    return base + "_rx";
-}
-
 /**
  * Plan clip edits against the current tree. Empty vector = no-op (0 undo).
  * Clip never mutates SmartGroup::boundaryPolyline.
  */
-inline std::vector<std::unique_ptr<DocEdit>> planEraseEdits(DeviceDocument &doc,
-                                                            const std::string &opId,
-                                                            const ClipRegion &region)
+inline std::vector<std::unique_ptr<DocEdit>> planEraseEdits(
+    DeviceDocument &doc, const std::string &opId, const ClipRegion &region,
+    const std::unordered_set<std::string> *skipParents = nullptr)
 {
     std::vector<std::unique_ptr<DocEdit>> parts;
     std::vector<EraseInkRef> inks;
@@ -143,8 +129,11 @@ inline std::vector<std::unique_ptr<DocEdit>> planEraseEdits(DeviceDocument &doc,
             sgInkRemain[ref.smartGroup->id] += 1;
     }
 
-    std::unordered_set<std::string> remnantIds;
     for (const auto &ref : inks) {
+        if (skipParents
+            && (skipParents->count(ref.parentId)
+                || (ref.smartGroup && skipParents->count(ref.smartGroup->id))))
+            continue;
         const DocNode &ink = *ref.ink;
         const std::string role = ink.role ? *ink.role : std::string("content");
         const std::vector<InkSample> world = worldInkSamples(ink, ref.smartGroup);
@@ -183,7 +172,7 @@ inline std::vector<std::unique_ptr<DocEdit>> planEraseEdits(DeviceDocument &doc,
         for (size_t i = 0; i < remnants.size(); ++i) {
             if (i == longest)
                 continue;
-            const std::string nid = allocEraseRemnantId(doc, ink.id, &remnantIds);
+            const std::string nid = doc.generateNodeId();
             auto e = makeRemnantAppend(opId, nid, ref.parentId, afterId, ink, remnants[i]);
             if (ref.smartGroup && role == "content")
                 e->setLayoutOffset(seedLayoutOffset(remnants[i], ref.smartGroup->smartBounds));

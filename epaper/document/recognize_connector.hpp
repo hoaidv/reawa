@@ -1025,7 +1025,7 @@ inline ConnectorResult tryRecognizeConnector(DeviceDocument &doc, const std::str
     for (const auto &id : bodyIds)
         cap.push_back(id);
 
-    const std::string cid = std::string("conn_") + strokeId;
+    const std::string cid = doc.generateNodeId();
     CreateConnectorEdit edit;
     edit.setId(std::string("create_connector:") + cid);
     edit.setSource("epaper");

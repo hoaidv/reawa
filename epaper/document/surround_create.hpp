@@ -351,7 +351,7 @@ inline SelectionCreateResult createSmartGroupFromSelection(DeviceDocument &doc,
     for (const DocNode *ink : orderedInks)
         capturedIds.push_back(ink->id);
 
-    const std::string smartGroupId = std::string("sg_sel_") + winnerId;
+    const std::string smartGroupId = doc.generateNodeId();
     CreateSmartGroupEdit edit;
     edit.setId(std::string("create_smart_group:") + smartGroupId);
     edit.setSource("epaper");

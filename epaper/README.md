@@ -46,7 +46,6 @@ Optional env, forwarded to the device by `deploy-rm2.sh` when set locally:
 |---|---|
 | `RM_INK_TRACE=1` | Dump arrival→flush / flush→swap percentiles on exit |
 | `RM_INK_MODE=pool` | Fall back to the old QML `Rectangle` ink pool |
-| `RM_INK_BEACON=1` | Stamp render-path probe squares into the ink layer |
 | `RM_DOC_PROBE=1` | STORY-EP-013: resident 500-node / 50k-sample stub + hit-test on ingest (not in `paint()`) |
 | `RM_DOC_PROBE_SYNTH=1` | Inject synthetic strokes then exit (device-runnable; still not panel p95) |
 | `RM_DOC_PROBE_EVERY_SAMPLE=1` | Hit-test on every ingest sample (stress); default is pen-down only |

@@ -49,14 +49,6 @@ static QRectF panelToQ(const epaper::follow::PanelRect &r)
 
 /** Context toolbar under the box — south of the bottom handle (28 du visual). */
 
-/** Fixed screen slots for the render-path beacons (EXP-0001 Round 22). */
-constexpr int kStaticBeaconX = 40;
-constexpr int kStaticBeaconY = 60;
-constexpr int kStaticBeaconSize = 120;
-constexpr int kFlushBeaconX = 200;
-constexpr int kFlushBeaconY = 60;
-constexpr int kFlushBeaconSize = 60;
-
 /** RM_DOC_PROBE=1 — ingest-path stub only; never read from paint(). */
 bool g_docProbe = false;
 
@@ -125,7 +117,6 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     , m_oneWay(m_session.document)
 {
     m_paintsInk = qgetenv("RM_INK_MODE").trimmed().toLower() != "pool";
-    m_beacons = envFlag("RM_INK_BEACON", false);
     armDocProbeFromEnv();
 
     setAntialiasing(false);
@@ -134,6 +125,7 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     setFillColor(m_paintsInk ? QColor(Qt::white) : QColor(Qt::transparent));
     m_flushClock.start();
     m_refreshClock.start();
+    m_stroke.mintNodeId = [this]() { return m_session.document.generateNodeId(); };
     connect(m_sync, &StrokeSync::hostMessage, this, &TabletCanvasItem::onHostMessage);
     connect(m_sync, &StrokeSync::socketConnected, this, [this]() {
         epaper::UiStallSection stall("onLinkUp-hello");
@@ -356,7 +348,6 @@ void TabletCanvasItem::paint(QPainter *painter)
 
     // SRS-EP-13: do not hit-test or time the stub document here.
     ensureImage();
-    m_paintCount.fetchAndAddRelaxed(1);
     painter->drawImage(0, 0, m_image);
 }
 
@@ -378,7 +369,6 @@ void TabletCanvasItem::ensureImage()
     }
     m_image = grown;
     setTextureSize(want);
-    stampStaticBeacon();
 }
 
 /** Draw one ink segment into m_image. */
@@ -418,15 +408,13 @@ void TabletCanvasItem::emitSegment(const Point &from, const Point &to)
     m_pendingDirty = m_pendingDirty.isNull() ? rf : m_pendingDirty.united(rf);
 }
 
-/** Coalesce dirty rects and swapBuffers / beacon. */
+/** Coalesce dirty rects and swapBuffers. */
 void TabletCanvasItem::flushPending()
 {
     if (m_pendingDirty.isNull())
         return;
 
     EpaperBridge::instance()->traceFlush();
-    ++m_flushCount;
-    stampFlushBeacon();
 
     const QRect local = m_pendingDirty.toAlignedRect();
     m_pendingDirty = QRectF();
@@ -448,37 +436,6 @@ void TabletCanvasItem::flushPending()
         }
     }
 }
-
-/** EXP beacon: fixed rect for render-path timing. */
-void TabletCanvasItem::stampStaticBeacon()
-{
-    if (!m_beacons || m_image.isNull())
-        return;
-
-    // Painted once, never touched again: if this square is missing on screen the
-    // painter node never reaches the panel at all.
-    QPainter p(&m_image);
-    p.fillRect(kStaticBeaconX, kStaticBeaconY, kStaticBeaconSize, kStaticBeaconSize, Qt::black);
-    p.fillRect(kStaticBeaconX + 30, kStaticBeaconY + 30, kStaticBeaconSize - 60, kStaticBeaconSize - 60, Qt::white);
-}
-
-/** EXP beacon: marks a flush cycle. */
-void TabletCanvasItem::stampFlushBeacon()
-{
-    if (!m_beacons || m_image.isNull())
-        return;
-
-    // Toggled on every flush without any geometry change: if the static beacon
-    // shows but this one never blinks, content-only damage is being dropped.
-    const bool on = (m_flushCount % 2) == 0;
-    QPainter p(&m_image);
-    p.fillRect(kFlushBeaconX, kFlushBeaconY, kFlushBeaconSize, kFlushBeaconSize,
-               on ? Qt::black : Qt::white);
-
-    const QRectF r(kFlushBeaconX, kFlushBeaconY, kFlushBeaconSize, kFlushBeaconSize);
-    m_pendingDirty = m_pendingDirty.isNull() ? r : m_pendingDirty.united(r);
-}
-
 
 /**
  * =================================================================================================
@@ -726,13 +683,11 @@ void TabletCanvasItem::endStroke()
 
     // Status text is refreshed between strokes only: during a stroke it would
     // add a second damage region per flush.
-    m_debugInfo = QStringLiteral("(%1,%2) sz=%3x%4 flush=%5 paint=%6 ink=%7")
+    m_debugInfo = QStringLiteral("(%1,%2) sz=%3x%4 ink=%5")
                       .arg(int(m_stroke.lastPanelX))
                       .arg(int(m_stroke.lastPanelY))
                       .arg(int(width()))
                       .arg(int(height()))
-                      .arg(m_flushCount)
-                      .arg(m_paintCount.loadRelaxed())
                       .arg(m_session.document.inkCount());
     emit debugChanged();
 }
@@ -931,7 +886,6 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
     epaper::render::QImagePixelSink sink(&m_image);
     m_renderer.render(m_session.document, proj, req, sink);
 
-    stampStaticBeacon();
     m_refreshClock.restart();
     // Full-rect update. Pen-mode swap only when explicitly requested (RM_EP_SWAP) —
     // unconditional swap after every settle starved the stroke path on device.

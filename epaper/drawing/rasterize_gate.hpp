@@ -19,5 +19,5 @@ inline bool deferFullDocumentRasterize(bool inkStrokeActive, bool erasePointerAc
     return inkStrokeActive || erasePointerActive;
 }
 
-} // namespace render
+} // namespace rend
 } // namespace epaper

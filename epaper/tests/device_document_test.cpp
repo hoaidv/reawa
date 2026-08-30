@@ -1122,8 +1122,24 @@ static void test_lastopid_redo_move_b_then_create_b_skips()
     CHECK(doc.find("B")->lastOpId == "moveB");
 }
 
+static void test_generate_node_id_singleton()
+{
+    DeviceDocument doc;
+    const std::string a = doc.generateNodeId();
+    const std::string b = doc.generateNodeId();
+    CHECK(a != b);
+    CHECK(a.size() == 36);
+    CHECK(a[8] == '-' && a[13] == '-' && a[18] == '-' && a[23] == '-');
+    CHECK(doc.commitJson(makeAppendInkOp(a)).applied);
+    CHECK(doc.find(a));
+    const std::string c = doc.generateNodeId();
+    CHECK(c != a && c != b);
+    CHECK(!doc.find(c));
+}
+
 int main()
 {
+    test_generate_node_id_singleton();
     test_append_ink_fixture_needs_parent();
     test_create_primitive_fixture();
     test_shared_ops_sequence_matches_infini_shape();

@@ -49,7 +49,7 @@ inline ApplyResult CreateFrameEdit::doApply(DeviceDocument &doc)
     n.id = m_nodeId;
     n.kind = NodeKind::Frame;
     n.bounds = m_bounds;
-    doc.rootChildren.push_back(std::move(n));
+    doc.insertAt("", static_cast<int>(doc.rootChildren.size()), std::move(n));
     return {true, {}};
 }
 

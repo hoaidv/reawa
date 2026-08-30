@@ -16,7 +16,7 @@ If you change a list in code, change this page in the same change.
 |---|---|---|---|---|---|
 | `Ink` | [`modes/ink_mode.hpp`](../../../epaper/drawing/tools/modes/ink_mode.hpp) | `"pen"` | InkStroke | Navigation, Select, Move | If select/move mutated a non-empty selection → `sel_freeform` |
 | `Selection` | [`modes/selection_mode.hpp`](../../../epaper/drawing/tools/modes/selection_mode.hpp) | `"sel_rect"`, `"sel_freeform"` | Resize, Move, Lasso, Marquee | Navigation, Select, Move, Resize, Rotate | no-op (must not force `sel_rect` → freeform) |
-| `Eraser` | — | — | — | — | reserved |
+| `Eraser` | [`modes/eraser_mode.hpp`](../../../epaper/drawing/tools/modes/eraser_mode.hpp) | `"erase_brush"`, `"erase_area"`, `"erase_object"` | BrushErase, AreaErase, ObjectErase | Navigation | — |
 
 Lasso `match` requires `exclusiveTool == sel_freeform`. Marquee requires `sel_rect`. Both **accept**
 Primary and Secondary, but SelectionMode does **not** list them on `secondaryOps` (commented out).
@@ -37,6 +37,9 @@ Registered in `ToolCanvasItem::registerOperations`. One instance per kind on the
 | Navigation | `operations/navigation_operation.hpp` | RawPointer / Pinch | same | 30 | Secondary only | Empty-canvas pan after 20 mm (178 du); pinch always Finger hardware |
 | Select | `operations/select_operation.hpp` | Tap | Tap | 20 | Secondary only | Pick or clear |
 | InkStroke | `operations/ink_stroke_operation.hpp` | RawPointer | RawPointer | 10 | Primary only | `InkSink`; skip stylus stash if `device != Pen` |
+| BrushErase | `operations/brush_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Ghost + hover circle; `erase_brush` |
+| AreaErase | `operations/area_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Dotted freeform; polygon clip + fully-inside remove |
+| ObjectErase | `operations/object_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Dotted freeform + AABB; 80% table; 0 remnants |
 | Rotate | — | — | — | — | — | enum + Mode list only |
 
 Shared move/resize math: `operations/transform_session.hpp` (Qt-free) +
@@ -69,7 +72,7 @@ Copy, Paste. Cut/Copy/Paste chrome exists; clipboard wiring may still be incompl
 | `SessionDocContext` | `contexts/session_doc_context.hpp` | Adapter over `CanvasSession` + Tablet |
 | `SelectionContext` | `contexts/selection_context.hpp` | ids, pickableId, phase |
 | `ToolContext` | `contexts/tool_context.hpp` | Overlay ports |
-| `ToolCanvasContext` | `contexts/tool_canvas_context.*` | Adapter; owns `ToolChrome` |
+| `ToolCanvasContext` | `contexts/tool_canvas_context.*` | Adapter + ports; dispatches overlay paint to the locked or exclusive-armed Operation, then settled `ToolChrome`. No per-tool draw. |
 
 Phases: Idle → Selecting → Selected → Transforming.
 

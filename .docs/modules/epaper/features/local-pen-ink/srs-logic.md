@@ -54,9 +54,9 @@ module: epaper
 | Event arrival → flush | ≪ budget | p50 305 µs, p95 798 µs, p99 1517 µs (n=764) |
 | Instrumentation | `RM_INK_TRACE=1` | arrival→flush and flush→swap percentiles on exit |
 
-When ink is invisible, `RM_INK_BEACON=1` stamps a static and a per-flush probe
-square into the ink image; together with the `paint=` counter this distinguishes
-"Qt never called `paint()`" from "the panel never refreshed".
+When ink is invisible, `RM_INK_TRACE=1` dumps arrival→flush / flush→swap
+percentiles on exit. Render-path probe squares (`RM_INK_BEACON`) were retired
+once live ink reached the panel.
 
 **Out of scope for this SRS:** macOS stroke ingest UI, viewport sync, pressure polish.
 

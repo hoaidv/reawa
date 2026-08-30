@@ -38,6 +38,12 @@ public:
     InteractionMode *activeMode() const { return m_activeMode; }
 
     Operation *lockedOperation() const { return m_lockedOp; }
+    Operation *operation(OperationKind kind) const { return opFor(kind); }
+    /** Locked gesture painter, else exclusive-armed idle overlay op. */
+    Operation *overlayOperation() const;
+
+    void setHoverPanel(const QPointF &panel);
+    void clearHover();
 
     void setOperation(OperationKind kind, std::unique_ptr<Operation> op)
     {

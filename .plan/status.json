@@ -1,12 +1,12 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-29T16:12:06+00:00",
+  "generated_at": "2026-08-30T05:27:12+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 15,
-    "ready": 2,
+    "draft": 13,
+    "ready": 1,
     "in-progress": 0,
-    "in-review": 0,
+    "in-review": 4,
     "done": 135,
     "blocked": 13,
     "cancelled": 6
@@ -18,9 +18,9 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 67,
+      "total": 68,
       "done": 41,
-      "in_review": 0
+      "in_review": 4
     },
     "infini": {
       "total": 38,
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "NOW STORY-EP-067 generateNodeId; brush EP-062\u2026064 done; area/object EP-065/066 draft; clipboard W3 frozen; remaining follow field test",
+      "cursor": "NOW STORY-EP-067 generateNodeId then STORY-EP-068 overlay-on-operations; brush EP-062\u2026064 done; area/object EP-065/066 draft until overlay refactor; clipboard W3 frozen",
       "iter": "iter-005"
     },
     {

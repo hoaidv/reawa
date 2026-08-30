@@ -343,6 +343,7 @@ export class VectorDocument {
     this.insertUnder(p.parentId as string | undefined, node);
   }
 
+  /** Inbound doc_change carries the device id; Infini never remints. @implements [SRS-IN-09] */
   private opAppendInk(p: Record<string, unknown>): void {
     const id = String(p.id);
     this.assertUniqueId(id);

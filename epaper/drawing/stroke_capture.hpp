@@ -9,9 +9,11 @@
  */
 
 #include "document/ingest_stroke.hpp"
+#include "document/node_id.hpp"
 #include "ingest_origin_guard.hpp"
 
 #include <algorithm>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -106,7 +108,7 @@ struct StrokeCapture {
     bool previewSent = false;
     bool awaitingPlausiblePress = false;
     std::string activeStrokeId;
-    int strokeSeq = 0;
+    std::function<std::string()> mintNodeId;
     int strokeCount = 0;
     double activeWorldStrokeWidth = 2.5;
     double lastPanelX = 0;
@@ -157,7 +159,10 @@ struct StrokeCapture {
             | StrokeIntent::LatchChip;
 
         current.clear();
-        activeStrokeId = std::string("s-") + std::to_string(++strokeSeq);
+        if (mintNodeId)
+            activeStrokeId = mintNodeId();
+        else
+            activeStrokeId = epaper::document::generateUuidV4();
         activeWorldStrokeWidth = worldStrokeWidth(ch.pressure, kBaseWorldStroke);
         const Sample s = makeSample(panelX, panelY, ch);
         current.push_back(s);

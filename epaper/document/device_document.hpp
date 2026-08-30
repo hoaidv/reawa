@@ -8,6 +8,7 @@
  */
 
 #include "doc_model.hpp"
+#include "node_id.hpp"
 #include "operations/undo_stack.hpp"
 
 #include <chrono>
@@ -16,6 +17,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -208,11 +210,19 @@ public:
             for (const auto &c : kids->asArray())
                 rootChildren.push_back(nodeFromJson(c));
         }
+        reindexAll();
         onAcceptedDocLoad();
     }
 
     const DocNode *find(const std::string &id) const { return findMut(id); }
     DocNode *mutableFind(const std::string &id) { return findMut(id); }
+
+    /**
+     * O(1) UUID. Uniqueness is enforced at insert via the id→node map.
+     * @implements [SRS-EP-07] unique tree ids
+     * @implements [STORY-EP-067] Singleton generateNodeId for all tree nodes
+     */
+    std::string generateNodeId() { return generateUuidV4(); }
 
     struct NodePlace {
         std::string parentId;
@@ -271,6 +281,7 @@ public:
 
 private:
     std::set<std::string> m_applied;
+    mutable std::unordered_map<std::string, DocNode *> m_byId;
     enum class HistoryLatch { None, Undo, Redo };
     UndoStack m_history;
     std::vector<DocChange> m_publishQueue;
@@ -353,13 +364,15 @@ private:
         return false;
     }
 
-    static bool detachAny(std::vector<DocNode> &nodes, const std::string &id, DocNode *out)
+    bool detachAny(std::vector<DocNode> &nodes, const std::string &id, DocNode *out)
     {
         for (size_t i = 0; i < nodes.size(); ++i) {
             if (nodes[i].id == id) {
+                forgetSubtree(nodes[i]);
                 if (out)
                     *out = std::move(nodes[i]);
                 nodes.erase(nodes.begin() + static_cast<std::ptrdiff_t>(i));
+                rebindSiblings(nodes);
                 return true;
             }
             if (detachAny(nodes[i].children, id, out))
@@ -382,7 +395,9 @@ public:
             index = 0;
         if (index > static_cast<int>(sibs->size()))
             index = static_cast<int>(sibs->size());
-        sibs->insert(sibs->begin() + index, std::move(node));
+        auto it = sibs->insert(sibs->begin() + index, std::move(node));
+        rememberSubtree(*it);
+        rebindSiblings(*sibs);
     }
 
     void runLatchedHistory()
@@ -435,6 +450,9 @@ public:
 
     DocNode *findMut(const std::string &id) const
     {
+        const auto it = m_byId.find(id);
+        if (it != m_byId.end())
+            return it->second;
         return findIn(const_cast<std::vector<DocNode> &>(rootChildren), id);
     }
 
@@ -451,8 +469,35 @@ public:
 
     void assertUniqueId(const std::string &id)
     {
-        if (findMut(id))
+        if (m_byId.count(id))
             throw std::runtime_error(std::string("duplicate_id:") + id);
+    }
+
+    void rememberSubtree(DocNode &n) const
+    {
+        m_byId[n.id] = &n;
+        for (auto &c : n.children)
+            rememberSubtree(c);
+    }
+
+    void forgetSubtree(const DocNode &n) const
+    {
+        m_byId.erase(n.id);
+        for (const auto &c : n.children)
+            forgetSubtree(c);
+    }
+
+    void rebindSiblings(std::vector<DocNode> &sibs) const
+    {
+        for (auto &n : sibs)
+            m_byId[n.id] = &n;
+    }
+
+    void reindexAll() const
+    {
+        m_byId.clear();
+        for (auto &n : const_cast<std::vector<DocNode> &>(rootChildren))
+            rememberSubtree(n);
     }
 
     static bool isContainer(const DocNode *n)
@@ -463,7 +508,7 @@ public:
     void insertUnder(const std::optional<std::string> &parentId, DocNode node)
     {
         if (!parentId || parentId->empty()) {
-            rootChildren.push_back(std::move(node));
+            insertAt("", static_cast<int>(rootChildren.size()), std::move(node));
             return;
         }
         DocNode *parent = findMut(*parentId);
@@ -471,7 +516,7 @@ public:
             throw std::runtime_error(std::string("bad_parent:") + *parentId);
         if (node.kind == NodeKind::Frame)
             throw std::runtime_error("frame_not_under_container");
-        parent->children.push_back(std::move(node));
+        insertAt(*parentId, static_cast<int>(parent->children.size()), std::move(node));
     }
 
     static ConnectorAnchor anchorFromJson(const JsonValue *a)
@@ -586,13 +631,15 @@ public:
         return detachInkFrom(rootChildren, id, out);
     }
 
-    static bool detachInkFrom(std::vector<DocNode> &nodes, const std::string &id, DocNode *out)
+    bool detachInkFrom(std::vector<DocNode> &nodes, const std::string &id, DocNode *out)
     {
         for (size_t i = 0; i < nodes.size(); ++i) {
             if (nodes[i].kind == NodeKind::Ink && nodes[i].id == id) {
+                forgetSubtree(nodes[i]);
                 if (out)
                     *out = std::move(nodes[i]);
                 nodes.erase(nodes.begin() + static_cast<std::ptrdiff_t>(i));
+                rebindSiblings(nodes);
                 return true;
             }
             if (nodes[i].kind == NodeKind::Frame || nodes[i].kind == NodeKind::Group) {
@@ -603,11 +650,13 @@ public:
         return false;
     }
 
-    static bool removeId(std::vector<DocNode> &nodes, const std::string &id)
+    bool removeId(std::vector<DocNode> &nodes, const std::string &id)
     {
         for (size_t i = 0; i < nodes.size(); ++i) {
             if (nodes[i].id == id) {
+                forgetSubtree(nodes[i]);
                 nodes.erase(nodes.begin() + static_cast<std::ptrdiff_t>(i));
+                rebindSiblings(nodes);
                 return true;
             }
             if (removeId(nodes[i].children, id))

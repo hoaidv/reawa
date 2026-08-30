@@ -81,7 +81,7 @@ inline ApplyResult JoinSmartGroupEdit::doApply(DeviceDocument &doc)
     const double cx = std::isfinite(minX) ? (minX + maxX) / 2.0 : 0.0;
     const double cy = std::isfinite(minY) ? (minY + maxY) / 2.0 : 0.0;
     detached.layoutOffset = {(cx - sg->smartBounds.x) / w, (cy - sg->smartBounds.y) / h};
-    sg->children.push_back(std::move(detached));
+    doc.insertAt(m_smartGroupId, std::numeric_limits<int>::max(), std::move(detached));
     return {true, {}};
 }
 

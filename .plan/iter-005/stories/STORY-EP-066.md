@@ -4,12 +4,12 @@ title: Object erase 80 percent table
 kind: implement
 parent_srs: [SRS-EP-58, SRS-EP-59]
 parent_req: [REQ-11]
-status: draft
+status: in-review
 priority: P0
 iter: iter-005
 estimate: 5
 owner: dev
-depends_on: [STORY-EP-062]
+depends_on: [STORY-EP-062, STORY-EP-068]
 acceptance_criteria:
   - "Given erase_object and a lasso containing >=80% arc length of an Ink, When commit, Then that Ink is gone (0 remnant nodes for that id) and one undo restores it."
   - "Given a SmartGroup whose boundary-polyline area is >=80% inside the lasso, When commit, Then the whole group is gone."
@@ -26,7 +26,7 @@ wireframe: ""
 
 # STORY-EP-066 — Object erase 80 percent table
 
-`ObjectErase` Operation. Whole nodes only — **0 remnants**. Does **not** require the clip engine ([STORY-EP-063](./STORY-EP-063.md)). Needs the mode/chip from [STORY-EP-062](./STORY-EP-062.md). Boundary polyline for SmartGroup area must exist (seeded in EP-063; if EP-066 lands first, seed polyline in this story for create path and keep EP-063 as persist/clip owner).
+`ObjectErase` Operation. Whole nodes only — **0 remnants**. Does **not** require the clip engine ([STORY-EP-063](./STORY-EP-063.md)). Needs the mode/chip from [STORY-EP-062](./STORY-EP-062.md). Overlay paint lives on this Operation ([STORY-EP-068](./STORY-EP-068.md)); do not add AABB/freeform draw to `ToolCanvasContext`. Boundary polyline for SmartGroup area must exist (seeded in EP-063; if EP-066 lands first, seed polyline in this story for create path and keep EP-063 as persist/clip owner).
 
 80% table ([prd-erase.md](../../../.docs/modules/epaper/prd-erase.md) §9.2 / [SRS-EP-58](../../../.docs/modules/epaper/features/erase/srs-logic.md#srs-ep-58-object)):
 
@@ -50,7 +50,7 @@ Human is QA this wave: host tests + human confirm. No BDD ceremony required befo
 |---|---|
 | Kind | `implement` |
 | Owner | `dev` |
-| Depends on | STORY-EP-062 |
+| Depends on | STORY-EP-062, STORY-EP-068 |
 
 ## Done when
 

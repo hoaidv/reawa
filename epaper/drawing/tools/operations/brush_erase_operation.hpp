@@ -11,6 +11,7 @@
 
 #include "../host_caps.hpp"
 #include "../operation.hpp"
+#include "../contexts/session_doc_context.hpp"
 #include "document/erase_clip.hpp"
 #include "document/erase_commit.hpp"
 #include "debug/ui_stall.hpp"
@@ -55,6 +56,50 @@ public:
         if (!m_caps || !m_caps->toolUi)
             return false;
         return m_caps->toolUi->exclusiveTool() == QLatin1String("erase_brush");
+    }
+
+    bool paintsIdleOverlay() const override { return true; }
+    bool wantsPenWaveform() const override
+    {
+        return m_caps && m_caps->toolUi
+            && m_caps->toolUi->exclusiveTool() == QLatin1String("erase_brush");
+    }
+
+    void setHoverPanel(const QPointF &panel) override
+    {
+        if (!hoverEnabled()) {
+            clearHover();
+            return;
+        }
+        const double scale = m_caps && m_caps->toolUi ? m_caps->toolUi->panelScale() : 1.0;
+        const double d =
+            epaper::document::eraseMmToWorld(epaper::document::kEraseBrushDiameterMm) * scale;
+        const double stroke =
+            epaper::document::eraseMmToWorld(epaper::document::kEraseHoverStrokeMm) * scale;
+        const double pad = d * 0.5 + stroke + 2.0;
+        const QRectF next = QRectF(panel, panel).adjusted(-pad, -pad, pad, pad);
+        QRectF dirty = next;
+        const bool wasValid = m_hoverValid;
+        if (wasValid)
+            dirty = dirty.united(m_hoverDirty);
+        m_hoverPanel = panel;
+        m_hoverValid = true;
+        m_hoverDirty = next;
+        if (!wasValid && m_caps && m_caps->toolUi)
+            m_caps->toolUi->syncOverlayPresence();
+        if (m_caps && m_caps->toolUi)
+            m_caps->toolUi->damageChrome(dirty);
+    }
+
+    void clearHover() override
+    {
+        if (!m_hoverValid)
+            return;
+        const QRectF dirty = m_hoverDirty;
+        m_hoverValid = false;
+        m_hoverDirty = QRectF();
+        if (m_caps && m_caps->toolUi)
+            m_caps->toolUi->damageChrome(dirty);
     }
 
     void onDown(const PointerSample &s) override
@@ -107,16 +152,46 @@ public:
 
     void paintOverlay(QPainter *painter) override
     {
-        if (!painter || m_ghost.isNull())
+        if (!painter)
             return;
-        const QRectF clip = painter->clipBoundingRect();
-        if (clip.isEmpty())
-            painter->drawImage(0, 0, m_ghost);
-        else
-            painter->drawImage(clip.topLeft(), m_ghost, clip);
+        if (!m_ghost.isNull()) {
+            const QRectF clip = painter->clipBoundingRect();
+            if (clip.isEmpty())
+                painter->drawImage(0, 0, m_ghost);
+            else
+                painter->drawImage(clip.topLeft(), m_ghost, clip);
+            return;
+        }
+        paintHover(painter);
     }
 
 private:
+    bool hoverEnabled() const
+    {
+        auto *sess = dynamic_cast<SessionDocContext *>(m_caps ? m_caps->doc : nullptr);
+        return sess && sess->session() && sess->session()->chip.eraseBrushHover;
+    }
+
+    void paintHover(QPainter *painter)
+    {
+        if (!m_hoverValid || !hoverEnabled())
+            return;
+        if (!m_caps || !m_caps->toolUi)
+            return;
+        const double scale = m_caps->toolUi->panelScale();
+        const double d =
+            epaper::document::eraseMmToWorld(epaper::document::kEraseBrushDiameterMm) * scale;
+        const double stroke = std::max(
+            1.0, epaper::document::eraseMmToWorld(epaper::document::kEraseHoverStrokeMm) * scale);
+        painter->save();
+        QPen pen(Qt::black);
+        pen.setWidthF(stroke);
+        painter->setPen(pen);
+        painter->setBrush(Qt::white);
+        painter->drawEllipse(m_hoverPanel, d * 0.5, d * 0.5);
+        painter->restore();
+    }
+
     void appendWorld(const PointerSample &s)
     {
         if (!m_caps || !m_caps->toolUi)
@@ -240,6 +315,9 @@ private:
     QRectF m_ghostDirty;
     QPointF m_lastPanel;
     bool m_hasPanel = false;
+    QPointF m_hoverPanel;
+    bool m_hoverValid = false;
+    QRectF m_hoverDirty;
     OperationDescriptor m_desc;
 };
 

@@ -4,7 +4,6 @@
 #include <QVector>
 #include <QPointF>
 #include <QEvent>
-#include <QAtomicInt>
 #include <QElapsedTimer>
 #include <QImage>
 #include <QRectF>
@@ -184,17 +183,11 @@ private:
     void paintSegment(const Point &from, const Point &to, qreal lineWidth);
     void emitSegment(const Point &from, const Point &to);
     void flushPending();
-    void stampStaticBeacon();
-    void stampFlushBeacon();
-
 
     QImage m_image;
     bool m_paintsInk = true;
-    bool m_beacons = true;
     QRectF m_pendingDirty;
     QElapsedTimer m_flushClock;
-    int m_flushCount = 0;
-    QAtomicInt m_paintCount{0};
     static constexpr qint64 kFlushIntervalMs = 8;
 
 /**

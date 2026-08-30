@@ -32,6 +32,47 @@ Operation *InputHub::opFor(OperationKind kind) const
     return it == m_ops.end() ? nullptr : it->second.get();
 }
 
+Operation *InputHub::overlayOperation() const
+{
+    if (m_lockedOp)
+        return m_lockedOp;
+    if (!m_activeMode)
+        return nullptr;
+    PointerSample dummy;
+    dummy.role = PointerRole::Primary;
+    dummy.device = PointerDevice::Pen;
+    Operation *best = nullptr;
+    int bestPriority = INT_MIN;
+    for (OperationKind kind : m_activeMode->primaryOps()) {
+        Operation *op = opFor(kind);
+        if (!op || !op->paintsIdleOverlay())
+            continue;
+        if (!op->match(StrategyKind::RawPointer, dummy))
+            continue;
+        if (op->descriptor().priority > bestPriority) {
+            bestPriority = op->descriptor().priority;
+            best = op;
+        }
+    }
+    return best;
+}
+
+void InputHub::setHoverPanel(const QPointF &panel)
+{
+    if (m_lockedOp)
+        return;
+    if (Operation *op = overlayOperation())
+        op->setHoverPanel(panel);
+}
+
+void InputHub::clearHover()
+{
+    for (auto &kv : m_ops) {
+        if (kv.second)
+            kv.second->clearHover();
+    }
+}
+
 const HitRegion *InputHub::overlayHitAt(const QPointF &panel) const
 {
     const HitRegion *best = nullptr;

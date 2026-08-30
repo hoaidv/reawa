@@ -365,17 +365,56 @@ static void test_clip_geometry_not_sample_drop()
 static void test_second_split_skips_taken_remnant_id()
 {
     DeviceDocument doc;
-    CHECK(doc.commitJson(makeInk("ink-1", "I1", {{0, 0}, {200, 0}})).applied);
+    CHECK(doc.commitJson(makeInk("ink-1", "s-3", {{0, 0}, {200, 0}})).applied);
+    CHECK(doc.commitJson(makeInk("ink-r1", "s-3_r1", {{0, 10}, {10, 10}})).applied);
     CHECK(commitEraseRegion(doc, "erase-1", capsuleRegion({{50, 0}}, 4.0)).applied);
-    CHECK(doc.find("I1_r1"));
-    CHECK(doc.inkCount() == 2);
+    CHECK(doc.find("s-3"));
+    CHECK(doc.find("s-3_r1"));
+    CHECK(doc.inkCount() == 3);
     const ApplyResult r = commitEraseRegion(doc, "erase-2", capsuleRegion({{150, 0}}, 4.0));
     CHECK(r.applied);
     CHECK(r.reason.find("duplicate_id") == std::string::npos);
-    CHECK(doc.find("I1"));
-    CHECK(doc.find("I1_r1"));
-    CHECK(doc.find("I1_r2"));
-    CHECK(doc.inkCount() == 3);
+    CHECK(doc.find("s-3"));
+    CHECK(doc.find("s-3_r1"));
+    CHECK(doc.inkCount() == 4);
+    std::vector<std::string> extras;
+    doc.forEachPaintNode([&](const DocNode &n) {
+        if (n.kind == NodeKind::Ink && n.id != "s-3" && n.id != "s-3_r1")
+            extras.push_back(n.id);
+    });
+    CHECK(extras.size() == 2);
+    CHECK(extras[0] != extras[1]);
+}
+
+static void test_generate_node_id_skips_tree_and_reserved()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitJson(makeInk("ink-n1", "n-1", {{0, 0}, {1, 0}})).applied);
+    const std::string a = doc.generateNodeId();
+    const std::string b = doc.generateNodeId();
+    CHECK(a != "n-1");
+    CHECK(b != "n-1");
+    CHECK(a != b);
+    CHECK(!doc.find(a) && !doc.find(b));
+    CHECK(doc.commitJson(makeInk("ink-a", a, {{2, 0}, {3, 0}})).applied);
+    CHECK(doc.find(a));
+    const ApplyResult dup = doc.commitJson(makeInk("ink-dup", a, {{4, 0}, {5, 0}}));
+    CHECK(!dup.applied);
+    CHECK(dup.reason.find("duplicate_id") != std::string::npos);
+}
+
+static void test_two_callers_one_gesture_distinct_ids()
+{
+    DeviceDocument doc;
+    CHECK(doc.commitJson(makeInk("ink-1", "I1", {{0, 0}, {100, 0}})).applied);
+    const std::string remnant = doc.generateNodeId();
+    const std::string conn = doc.generateNodeId();
+    CHECK(remnant != conn);
+    CHECK(remnant != "I1");
+    CHECK(conn != "I1");
+    CHECK(doc.commitJson(makeInk("ink-r", remnant, {{0, 1}, {1, 1}})).applied);
+    CHECK(doc.commitJson(makeInk("ink-c", conn, {{0, 2}, {1, 2}})).applied);
+    CHECK(doc.find(remnant) && doc.find(conn) && doc.find("I1"));
 }
 
 static void test_mm_to_world_is_226dpi_du()
@@ -420,6 +459,8 @@ int main()
     test_mm_to_world_is_226dpi_du();
     test_clip_geometry_not_sample_drop();
     test_second_split_skips_taken_remnant_id();
+    test_generate_node_id_skips_tree_and_reserved();
+    test_two_callers_one_gesture_distinct_ids();
     test_split_two_remnants_longest_keeps_id();
     test_remnant_below_floor_dropped();
     test_empty_removes_ink();

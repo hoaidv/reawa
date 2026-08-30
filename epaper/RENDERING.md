@@ -219,17 +219,14 @@ correctly fixed the ink and the latency in one change.
 
 ### Diagnosing it: beacons, not eyes
 
-There is no framebuffer readback on RM2, so "is it on screen?" needs a human. Two
-squares stamped into the ink `QImage` turned that into a truth table:
+There was no framebuffer readback on RM2, so "is it on screen?" needed a human.
+Two squares stamped into the ink `QImage` turned that into a truth table (static
+square at image creation vs flush square toggled each flush). Plus `flush=` /
+`paint=` counters in the status line. `flush=` climbing while `paint=` stayed at
+`0` isolated the failure to Qt — above the epaper backend — in a single deploy.
 
-| Beacon | Written | Answers |
-|---|---|---|
-| Static | Once, at image creation | Does the painter node reach the panel at all? |
-| Flush | Toggled each flush, no geometry change | Does content-only damage propagate? |
-
-Plus `flush=` / `paint=` counters in the status line. `flush=` climbing while
-`paint=` stayed at `0` isolated the failure to Qt — above the epaper backend —
-in a single deploy. Keep them for the next regression: `RM_INK_BEACON=1`.
+Those probes (`RM_INK_BEACON`) are **gone**: live ink reaches the panel, so they
+are no longer compiled in.
 
 ### Why the 2000-item `Rectangle` pool is only a fallback
 

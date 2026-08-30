@@ -240,14 +240,12 @@ void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen, bool eraserNib)
 
 void ToolCanvasItem::onHoverMove(qreal x, qreal y)
 {
-    if (m_toolCtx)
-        m_toolCtx->setEraseHoverPanel(QPointF(x, y));
+    m_hub.setHoverPanel(QPointF(x, y));
 }
 
 void ToolCanvasItem::onHoverLeave()
 {
-    if (m_toolCtx)
-        m_toolCtx->clearEraseHover();
+    m_hub.clearHover();
 }
 
 void ToolCanvasItem::onFingerTap(qreal x, qreal y)
