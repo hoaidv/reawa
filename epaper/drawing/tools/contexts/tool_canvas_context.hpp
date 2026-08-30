@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- * ToolCanvasContext — ToolContext adapter; owns SelectionOverlay chrome logic.
+ * ToolCanvasContext — ToolContext adapter; Mode owns overlay policy.
  * @implements [SRS-EP-12]
  */
 
@@ -48,6 +48,8 @@ public:
     void damageChrome(const QRectF &panelRect) override;
     void damageChromeSegment(const QRectF &panelRect) override;
     void syncOverlayPresence() override;
+    void setOverlayVisible(bool on) override;
+    void paintSelectionChrome(QPainter *painter) override;
     void setStrokeWaveform(bool penInFlight) override;
     void requestChromeRefresh() override;
     void resetTransientChromeFlags() override;

@@ -8,7 +8,6 @@
 
 #include "strategy.hpp"
 
-#include <QPointF>
 #include <cstdint>
 
 class QPainter;
@@ -62,10 +61,6 @@ public:
         (void)painter;
     }
     virtual bool didMutateSelection() const { return false; }
-    virtual bool wantsPenWaveform() const { return false; }
-    virtual bool paintsIdleOverlay() const { return false; }
-    virtual void setHoverPanel(const QPointF &panel) { (void)panel; }
-    virtual void clearHover() {}
 };
 
 } // namespace tools

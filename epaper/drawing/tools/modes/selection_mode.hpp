@@ -2,11 +2,19 @@
 
 /**
  * Selection Mode — exclusive Mode for sel_rect / sel_freeform.
- * @implements [SRS-EP-04] @implements [SRS-EP-11]
+ * Owns overlay policy (phase + armed chip); forwards in-flight paint to Operations.
+ * @implements [SRS-EP-04] @implements [SRS-EP-11] @implements [SRS-EP-12]
  */
 
+#include "../input_hub.hpp"
 #include "../mode.hpp"
 #include "../operation.hpp"
+#include "../contexts/selection_context.hpp"
+#include "../contexts/tool_context.hpp"
+
+#include <QLatin1String>
+#include <QPainter>
+#include <QString>
 
 namespace epaper {
 namespace tools {
@@ -26,12 +34,49 @@ public:
         return {
             OperationKind::Navigation,
             OperationKind::Select,
-            // OperationKind::Lasso,
-            // OperationKind::Marquee,
             OperationKind::Move,
             OperationKind::Resize,
             OperationKind::Rotate,
         };
+    }
+
+    void activate(HostCaps &caps, InputHub &hub) override { syncOverlay(caps, hub); }
+
+    void paintOverlay(QPainter *painter, HostCaps &caps, InputHub &hub) override
+    {
+        if (!caps.selection || !caps.toolUi)
+            return;
+        const SelectionPhase phase = caps.selection->phase();
+        if (phase == SelectionPhase::Idle)
+            return;
+        if (phase == SelectionPhase::Selecting) {
+            if (Operation *op = hub.lockedOperation())
+                op->paintOverlay(painter);
+            return;
+        }
+        if (phase == SelectionPhase::Transforming) {
+            if (Operation *op = hub.lockedOperation())
+                op->paintOverlay(painter);
+            caps.toolUi->paintSelectionChrome(painter);
+            return;
+        }
+        caps.toolUi->paintSelectionChrome(painter);
+    }
+
+    void syncOverlay(HostCaps &caps, InputHub &hub) override
+    {
+        (void)hub;
+        if (!caps.toolUi || !caps.selection)
+            return;
+        caps.toolUi->setOverlayVisible(true);
+        const SelectionPhase phase = caps.selection->phase();
+        const QString ex = caps.toolUi->exclusiveTool();
+        bool pen = false;
+        if (phase == SelectionPhase::Selecting)
+            pen = true;
+        else if (phase != SelectionPhase::Selected && phase != SelectionPhase::Transforming)
+            pen = ex == QLatin1String("sel_freeform");
+        caps.toolUi->setStrokeWaveform(pen);
     }
 };
 

@@ -32,7 +32,7 @@
 namespace epaper {
 namespace tools {
 
-class BrushEraseOperation final : public Operation, public RawPointerSink {
+class BrushEraseOperation final : public Operation, public RawPointerSink, public StylusHoverSink {
 public:
     explicit BrushEraseOperation(HostCaps *caps)
         : m_caps(caps)
@@ -51,56 +51,16 @@ public:
     bool match(StrategyKind channel, const PointerSample &s) const override
     {
         (void)s;
-        if (channel != StrategyKind::RawPointer)
+        if (channel != StrategyKind::RawPointer && channel != StrategyKind::StylusHover)
             return false;
         if (!m_caps || !m_caps->toolUi)
             return false;
         return m_caps->toolUi->exclusiveTool() == QLatin1String("erase_brush");
     }
 
-    bool paintsIdleOverlay() const override { return true; }
-    bool wantsPenWaveform() const override
-    {
-        return m_caps && m_caps->toolUi
-            && m_caps->toolUi->exclusiveTool() == QLatin1String("erase_brush");
-    }
-
-    void setHoverPanel(const QPointF &panel) override
-    {
-        if (!hoverEnabled()) {
-            clearHover();
-            return;
-        }
-        const double scale = m_caps && m_caps->toolUi ? m_caps->toolUi->panelScale() : 1.0;
-        const double d =
-            epaper::document::eraseMmToWorld(epaper::document::kEraseBrushDiameterMm) * scale;
-        const double stroke =
-            epaper::document::eraseMmToWorld(epaper::document::kEraseHoverStrokeMm) * scale;
-        const double pad = d * 0.5 + stroke + 2.0;
-        const QRectF next = QRectF(panel, panel).adjusted(-pad, -pad, pad, pad);
-        QRectF dirty = next;
-        const bool wasValid = m_hoverValid;
-        if (wasValid)
-            dirty = dirty.united(m_hoverDirty);
-        m_hoverPanel = panel;
-        m_hoverValid = true;
-        m_hoverDirty = next;
-        if (!wasValid && m_caps && m_caps->toolUi)
-            m_caps->toolUi->syncOverlayPresence();
-        if (m_caps && m_caps->toolUi)
-            m_caps->toolUi->damageChrome(dirty);
-    }
-
-    void clearHover() override
-    {
-        if (!m_hoverValid)
-            return;
-        const QRectF dirty = m_hoverDirty;
-        m_hoverValid = false;
-        m_hoverDirty = QRectF();
-        if (m_caps && m_caps->toolUi)
-            m_caps->toolUi->damageChrome(dirty);
-    }
+    void onHoverEnter(const PointerSample &s) override { applyHover(s.panel); }
+    void onHoverMove(const PointerSample &s) override { applyHover(s.panel); }
+    void onHoverLeave() override { dropHover(); }
 
     void onDown(const PointerSample &s) override
     {
@@ -114,6 +74,7 @@ public:
         m_ghostDirty = ghostDirty(s.panel);
         if (m_caps && m_caps->toolUi) {
             m_caps->toolUi->syncOverlayPresence();
+            m_caps->toolUi->setStrokeWaveform(true);
             m_caps->toolUi->damageChrome(m_ghostDirty);
         }
     }
@@ -170,6 +131,43 @@ private:
     {
         auto *sess = dynamic_cast<SessionDocContext *>(m_caps ? m_caps->doc : nullptr);
         return sess && sess->session() && sess->session()->chip.eraseBrushHover;
+    }
+
+    void applyHover(const QPointF &panel)
+    {
+        if (!hoverEnabled()) {
+            dropHover();
+            return;
+        }
+        const double scale = m_caps && m_caps->toolUi ? m_caps->toolUi->panelScale() : 1.0;
+        const double d =
+            epaper::document::eraseMmToWorld(epaper::document::kEraseBrushDiameterMm) * scale;
+        const double stroke =
+            epaper::document::eraseMmToWorld(epaper::document::kEraseHoverStrokeMm) * scale;
+        const double pad = d * 0.5 + stroke + 2.0;
+        const QRectF next = QRectF(panel, panel).adjusted(-pad, -pad, pad, pad);
+        QRectF dirty = next;
+        const bool wasValid = m_hoverValid;
+        if (wasValid)
+            dirty = dirty.united(m_hoverDirty);
+        m_hoverPanel = panel;
+        m_hoverValid = true;
+        m_hoverDirty = next;
+        if (!wasValid && m_caps && m_caps->toolUi)
+            m_caps->toolUi->syncOverlayPresence();
+        if (m_caps && m_caps->toolUi)
+            m_caps->toolUi->damageChrome(dirty);
+    }
+
+    void dropHover()
+    {
+        if (!m_hoverValid)
+            return;
+        const QRectF dirty = m_hoverDirty;
+        m_hoverValid = false;
+        m_hoverDirty = QRectF();
+        if (m_caps && m_caps->toolUi)
+            m_caps->toolUi->damageChrome(dirty);
     }
 
     void paintHover(QPainter *painter)

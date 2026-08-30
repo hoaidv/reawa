@@ -32,45 +32,55 @@ Operation *InputHub::opFor(OperationKind kind) const
     return it == m_ops.end() ? nullptr : it->second.get();
 }
 
-Operation *InputHub::overlayOperation() const
+StylusHoverSink *InputHub::matchHoverSink(const PointerSample &s) const
 {
-    if (m_lockedOp)
-        return m_lockedOp;
-    if (!m_activeMode)
+    if (!m_activeMode || m_lockedOp)
         return nullptr;
-    PointerSample dummy;
-    dummy.role = PointerRole::Primary;
-    dummy.device = PointerDevice::Pen;
-    Operation *best = nullptr;
+    StylusHoverSink *best = nullptr;
     int bestPriority = INT_MIN;
     for (OperationKind kind : m_activeMode->primaryOps()) {
         Operation *op = opFor(kind);
-        if (!op || !op->paintsIdleOverlay())
+        auto *hover = dynamic_cast<StylusHoverSink *>(op);
+        if (!hover)
             continue;
-        if (!op->match(StrategyKind::RawPointer, dummy))
+        if (!op->match(StrategyKind::StylusHover, s))
             continue;
         if (op->descriptor().priority > bestPriority) {
             bestPriority = op->descriptor().priority;
-            best = op;
+            best = hover;
         }
     }
     return best;
 }
 
-void InputHub::setHoverPanel(const QPointF &panel)
+void InputHub::endHover()
 {
-    if (m_lockedOp)
+    if (!m_hoverSink)
         return;
-    if (Operation *op = overlayOperation())
-        op->setHoverPanel(panel);
+    m_hoverSink->onHoverLeave();
+    m_hoverSink = nullptr;
 }
 
-void InputHub::clearHover()
+void InputHub::dispatchHoverMove(const PointerSample &in)
 {
-    for (auto &kv : m_ops) {
-        if (kv.second)
-            kv.second->clearHover();
+    PointerSample s = in;
+    s.role = PointerRole::Primary;
+    StylusHoverSink *next = matchHoverSink(s);
+    if (m_hoverSink && m_hoverSink != next)
+        endHover();
+    if (!next)
+        return;
+    if (m_hoverSink != next) {
+        m_hoverSink = next;
+        m_hoverSink->onHoverEnter(s);
+        return;
     }
+    m_hoverSink->onHoverMove(s);
+}
+
+void InputHub::dispatchHoverLeave()
+{
+    endHover();
 }
 
 const HitRegion *InputHub::overlayHitAt(const QPointF &panel) const
@@ -183,6 +193,7 @@ bool InputHub::dispatchPointerDown(const PointerSample &in)
         if (m_secondary.lockedUntilLift() || !m_secondary.armed())
             return false;
     }
+    endHover();
     if (m_lockedOp) {
         feedRawDown(m_lockedOp, s);
         return true;
@@ -228,6 +239,7 @@ void InputHub::dispatchPointerCancel()
 
 void InputHub::cancelAll()
 {
+    endHover();
     if (!m_lockedOp)
         return;
     feedRawCancel(m_lockedOp);
@@ -261,6 +273,7 @@ bool InputHub::dispatchPinchBegin(qreal x, qreal y, qreal scale)
 {
     if (!m_secondary.armed())
         return false;
+    endHover();
     if (m_lockedOp)
         cancelAll();
 

@@ -47,8 +47,6 @@ public:
         return m_caps->toolUi->exclusiveTool() == QLatin1String("sel_rect");
     }
 
-    bool paintsIdleOverlay() const override { return true; }
-
     void onDown(const PointerSample &s) override
     {
         if (!m_caps || !m_caps->toolUi || !m_caps->selection)

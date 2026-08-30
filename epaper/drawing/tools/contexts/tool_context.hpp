@@ -15,6 +15,8 @@
 
 #include <string>
 
+class QPainter;
+
 namespace epaper {
 namespace tools {
 
@@ -24,6 +26,8 @@ public:
     virtual void damageChrome(const QRectF &panelRect) = 0;
     virtual void damageChromeSegment(const QRectF &panelRect) = 0;
     virtual void syncOverlayPresence() = 0;
+    virtual void setOverlayVisible(bool on) = 0;
+    virtual void paintSelectionChrome(QPainter *painter) = 0;
     virtual void setStrokeWaveform(bool penInFlight) = 0;
     virtual void requestChromeRefresh() = 0;
     virtual void resetTransientChromeFlags() = 0;

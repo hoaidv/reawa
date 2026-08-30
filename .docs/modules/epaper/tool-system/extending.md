@@ -14,8 +14,8 @@ If the change would violate an SRS, stop and file a challenge — do not silentl
 Operation `match()` on `PointerDevice`.
 
 The architectural test from [ADR-0033](../../adr/ADR-0033-tool-abstraction.md): **adding a tool
-should primarily add code**; it should not require a new branch in the router, the overlay
-painter’s “which exclusive tool”, or a sibling Operation.
+should primarily add code**; it should not require a new branch in the router, `ToolCanvasContext`,
+or a sibling Operation. Overlay **policy** (when to paint, Pen vs Mono) belongs on the active Mode.
 
 ## Add an Operation (most common)
 
@@ -32,8 +32,9 @@ Example: Eraser stroke, Rotate, connector-endpoint drag.
 5. `ToolCanvasItem::registerOperations` — `setOperation(kind, make_unique<…>(&caps))`.
 6. Add the kind to the right Mode lists (`primaryOps` and/or `secondaryOps`). **One instance** on
    the hub; Modes only name kinds.
-7. If it paints live chrome, `paintOverlay` and/or `ToolContext` damage. Live node on Tablet must
-   use suppress + ToolCanvas (see TransformGesture).
+7. If it paints live chrome, `paintOverlay` and/or `ToolContext` damage. Mode decides when to
+   call that paint. Pen-near (unlocked) uses `StylusHoverSink`, not fields on `Operation`. Live
+   node on Tablet must use suppress + ToolCanvas (see TransformGesture).
 8. Update [catalog.md](./catalog.md). ARM `build-warn`; host tests if Qt-free math.
 
 **Dual-assign (e.g. EraserMode + finger erase in InkMode):** register once; put `Eraser` on
@@ -45,8 +46,8 @@ Navigation from that list or raise eraser above 30 (and accept losing pan). Tap-
 ## Add an exclusive Mode
 
 1. `ModeId` in [`mode.hpp`](../../../epaper/drawing/tools/mode.hpp).
-2. `modes/<name>_mode.hpp` with `primaryOps` / `secondaryOps`. Put Mode-only policy in
-   `onSecondaryCommit` (or `activate`), not inside shared Operations.
+2. `modes/<name>_mode.hpp` with `primaryOps` / `secondaryOps` plus `paintOverlay` / `syncOverlay`.
+   Put Mode-only policy there (phase, exclusive chip, waveform), not inside `ToolCanvasContext`.
 3. Chip exclusive string in `CanvasSession` / `primary_toolbar.hpp` / Main.qml tile.
 4. `ToolCanvasItem::syncActiveMode` — map that string to the Mode object.
 5. Do **not** make recognizers or hand-touch exclusive Modes ([ADR-0033](../../adr/ADR-0033-tool-abstraction.md)).

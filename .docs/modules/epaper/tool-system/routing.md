@@ -88,11 +88,17 @@ swap, pen-near cancelling finger-ink is a known leftover.
 
 ## Overlay presence and live manip
 
-`ToolChrome::syncPresence`:
+Active **Mode** `syncOverlay` / `paintOverlay` (not `InputHub::overlayOperation`).
 
-- Visible if `isSelectionTool` **or** `SelectionPhase::Transforming`.
-- Waveform Pen only for idle `sel_freeform` that is not Selected/Transforming (lasso starts without
-  a Mono→Pen attach hitch). Transforming always Mono.
+- **SelectionMode:** overlay attached while the mode is active (lasso must not pay Mono-attach).
+  Waveform Pen while Selecting, or Idle `sel_freeform`. Selected / Transforming are Mono.
+- **EraserMode:** overlay on; Pen while an `erase_*` chip is armed.
+- **InkMode:** overlay only while `SelectionPhase::Transforming` (tablet suppress punches a hole
+  until the overlay paints the live node). Mono waveform.
+- Gesture start/end may also `ToolContext::setStrokeWaveform`; Mode restores idle policy on refresh.
+
+Hover is an unlocked `StylusHoverSink` cycle (`dispatchHoverMove` / `dispatchHoverLeave`). Brush
+erase implements it. Pointer-down and cancel end hover.
 
 `TransformGesture::apply`: document live geometry every sample; overlay `redrawLiveManip` every
 sample; Infini `sendManipPreview` throttled to 200 ms.

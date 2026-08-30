@@ -18,6 +18,7 @@ enum class StrategyKind {
     Tap,
     Pinch,
     HitTarget,
+    StylusHover,
 };
 
 enum class PointerDevice {
@@ -59,7 +60,7 @@ struct DeviceMap {
     }
 };
 
-/** Narrow sink — Operation implements at most one receive strategy. */
+/** Narrow sink — Operation implements at most one locked receive strategy. */
 struct RawPointerSink {
     virtual ~RawPointerSink() = default;
     virtual void onDown(const PointerSample &s) = 0;
@@ -78,6 +79,14 @@ struct PinchSink {
     virtual void onPinchBegin(const QPointF &centroid, qreal scale) = 0;
     virtual void onPinchUpdate(const QPointF &centroid, qreal scale) = 0;
     virtual void onPinchEnd() = 0;
+};
+
+/** Unlocked pen-near cycle. Hub demuxes; does not take the gesture lock. */
+struct StylusHoverSink {
+    virtual ~StylusHoverSink() = default;
+    virtual void onHoverEnter(const PointerSample &s) = 0;
+    virtual void onHoverMove(const PointerSample &s) = 0;
+    virtual void onHoverLeave() = 0;
 };
 
 /** Registered hit region for HitTarget strategy (panel space). */

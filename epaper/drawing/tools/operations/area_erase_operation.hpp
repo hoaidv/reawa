@@ -36,12 +36,6 @@ public:
 
     OperationKind kind() const override { return OperationKind::AreaErase; }
     const OperationDescriptor &descriptor() const override { return m_desc; }
-    bool paintsIdleOverlay() const override { return true; }
-    bool wantsPenWaveform() const override
-    {
-        return m_caps && m_caps->toolUi
-            && m_caps->toolUi->exclusiveTool() == QLatin1String("erase_area");
-    }
 
     bool match(StrategyKind channel, const PointerSample &s) const override
     {

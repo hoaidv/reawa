@@ -64,21 +64,6 @@ void ToolChrome::damageSegment(const QRectF &seg,
     repaint(seg.toAlignedRect());
 }
 
-void ToolChrome::syncPresence(SelectionContext &selection, bool isSelectionTool, bool penWaveform,
-                              const std::function<void(bool visible)> &setVisible,
-                              const std::function<void(bool penWaveform)> &setStrokeWaveform)
-{
-    // Selection mode keeps the overlay attached (lasso must not pay Mono-attach).
-    // Transforming also needs it in InkMode: tablet suppress punches a hole until
-    // the overlay paints the live node.
-    const bool show =
-        isSelectionTool || selection.phase() == SelectionPhase::Transforming;
-    if (setVisible)
-        setVisible(show);
-    if (show && setStrokeWaveform)
-        setStrokeWaveform(penWaveform);
-}
-
 void ToolChrome::paint(QPainter *painter, SelectionContext &selection, SessionDocContext &doc,
                        bool isSelectionTool)
 {

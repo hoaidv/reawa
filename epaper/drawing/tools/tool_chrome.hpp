@@ -41,9 +41,6 @@ public:
     void refresh(SelectionContext &selection, SessionDocContext &doc, bool isSelectionTool);
     void damage(const QRectF &next, const std::function<void(const QRectF &)> &repaint);
     void damageSegment(const QRectF &seg, const std::function<void(const QRectF &)> &repaint);
-    void syncPresence(SelectionContext &selection, bool isSelectionTool, bool penWaveform,
-                      const std::function<void(bool visible)> &setVisible,
-                      const std::function<void(bool penWaveform)> &setStrokeWaveform);
     void paint(QPainter *painter, SelectionContext &selection, SessionDocContext &doc,
                bool isSelectionTool);
     void redrawLiveManip(SelectionContext &selection, SessionDocContext &doc, bool resizing,

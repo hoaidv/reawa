@@ -10,6 +10,8 @@
 
 #include <vector>
 
+class QPainter;
+
 namespace epaper {
 namespace tools {
 
@@ -43,6 +45,22 @@ public:
     {
         (void)caps;
         (void)info;
+    }
+    /** Mode owns overlay policy; may forward in-flight paint to a locked Operation. */
+    virtual void paintOverlay(QPainter *painter, HostCaps &caps, InputHub &hub)
+    {
+        (void)painter;
+        (void)caps;
+        (void)hub;
+    }
+    /**
+     * Overlay attach + Pen vs Mono waveform.
+     * Idle / phase / exclusive-arm: Mode tells. Gesture start/end: Operation tells.
+     */
+    virtual void syncOverlay(HostCaps &caps, InputHub &hub)
+    {
+        (void)caps;
+        (void)hub;
     }
 };
 

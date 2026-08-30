@@ -37,7 +37,7 @@ Registered in `ToolCanvasItem::registerOperations`. One instance per kind on the
 | Navigation | `operations/navigation_operation.hpp` | RawPointer / Pinch | same | 30 | Secondary only | Empty-canvas pan after 20 mm (178 du); pinch always Finger hardware |
 | Select | `operations/select_operation.hpp` | Tap | Tap | 20 | Secondary only | Pick or clear |
 | InkStroke | `operations/ink_stroke_operation.hpp` | RawPointer | RawPointer | 10 | Primary only | `InkSink`; skip stylus stash if `device != Pen` |
-| BrushErase | `operations/brush_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Ghost + hover circle; `erase_brush` |
+| BrushErase | `operations/brush_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Ghost; `StylusHoverSink` near-circle; `erase_brush` |
 | AreaErase | `operations/area_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Dotted freeform; polygon clip + fully-inside remove |
 | ObjectErase | `operations/object_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Dotted freeform + AABB; 80% table; 0 remnants |
 | Rotate | — | — | — | — | — | enum + Mode list only |
@@ -71,15 +71,24 @@ Copy, Paste. Cut/Copy/Paste chrome exists; clipboard wiring may still be incompl
 | `DocContext` | `contexts/doc_context.hpp` | Document + commands |
 | `SessionDocContext` | `contexts/session_doc_context.hpp` | Adapter over `CanvasSession` + Tablet |
 | `SelectionContext` | `contexts/selection_context.hpp` | ids, pickableId, phase |
-| `ToolContext` | `contexts/tool_context.hpp` | Overlay ports |
-| `ToolCanvasContext` | `contexts/tool_canvas_context.*` | Adapter + ports; dispatches overlay paint to the locked or exclusive-armed Operation, then settled `ToolChrome`. No per-tool draw. |
+| `ToolContext` | `contexts/tool_context.hpp` | Overlay ports (damage, waveform, chrome paint) |
+| `ToolCanvasContext` | `contexts/tool_canvas_context.*` | Adapter: `paintOverlay` / `syncOverlayPresence` forward to the active Mode. No per-tool draw. |
 
 Phases: Idle → Selecting → Selected → Transforming.
 
+**Overlay policy lives on the Mode** ([ADR-0033](../../adr/ADR-0033-tool-abstraction.md) Mode → Overlay). `ToolCanvasContext` does not pick an Operation to paint.
+
+| Mode | `paintOverlay` | `syncOverlay` (attach + waveform) |
+|---|---|---|
+| Selection | Idle: nothing. Selecting: locked Lasso/Marquee. Selected: settled AABB/knobs via `paintSelectionChrome`. Transforming: locked Move/Resize then live chrome. | Overlay always on. Pen while Selecting, or Idle `sel_freeform`. Mono when Selected/Transforming. |
+| Eraser | Locked op, else exclusive-armed op (`match`). Brush idle = hover circle. | Overlay on. Pen while `erase_*`. |
+| Ink | Transforming only: locked Move then live chrome. | Visible only while Transforming (Mono). |
+
+Operations still **tell** `setStrokeWaveform` at gesture down/up. Mode restores idle Pen after up (e.g. empty freeform). Hover is `StylusHoverSink` (enter/move/leave); hub demuxes without taking the lock.
+
 ## Selection chrome
 
-`tool_chrome.*` — overlay state, paint, damage, hit regions. During Transforming: `handleCount = 0`
-(no QML knobs on the live path). Settled knobs return on chrome refresh after commit.
+`tool_chrome.*` — overlay state, paint, damage, hit regions. **Who calls `paint` is the Mode** (`ToolContext::paintSelectionChrome`). During Transforming: `handleCount = 0` (no QML knobs on the live path). Settled knobs return on chrome refresh after commit.
 
 ## Tree (orientation)
 
@@ -87,16 +96,16 @@ Phases: Idle → Selecting → Selected → Transforming.
 epaper/drawing/tools/
   strategy.hpp          PointerDevice, PointerRole, DeviceMap, PointerSample, sinks, HitRegion
   operation.hpp         OperationKind, OperationDescriptor, Operation
-  mode.hpp              ModeId, InteractionMode, SecondaryCommitInfo
-  input_hub.hpp/.cpp    Router: match/lock/feed, interventions, device map
+  mode.hpp              ModeId, InteractionMode (paintOverlay / syncOverlay)
+  input_hub.hpp/.cpp    Router: match/lock/feed, hover cycle, interventions, device map
   host_caps.hpp         InkSink, DocContext, ToolContext, SelectionContext, setExclusiveTool
   interventions.hpp     PenProximity, PenDown, SecondContact
   ink_sink.hpp / tablet_ink_sink.hpp
   viewport.hpp
   tool_chrome.hpp/.cpp
-  modes/                ink_mode, selection_mode
+  modes/                ink_mode, selection_mode, eraser_mode
   operations/           ink_stroke, lasso, marquee, select, move, resize, navigation,
-                        transform_gesture, transform_session
+                        brush/area/object erase, transform_gesture, transform_session
   actions/              enclose, ink_scale, cut, copy, paste
   modifiers/            tool_modifier, secondary_device, ink_box_recognizer, connector_recognizer
   contexts/             doc, session_doc, selection, tool, tool_canvas

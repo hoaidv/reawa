@@ -3,7 +3,6 @@
 #include "../../tabletcanvasitem.h"
 #include "../../toolcanvasitem.h"
 #include "../input_hub.hpp"
-#include "../operation.hpp"
 #include "../ui/selection_context_bar.hpp"
 #include "selection_context.hpp"
 #include "session_doc_context.hpp"
@@ -22,13 +21,8 @@ ToolCanvasContext::ToolCanvasContext(ToolCanvasItem *host)
 
 void ToolCanvasContext::paintOverlay(QPainter *painter)
 {
-    if (m_hub) {
-        if (Operation *op = m_hub->overlayOperation())
-            op->paintOverlay(painter);
-    }
-    if (!m_doc || !m_selection)
-        return;
-    m_chrome.paint(painter, *m_selection, *m_doc, isSelectionTool());
+    if (m_hub && m_hub->activeMode())
+        m_hub->activeMode()->paintOverlay(painter, m_hub->hostCaps(), *m_hub);
 }
 
 void ToolCanvasContext::damageChrome(const QRectF &panelRect)
@@ -43,17 +37,28 @@ void ToolCanvasContext::damageChromeSegment(const QRectF &panelRect)
 
 void ToolCanvasContext::syncOverlayPresence()
 {
-    if (!m_selection)
+    if (m_hub && m_hub->activeMode())
+        m_hub->activeMode()->syncOverlay(m_hub->hostCaps(), *m_hub);
+}
+
+void ToolCanvasContext::setOverlayVisible(bool on)
+{
+    if (m_setVisible)
+        m_setVisible(on);
+}
+
+void ToolCanvasContext::paintSelectionChrome(QPainter *painter)
+{
+    if (!m_doc || !m_selection)
         return;
-    const bool penWaveform =
-        m_hub && m_hub->overlayOperation() && m_hub->overlayOperation()->wantsPenWaveform();
-    m_chrome.syncPresence(*m_selection, isSelectionTool() || isEraserTool(), penWaveform, m_setVisible,
-                          m_setStrokeWaveform);
+    m_chrome.paint(painter, *m_selection, *m_doc, isSelectionTool());
 }
 
 void ToolCanvasContext::setStrokeWaveform(bool penInFlight)
 {
-    if (m_host)
+    if (m_setStrokeWaveform)
+        m_setStrokeWaveform(penInFlight);
+    else if (m_host)
         m_host->setStrokeWaveform(penInFlight);
 }
 

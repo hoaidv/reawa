@@ -90,6 +90,7 @@ void ToolCanvasItem::setSession(CanvasSession *session)
                 m_toolCtx->onDocumentOrCameraChanged();
         });
         m_toolConn = connect(m_session, &CanvasSession::exclusiveToolChanged, this, [this]() {
+            m_hub.dispatchHoverLeave();
             syncActiveMode();
             if (m_toolCtx)
                 m_toolCtx->syncOverlayPresence();
@@ -240,12 +241,12 @@ void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen, bool eraserNib)
 
 void ToolCanvasItem::onHoverMove(qreal x, qreal y)
 {
-    m_hub.setHoverPanel(QPointF(x, y));
+    m_hub.dispatchHoverMove(sample(x, y, 0, true));
 }
 
 void ToolCanvasItem::onHoverLeave()
 {
-    m_hub.clearHover();
+    m_hub.dispatchHoverLeave();
 }
 
 void ToolCanvasItem::onFingerTap(qreal x, qreal y)

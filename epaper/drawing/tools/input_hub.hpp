@@ -39,11 +39,9 @@ public:
 
     Operation *lockedOperation() const { return m_lockedOp; }
     Operation *operation(OperationKind kind) const { return opFor(kind); }
-    /** Locked gesture painter, else exclusive-armed idle overlay op. */
-    Operation *overlayOperation() const;
 
-    void setHoverPanel(const QPointF &panel);
-    void clearHover();
+    void dispatchHoverMove(const PointerSample &s);
+    void dispatchHoverLeave();
 
     void setOperation(OperationKind kind, std::unique_ptr<Operation> op)
     {
@@ -77,6 +75,8 @@ private:
     bool kindAllowed(OperationKind kind, PointerRole role) const;
     Operation *opFor(OperationKind kind) const;
     Operation *matchOperation(StrategyKind channel, const PointerSample &s);
+    StylusHoverSink *matchHoverSink(const PointerSample &s) const;
+    void endHover();
 
     void feedRawDown(Operation *op, const PointerSample &s);
     void feedRawMove(Operation *op, const PointerSample &s);
@@ -89,6 +89,7 @@ private:
     SecondaryDeviceModifier m_secondary;
     InteractionMode *m_activeMode = nullptr;
     Operation *m_lockedOp = nullptr;
+    StylusHoverSink *m_hoverSink = nullptr;
     std::unordered_map<int, std::unique_ptr<Operation>> m_ops;
     std::vector<HitRegion> m_hits;
     std::vector<Intervention> m_interventions;
