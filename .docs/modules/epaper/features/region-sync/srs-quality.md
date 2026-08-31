@@ -1,7 +1,7 @@
 ---
 feature: region-sync
 parent_req: [REQ-02, REQ-10, REQ-19]
-version: 0.6.0
+version: 0.8.0
 lifecycle: active
 ---
 
@@ -27,9 +27,13 @@ Parent REQ: [REQ-02](../../prd.md#region-sync). Follow quality: [SRS-EP-51](#srs
 | Infini pans ≥5 s **while Epaper follow is off** | Infini-driven region changes | **0**; next pen uses local camera |
 | **Panel raster vs the device's own document** | Same figures for the region after settle | Always ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §2) |
 | **Panel raster vs desktop mirror** | Same figures after the change stream settles | Always — convergence measured on the desktop ([SRS-IN-08](../../../infini/features/tablet-sync/srs-quality.md)) |
-| Soft refresh under pan/zoom spam | Min interval between soft paints | ≥ **250 ms**; latest pending wins |
-| Settle / accepted `doc_load` | Sharp paint | Immediate; AA on; no soft fade left behind |
-| Ordinary local `append_ink` | Document FullClear / InPlaceDirty on that pen-up | **0** — live stamps are settle ([CHL-0029](../../../../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)); must not steal the next pen-down ([SRS-EP-01](../local-pen-ink/srs-logic.md)) |
+| Soft refresh under pan/zoom spam | GUI-thread vector FullClear of the camera | **0** on pan/zoom (blit + LatestJob); latest pending wins, in-flight is allowed to finish |
+| Soft pan/zoom preview | Reuse previous panel bitmap (pan shift / zoom scale-blit); ghosting OK | Always — not a FullClear |
+| Camera sharpen | LatestJob vector of the current camera; latest pending wins; deliver on GUI when not inking | Mid-gesture when a job finishes; always at settle |
+| Unchanged camera (`cam=none`) | Blit | **0**; still submit sharpen if the preview is a blit |
+| Newly revealed pan strips / zoom-in AA | Present after the matching LatestJob delivers | Always after settle; also mid-gesture when a job completes |
+| Settle / accepted `doc_load` | Sharp paint | Job delivers AA vector; no soft fade left behind once idle |
+| Ordinary local `append_ink` | Document FullClear / InPlaceDirty on that pen-up | **0** — live stamps are settle ([CHL-0029](../../../../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)); camera job must not swap `m_image` during a stroke ([SRS-EP-01](../local-pen-ink/srs-logic.md)) |
 | Structural local op | Sharp paint of the changed AABB | InPlaceDirty (or FullClear if AABB missing/huge) |
 | **Repaints sourced from an inbound peer picture** | Count | **0** |
 | Local ink → wire | `stroke_*` (preview) with world brush + **world** x/y | Always |
@@ -43,6 +47,14 @@ Parent REQ: [REQ-02](../../prd.md#region-sync). Follow quality: [SRS-EP-51](#srs
 - **Map** is never coalesced; **paint** is. Ghosting between paints is accepted.
 - Ghosting is a *timing* allowance, never a *content* allowance: a settled frame that disagrees with
   the local document is a defect, not slow e-ink.
+- **Soft camera** may blit the previous `m_image` (pan translate, zoom scale). That is the
+  interactive path. Vector paint of on-camera ink runs on a **LatestJob** worker (one in-flight,
+  one pending). Unlike object-erase overlay, a newer camera **does not** abort in-flight —
+  the finished buffer is warped toward the current camera, then the pending job runs.
+  The GUI swaps when the job matches (or warps a slightly stale result). It does not
+  FullClear on the pointer stack.
+- Newly revealed strips and zoom-in AA are **not** guaranteed on the blit frame; they appear when
+  the job for that camera delivers. Settle always leaves a job in flight for the final camera.
 - **Ordinary ink settle** is live stamps, not a full-panel sharp paint
   ([CHL-0029](../../../../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)).
   A FullClear that agrees with the document still **fails SRS-EP-01** if it queues the next pen-down.

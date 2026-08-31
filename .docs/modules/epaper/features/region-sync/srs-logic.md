@@ -1,7 +1,7 @@
 ---
 feature: region-sync
 parent_req: [REQ-02, REQ-10, REQ-19]
-version: 0.6.0
+version: 0.6.1
 lifecycle: active
 ---
 
@@ -165,6 +165,7 @@ behavior is the Qt canvas item above.
 ## [SRS-EP-24] Two-finger pan/zoom and viewport publish {#srs-ep-24-two-finger-viewport}
 
 <!-- lifecycle: active -->
+<!-- revised: 2026-08-31 — camera preview is m_image blit, not FullClear (SRS-EP-03). -->
 <!-- revised: 2026-08-20 — ADR-0029. Local Must; publish only if Infini follow is on. BRD-07 ship gate lifted. -->
 
 **Parent:** [REQ-10](../../prd.md#hand-touch) (two-finger half; [REQ-16](../../prd.md#device-pan-zoom) retired). **Decision:** [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md). **Links (not parents):** [SRS-EP-02](#srs-ep-02) inbound Infini map apply, [SRS-EP-49](#srs-ep-49-viewport-follow) follow enum, [SRS-EP-08](../device-document/srs-logic.md). Do **not** parent Infini [REQ-06](../../../infini/prd.md#viewport-follow) here.
@@ -180,6 +181,7 @@ Local two-finger pan/pinch is **Must**. Last-writer token is withdrawn.
 | Pan | Translate `drawingRegion` / equivalent `translate` |
 | Pinch | Uniform `scale` only (no rotate/skew) |
 | Local map | Apply **immediately** so the next pen sample is correct (p95 ≤100 ms map apply — [SRS-EP-26](./srs-quality.md#srs-ep-26-two-finger-quality)) |
+| Panel preview | Blit previous `m_image` (pan shift / zoom scale); not a FullClear ([SRS-EP-03](./srs-quality.md#srs-ep-03)) |
 | If Epaper follow is on at gesture start | **0** pan, **0** pinch — follow stays `infini_to_epaper`; cameras stay coupled. Box pick / move / resize still runs ([SRS-EP-49](#srs-ep-49-viewport-follow)) |
 | Publish | `viewport` **up** with `source: epaper` **only if** Infini follow is on (`direction = epaper_to_infini`). Otherwise **0** viewport up |
 | Flush | `settle: true` on two-finger end when publishing |

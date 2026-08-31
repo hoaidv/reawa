@@ -7,10 +7,12 @@
 #include <QElapsedTimer>
 #include <QImage>
 #include <QRectF>
+#include <QTimer>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QString>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -22,9 +24,14 @@
 #include "document/one_way_sync.hpp"
 #include "document/viewport_follow.hpp"
 #include "input/pen_sample.hpp"
+#include "debug/rasterize_probe.hpp"
 #include "primary_toolbar.hpp"
 #include "rendering/rendering.hpp"
 #include "stroke_capture.hpp"
+#include "camera_sharp_job.hpp"
+#include "util/latest_job.hpp"
+
+#include <optional>
 
 class StrokeSync;
 
@@ -37,6 +44,7 @@ class StrokeSync;
  * @implements [SRS-EP-11] live SmartGroup manipulation
  * @implements [SRS-EP-21] one-finger pick move palm pan
  * @implements [SRS-EP-23] finger exclusive-tool switch
+ * @implements [SRS-EP-03] camera coalesce paint attribution
  * @implements [SRS-EP-24] two-finger pan pinch viewport
  * @implements [SRS-EP-25] one-finger hand-touch quality
  * @implements [SRS-EP-26] two-finger map-apply quality
@@ -107,6 +115,7 @@ private:
 
 public:
     explicit TabletCanvasItem(QQuickItem *parent = nullptr);
+    ~TabletCanvasItem() override;
 
 protected:
     void geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) override;
@@ -259,7 +268,8 @@ private:
  * =================================================================================================
  * Rasterize scheduling and document tree paint
  * 
- * Cycle: scheduleVectorRasterize / scheduleDirtyRasterize → rasterizeVectors → DocumentRenderer
+ * Cycle: blit preview + LatestJob vector ([SRS-EP-03]); dirty/enclose stay GUI InPlaceDirty.
+ * Camera vector is never on the pointer stack ([SRS-EP-01]).
  * =================================================================================================
  */
 
@@ -267,6 +277,19 @@ private:
 
     void scheduleVectorRasterize(bool sharp);
     void rasterizeVectors(bool sharp, const QRectF &panelDirty = QRectF());
+    void armRasterTimer();
+    void onRasterTimer();
+    void bumpSnapEpoch();
+    void submitCameraSharp();
+    void onCameraSharpResult(epaper::camerasharp::Result result);
+    void applyCameraSharp(epaper::camerasharp::Result result);
+    bool blitOnto(QImage *dst, const QImage &src, epaper::rasterprobe::CamBox srcCam);
+    epaper::rasterprobe::CamBox currentCamBox() const;
+    bool tryPaintCameraBlit(bool sharp, epaper::rasterprobe::CamDelta cam,
+                            const epaper::rasterprobe::CameraPlan &plan, int *warpMs,
+                            int *renderMs);
+    void finishRasterize(const epaper::rasterprobe::Record &rec,
+                         const epaper::rasterprobe::CamBox &next);
     QRectF padRasterDirty(const QRectF &panel) const;
     epaper::render::WorldAabb panelRectToWorldClip(const QRectF &panel) const;
     QRectF panelBoundOfNodeId(const std::string &id) const;
@@ -286,6 +309,19 @@ private:
     QRectF m_pendingInPlaceDirty;
     QRectF m_encloseDirtyPanel;
     epaper::render::DocumentRenderer m_renderer;
+    epaper::rasterprobe::Why m_rasterWhy = epaper::rasterprobe::Why::Unknown;
+    epaper::rasterprobe::CamBox m_rasterCam;
+    std::string m_rasterOrient;
+    QTimer m_rasterTimer;
+    bool m_pointerBusy = false;
+    /** Blit preview is on screen; LatestJob owes a vector at the current camera. */
+    bool m_cameraNeedsSharp = false;
+    std::uint64_t m_snapEpoch = 0;
+    std::uint64_t m_cameraJobSeq = 0;
+    std::shared_ptr<const std::vector<epaper::document::DocNode>> m_cameraSnap;
+    std::uint64_t m_cameraSnapEpoch = 0;
+    epaper::LatestJob<epaper::camerasharp::Job, epaper::camerasharp::Result> m_cameraJob;
+    std::optional<epaper::camerasharp::Result> m_heldSharp;
 
     QElapsedTimer m_refreshClock;
     static constexpr qint64 kRefreshMinIntervalMs = 250;
@@ -359,6 +395,12 @@ public:
     void clearStash();
     bool strokeActive() const { return m_stroke.active; }
     void setErasePointerActive(bool on);
+    /** True while a ToolCanvas pointer/pinch callback is on the stack. Vector
+     *  FullClear must wait; camera blit may still run. */
+    void setPointerBusy(bool on);
+    /** Arm the coalesce timer for work deferred during pointerBusy — never
+     *  FullClear synchronously on pointer-up (next down is ~30 ms). */
+    void flushDeferredRasterize();
     void cancelActiveStroke();
 
     void scheduleDocumentRasterize(bool sharp);

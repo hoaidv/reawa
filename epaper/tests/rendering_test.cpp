@@ -6,7 +6,7 @@
 #include "document/device_document.hpp"
 #include "rendering/rendering.hpp"
 
-#include <cmath>
+#include <atomic>
 #include <iostream>
 #include <set>
 #include <string>
@@ -112,6 +112,9 @@ static void test_full_clip_same_polylines()
     CHECK(flatSink.polylineCount == cullSink.polylineCount);
     CHECK(flatSink.polylineCount == 2); // free ink + SG child
     CHECK(flat.lastVisitCount() >= cull.lastVisitCount());
+    CHECK(flat.lastPaintStats().polylines == 2);
+    CHECK(cull.lastPaintStats().polylines == 2);
+    CHECK(cull.lastPaintStats().pts >= 4);
 }
 
 static void test_hierarchy_cull_skips_far_sg()
@@ -143,6 +146,8 @@ static void test_hierarchy_cull_skips_far_sg()
     CHECK(flatSink.polylineCount == 2);
     CHECK(cullSink.polylineCount == 1);
     CHECK(cull.lastVisitCount() < flat.lastVisitCount());
+    CHECK(cull.lastPaintStats().skipped >= 1);
+    CHECK(cull.lastPaintStats().polylines == 1);
 }
 
 static void test_sg_child_visible_when_panned_into_view()
@@ -294,6 +299,29 @@ static void test_suppress_and_style()
     CHECK(sink.widths[0] > 2.0); // widthMul applied
 }
 
+static void test_cancel_aborts_walk()
+{
+    DeviceDocument doc;
+    for (int i = 0; i < 20; ++i)
+        doc.rootChildren.push_back(makeFreeInk("n" + std::to_string(i), 0, 0, 10, 10));
+
+    CanvasFrame frame;
+    frame.setPanelSize(100, 100);
+    frame.applyDrawingRegion({0, 0, 100, 100}, true);
+    FrameProjector proj;
+    proj.frame = &frame;
+
+    std::atomic<bool> cancel{true};
+    RenderRequest req;
+    req.worldClip = proj.drawingWorldClip();
+    req.cancel = &cancel;
+
+    RecordingSink sink;
+    HierarchyCullAlgorithm cull;
+    cull.paint(doc, proj, req, sink);
+    CHECK(sink.polylineCount == 0);
+}
+
 static void test_includeIds_skips_neighbors()
 {
     DeviceDocument doc;
@@ -362,6 +390,7 @@ int main()
     test_collectManipSuppressIds();
     test_suppress_and_style();
     test_includeIds_skips_neighbors();
+    test_cancel_aborts_walk();
     test_inplace_dirty_clearRect_and_tight_clip();
     if (g_fails) {
         std::cerr << "rendering_test: " << g_fails << " failure(s)\n";

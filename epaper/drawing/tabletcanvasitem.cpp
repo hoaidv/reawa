@@ -1,6 +1,7 @@
 #include "tabletcanvasitem.h"
 #include "debug/ui_stall.hpp"
 #include "debug/ink_path_probe.hpp"
+#include "debug/rasterize_probe.hpp"
 #include "regionsync/strokesync.h"
 #include "epaperbridge.h"
 #include "debug/latency_probe.hpp"
@@ -17,13 +18,15 @@
 
 #include <QStringList>
 #include <algorithm>
+#include <atomic>
+#include <cmath>
 #include <QPainter>
-#include <QPainterPath>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QQuickWindow>
 #include <QCoreApplication>
+#include <QMetaObject>
 #include <QtMath>
 #include <QByteArray>
 #include <QTransform>
@@ -129,6 +132,8 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     setFillColor(m_paintsInk ? QColor(Qt::white) : QColor(Qt::transparent));
     m_flushClock.start();
     m_refreshClock.start();
+    m_rasterTimer.setSingleShot(true);
+    connect(&m_rasterTimer, &QTimer::timeout, this, &TabletCanvasItem::onRasterTimer);
     m_stroke.mintNodeId = [this]() { return m_session.document.generateNodeId(); };
     connect(m_sync, &StrokeSync::hostMessage, this, &TabletCanvasItem::onHostMessage);
     connect(m_sync, &StrokeSync::socketConnected, this, [this]() {
@@ -157,16 +162,29 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     m_sync->connectToMac();
     updateToolChipRect();
     m_renderer.setAlgorithm(std::make_unique<epaper::render::HierarchyCullAlgorithm>());
+    m_cameraJob.start(
+        [](const epaper::camerasharp::Job &job, const std::atomic<bool> &cancel) {
+            return epaper::camerasharp::run(job, cancel);
+        },
+        [this](epaper::camerasharp::Result result) {
+            QMetaObject::invokeMethod(
+                this,
+                [this, r = std::move(result)]() mutable { onCameraSharpResult(std::move(r)); },
+                Qt::QueuedConnection);
+        });
 
     connect(&m_session, &CanvasSession::cameraChanged, this, [this]() {
+        m_rasterWhy = epaper::rasterprobe::Why::Camera;
         scheduleVectorRasterize(false);
     });
     connect(&m_session, &CanvasSession::documentMutated, this, [this]() {
+        bumpSnapEpoch();
         // [D05] noteDocumentDirty already painted; FullClear would hitch the next down.
         if (m_consumeMutatedRasterize) {
             m_consumeMutatedRasterize = false;
             return;
         }
+        m_rasterWhy = epaper::rasterprobe::Why::Mutated;
         scheduleVectorRasterize(true);
     });
     connect(&m_session, &CanvasSession::exclusiveToolChanged, this, [this]() {
@@ -176,6 +194,11 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
     });
     connect(&m_session, &CanvasSession::followChanged, this, &TabletCanvasItem::followChanged);
     connect(&m_session, &CanvasSession::recogChanged, this, &TabletCanvasItem::recogChanged);
+}
+
+TabletCanvasItem::~TabletCanvasItem()
+{
+    m_cameraJob.stop();
 }
 
 /** On resize: sync frame panel size, ToolChip layout, and Pen-mode region. */
@@ -679,6 +702,8 @@ void TabletCanvasItem::applyContactPress(const PanelPt &canvasPos, const IngestC
 /** Start StrokeCapture + syncBegin. */
 void TabletCanvasItem::beginStroke(const PanelPt &canvasPos, const IngestChannels &ch)
 {
+    bumpSnapEpoch();
+    m_heldSharp.reset();
     m_stroke.setPanelHeight(double(ingestPanelHeight()));
     m_pendingDirty = QRectF();
     m_flushClock.restart();
@@ -714,15 +739,22 @@ void TabletCanvasItem::endStroke()
         m_rasterizeDeferredSharp = false;
         m_rasterizePending = false;
         m_pendingInPlaceDirty = QRectF();
+        m_rasterWhy = epaper::rasterprobe::Why::Enclose;
         rasterizeVectors(true, dirty);
+        if (m_cameraNeedsSharp)
+            submitCameraSharp();
+    } else if (m_heldSharp) {
+        auto r = std::move(*m_heldSharp);
+        m_heldSharp.reset();
+        if (r.snapEpoch == m_snapEpoch)
+            applyCameraSharp(std::move(r));
+        else if (m_cameraNeedsSharp)
+            submitCameraSharp();
+    } else if (m_cameraNeedsSharp) {
+        submitCameraSharp();
     } else if (m_rasterizeDeferredSharp || m_rasterizePending) {
-        // Camera settle must not run on this pen-up (next down is ~30 ms away).
-        const bool sharp = m_rasterizeDeferredSharp;
-        m_rasterizeDeferredSharp = false;
-        m_rasterizePending = false;
-        if (sharp)
-            m_rasterizeSharp = true;
-        scheduleVectorRasterize(false);
+        m_rasterizePending = true;
+        armRasterTimer();
     }
 
     // Status text is refreshed between strokes only: during a stroke it would
@@ -842,53 +874,313 @@ qreal TabletCanvasItem::worldStrokeWidth(qreal pressure) const
  * =================================================================================================
  */
 
-/** Queue soft/sharp vector refresh (defer if pen down). */
+epaper::rasterprobe::CamBox TabletCanvasItem::currentCamBox() const
+{
+    return epaper::camerasharp::camBoxOf(m_session.frame);
+}
+
+void TabletCanvasItem::bumpSnapEpoch()
+{
+    ++m_snapEpoch;
+    m_cameraSnap.reset();
+}
+
+/** @implements [SRS-EP-03] LatestJob camera vector — not on the GUI pointer stack */
+void TabletCanvasItem::submitCameraSharp()
+{
+    if (!m_paintsInk || m_image.isNull())
+        return;
+    if (m_stroke.active || m_erasePointerActive)
+        return;
+    syncFramePanelSize();
+    if (!m_session.frame.drawingRegion.valid)
+        return;
+    if (!m_cameraSnap || m_cameraSnapEpoch != m_snapEpoch) {
+        m_cameraSnap = std::make_shared<const std::vector<epaper::document::DocNode>>(
+            m_session.document.rootChildren);
+        m_cameraSnapEpoch = m_snapEpoch;
+    }
+    epaper::camerasharp::Job job;
+    job.id = ++m_cameraJobSeq;
+    job.snapEpoch = m_snapEpoch;
+    job.frame = m_session.frame;
+    job.tree = m_cameraSnap;
+    job.suppressIds = m_session.liveManipSuppressIds();
+    job.imageW = m_image.width();
+    job.imageH = m_image.height();
+    job.format = m_image.format();
+    m_cameraNeedsSharp = true;
+    // Let in-flight finish: a completed buffer is warped toward `now`. Cancelling
+    // every 200 ms nav tick meant dense pages (~700 ms vector) never sharpened.
+    m_cameraJob.submit(std::move(job), false);
+}
+
+void TabletCanvasItem::onCameraSharpResult(epaper::camerasharp::Result result)
+{
+    if (result.cancelled || result.image.isNull())
+        return;
+    if (result.snapEpoch != m_snapEpoch)
+        return;
+    if (m_stroke.active || m_erasePointerActive) {
+        m_heldSharp = std::move(result);
+        return;
+    }
+    applyCameraSharp(std::move(result));
+}
+
+void TabletCanvasItem::applyCameraSharp(epaper::camerasharp::Result result)
+{
+    ensureImage();
+    if (m_image.isNull() || result.image.isNull())
+        return;
+    syncFramePanelSize();
+    const auto now = currentCamBox();
+    const auto delta = epaper::rasterprobe::classifyCamera(
+        result.cam, now, m_session.frame.panelW,
+        result.orient != m_session.frame.orientation);
+
+    QElapsedTimer clock;
+    clock.start();
+    bool warped = false;
+    if (delta.kind == epaper::rasterprobe::CamKind::None) {
+        m_image = std::move(result.image);
+        m_cameraNeedsSharp = false;
+    } else {
+        QImage next(m_image.size(), m_image.format());
+        if (!blitOnto(&next, result.image, result.cam)) {
+            m_cameraNeedsSharp = true;
+            submitCameraSharp();
+            return;
+        }
+        m_image = std::move(next);
+        warped = true;
+        m_cameraNeedsSharp = true;
+    }
+    const int blitMs = int(clock.restart());
+    {
+        epaper::inkpath::Span span("rasterize.update");
+        update(m_image.rect());
+    }
+    const int updateMs = int(clock.elapsed());
+
+    epaper::rasterprobe::Record rec;
+    rec.why = epaper::rasterprobe::Why::Camera;
+    rec.cam = delta;
+    rec.inplace = false;
+    rec.sharp = !warped;
+    rec.blit = warped;
+    rec.totalMs = (warped ? blitMs : result.renderMs) + updateMs;
+    rec.warpMs = 0;
+    rec.renderMs = warped ? blitMs : result.renderMs;
+    rec.updateMs = updateMs;
+    rec.ink = m_session.document.inkCount();
+    rec.nodes = m_session.document.nodeCount();
+    rec.visits = int(result.stats.visits);
+    rec.skipped = int(result.stats.skipped);
+    rec.polylines = int(result.stats.polylines);
+    rec.pts = int(result.stats.pts);
+    finishRasterize(rec, now);
+    if (warped)
+        submitCameraSharp();
+}
+
+bool TabletCanvasItem::blitOnto(QImage *dst, const QImage &src, epaper::rasterprobe::CamBox srcCam)
+{
+    if (!dst || dst->isNull() || src.isNull() || !srcCam.valid)
+        return false;
+    const QRect img = dst->rect();
+    if (src.size() != dst->size())
+        return false;
+
+    const auto now = currentCamBox();
+    const auto cam = epaper::rasterprobe::classifyCamera(srcCam, now, m_session.frame.panelW,
+                                                         false);
+    const auto plan = epaper::rasterprobe::planCameraPaint(cam.kind, false);
+
+    if (plan.paint == epaper::rasterprobe::CameraPaint::Skip) {
+        *dst = src;
+        return true;
+    }
+
+    if (plan.paint == epaper::rasterprobe::CameraPaint::BlitPan) {
+        epaper::canvasframe::CanvasFrame oldF = m_session.frame;
+        oldF.drawingRegion.minX = srcCam.minX;
+        oldF.drawingRegion.minY = srcCam.minY;
+        oldF.drawingRegion.maxX = srcCam.maxX;
+        oldF.drawingRegion.maxY = srcCam.maxY;
+        oldF.drawingRegion.valid = true;
+        const double wx = (srcCam.minX + srcCam.maxX) * 0.5;
+        const double wy = (srcCam.minY + srcCam.maxY) * 0.5;
+        const auto o = oldF.worldToPanel(wx, wy);
+        const auto n = m_session.frame.worldToPanel(wx, wy);
+        const int dx = int(std::lround(n.x - o.x));
+        const int dy = int(std::lround(n.y - o.y));
+        if (std::abs(dx) >= img.width() || std::abs(dy) >= img.height())
+            return false;
+        dst->fill(Qt::white);
+        QPainter p(dst);
+        p.drawImage(QPoint(dx, dy), src);
+        return true;
+    }
+
+    if (plan.paint == epaper::rasterprobe::CameraPaint::BlitScale) {
+        const auto a = m_session.frame.worldToPanel(srcCam.minX, srcCam.minY);
+        const auto b = m_session.frame.worldToPanel(srcCam.maxX, srcCam.minY);
+        const auto c = m_session.frame.worldToPanel(srcCam.minX, srcCam.maxY);
+        const auto d = m_session.frame.worldToPanel(srcCam.maxX, srcCam.maxY);
+        const qreal minX = std::min({a.x, b.x, c.x, d.x});
+        const qreal minY = std::min({a.y, b.y, c.y, d.y});
+        const qreal maxX = std::max({a.x, b.x, c.x, d.x});
+        const qreal maxY = std::max({a.y, b.y, c.y, d.y});
+        const QRectF dest(minX, minY, maxX - minX, maxY - minY);
+        if (dest.width() < 2.0 || dest.height() < 2.0)
+            return false;
+        dst->fill(Qt::white);
+        QPainter p(dst);
+        p.setRenderHint(QPainter::SmoothPixmapTransform, false);
+        p.drawImage(dest, src, QRectF(src.rect()));
+        return true;
+    }
+    return false;
+}
+
+void TabletCanvasItem::armRasterTimer()
+{
+    if (!m_rasterTimer.isActive())
+        m_rasterTimer.start(int(kRefreshMinIntervalMs));
+}
+
+void TabletCanvasItem::onRasterTimer()
+{
+    if (!m_rasterizePending && !m_rasterizeDeferredSharp)
+        return;
+    if (epaper::render::deferVectorRasterize(m_stroke.active, m_erasePointerActive, m_pointerBusy)) {
+        armRasterTimer();
+        return;
+    }
+    if (m_pendingInPlaceDirty.isEmpty()) {
+        m_rasterizePending = false;
+        m_rasterizeSharp = false;
+        m_rasterizeDeferredSharp = false;
+        if (m_cameraNeedsSharp)
+            submitCameraSharp();
+        return;
+    }
+    const bool doSharp = m_rasterizeSharp || m_rasterizeDeferredSharp;
+    m_rasterizePending = false;
+    m_rasterizeSharp = false;
+    m_rasterizeDeferredSharp = false;
+    const QRectF dirty = m_pendingInPlaceDirty;
+    m_pendingInPlaceDirty = QRectF();
+    if (m_rasterWhy == epaper::rasterprobe::Why::Unknown)
+        m_rasterWhy = epaper::rasterprobe::Why::Dirty;
+    rasterizeVectors(doSharp, dirty);
+}
+
+void TabletCanvasItem::setPointerBusy(bool on)
+{
+    m_pointerBusy = on;
+}
+
+void TabletCanvasItem::flushDeferredRasterize()
+{
+    if (m_heldSharp && !m_stroke.active && !m_erasePointerActive) {
+        auto r = std::move(*m_heldSharp);
+        m_heldSharp.reset();
+        if (r.snapEpoch == m_snapEpoch)
+            applyCameraSharp(std::move(r));
+    }
+    if (m_cameraNeedsSharp && !m_stroke.active && !m_erasePointerActive)
+        submitCameraSharp();
+    if (m_rasterizePending || m_rasterizeDeferredSharp || m_rasterizeSharp
+        || !m_pendingInPlaceDirty.isEmpty()) {
+        m_rasterizePending = true;
+        armRasterTimer();
+    }
+}
+
+void TabletCanvasItem::finishRasterize(const epaper::rasterprobe::Record &rec,
+                                      const epaper::rasterprobe::CamBox &next)
+{
+    epaper::rasterprobe::logRaster(rec);
+    const QString line = QString::fromStdString(epaper::rasterprobe::formatRasterLine(rec));
+    qInfo().noquote() << line.trimmed();
+    m_rasterCam = next;
+    m_rasterOrient = m_session.frame.orientation;
+    m_rasterWhy = epaper::rasterprobe::Why::Unknown;
+}
+
+/** Queue refresh. Camera: blit now + LatestJob sharp. Dirty/enclose stay GUI. */
 void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
 {
-    // [D02] No 180 ms follow-up FullClear. Camera still coalesces at 250 ms.
-    if (epaper::render::deferFullDocumentRasterize(m_stroke.active, m_erasePointerActive)) {
+    const bool deferWipe =
+        epaper::render::deferFullDocumentRasterize(m_stroke.active, m_erasePointerActive);
+
+    if (m_rasterWhy == epaper::rasterprobe::Why::Camera) {
+        syncFramePanelSize();
+        const auto cam = epaper::rasterprobe::classifyCamera(
+            m_rasterCam, currentCamBox(), m_session.frame.panelW,
+            m_rasterOrient != m_session.frame.orientation);
+        const auto plan = epaper::rasterprobe::planCameraPaint(cam.kind, sharp);
+        if (plan.paint == epaper::rasterprobe::CameraPaint::Skip) {
+            if (m_cameraNeedsSharp && !deferWipe)
+                submitCameraSharp();
+            return;
+        }
+        const bool blit = plan.paint == epaper::rasterprobe::CameraPaint::BlitPan
+            || plan.paint == epaper::rasterprobe::CameraPaint::BlitScale;
+        if (blit) {
+            if (deferWipe) {
+                m_cameraNeedsSharp = true;
+                return;
+            }
+            m_rasterizePending = false;
+            m_rasterizeDeferredSharp = false;
+            rasterizeVectors(false);
+            return;
+        }
+        if (epaper::render::deferVectorRasterize(m_stroke.active, m_erasePointerActive,
+                                                 m_pointerBusy)) {
+            submitCameraSharp();
+            return;
+        }
+        m_rasterizePending = false;
+        m_rasterizeDeferredSharp = false;
+        rasterizeVectors(true);
+        m_cameraNeedsSharp = false;
+        return;
+    }
+
+    if (deferWipe) {
         if (sharp)
             m_rasterizeDeferredSharp = true;
         else if (!m_rasterizeDeferredSharp)
             m_rasterizePending = true;
+        armRasterTimer();
         return;
     }
 
-    if (sharp)
-        m_rasterizeSharp = true;
-    if (m_rasterizePending && !sharp)
-        return;
     if (sharp) {
         m_rasterizePending = false;
         m_rasterizeDeferredSharp = false;
         m_pendingInPlaceDirty = QRectF();
         rasterizeVectors(true);
         m_rasterizeSharp = false;
+        m_cameraNeedsSharp = false;
         return;
     }
+    if (m_rasterizePending)
+        return;
     m_rasterizePending = true;
-    QTimer::singleShot(int(kRefreshMinIntervalMs), this, [this]() {
-        if (!m_rasterizePending
-            || epaper::render::deferFullDocumentRasterize(m_stroke.active, m_erasePointerActive))
-            return;
-        m_rasterizePending = false;
-        const bool doSharp = m_rasterizeSharp || m_rasterizeDeferredSharp;
-        m_rasterizeSharp = false;
-        m_rasterizeDeferredSharp = false;
-        if (!m_pendingInPlaceDirty.isEmpty()) {
-            const QRectF dirty = m_pendingInPlaceDirty;
-            m_pendingInPlaceDirty = QRectF();
-            rasterizeVectors(doSharp, dirty);
-        } else {
-            rasterizeVectors(doSharp);
-        }
-    });
+    armRasterTimer();
 }
+
 
 /** [D05] InPlaceDirty of a panel AABB; FullClear wins if also requested. */
 void TabletCanvasItem::scheduleDirtyRasterize(const QRectF &panelDirty, bool sharp)
 {
     m_consumeMutatedRasterize = true;
+    m_rasterWhy = epaper::rasterprobe::Why::Dirty;
     const QRectF padded = padRasterDirty(panelDirty);
     if (epaper::render::deferFullDocumentRasterize(m_stroke.active, m_erasePointerActive)) {
         m_pendingInPlaceDirty = m_pendingInPlaceDirty.isEmpty()
@@ -898,6 +1190,7 @@ void TabletCanvasItem::scheduleDirtyRasterize(const QRectF &panelDirty, bool sha
             m_rasterizeDeferredSharp = true;
         else if (!m_rasterizeDeferredSharp)
             m_rasterizePending = true;
+        armRasterTimer();
         return;
     }
     m_pendingInPlaceDirty = QRectF();
@@ -944,15 +1237,38 @@ void TabletCanvasItem::emitRecogChrome(int kind, const std::vector<std::string> 
     m_session.emitRecogChrome(kind, list);
 }
 
-/** Clear image and paint the local doc tree ∩ camera via DocumentRenderer. */
+bool TabletCanvasItem::tryPaintCameraBlit(bool /*sharp*/, epaper::rasterprobe::CamDelta /*cam*/,
+                                          const epaper::rasterprobe::CameraPlan &plan, int *warpMs,
+                                          int *renderMs)
+{
+    if (warpMs)
+        *warpMs = 0;
+    if (renderMs)
+        *renderMs = 0;
+    if (m_image.isNull() || !m_rasterCam.valid)
+        return false;
+    if (plan.paint != epaper::rasterprobe::CameraPaint::BlitPan
+        && plan.paint != epaper::rasterprobe::CameraPaint::BlitScale)
+        return false;
+    QElapsedTimer blitClock;
+    blitClock.start();
+    QImage src = m_image;
+    {
+        epaper::inkpath::Span span("rasterize.blit");
+        if (!blitOnto(&m_image, src, m_rasterCam))
+            return false;
+    }
+    if (renderMs)
+        *renderMs = int(blitClock.elapsed());
+    return true;
+}
+
+/** Paint vectors into m_image. Camera pan/zoom blit the previous bitmap. */
 void TabletCanvasItem::rasterizeVectors(bool sharp, const QRectF &panelDirty)
 {
     epaper::UiStallSection stall("rasterizeVectors");
-    using epaper::document::refreshAllConnectorWarps;
-    {
-        epaper::inkpath::Span span("rasterize.warp");
-        refreshAllConnectorWarps(m_session.document);
-    }
+    QElapsedTimer clock;
+    clock.start();
     if (!m_paintsInk)
         return;
     ensureImage();
@@ -961,46 +1277,89 @@ void TabletCanvasItem::rasterizeVectors(bool sharp, const QRectF &panelDirty)
 
     syncFramePanelSize();
 
-    epaper::render::FrameProjector proj;
-    proj.frame = &m_session.frame;
+    const epaper::rasterprobe::CamBox nextCam = currentCamBox();
+    const bool orientChanged = m_rasterOrient != m_session.frame.orientation;
+    const epaper::rasterprobe::CamDelta cam = epaper::rasterprobe::classifyCamera(
+        m_rasterCam, nextCam, m_session.frame.panelW, orientChanged);
 
-    const QRect img = m_image.rect();
+    int warpMs = 0;
+    int renderMs = 0;
+    bool blit = false;
+    bool useDirty = false;
     QRectF dirty = panelDirty;
-    const double imgArea = double(img.width()) * double(img.height());
-    const bool useDirty = dirty.isValid() && !dirty.isEmpty()
-        && (dirty.width() * dirty.height() <= 0.5 * imgArea);
+    const QRect img = m_image.rect();
 
-    epaper::render::RenderRequest req;
-    req.sharp = sharp;
-    if (useDirty) {
-        // [D03] Tight worldClip + painter clip. FullClear if dirty is huge/empty.
-        req.mode = epaper::render::RenderRequest::BufferMode::InPlaceDirty;
-        dirty = padRasterDirty(dirty);
-        req.dirtyPanelX = dirty.x();
-        req.dirtyPanelY = dirty.y();
-        req.dirtyPanelW = dirty.width();
-        req.dirtyPanelH = dirty.height();
-        req.worldClip = epaper::render::intersectWorldAabb(
-            proj.drawingWorldClip(), panelRectToWorldClip(dirty));
-    } else {
-        req.mode = epaper::render::RenderRequest::BufferMode::FullClear;
-        req.worldClip = proj.drawingWorldClip();
+    if (m_rasterWhy == epaper::rasterprobe::Why::Camera) {
+        const auto plan = epaper::rasterprobe::planCameraPaint(cam.kind, sharp);
+        if (plan.paint == epaper::rasterprobe::CameraPaint::Skip) {
+            if (m_cameraNeedsSharp)
+                submitCameraSharp();
+            return;
+        }
+        if (plan.paint == epaper::rasterprobe::CameraPaint::BlitPan
+            || plan.paint == epaper::rasterprobe::CameraPaint::BlitScale) {
+            if (tryPaintCameraBlit(sharp, cam, plan, &warpMs, &renderMs)) {
+                blit = true;
+                m_cameraNeedsSharp = true;
+            } else {
+                submitCameraSharp();
+                return;
+            }
+        }
     }
-    for (const auto &id : m_session.liveManipSuppressIds())
-        req.suppressIds.insert(id);
 
-    {
-        epaper::inkpath::Span span("rasterize.render");
-        epaper::render::QImagePixelSink sink(&m_image);
-        m_renderer.render(m_session.document, proj, req, sink);
+    if (!blit) {
+        using epaper::document::refreshAllConnectorWarps;
+        {
+            epaper::inkpath::Span span("rasterize.warp");
+            refreshAllConnectorWarps(m_session.document);
+        }
+        warpMs = int(clock.restart());
+
+        epaper::render::FrameProjector proj;
+        proj.frame = &m_session.frame;
+
+        const double imgArea = double(img.width()) * double(img.height());
+        useDirty = dirty.isValid() && !dirty.isEmpty()
+            && (dirty.width() * dirty.height() <= 0.5 * imgArea);
+
+        epaper::render::RenderRequest req;
+        req.sharp = sharp;
+        if (useDirty) {
+            req.mode = epaper::render::RenderRequest::BufferMode::InPlaceDirty;
+            dirty = padRasterDirty(dirty);
+            req.dirtyPanelX = dirty.x();
+            req.dirtyPanelY = dirty.y();
+            req.dirtyPanelW = dirty.width();
+            req.dirtyPanelH = dirty.height();
+            req.worldClip = epaper::render::intersectWorldAabb(
+                proj.drawingWorldClip(), panelRectToWorldClip(dirty));
+        } else {
+            req.mode = epaper::render::RenderRequest::BufferMode::FullClear;
+            req.worldClip = proj.drawingWorldClip();
+        }
+        for (const auto &id : m_session.liveManipSuppressIds())
+            req.suppressIds.insert(id);
+
+        clock.restart();
+        {
+            epaper::inkpath::Span span("rasterize.render");
+            epaper::render::QImagePixelSink sink(&m_image);
+            m_renderer.render(m_session.document, proj, req, sink);
+        }
+        renderMs = int(clock.restart());
+        m_cameraNeedsSharp = false;
     }
 
     m_refreshClock.restart();
+    int updateMs = 0;
     {
         epaper::inkpath::Span span("rasterize.update");
-        update(useDirty ? dirty.toAlignedRect() : img);
+        clock.restart();
+        update(blit || !useDirty ? img : dirty.toAlignedRect());
+        updateMs = int(clock.restart());
     }
-    if (sharp && qEnvironmentVariableIsSet("RM_EP_SWAP")) {
+    if (!blit && sharp && qEnvironmentVariableIsSet("RM_EP_SWAP")) {
         if (auto *win = window()) {
             const QRect scene = mapRectToScene(QRectF(useDirty ? dirty : QRectF(img)))
                                     .toAlignedRect();
@@ -1013,11 +1372,36 @@ void TabletCanvasItem::rasterizeVectors(bool sharp, const QRectF &panelDirty)
             win->update();
         }
     }
-    const std::size_t visits =
-        m_renderer.algorithm() ? m_renderer.algorithm()->lastVisitCount() : 0;
-    qInfo() << "[sync] vector rasterize ink" << m_session.document.inkCount() << "nodes"
-            << m_session.document.nodeCount() << "visits" << int(visits) << "sharp" << sharp
-            << "inplace" << useDirty << "seq" << m_viewportSeq;
+
+    epaper::render::LastPaintStats st;
+    if (m_renderer.algorithm())
+        st = m_renderer.algorithm()->lastPaintStats();
+    int samples = 0;
+    m_session.document.forEachPaintNode([&](const epaper::document::DocNode &n) {
+        if (n.kind == epaper::document::NodeKind::Ink)
+            samples += int(n.samples.size());
+    });
+
+    epaper::rasterprobe::Record rec;
+    rec.why = m_rasterWhy;
+    rec.cam = cam;
+    rec.inplace = useDirty;
+    rec.sharp = sharp;
+    rec.blit = blit;
+    rec.totalMs = warpMs + renderMs + updateMs;
+    rec.warpMs = warpMs;
+    rec.renderMs = renderMs;
+    rec.updateMs = updateMs;
+    rec.ink = m_session.document.inkCount();
+    rec.nodes = m_session.document.nodeCount();
+    rec.samples = samples;
+    rec.visits = int(st.visits);
+    rec.skipped = int(st.skipped);
+    rec.polylines = int(st.polylines);
+    rec.pts = int(st.pts);
+    finishRasterize(rec, nextCam);
+    if (blit)
+        submitCameraSharp();
 }
 
 /**
@@ -1161,6 +1545,8 @@ void TabletCanvasItem::cancelActiveStroke()
 /** Surface name for scheduleVectorRasterize. */
 void TabletCanvasItem::scheduleDocumentRasterize(bool sharp)
 {
+    if (m_rasterWhy == epaper::rasterprobe::Why::Unknown)
+        m_rasterWhy = epaper::rasterprobe::Why::Camera;
     scheduleVectorRasterize(sharp);
 }
 
@@ -1369,8 +1755,13 @@ void TabletCanvasItem::applyViewport(const QJsonObject &obj)
     qInfo() << "[sync] viewport seq" << m_viewportSeq << "orientation"
             << QString::fromStdString(m_session.frame.orientation) << "settle" << settle << "ink"
             << m_session.document.inkCount();
-    // Soft path already ran via cameraChanged; settle wants a sharp pass.
-    scheduleVectorRasterize(settle);
+    // Soft path already ran via cameraChanged blit. Unchanged camera must not
+    // FullClear (that was cam=none). Settle-sharp uses the camera plan (pan strips /
+    // zoom vector) — never a second anonymous FullClear.
+    if (settle) {
+        m_rasterWhy = epaper::rasterprobe::Why::Camera;
+        scheduleVectorRasterize(true);
+    }
 }
 
 /** Map cached Infini viewport into local camera. */
@@ -1382,6 +1773,7 @@ void TabletCanvasItem::applyFollowCamera()
     if (m_session.follow.direction != epaper::handtouch::FollowDirection::InfiniToEpaper)
         return;
     applyFrameIntent(m_session.frame.applyDrawingRegion(m_session.follow.localCamera, true));
+    m_rasterWhy = epaper::rasterprobe::Why::Camera;
     scheduleVectorRasterize(true);
 }
 
@@ -1491,8 +1883,10 @@ void TabletCanvasItem::onHostMessage(const QJsonObject &obj)
     }
     flushOneWayWire();
     if (obj.value(QStringLiteral("type")).toString() == QLatin1String("doc_load")
-        && m_oneWay.epochLive())
+        && m_oneWay.epochLive()) {
+        m_rasterWhy = epaper::rasterprobe::Why::DocLoad;
         scheduleVectorRasterize(true);
+    }
 }
 
 

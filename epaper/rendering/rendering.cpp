@@ -211,10 +211,14 @@ double widthMulFor(const RenderRequest &req, const std::string &id)
     return it->second.widthMul > 0.0 ? it->second.widthMul : 1.0;
 }
 
-void emitPolyline(IPixelSink &sink, PanelPolyline poly)
+void emitPolyline(IPixelSink &sink, PanelPolyline poly, LastPaintStats *st)
 {
     if (poly.pts.size() < 2)
         return;
+    if (st) {
+        ++st->polylines;
+        st->pts += poly.pts.size();
+    }
     sink.drawPolyline(poly);
 }
 
@@ -228,7 +232,8 @@ bool shouldEmit(const RenderRequest &req, const std::string &id)
 }
 
 void emitInkOrPrimitive(const DocNode &node, const DocNode *smartParent,
-                        const FrameProjector &proj, const RenderRequest &req, IPixelSink &sink)
+                        const FrameProjector &proj, const RenderRequest &req, IPixelSink &sink,
+                        LastPaintStats *st)
 {
     if (!shouldEmit(req, node.id))
         return;
@@ -268,7 +273,7 @@ void emitInkOrPrimitive(const DocNode &node, const DocNode *smartParent,
         poly.pts.reserve(node.samples.size());
         for (const auto &s : node.samples)
             poly.pts.push_back(toPanel(s.x, s.y));
-        emitPolyline(sink, std::move(poly));
+        emitPolyline(sink, std::move(poly), st);
         return;
     }
 
@@ -276,7 +281,7 @@ void emitInkOrPrimitive(const DocNode &node, const DocNode *smartParent,
         PanelPolyline poly;
         poly.width = lineW;
         poly.pts = {toPanel(node.x1, node.y1), toPanel(node.x2, node.y2)};
-        emitPolyline(sink, std::move(poly));
+        emitPolyline(sink, std::move(poly), st);
         return;
     }
     if (node.geomKind == PrimitiveKind::Rect) {
@@ -289,7 +294,7 @@ void emitInkOrPrimitive(const DocNode &node, const DocNode *smartParent,
         PanelPolyline poly;
         poly.width = lineW;
         poly.pts = {{x0, y0}, {x1, y0}, {x1, y1}, {x0, y1}, {x0, y0}};
-        emitPolyline(sink, std::move(poly));
+        emitPolyline(sink, std::move(poly), st);
         return;
     }
     if (node.geomKind == PrimitiveKind::Ellipse) {
@@ -309,12 +314,12 @@ void emitInkOrPrimitive(const DocNode &node, const DocNode *smartParent,
             const double t = (2.0 * 3.14159265358979323846 * double(i)) / double(kSeg);
             poly.pts.push_back({cx + rx * std::cos(t), cy + ry * std::sin(t)});
         }
-        emitPolyline(sink, std::move(poly));
+        emitPolyline(sink, std::move(poly), st);
     }
 }
 
 void emitConnector(const DocNode &conn, const FrameProjector &proj, const RenderRequest &req,
-                   IPixelSink &sink)
+                   IPixelSink &sink, LastPaintStats *st)
 {
     if (!shouldEmit(req, conn.id))
         return;
@@ -335,48 +340,56 @@ void emitConnector(const DocNode &conn, const FrameProjector &proj, const Render
         proj.worldToPanel(s.x, s.y, &px, &py);
         poly.pts.push_back({px, py});
     }
-    emitPolyline(sink, std::move(poly));
+    emitPolyline(sink, std::move(poly), st);
 }
 
 void walkFlat(const std::vector<DocNode> &nodes, const DocNode *smartParent,
               const FrameProjector &proj, const RenderRequest &req, IPixelSink &sink,
-              std::size_t *visits)
+              LastPaintStats *st)
 {
     for (const auto &node : nodes) {
-        ++(*visits);
+        if (req.cancel && req.cancel->load())
+            return;
+        ++st->visits;
         if (node.kind == NodeKind::SmartGroup)
-            walkFlat(node.children, &node, proj, req, sink, visits);
+            walkFlat(node.children, &node, proj, req, sink, st);
         else if (node.kind == NodeKind::Frame || node.kind == NodeKind::Group)
-            walkFlat(node.children, nullptr, proj, req, sink, visits);
+            walkFlat(node.children, nullptr, proj, req, sink, st);
         else if (node.kind == NodeKind::Connector)
-            emitConnector(node, proj, req, sink);
+            emitConnector(node, proj, req, sink, st);
         else
-            emitInkOrPrimitive(node, smartParent, proj, req, sink);
+            emitInkOrPrimitive(node, smartParent, proj, req, sink, st);
     }
 }
 
 void walkCull(const std::vector<DocNode> &nodes, const DocNode *smartParent,
               const FrameProjector &proj, const RenderRequest &req, IPixelSink &sink,
-              std::size_t *visits)
+              LastPaintStats *st)
 {
     for (const auto &node : nodes) {
-        ++(*visits);
+        if (req.cancel && req.cancel->load())
+            return;
+        ++st->visits;
         if (node.kind == NodeKind::SmartGroup || node.kind == NodeKind::Frame
             || node.kind == NodeKind::Group) {
-            if (!nodeOverlapsClip(node, smartParent, req.worldClip))
+            if (!nodeOverlapsClip(node, smartParent, req.worldClip)) {
+                ++st->skipped;
                 continue;
+            }
             if (node.kind == NodeKind::SmartGroup)
-                walkCull(node.children, &node, proj, req, sink, visits);
+                walkCull(node.children, &node, proj, req, sink, st);
             else
-                walkCull(node.children, nullptr, proj, req, sink, visits);
+                walkCull(node.children, nullptr, proj, req, sink, st);
             continue;
         }
-        if (!nodeOverlapsClip(node, smartParent, req.worldClip))
+        if (!nodeOverlapsClip(node, smartParent, req.worldClip)) {
+            ++st->skipped;
             continue;
+        }
         if (node.kind == NodeKind::Connector)
-            emitConnector(node, proj, req, sink);
+            emitConnector(node, proj, req, sink, st);
         else
-            emitInkOrPrimitive(node, smartParent, proj, req, sink);
+            emitInkOrPrimitive(node, smartParent, proj, req, sink, st);
     }
 }
 
@@ -394,28 +407,29 @@ void collectPaintableIds(const std::vector<DocNode> &nodes, std::unordered_set<s
 }
 
 void emitBoundConnectors(const document::DeviceDocument &doc, const std::string &sgId,
-                         const FrameProjector &proj, const RenderRequest &req, IPixelSink &sink)
+                         const FrameProjector &proj, const RenderRequest &req, IPixelSink &sink,
+                         LastPaintStats *st)
 {
     for (const auto &node : doc.rootChildren) {
         if (node.kind != NodeKind::Connector)
             continue;
         if (node.fromNodeId != sgId && node.toNodeId != sgId)
             continue;
-        emitConnector(node, proj, req, sink);
+        emitConnector(node, proj, req, sink, st);
     }
 }
 
 void paintSubtreeWalk(const document::DeviceDocument &doc, const DocNode *root,
                       const FrameProjector &proj, const RenderRequest &req, IPixelSink &sink,
-                      std::size_t *visits, bool cull)
+                      LastPaintStats *st, bool cull)
 {
     if (!root || root->kind != NodeKind::SmartGroup)
         return;
     if (cull)
-        walkCull(root->children, root, proj, req, sink, visits);
+        walkCull(root->children, root, proj, req, sink, st);
     else
-        walkFlat(root->children, root, proj, req, sink, visits);
-    emitBoundConnectors(doc, root->id, proj, req, sink);
+        walkFlat(root->children, root, proj, req, sink, st);
+    emitBoundConnectors(doc, root->id, proj, req, sink, st);
 }
 
 } // namespace
@@ -470,15 +484,15 @@ WorldAabb FrameProjector::drawingWorldClip() const
 void FlatWalkAlgorithm::paint(const document::DeviceDocument &doc, const FrameProjector &proj,
                               const RenderRequest &req, IPixelSink &sink)
 {
-    m_visits = 0;
-    walkFlat(doc.rootChildren, nullptr, proj, req, sink, &m_visits);
+    m_stats = {};
+    walkFlat(doc.rootChildren, nullptr, proj, req, sink, &m_stats);
 }
 
 void HierarchyCullAlgorithm::paint(const document::DeviceDocument &doc, const FrameProjector &proj,
                                    const RenderRequest &req, IPixelSink &sink)
 {
-    m_visits = 0;
-    walkCull(doc.rootChildren, nullptr, proj, req, sink, &m_visits);
+    m_stats = {};
+    walkCull(doc.rootChildren, nullptr, proj, req, sink, &m_stats);
 }
 
 void DocumentRenderer::setAlgorithm(std::unique_ptr<IRenderAlgorithm> alg)
@@ -525,8 +539,8 @@ void DocumentRenderer::renderSubtree(const document::DeviceDocument &doc, const 
     if (!root)
         return;
     sink.begin(req.sharp);
-    std::size_t visits = 0;
-    paintSubtreeWalk(doc, root, proj, req, sink, &visits, /*cull=*/false);
+    LastPaintStats st;
+    paintSubtreeWalk(doc, root, proj, req, sink, &st, /*cull=*/false);
     sink.end();
 }
 

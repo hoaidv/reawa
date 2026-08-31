@@ -40,6 +40,10 @@ ToolCanvasItem::ToolCanvasItem(QQuickItem *parent)
 
 void ToolCanvasItem::paint(QPainter *painter)
 {
+    if (!m_overlayPaintOk)
+        return;
+    if (m_surface && m_surface->strokeActive())
+        return;
     epaper::inkpath::Span span("toolPaint");
     if (m_toolCtx)
         m_toolCtx->paintOverlay(painter);
@@ -143,7 +147,10 @@ void ToolCanvasItem::syncToolHost()
     m_toolCtx->setDoc(m_docCtx.get());
     m_toolCtx->setHub(&m_hub);
     m_toolCtx->setRepaint([this](const QRectF &r) { update(r.toAlignedRect()); });
-    m_toolCtx->setSetVisible([this](bool on) { setVisible(on); });
+    m_toolCtx->setSetVisible([this](bool on) {
+        m_overlayPaintOk = on;
+        setVisible(on);
+    });
     m_toolCtx->setSetStrokeWaveform([this](bool w) { setStrokeWaveform(w); });
     m_emphasis.setTimerHost(this);
 
@@ -237,6 +244,8 @@ void ToolCanvasItem::cancelInteraction()
 
 void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen, bool eraserNib)
 {
+    if (m_surface)
+        m_surface->setPointerBusy(true);
     const int ink = m_session ? m_session->document.inkCount() : 0;
     const int nodes = m_session ? m_session->document.nodeCount() : 0;
     epaper::inkpath::Sample probe(epaper::inkpath::Event::Down, ink, nodes);
@@ -252,6 +261,8 @@ void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen, 
 
 void ToolCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen, bool eraserNib)
 {
+    if (m_surface)
+        m_surface->setPointerBusy(true);
     const int ink = m_session ? m_session->document.inkCount() : 0;
     const int nodes = m_session ? m_session->document.nodeCount() : 0;
     epaper::inkpath::Sample probe(epaper::inkpath::Event::Move, ink, nodes);
@@ -271,6 +282,8 @@ void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen, bool eraserNib)
     if (m_surface) {
         m_surface->clearStash();
         m_surface->setErasePointerActive(false);
+        m_surface->setPointerBusy(false);
+        m_surface->flushDeferredRasterize();
     }
 }
 
@@ -299,6 +312,8 @@ void ToolCanvasItem::onPointerCancel()
     if (m_surface) {
         m_surface->clearStash();
         m_surface->setErasePointerActive(false);
+        m_surface->setPointerBusy(false);
+        m_surface->flushDeferredRasterize();
     }
 }
 
@@ -310,21 +325,33 @@ void ToolCanvasItem::onSecondContact()
 void ToolCanvasItem::onContactsCleared()
 {
     m_hub.secondary().setLockedUntilLift(false);
+    if (m_surface) {
+        m_surface->setPointerBusy(false);
+        m_surface->flushDeferredRasterize();
+    }
 }
 
 void ToolCanvasItem::onPinchStart(qreal x, qreal y, qreal scale)
 {
+    if (m_surface)
+        m_surface->setPointerBusy(true);
     m_hub.dispatchPinchBegin(x, y, scale);
 }
 
 void ToolCanvasItem::onPinchUpdate(qreal x, qreal y, qreal scale)
 {
+    if (m_surface)
+        m_surface->setPointerBusy(true);
     m_hub.dispatchPinchUpdate(x, y, scale);
 }
 
 void ToolCanvasItem::onPinchEnd()
 {
     m_hub.dispatchPinchEnd();
+    if (m_surface) {
+        m_surface->setPointerBusy(false);
+        m_surface->flushDeferredRasterize();
+    }
 }
 
 void ToolCanvasItem::toggleHandTouch()
@@ -338,4 +365,8 @@ void ToolCanvasItem::toggleHandTouch()
 void ToolCanvasItem::cancelHandTouch()
 {
     m_hub.dispatchIntervention(epaper::tools::InterventionGate::PenProximity);
+    if (m_surface) {
+        m_surface->setPointerBusy(false);
+        m_surface->flushDeferredRasterize();
+    }
 }

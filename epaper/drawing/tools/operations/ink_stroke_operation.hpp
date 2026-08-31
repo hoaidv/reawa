@@ -3,12 +3,14 @@
 /**
  * InkStrokeOperation — pen RawPointer → InkSink.
  * @implements [SRS-EP-04]
+ * @implements [SRS-EP-01] overlay hidden + stamp cleared before first ingest
  */
 
 #include "../host_caps.hpp"
 #include "../operation.hpp"
 #include "../tablet_ink_sink.hpp"
 #include "../contexts/tool_context.hpp"
+#include "../ui/node_emphasis.hpp"
 
 namespace epaper {
 namespace tools {
@@ -40,8 +42,12 @@ public:
         if (!ink())
             return;
         // Hide ToolCanvas before the first sample so Mono cannot cover live Pen ink.
+        // setVisible is async — overlayPaintOk is the sync gate. Clear membership
+        // Bold so a queued paint cannot restroke neighbors on this down.
         if (m_caps && m_caps->toolUi)
             m_caps->toolUi->setOverlayVisible(false);
+        if (m_caps && m_caps->emphasis)
+            m_caps->emphasis->clearStrokeStamp(*m_caps);
         RawPt raw;
         epaper::input::PenSample ch;
         if (s.device == PointerDevice::Pen) {

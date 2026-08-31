@@ -8,6 +8,7 @@
 #include "document/device_document.hpp"
 #include "drawing/canvas_frame.hpp"
 
+#include <atomic>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -59,6 +60,8 @@ struct RenderRequest {
     /** When non-empty, only these ids emit (blink/stamp). Empty = all minus suppress. */
     std::unordered_set<std::string> includeIds;
     std::unordered_map<std::string, StyleOverride> styles;
+    /** Cooperative cancel for LatestJob camera sharpen (checked in the walk). */
+    const std::atomic<bool> *cancel = nullptr;
 };
 
 struct PanelPolyline {
@@ -86,13 +89,22 @@ struct FrameProjector {
     WorldAabb drawingWorldClip() const;
 };
 
+/** Counters from the last paint — camera rasterize probe. */
+struct LastPaintStats {
+    std::size_t visits = 0;     /**< Nodes entered (containers + leaves). */
+    std::size_t polylines = 0;  /**< Emitted strokes (ink / primitive / connector). */
+    std::size_t pts = 0;        /**< Panel vertices in those polylines. */
+    std::size_t skipped = 0;    /**< Nodes rejected by worldClip (cull only). */
+};
+
 class IRenderAlgorithm {
 public:
     virtual ~IRenderAlgorithm() = default;
     virtual void invalidateAll() {}
     virtual void invalidateIds(const std::vector<std::string> &) {}
     /** Nodes entered during the last paint (containers + leaves). */
-    virtual std::size_t lastVisitCount() const { return 0; }
+    virtual std::size_t lastVisitCount() const { return lastPaintStats().visits; }
+    virtual LastPaintStats lastPaintStats() const { return {}; }
     virtual void paint(const document::DeviceDocument &doc, const FrameProjector &proj,
                        const RenderRequest &req, IPixelSink &sink) = 0;
 };
@@ -100,23 +112,25 @@ public:
 /** DFS paint — Θ(N) visit. */
 class FlatWalkAlgorithm : public IRenderAlgorithm {
 public:
-    std::size_t lastVisitCount() const override { return m_visits; }
+    std::size_t lastVisitCount() const override { return m_stats.visits; }
+    LastPaintStats lastPaintStats() const override { return m_stats; }
     void paint(const document::DeviceDocument &doc, const FrameProjector &proj,
                const RenderRequest &req, IPixelSink &sink) override;
 
 private:
-    std::size_t m_visits = 0;
+    LastPaintStats m_stats;
 };
 
 /** Skip container subtrees whose world AABB misses worldClip. */
 class HierarchyCullAlgorithm : public IRenderAlgorithm {
 public:
-    std::size_t lastVisitCount() const override { return m_visits; }
+    std::size_t lastVisitCount() const override { return m_stats.visits; }
+    LastPaintStats lastPaintStats() const override { return m_stats; }
     void paint(const document::DeviceDocument &doc, const FrameProjector &proj,
                const RenderRequest &req, IPixelSink &sink) override;
 
 private:
-    std::size_t m_visits = 0;
+    LastPaintStats m_stats;
 };
 
 /** Ink/primitive ids under a SmartGroup plus bound root connectors — for live-manip suppress. */

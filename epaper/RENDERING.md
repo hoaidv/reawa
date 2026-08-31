@@ -346,6 +346,26 @@ signature: GUI thread was in `behind=` immediately before the sample.
 ssh root@10.11.99.1 'tail -f /tmp/epaper-ink-path.log'
 ```
 
+Camera / document rasterize is **on by default** (every `rasterizeVectors`). One line to
+`/tmp/epaper-raster.log` (stderr and `[raster]` in `/tmp/epaper.log` too):
+
+```
+[raster] reason=camera cam=pan blit=1 inplace=0 sharp=0 total_ms=40 warp_ms=0
+  render_ms=12 update_ms=8 ink=812 nodes=940 samples=44102 visits=0 skip=0
+  polylines=0 pts=0 pan_px=18.2 zoom=1.000
+```
+
+`blit=1` is pan shift / zoom scale of the previous panel (or a slightly stale
+job warped toward the current camera). `blit=0 sharp=1` with large `render_ms`
+is the LatestJob vector swapped in — that is when newly revealed strips and
+zoom-in AA appear. `cam=none` on that line means the job matched the current
+camera (success, not a skip). First paint / orientation may still be a GUI
+vector. `reason=dirty inplace=1` is transform/erase. `EPAPER_RASTER=0` disables.
+
+```bash
+ssh root@10.11.99.1 'tail -f /tmp/epaper-raster.log'
+```
+
 If status says `libqsgepaper unavailable`, symbols changed on this firmware —
 the app still draws via stock Qt epaper, just without Pen partials.
 

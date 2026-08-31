@@ -104,4 +104,6 @@ private:
     QMetaObject::Connection m_camConn;
     QMetaObject::Connection m_toolConn;
     QMetaObject::Connection m_recogConn;
+    /** Sync flag: setVisible is async; paint must no-op the same call. */
+    bool m_overlayPaintOk = false;
 };

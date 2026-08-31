@@ -25,6 +25,7 @@ qt_add_executable(epaper_bin
     debug/debug_log_ship.cpp
     debug/ui_stall.cpp
     debug/ink_path_probe.cpp
+    debug/rasterize_probe.cpp
     connectivity/usbgadget.cpp
     connectivity/usb_link.cpp
     input/qtinputfilter.cpp

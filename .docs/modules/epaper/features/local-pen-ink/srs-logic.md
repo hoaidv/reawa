@@ -50,9 +50,12 @@ module: epaper
     [CHL-0030](../../../../../.plan/iter-005/challenges/CHL-0030-node-emphasis.md)):
     - Ordinary `append_ink` must not `rasterizeVectors` the document (live stamps are settle).
     - Do not FullClear ~180 ms after pen-up.
-    - Camera soft coalesce (250 ms) must not run inside `endStroke` or the next pen-down.
+    - Camera vector is a **LatestJob** (not a 250 ms GUI timer) and must not run
+      inside `endStroke` or the next pen-down. Do not swap a camera job onto `m_image`
+      during a stroke (it would wipe Pen stamps). Pan/zoom previews blit `m_image`.
     - ToolCanvas must stay **hidden** while an ink stroke is active (Mono over Pen looks
-      dash-dash-dash then solid, and `toolPaint` queues the next sample).
+      dash-dash-dash then solid, and `toolPaint` queues the next sample). A queued paint
+      after `setVisible(false)` must no-op (`overlayPaintOk`).
     - NodeEmphasis paints only emphasized ids (`includeIds`), never every overlapping ink.
 
 Regression probe: `/tmp/epaper-ink-path.log` — see

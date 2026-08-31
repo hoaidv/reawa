@@ -2,10 +2,11 @@
 
 /**
  * One in-flight compute + at most one pending request.
- * A newer submit replaces the waiting request and cooperatively cancels in-flight
- * so the worker runs the latest input next. Stale in-flight results are not delivered.
- *
- * Object erase overlay uses this so pointer events never stack 80% tests on the UI thread.
+ * A newer submit replaces the waiting request. By default it also cooperatively
+ * cancels in-flight so the worker starts the latest input next (object-erase
+ * overlay: a half-finished 80% test is worthless). Camera sharpen passes
+ * cancelRunning=false so a finished buffer can be warped toward the latest
+ * camera instead of being aborted every 200 ms nav tick.
  */
 
 #include <atomic>
@@ -47,15 +48,16 @@ public:
         m_thread = std::thread([this] { loop(); });
     }
 
-    /** Queue `req`. If a job is running, this becomes (or replaces) the single pending job
-     *  and the running job is asked to cancel. */
-    void submit(Request req)
+    /** Queue `req` as the single pending job.
+     *  @param cancelRunning  true (default): abort in-flight so this input runs next.
+     *                        false: let in-flight finish and deliver; then run pending. */
+    void submit(Request req, bool cancelRunning = true)
     {
         std::lock_guard<std::mutex> lock(m_mu);
         if (m_stop)
             return;
         m_pending = std::move(req);
-        if (m_inFlight)
+        if (cancelRunning && m_inFlight)
             m_cancel = true;
         m_cv.notify_one();
     }

@@ -26,7 +26,7 @@ stall, live ink stays solid).
 |---|---|
 | Ordinary `RecogOutcome::Ink` | No Tablet `rasterizeVectors`. Live Pen stamps **are** the settle ([CHL-0029](../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)). |
 | 180 ms settle follow-up | **Gone.** It stole downs after handwriting pauses. |
-| Camera soft coalesce | Still 250 ms. Must **not** run synchronously on pen-up of ordinary ink. |
+| Camera soft coalesce | Vector FullClear is a **LatestJob** off the GUI thread. Must **not** swap `m_image` during a stroke (wipes Pen stamps). Pan/zoom preview **blits**. |
 | InkMode overlay | **Hidden while a stroke is active** so ToolCanvas Mono cannot cover live Pen ink. |
 | NodeEmphasis blink / membership Bold | ToolCanvas only. Paints **`includeIds`** (styled nodes), not every overlapping ink in the AABB. |
 | Draw-into membership with recog off | Still **joins** (not an ink-box recognizer). Chrome must not stay Mono over the next stroke. |
@@ -36,9 +36,10 @@ stall, live ink stays solid).
 | Path | Behaviour |
 |---|---|
 | Move / resize pen-down | Still runs InPlaceDirty origin punch on that down (`slow_sample rasterize.render`). Correct; not an ink stroke. |
-| `doc_load`, camera, resize, missing AABB | Still FullClear. |
+| `doc_load`, orientation, first camera | Still GUI vector FullClear (not on the pointer stack). Pan/zoom **preview** is a blit; **sharpen** is LatestJob. |
 | Enclose / connector **create** | One InPlaceDirty of the group / spine∪boxes at pen-up. |
-| Camera pending during a stroke | Coalesced to the 250 ms timer **after** pen-up, not inside `endStroke`. A pan mid-write can still FullClear once idle. |
+| Camera pending during a stroke | Job is held until pen-up, then a **new** snapshot (includes the stroke). Must not FullClear on the pointer stack. |
+| Overlay paint after `setVisible(false)` | Sync `overlayPaintOk` + skip `paint()` while `strokeActive()`. Membership Bold is cleared on ink down. |
 | Recognizers off | Does **not** disable draw-into membership. Overlay must hide on the next ink down. |
 
 ## Causes we hit (in order)
@@ -49,7 +50,7 @@ stall, live ink stays solid).
 
 ## How to attribute a regression
 
-Always-on probe: `/tmp/epaper-ink-path.log` (stderr too). `EPAPER_INK_PATH=0` off. Stall: `/tmp/epaper-ui-stall.log`. Rasterize: `[sync] vector rasterize … inplace … visits` in `/tmp/epaper.log`.
+Always-on probe: `/tmp/epaper-ink-path.log` (stderr too). `EPAPER_INK_PATH=0` off. Stall: `/tmp/epaper-ui-stall.log`. Rasterize: `[raster] …` in `/tmp/epaper-raster.log` (camera pan/zoom vs dirty).
 
 | Log | Meaning | Likely revert |
 |---|---|---|
@@ -57,7 +58,7 @@ Always-on probe: `/tmp/epaper-ink-path.log` (stderr too). `EPAPER_INK_PATH=0` of
 | `event=down … behind=toolPaint` | ToolCanvas Mono painted on the GUI thread | InkMode hide-while-stroke; `includeIds`; stamp clear → `syncOverlayPresence` |
 | Solid ink becomes dash-dash then solid | Mono (or non-Pen) refresh over Pen stamps | Overlay visible during ink, or Tablet `update()` of a huge rect |
 | `event=down … slow_sample slowest=rasterize.render` with `spans=rasterize.*` | Rasterize **on the pointer stack** | Camera/enclose running on ink down; transform punch is OK if they were moving a box |
-| `endStroke` stall 400+ ms on ordinary ink | Sync rasterize or heavy ingest on up | Camera pending must timer-coalesce, not `rasterizeVectors` in `endStroke` |
+| `endStroke` stall 400+ ms on ordinary ink | Sync rasterize or heavy ingest on up | Camera pending must LatestJob, not `rasterizeVectors` in `endStroke` |
 | `[recog] … fail=recog_off` **and** `outcome=membership` | Draw-into still ran | Expected. Chrome, not join, is the hitch |
 
 Guided review of the first slice: [`.plan/iter-005/handoffs/2026-08-31-dev-guided-review-rasterize-dirty.md`](../../.plan/iter-005/handoffs/2026-08-31-dev-guided-review-rasterize-dirty.md).

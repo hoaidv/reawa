@@ -138,6 +138,8 @@ static void test_rasterize_defer_erase_not_transform()
     CHECK(deferFullDocumentRasterize(false, true));
     CHECK(deferFullDocumentRasterize(true, true));
     CHECK(!deferFullDocumentRasterize(false, false));
+    CHECK(deferVectorRasterize(false, false, true));
+    CHECK(!deferVectorRasterize(false, false, false));
 }
 
 static void test_move_hides_origin_tool_layer_keeps_it()

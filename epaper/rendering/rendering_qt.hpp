@@ -7,8 +7,8 @@
 #include "rendering/rendering.hpp"
 
 #include <QPainter>
-#include <QPainterPath>
 #include <QPen>
+#include <QPolygonF>
 
 namespace epaper {
 namespace render {
@@ -54,11 +54,11 @@ public:
         pen.setJoinStyle(Qt::RoundJoin);
         m_painter.setPen(pen);
         m_painter.setBrush(Qt::NoBrush);
-        QPainterPath path;
-        path.moveTo(poly.pts[0].first, poly.pts[0].second);
-        for (size_t i = 1; i < poly.pts.size(); ++i)
-            path.lineTo(poly.pts[i].first, poly.pts[i].second);
-        m_painter.drawPath(path);
+        QPolygonF pts;
+        pts.reserve(int(poly.pts.size()));
+        for (const auto &pt : poly.pts)
+            pts << QPointF(pt.first, pt.second);
+        m_painter.drawPolyline(pts);
     }
 
     void end() override
@@ -99,11 +99,11 @@ public:
         pen.setJoinStyle(Qt::RoundJoin);
         m_painter->setPen(pen);
         m_painter->setBrush(Qt::NoBrush);
-        QPainterPath path;
-        path.moveTo(poly.pts[0].first, poly.pts[0].second);
-        for (size_t i = 1; i < poly.pts.size(); ++i)
-            path.lineTo(poly.pts[i].first, poly.pts[i].second);
-        m_painter->drawPath(path);
+        QPolygonF pts;
+        pts.reserve(int(poly.pts.size()));
+        for (const auto &pt : poly.pts)
+            pts << QPointF(pt.first, pt.second);
+        m_painter->drawPolyline(pts);
     }
 
     void end() override {}

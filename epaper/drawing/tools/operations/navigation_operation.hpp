@@ -202,7 +202,11 @@ private:
             return;
         m_viewport->applyCamera(region, false);
         m_viewport->publishViewport(settle);
-        m_viewport->scheduleRasterize(settle);
+        // Soft preview is the cameraChanged blit. Only settle asks for sharp
+        // (pan strips / zoom vector). Scheduling soft here used to FullClear
+        // the same camera 250 ms later (cam=none).
+        if (settle)
+            m_viewport->scheduleRasterize(true);
         if (m_caps && m_caps->toolUi)
             m_caps->toolUi->refreshChrome();
         if (previewDue)
