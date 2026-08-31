@@ -2,10 +2,11 @@
 
 /**
  * Ink Mode — exclusive Mode id Ink; primary ink, secondary nav/pick/move.
- * Overlay only while Transforming (live node after tablet suppress).
+ * Overlay hidden while an ink stroke is active; else Transforming or NodeEmphasis.
  * @implements [SRS-EP-04] @implements [SRS-EP-12]
  */
 
+#include "../ink_sink.hpp"
 #include "../input_hub.hpp"
 #include "../mode.hpp"
 #include "../operation.hpp"
@@ -59,6 +60,12 @@ public:
         (void)hub;
         if (!caps.toolUi)
             return;
+        // Live ink is Pen on TabletCanvas. A visible ToolCanvas Mono region
+        // dashes that ink and toolPaint stalls the next sample (~100 ms).
+        if (caps.ink && caps.ink->strokeActive()) {
+            caps.toolUi->setOverlayVisible(false);
+            return;
+        }
         const bool transforming =
             caps.selection && caps.selection->phase() == SelectionPhase::Transforming;
         const bool emph = caps.emphasis && caps.emphasis->active();
@@ -71,6 +78,10 @@ public:
     {
         if (!caps.toolUi)
             return;
+        if (caps.ink && caps.ink->strokeActive()) {
+            caps.toolUi->setOverlayVisible(false);
+            return;
+        }
         if (caps.overlay && caps.selection) {
             auto *sess = dynamic_cast<SessionDocContext *>(caps.doc);
             if (sess) {

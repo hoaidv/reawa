@@ -25,9 +25,26 @@ GUI-thread `rasterizeVectors` FullClear (680–946 ms) between strokes. Next pen
 
 Guided review: [`.plan/iter-005/handoffs/2026-08-31-dev-guided-review-rasterize-dirty.md`](../../.plan/iter-005/handoffs/2026-08-31-dev-guided-review-rasterize-dirty.md)
 
+## Follow-up (2026-08-31, same session)
+
+Device log after the FullClear skip, recognizers off:
+
+- Downs at the **end** of a dense page: `behind=toolPaint` 77–357 ms, not `rasterizeVectors`.
+- Long stroke (~every 100 samples, `gap_ms≈100`): another `toolPaint` ~90–105 ms. Ink goes solid → dash-dash-dash → solid.
+- Recog lines still `fail=recog_off`, but **draw-into membership still runs** and `NodeEmphasis` Bold keeps ToolCanvas visible + Mono. `paint()` HierarchyCull’d the group AABB and re-stroked every overlapping ink in Mono.
+
+Fix: hide ToolCanvas while an ink stroke is active; `includeIds` so emphasis paints only blink/stamp ids; `clearStrokeStamp` syncs overlay off.
+
+## Follow-up (2026-08-31) — camera settle on pen-up
+
+Latest log after overlay hide: many downs are `slow_sample rasterize.render` 24–120 ms **inside** the pointer callback (`inplace true`). `endStroke` 438–624 ms when camera-pending rasterize ran synchronously on pen-up. Ordinary ink now **queues** that camera pass on the 250 ms timer instead of running it on up.
+
+Move/resize downs still rasterize (origin punch). That punch must include bound connector spines or the origin connector remains on TabletCanvas.
+
 ## How to attribute
 
 Always-on probe: `/tmp/epaper-ink-path.log` (stderr too). `EPAPER_INK_PATH=0` off.
 
-- `reason=queued i=0 event=down behind=rasterizeVectors` — rasterize stole the first sample (should be gone on ordinary ink after this fix)
+- `reason=queued i=0 event=down behind=rasterizeVectors` — rasterize stole the first sample
+- `reason=queued behind=toolPaint` — ToolCanvas Mono overlay stole the sample (membership/blink)
 - `reason=slow_sample slowest=flushPending|syncPoint|ingestDoc|tabletPaint` — the callback itself

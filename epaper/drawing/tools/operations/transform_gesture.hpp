@@ -54,7 +54,11 @@ public:
         caps->doc->setLiveManipSuppressIds(subject->id);
         caps->doc->beginGesture();
         caps->doc->refreshAllConnectorWarps();
-        // [D08] Punch origin AABB only — not FullClear.
+        // Origin punch must include bound connector spines (BR-B19). Box AABB
+        // alone leaves the middle of the connector on TabletCanvas.
+        const QRectF originConn = caps->doc->boundConnectorsPanelUnion(subject->id);
+        if (!originConn.isEmpty())
+            m_originPanel = m_originPanel.isEmpty() ? originConn : m_originPanel.united(originConn);
         if (m_originPanel.isEmpty())
             caps->doc->noteDocumentMutated();
         else
@@ -107,6 +111,9 @@ public:
             if (epaper::document::boundsOf(*n, b))
                 live = caps->toolUi->worldBoundsToPanel(b).adjusted(-8, -8, 8, 8);
         }
+        const QRectF liveConn = caps->doc->boundConnectorsPanelUnion(id);
+        if (!liveConn.isEmpty())
+            live = live.isEmpty() ? liveConn : live.united(liveConn);
         const QRectF dirty =
             m_originPanel.isEmpty() ? live : (live.isEmpty() ? m_originPanel : m_originPanel.united(live));
         auto punch = [&]() {
@@ -136,7 +143,14 @@ public:
                 caps->overlay->clearOriginPanelRect();
             caps->doc->clearLiveManipSuppressIds();
             caps->doc->refreshAllConnectorWarps();
-            punch();
+            const QRectF settledConn = caps->doc->boundConnectorsPanelUnion(id);
+            const QRectF settledDirty = settledConn.isEmpty()
+                ? dirty
+                : (dirty.isEmpty() ? settledConn : dirty.united(settledConn));
+            if (settledDirty.isEmpty())
+                caps->doc->noteDocumentMutated();
+            else
+                caps->doc->noteDocumentDirty(settledDirty);
             caps->toolUi->refreshChrome();
             caps->doc->notifyHistory();
             caps->doc->flushWire();
@@ -163,6 +177,9 @@ public:
                 if (epaper::document::boundsOf(*n, b))
                     live = caps->toolUi->worldBoundsToPanel(b).adjusted(-8, -8, 8, 8);
             }
+            const QRectF liveConn = caps->doc->boundConnectorsPanelUnion(id);
+            if (!liveConn.isEmpty())
+                live = live.isEmpty() ? liveConn : live.united(liveConn);
             const QRectF dirty = m_originPanel.isEmpty()
                 ? live
                 : (live.isEmpty() ? m_originPanel : m_originPanel.united(live));

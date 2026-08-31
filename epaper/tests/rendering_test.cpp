@@ -294,6 +294,29 @@ static void test_suppress_and_style()
     CHECK(sink.widths[0] > 2.0); // widthMul applied
 }
 
+static void test_includeIds_skips_neighbors()
+{
+    DeviceDocument doc;
+    doc.rootChildren.push_back(makeFreeInk("keep", 0, 0, 5, 5));
+    doc.rootChildren.push_back(makeFreeInk("skip", 1, 1, 6, 6));
+
+    CanvasFrame frame;
+    frame.setPanelSize(100, 100);
+    frame.applyDrawingRegion({0, 0, 100, 100}, true);
+    FrameProjector proj;
+    proj.frame = &frame;
+
+    RenderRequest req;
+    req.worldClip = proj.drawingWorldClip();
+    req.includeIds.insert("keep");
+    req.styles["keep"] = StyleOverride{2.0};
+
+    RecordingSink sink;
+    HierarchyCullAlgorithm cull;
+    cull.paint(doc, proj, req, sink);
+    CHECK(sink.polylineCount == 1);
+}
+
 static void test_inplace_dirty_clearRect_and_tight_clip()
 {
     DeviceDocument doc;
@@ -338,6 +361,7 @@ int main()
     test_renderSubtree_sg_and_connector();
     test_collectManipSuppressIds();
     test_suppress_and_style();
+    test_includeIds_skips_neighbors();
     test_inplace_dirty_clearRect_and_tight_clip();
     if (g_fails) {
         std::cerr << "rendering_test: " << g_fails << " failure(s)\n";

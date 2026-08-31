@@ -218,10 +218,19 @@ void emitPolyline(IPixelSink &sink, PanelPolyline poly)
     sink.drawPolyline(poly);
 }
 
+bool shouldEmit(const RenderRequest &req, const std::string &id)
+{
+    if (req.suppressIds.count(id))
+        return false;
+    if (!req.includeIds.empty() && !req.includeIds.count(id))
+        return false;
+    return true;
+}
+
 void emitInkOrPrimitive(const DocNode &node, const DocNode *smartParent,
                         const FrameProjector &proj, const RenderRequest &req, IPixelSink &sink)
 {
-    if (req.suppressIds.count(node.id))
+    if (!shouldEmit(req, node.id))
         return;
     if (node.kind != NodeKind::Ink && node.kind != NodeKind::Primitive)
         return;
@@ -307,7 +316,7 @@ void emitInkOrPrimitive(const DocNode &node, const DocNode *smartParent,
 void emitConnector(const DocNode &conn, const FrameProjector &proj, const RenderRequest &req,
                    IPixelSink &sink)
 {
-    if (req.suppressIds.count(conn.id))
+    if (!shouldEmit(req, conn.id))
         return;
     if (conn.warpedSamples.size() < 2)
         return;

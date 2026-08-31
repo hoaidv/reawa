@@ -56,6 +56,8 @@ struct RenderRequest {
     double dirtyPanelW = 0;
     double dirtyPanelH = 0;
     std::unordered_set<std::string> suppressIds;
+    /** When non-empty, only these ids emit (blink/stamp). Empty = all minus suppress. */
+    std::unordered_set<std::string> includeIds;
     std::unordered_map<std::string, StyleOverride> styles;
 };
 

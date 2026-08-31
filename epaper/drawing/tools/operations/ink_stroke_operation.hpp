@@ -8,6 +8,7 @@
 #include "../host_caps.hpp"
 #include "../operation.hpp"
 #include "../tablet_ink_sink.hpp"
+#include "../contexts/tool_context.hpp"
 
 namespace epaper {
 namespace tools {
@@ -38,6 +39,9 @@ public:
     {
         if (!ink())
             return;
+        // Hide ToolCanvas before the first sample so Mono cannot cover live Pen ink.
+        if (m_caps && m_caps->toolUi)
+            m_caps->toolUi->setOverlayVisible(false);
         RawPt raw;
         epaper::input::PenSample ch;
         if (s.device == PointerDevice::Pen) {

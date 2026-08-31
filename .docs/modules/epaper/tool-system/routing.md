@@ -93,8 +93,9 @@ Active **Mode** `syncOverlay` / `paintOverlay` (not `InputHub::overlayOperation`
 - **SelectionMode:** overlay attached while the mode is active (lasso must not pay Mono-attach).
   Waveform Pen while Selecting, or Idle `sel_freeform`. Selected / Transforming are Mono.
 - **EraserMode:** overlay on; Pen while an `erase_*` chip is armed.
-- **InkMode:** overlay only while `SelectionPhase::Transforming` (tablet suppress punches a hole
-  until the overlay paints the live node). Mono waveform.
+- **InkMode:** overlay hidden while an ink stroke is active (Tablet Pen). Else visible while
+  Transforming or NodeEmphasis (Mono). Transforming still forces overlay so tablet suppress
+  does not leave a hole.
 - Gesture start/end may also `ToolContext::setStrokeWaveform`; Mode restores idle policy on refresh.
 
 Hover is an unlocked `StylusHoverSink` cycle (`dispatchHoverMove` / `dispatchHoverLeave`). Brush

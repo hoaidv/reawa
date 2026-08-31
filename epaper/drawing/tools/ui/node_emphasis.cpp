@@ -131,6 +131,8 @@ void NodeEmphasis::clearStrokeStamp(HostCaps &caps)
     m_stampIds.clear();
     m_stamp = StrokeStamp::Off;
     damage(caps, prev);
+    if (caps.toolUi)
+        caps.toolUi->syncOverlayPresence();
 }
 
 void NodeEmphasis::showAabb(HostCaps &caps, const std::string &id)
@@ -190,6 +192,16 @@ void NodeEmphasis::paint(QPainter *painter, HostCaps &caps)
     proj.frame = &sess->frame();
     epaper::render::RenderRequest req;
     req.sharp = true;
+    // Only the emphasized ids — never re-stroke neighbors in Mono (dash + hitch).
+    for (const auto &id : m_blinkIds) {
+        req.includeIds.insert(id);
+        req.styles[id] = epaper::render::StyleOverride{2.0};
+    }
+    const double stampMul = m_stamp == StrokeStamp::Off ? 1.0 : 2.0;
+    for (const auto &id : m_stampIds) {
+        req.includeIds.insert(id);
+        req.styles[id] = epaper::render::StyleOverride{stampMul};
+    }
     if (!m_dirty.isEmpty() && caps.toolUi) {
         const auto tl = caps.toolUi->panelToWorld(m_dirty.topLeft());
         const auto br = caps.toolUi->panelToWorld(m_dirty.bottomRight());
@@ -200,16 +212,13 @@ void NodeEmphasis::paint(QPainter *painter, HostCaps &caps)
         w.maxY = std::max(tl.y, br.y);
         req.worldClip = w;
     }
-    for (const auto &id : m_blinkIds)
-        req.styles[id] = epaper::render::StyleOverride{2.0};
-    const double stampMul = m_stamp == StrokeStamp::Off ? 1.0 : 2.0;
-    for (const auto &id : m_stampIds)
-        req.styles[id] = epaper::render::StyleOverride{stampMul};
 
-    epaper::render::DocumentRenderer renderer;
-    renderer.setAlgorithm(std::make_unique<epaper::render::HierarchyCullAlgorithm>());
-    epaper::render::QPainterPixelSink sink(painter);
-    renderer.render(sess->document(), proj, req, sink);
+    if (!req.includeIds.empty()) {
+        epaper::render::DocumentRenderer renderer;
+        renderer.setAlgorithm(std::make_unique<epaper::render::HierarchyCullAlgorithm>());
+        epaper::render::QPainterPixelSink sink(painter);
+        renderer.render(sess->document(), proj, req, sink);
+    }
 
     if (m_stamp == StrokeStamp::Dotted && !m_stampIds.empty()) {
         QPen dotted(Qt::black);

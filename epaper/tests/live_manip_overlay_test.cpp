@@ -211,6 +211,35 @@ static void test_connector_to_node_also_hidden()
     CHECK(ids.count("conn_in") == 1);
 }
 
+/** Origin punch AABB must cover the connector spine, not only the box.
+ *  A box-only dirty rect leaves origin connector pixels on CanvasLayer (BR-B19). */
+static void test_connector_spine_outside_box_aabb()
+{
+    DeviceDocument doc;
+    doc.rootChildren.push_back(makeSmartGroup("sg_a"));
+    doc.rootChildren.push_back(makeSmartGroup("sg_b"));
+    DocNode conn = makeConnector("conn_long", "sg_a", "sg_b");
+    conn.warpedSamples.clear();
+    ConnectorRestPt a;
+    a.x = 10;
+    a.y = 50;
+    ConnectorRestPt b;
+    b.x = 400;
+    b.y = 50;
+    conn.warpedSamples.push_back(a);
+    conn.warpedSamples.push_back(b);
+    doc.rootChildren.push_back(std::move(conn));
+
+    std::unordered_set<std::string> suppress;
+    collectManipSuppressIds(doc, "sg_a", &suppress);
+    CHECK(suppress.count("conn_long") == 1);
+
+    const DocNode *c = doc.find("conn_long");
+    CHECK(c != nullptr && c->warpedSamples.size() >= 2);
+    const double spineW = c->warpedSamples.back().x - c->warpedSamples.front().x;
+    CHECK(spineW > 80.0); // wider than sg_a smartBounds; box-only InPlaceDirty misses it
+}
+
 int main()
 {
     test_rasterize_defer_erase_not_transform();
@@ -219,6 +248,7 @@ int main()
     test_rotate_live_geometry_still_punches_origin();
     test_commit_clears_suppress_origin_returns();
     test_connector_to_node_also_hidden();
+    test_connector_spine_outside_box_aabb();
     if (g_fails) {
         std::cerr << "live_manip_overlay_test: " << g_fails << " failure(s)\n";
         return 1;

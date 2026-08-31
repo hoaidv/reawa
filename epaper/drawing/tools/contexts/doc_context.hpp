@@ -43,6 +43,8 @@ public:
     virtual void flushWire() = 0;
     virtual void clearLiveManipSuppressIds() = 0;
     virtual void setLiveManipSuppressIds(const std::string &nodeId) = 0;
+    /** Panel union of connectors bound to @p nodeId (origin punch / settle dirty). */
+    virtual QRectF boundConnectorsPanelUnion(const std::string &nodeId) const = 0;
 
     virtual const epaper::document::DocNode *hitMoveTarget(double wx, double wy) const = 0;
     virtual bool fingerHitsBox(double wx, double wy) const = 0;

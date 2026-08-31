@@ -706,7 +706,7 @@ void TabletCanvasItem::endStroke()
     epaper::UiStallSection stall("endStroke");
     applyStrokeIntent(m_stroke.end());
 
-    // [D06] Enclose/connector: one InPlaceDirty of the changed AABB (group-local bake).
+    // [D06] Enclose/connector create: one InPlaceDirty of the changed AABB.
     if (m_needEncloseRasterize) {
         m_needEncloseRasterize = false;
         const QRectF dirty = m_encloseDirtyPanel;
@@ -715,24 +715,14 @@ void TabletCanvasItem::endStroke()
         m_rasterizePending = false;
         m_pendingInPlaceDirty = QRectF();
         rasterizeVectors(true, dirty);
-    } else if (m_rasterizeDeferredSharp) {
+    } else if (m_rasterizeDeferredSharp || m_rasterizePending) {
+        // Camera settle must not run on this pen-up (next down is ~30 ms away).
+        const bool sharp = m_rasterizeDeferredSharp;
         m_rasterizeDeferredSharp = false;
-        if (!m_pendingInPlaceDirty.isEmpty()) {
-            const QRectF dirty = m_pendingInPlaceDirty;
-            m_pendingInPlaceDirty = QRectF();
-            rasterizeVectors(true, dirty);
-        } else {
-            scheduleVectorRasterize(true);
-        }
-    } else if (m_rasterizePending) {
         m_rasterizePending = false;
-        if (!m_pendingInPlaceDirty.isEmpty()) {
-            const QRectF dirty = m_pendingInPlaceDirty;
-            m_pendingInPlaceDirty = QRectF();
-            rasterizeVectors(false, dirty);
-        } else {
-            scheduleVectorRasterize(false);
-        }
+        if (sharp)
+            m_rasterizeSharp = true;
+        scheduleVectorRasterize(false);
     }
 
     // Status text is refreshed between strokes only: during a stroke it would

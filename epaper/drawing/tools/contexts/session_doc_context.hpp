@@ -106,7 +106,7 @@ public:
     bool lodOkPanel(const epaper::document::SmartBounds &wb) const;
 
     QString hitLocalSmartGroup(double wx, double wy) const;
-    QRectF boundConnectorsPanelUnion(const std::string &nodeId) const;
+    QRectF boundConnectorsPanelUnion(const std::string &nodeId) const override;
 
 private:
     CanvasSession *m_session = nullptr;

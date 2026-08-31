@@ -84,7 +84,7 @@ Phases: Idle → Selecting → Selected → Transforming.
 |---|---|---|---|
 | Selection | Idle: nothing. Selecting: locked Lasso/Marquee. Selected: `paintSettled`. Transforming: locked Move/Resize then `paintLiveManip`. | Overlay always on. Pen while Selecting, or Idle `sel_freeform`. Mono when Selected/Transforming. | Overlay refresh with knobs iff Selected; bar; emit; `publishOverlayHits`; sync; damage |
 | Eraser | Locked op, else exclusive-armed op (`match`). Brush idle = hover circle. | Overlay on. Pen while `erase_*`. | `syncOverlay` only |
-| Ink | Transforming: locked Move then `paintLiveManip`. Always `paintNodeEmphasis`. | Visible while Transforming **or** NodeEmphasis active (Mono). | Overlay refresh without knobs; Transforming live dirty; emphasis dirty; sync; damage |
+| Ink | Transforming: locked Move then `paintLiveManip`. Always `paintNodeEmphasis`. | Hidden while an ink stroke is active (Tablet Pen). Else visible while Transforming **or** NodeEmphasis (Mono). | No-op while stroke active. Else overlay refresh without knobs; Transforming live dirty; emphasis dirty; sync; damage |
 
 Operations still **tell** `setStrokeWaveform` at gesture down/up. Mode restores idle Pen after up (e.g. empty freeform). Hover is `StylusHoverSink` (enter/move/leave); hub demuxes without taking the lock.
 

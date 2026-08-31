@@ -70,7 +70,7 @@ the final say. This feature removes both.
 | BR-B16 | **Deselect leaves nothing behind.** No residual selection chrome on the next settled frame. | CHL-0007 |
 | BR-B17 | **Rotation is out of scope but not designed out.** The transform op carries a rotation field that stays unset; nothing in this feature may assume rotation cannot exist. | REQ-06 ↔ REQ-08 |
 | BR-B18 | **SmartGroup declares its capabilities.** `{select, move, resize, set-ink-scale-mode}` through the shared capability descriptor of [node-manipulation](../node-manipulation/srs-product.md) — not as a bespoke, hard-coded tool. | REQ-06 conformance |
-| BR-B19 | **Live node paint is overlay, settle is document.** During move/resize the origin box is hidden on the document surface and the live ink + chrome are painted on ToolCanvasLayer. On pen-up, one raster of the committed node on CanvasLayer. Mid-gesture ghosting/dirty traces are allowed; a settled duplicate or snap-back is not. Painting the live node on CanvasLayer (option 2) is deferred. | CHL-0018 / ADR-0019 |
+| BR-B19 | **Live node paint is overlay, settle is document.** During move/resize the origin box **and bound connector spines** are hidden on the document surface and the live ink + chrome + live connectors are painted on ToolCanvasLayer. On pen-up, one raster of the committed node **and re-warped connectors** on CanvasLayer (origin∪live∪connector AABB). Mid-gesture ghosting/dirty traces are allowed; a settled duplicate or snap-back is not. Painting the live node on CanvasLayer (option 2) is deferred. | CHL-0018 / ADR-0019 |
 
 ## Edge cases
 
