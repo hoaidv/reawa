@@ -327,6 +327,25 @@ ssh root@10.11.99.1 'killall -TERM epaper; sleep 1; grep ink-trace /tmp/epaper.l
 A `new Node(null)` on that `updatePaintNode` line means the canvas is unsized
 again — ink will be invisible.
 
+Ink-path attribution is **on by default** (pen-down → pixel budget, 30 ms).
+Each hitch writes one line to `/tmp/epaper-ink-path.log` (also stderr):
+
+```
+[ink-path] event=down stroke=12 i=0 total_ms=2 gap_ms=180 reason=queued
+  slowest=- slowest_ms=0 behind=rasterizeVectors behind_ms=108
+  recent=rasterize.warp:80,rasterize.render:22,rasterizeVectors:108
+  ink=412 nodes=480 spans=-
+```
+
+`reason=queued` + `i=0 event=down` is the "first millimetre lags, then smooth"
+signature: GUI thread was in `behind=` immediately before the sample.
+`reason=slow_sample` means the InkStroke callback itself was over budget;
+`slowest=` is the leaf stage. `EPAPER_INK_PATH=0` disables. Tail on device:
+
+```bash
+ssh root@10.11.99.1 'tail -f /tmp/epaper-ink-path.log'
+```
+
 If status says `libqsgepaper unavailable`, symbols changed on this firmware —
 the app still draws via stock Qt epaper, just without Pen partials.
 

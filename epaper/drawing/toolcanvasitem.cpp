@@ -15,6 +15,8 @@
 #include "tools/operations/area_erase_operation.hpp"
 #include "tools/operations/object_erase_operation.hpp"
 
+#include "debug/ink_path_probe.hpp"
+
 #include <QDebug>
 #include <QPainter>
 
@@ -37,6 +39,7 @@ ToolCanvasItem::ToolCanvasItem(QQuickItem *parent)
 
 void ToolCanvasItem::paint(QPainter *painter)
 {
+    epaper::inkpath::Span span("toolPaint");
     if (m_toolCtx)
         m_toolCtx->paintOverlay(painter);
 }
@@ -213,6 +216,9 @@ void ToolCanvasItem::cancelInteraction()
 
 void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen, bool eraserNib)
 {
+    const int ink = m_session ? m_session->document.inkCount() : 0;
+    const int nodes = m_session ? m_session->document.nodeCount() : 0;
+    epaper::inkpath::Sample probe(epaper::inkpath::Event::Down, ink, nodes);
     // Erase only: deferring rasterize on move/resize leaves the origin node on
     // TabletCanvas (suppress punch never runs). Nib erase starts as pen exclusive.
     if (m_surface && (eraserNib || (m_hub.activeMode() &&
@@ -225,11 +231,17 @@ void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen, 
 
 void ToolCanvasItem::onPointerMove(qreal x, qreal y, qreal pressure, bool pen, bool eraserNib)
 {
+    const int ink = m_session ? m_session->document.inkCount() : 0;
+    const int nodes = m_session ? m_session->document.nodeCount() : 0;
+    epaper::inkpath::Sample probe(epaper::inkpath::Event::Move, ink, nodes);
     m_hub.dispatchPointerMove(sample(x, y, pressure, pen, eraserNib));
 }
 
 void ToolCanvasItem::onPointerEnd(qreal x, qreal y, bool pen, bool eraserNib)
 {
+    const int ink = m_session ? m_session->document.inkCount() : 0;
+    const int nodes = m_session ? m_session->document.nodeCount() : 0;
+    epaper::inkpath::Sample probe(epaper::inkpath::Event::Up, ink, nodes);
     m_hub.dispatchPointerUp(sample(x, y, 0, pen, eraserNib));
     if (m_nibArmed && m_session) {
         m_session->endNibErase();

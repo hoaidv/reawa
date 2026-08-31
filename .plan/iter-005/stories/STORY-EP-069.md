@@ -4,7 +4,7 @@ title: ToolContextImpl host ports and SelectionOverlay
 kind: implement
 parent_srs: [SRS-EP-04, SRS-EP-12]
 parent_req: [REQ-03, REQ-06]
-status: in-progress
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -44,3 +44,4 @@ Human is Quality Assurance Engineer; no design package; no behavior-driven cerem
 
 - Grep: no `ToolCanvasContext`, `ToolChrome`, `isSelectionTool`, `isEraserTool` in `tools/`
 - Panel: settled knobs + bar; live node on finger-move from ink; brush hover/ghost; lasso Pen-before-contact
+- **Human verified 2026-08-31** — code already on device; `SelectionOverlay` is host-owned, not leftover

@@ -6,12 +6,12 @@ owner: sm
 date: 2026-08-31
 lock: vertical · verified · wip 2
 wave: W3-erase-ids
-verdict: "Erase EP-062…068 done (human-verified 2026-08-31). NOW STORY-EP-069 ToolContextImpl/SelectionOverlay in-progress. Clipboard W3 frozen."
+verdict: "Erase EP-062…068 and STORY-EP-069 done (human-verified 2026-08-31). WAIT human next pick. Clipboard W3 frozen."
 ---
 
 # Execution board — hand-on-paper
 
-**Canonical board** for [TRACK-005](../tracks/TRACK-005-hand-on-paper.md). Track **active**. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **done** 2026-08-27. Inverse-undo implement **done**. Erase product bound 2026-08-29. Erase implement **human-verified** 2026-08-31. Clipboard W3 still frozen.
+**Canonical board** for [TRACK-005](../tracks/TRACK-005-hand-on-paper.md). Track **active**. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **done** 2026-08-27. Inverse-undo implement **done**. Erase product bound 2026-08-29. Erase implement **human-verified** 2026-08-31. [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Clipboard W3 still frozen.
 
 ---
 
@@ -20,7 +20,7 @@ verdict: "Erase EP-062…068 done (human-verified 2026-08-31). NOW STORY-EP-069 
 | Band | Count | Meaning |
 |---|---|---|
 | Design **done** | 5 current | [UI-EP-06](../../.docs/design/index.md) hand-touch (EP-054; field-test delta 20 mm + HT) · [UI-EP-07](../../.docs/design/index.md) follow Epaper · [UI-IN-04](../../.docs/design/index.md) follow Infini · [UI-EP-08](../../.docs/design/index.md) Device Settings · Pen buttons |
-| Wave **NOW** | 1 | [STORY-EP-069](./stories/STORY-EP-069.md) ToolContextImpl host ports and SelectionOverlay **in-progress** |
+| Wave **NOW** | 0 | WAIT human next pick. [STORY-EP-069](./stories/STORY-EP-069.md) **done** |
 | Closed interrupt | TRACK-006 | Tablet/Tool split + [ADR-0033](../../.docs/adr/ADR-0033-tool-abstraction.md) + pointer roles. Do **not** continue. |
 | Queued | — | Clipboard / Device Settings still wait. Follow hardware score still outstanding. Infini undo apply parked (IN-038 cancelled). |
 
@@ -44,8 +44,8 @@ modules: epaper, infini
 features: epaper/ink-box; epaper/tool-modes; epaper/connector-ink; epaper/region-sync; epaper/local-pen-ink; epaper/device-document; epaper/erase; infini/infinity-canvas; infini/tablet-sync; infini/vector-document
 personas: developer, human
 forbidden: REQ-15 tables; REQ-08; CHL-0011; CHL-0012; EP-032; AI; last-writer ADR-0023; TRACK-006 reopen; DeviceMap invert UI; Mouse DragHandler; STORY-IN-038; infini undo apply; tablet-to-desktop undo sync
-NOW: STORY-EP-069 in-progress; erase EP-062…068 done; do not start clipboard
-cursor: NOW ToolContextImpl/SelectionOverlay; erase human-verified 2026-08-31; do not start clipboard W3; do not continue TRACK-006; IN-038 cancelled
+NOW: WAIT human next pick; STORY-EP-069 done; erase EP-062…068 done; do not start clipboard
+cursor: WAIT clipboard / Device Settings / follow field notes; do not continue TRACK-006; IN-038 cancelled
 ```
 
 ---
@@ -71,7 +71,7 @@ cursor: NOW ToolContextImpl/SelectionOverlay; erase human-verified 2026-08-31; d
 | **W-undo-skip** | merged into W-undo-local | — | EP-060 |
 | **W-undo-wire** | **dropped** | — | Infini apply cancelled (IN-038). Device queue is EP-061 in W-undo-local |
 | **W-undo-local** | **done** 2026-08-27 | serial (one Quality Assurance Engineer then one Developer; both stories) | [STORY-EP-060](./stories/STORY-EP-060.md) + [STORY-EP-061](./stories/STORY-EP-061.md) **done**. Human verified device undo/redo 2026-08-27. No `infini/` |
-| **W3** | **done** 2026-08-31 | | erase EP-062…068 **done** (human-verified); leftover [STORY-EP-069](./stories/STORY-EP-069.md) **in-progress** |
+| **W3** | **done** 2026-08-31 | | erase EP-062…068 **done**; [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified) |
 | **W4** | queued | | connector ends / attachments |
 | **W5** | queued | | barrel BDD then EP-052 / EP-058 / EP-057. IN-035 cancelled. |
 | **W6** | queued | | manual create |
@@ -81,9 +81,9 @@ cursor: NOW ToolContextImpl/SelectionOverlay; erase human-verified 2026-08-31; d
 
 | Lane | Story | Writes | Conflicts |
 |---|---|---|---|
-| **A** | [STORY-EP-069](./stories/STORY-EP-069.md) | `epaper/drawing/tools/` host ports; SelectionOverlay | do not merge overlay into ToolCanvasItem |
+| **human** | next pick | confirm | do not start clipboard until human says go |
 
-Work-in-progress 2 = campaign capacity. Erase panel wait is closed.
+Work-in-progress 2 = campaign capacity. No implement lane in flight.
 
 ### Full task table
 
@@ -117,14 +117,14 @@ Work-in-progress 2 = campaign capacity. Erase panel wait is closed.
 | STORY-EP-066 | Object erase 80 percent table | P0 | SRS-EP-58 | — | **done** | W3 | — | — | Human-verified 2026-08-31. Append-only dashed raster; deletion-rect outline dirty. [ADR-0036](../../.docs/adr/ADR-0036-toolcanvas-live-overlay.md). |
 | STORY-EP-067 | Singleton generateNodeId for all tree nodes | P0 | SRS-EP-07 / EP-08 / EP-55 / IN-09 | — | **done** | W3-erase-ids | — | A | Human-verified 2026-08-31. Folded remnant / stroke / connector / enclose mint sites. Opaque `n-N`. |
 | STORY-EP-068 | Operations own overlay paint; ToolCanvasContext stays generic | P0 | SRS-EP-04 / EP-12 / EP-56 | — | **done** | W3-erase-ids | — | B | Human-verified 2026-08-31. Hover + waveform on Operations. |
-| STORY-EP-069 | ToolContextImpl host ports and SelectionOverlay | P0 | SRS-EP-04 / EP-12 | — | **in-progress** | W3-erase-ids | Developer | — | [ADR-0035](../../.docs/adr/ADR-0035-tool-context-is-host-ports.md); principles.md; ToolChrome → SelectionOverlay. |
+| STORY-EP-069 | ToolContextImpl host ports and SelectionOverlay | P0 | SRS-EP-04 / EP-12 | — | **done** | W3-erase-ids | — | — | Human-verified 2026-08-31. [ADR-0035](../../.docs/adr/ADR-0035-tool-context-is-host-ports.md); `SelectionOverlay` host-owned; grep clean. |
 | CHORE-7 | Three exclusive erasers (CHL-0028) | Must | [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted** | icons only | EP-062…068 **done** (human-verified 2026-08-31) | W3-erase-ids | — | — | Path A/B retired. Human is Quality Assurance Engineer. |
 
 ### Current-wave sub-agent roster
 
 | Lane | Agent role | Story | Writes | Done when |
 |---|---|---|---|---|
-| A | Developer | [STORY-EP-069](./stories/STORY-EP-069.md) | `epaper/drawing/tools/` host ports; SelectionOverlay | Grep: no ToolCanvasContext / ToolChrome / exclusive-id compares on the adapter; panel knobs + brush hover/ghost + lasso still work |
+| human | — | next pick | confirm | Human names clipboard, Device Settings, follow field notes, or stop |
 
 Wait: do **not** start clipboard. Do **not** implement IN-038. Do **not** reopen TRACK-006.
 
@@ -147,4 +147,4 @@ Wait: do **not** start clipboard. Do **not** implement IN-038. Do **not** reopen
 
 ## Verdict
 
-[STORY-EP-059](./stories/STORY-EP-059.md)…[STORY-EP-061](./stories/STORY-EP-061.md) **done** (human-verified 2026-08-27). [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-068](./stories/STORY-EP-068.md) **done** (human-verified 2026-08-31). [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**. [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**. [ADR-0036](../../.docs/adr/ADR-0036-toolcanvas-live-overlay.md) **accepted**. NOW [STORY-EP-069](./stories/STORY-EP-069.md) **in-progress**. Clipboard W3 stays queued.
+[STORY-EP-059](./stories/STORY-EP-059.md)…[STORY-EP-061](./stories/STORY-EP-061.md) **done** (human-verified 2026-08-27). [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**. [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**. [ADR-0035](../../.docs/adr/ADR-0035-tool-context-is-host-ports.md) **accepted**. [ADR-0036](../../.docs/adr/ADR-0036-toolcanvas-live-overlay.md) **accepted**. **WAIT** human next pick. Clipboard W3 stays queued.

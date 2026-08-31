@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-31T10:19:46+00:00",
+  "generated_at": "2026-08-31T10:30:28+00:00",
   "current_iter": "iter-005",
   "by_status": {
     "draft": 13,
     "ready": 1,
-    "in-progress": 1,
+    "in-progress": 0,
     "in-review": 0,
-    "done": 139,
+    "done": 140,
     "blocked": 13,
     "cancelled": 6
   },
@@ -19,7 +19,7 @@
     },
     "epaper": {
       "total": 69,
-      "done": 45,
+      "done": 46,
       "in_review": 0
     },
     "infini": {
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "NOW STORY-EP-069 ToolContextImpl/SelectionOverlay in-progress; erase EP-062\u2026068 done (human-verified 2026-08-31); clipboard W3 frozen",
+      "cursor": "WAIT human next pick; STORY-EP-069 ToolContextImpl/SelectionOverlay done (human-verified 2026-08-31); erase EP-062\u2026068 done; clipboard W3 frozen",
       "iter": "iter-005"
     },
     {

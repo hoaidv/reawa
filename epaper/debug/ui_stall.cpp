@@ -1,4 +1,5 @@
 #include "ui_stall.hpp"
+#include "ink_path_probe.hpp"
 
 #include <QCoreApplication>
 #include <QThread>
@@ -20,6 +21,9 @@ constexpr int kDefaultLogMs = 250;
 QTimer *g_beat = nullptr;
 std::uint64_t g_lastMs = 0;
 char g_section[64] = {};
+constexpr int kStackMax = 8;
+char g_stack[kStackMax][64] = {};
+int g_depth = 0;
 
 /** A hitch the hand notices is well under a second. EPAPER_UI_STALL_MS to tune. */
 int sectionThresholdMs()
@@ -91,7 +95,9 @@ UiStallSection::UiStallSection(const char *tag)
     : m_tag(tag)
     , m_startMs(nowMs())
 {
-    if (tag && tag[0]) {
+    if (tag && tag[0] && g_depth < kStackMax) {
+        std::strncpy(g_stack[g_depth], tag, sizeof(g_stack[g_depth]) - 1);
+        ++g_depth;
         std::strncpy(g_section, tag, sizeof(g_section) - 1);
         g_section[sizeof(g_section) - 1] = 0;
     }
@@ -102,7 +108,15 @@ UiStallSection::~UiStallSection()
     const int ms = static_cast<int>(nowMs() - m_startMs);
     if (ms >= sectionThresholdMs())
         logStall(ms, "section", m_tag ? m_tag : "-");
-    g_section[0] = 0;
+    epaper::inkpath::noteSection(m_tag, ms);
+    if (g_depth > 0)
+        --g_depth;
+    if (g_depth > 0) {
+        std::strncpy(g_section, g_stack[g_depth - 1], sizeof(g_section) - 1);
+        g_section[sizeof(g_section) - 1] = 0;
+    } else {
+        g_section[0] = 0;
+    }
 }
 
 void startUiStallWatchdog()

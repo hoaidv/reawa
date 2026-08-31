@@ -19,6 +19,8 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/surround_create_test.cpp -o /tmp/surr
 /tmp/surround_create_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/debug_log_test.cpp -o /tmp/debug_log_test
 /tmp/debug_log_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. debug/ink_path_probe.cpp tests/ink_path_probe_test.cpp -o /tmp/ink_path_probe_test
+/tmp/ink_path_probe_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/manipulate_test.cpp -o /tmp/manipulate_test
 /tmp/manipulate_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/one_way_sync_test.cpp -o /tmp/one_way_sync_test

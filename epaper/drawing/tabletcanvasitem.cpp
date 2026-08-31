@@ -1,5 +1,6 @@
 #include "tabletcanvasitem.h"
 #include "debug/ui_stall.hpp"
+#include "debug/ink_path_probe.hpp"
 #include "regionsync/strokesync.h"
 #include "epaperbridge.h"
 #include "debug/latency_probe.hpp"
@@ -343,6 +344,7 @@ bool TabletCanvasItem::lodOkPanel(const epaper::document::SmartBounds &wb) const
 /** Blit ink buffer. */
 void TabletCanvasItem::paint(QPainter *painter)
 {
+    epaper::inkpath::Span span("tabletPaint");
     if (!m_paintsInk)
         return;
 
@@ -603,21 +605,31 @@ void TabletCanvasItem::applyStrokeIntent(const epaper::strokecapture::StrokeResu
             emit lastStrokeLatchChanged();
         }
     }
-    if (has(r.intent, StrokeIntent::PreviewBegin))
+    if (has(r.intent, StrokeIntent::PreviewBegin)) {
+        epaper::inkpath::Span span("syncBegin");
         syncBegin();
-    if (has(r.intent, StrokeIntent::PreviewPoint) && r.hasPreviewSample)
+    }
+    if (has(r.intent, StrokeIntent::PreviewPoint) && r.hasPreviewSample) {
+        epaper::inkpath::Span span("syncPoint");
         syncPoint(makePoint(r.previewSample));
-    if (has(r.intent, StrokeIntent::EmitSegment) && r.hasSegment)
+    }
+    if (has(r.intent, StrokeIntent::EmitSegment) && r.hasSegment) {
+        epaper::inkpath::Span span("emitSegment");
         emitSegment(makePoint(r.segmentFrom), makePoint(r.segmentTo));
+    }
     if (has(r.intent, StrokeIntent::PreviewEnd))
         syncEnd();
     if (has(r.intent, StrokeIntent::StrokeCountChanged))
         emit strokeCountChanged();
     // Pixels before ingest — SRS-EP-07 / EP-13.
-    if (has(r.intent, StrokeIntent::FlushInk))
+    if (has(r.intent, StrokeIntent::FlushInk)) {
+        epaper::inkpath::Span span("flushPending");
         flushPending();
-    if (has(r.intent, StrokeIntent::IngestReady) && r.hasFinished)
+    }
+    if (has(r.intent, StrokeIntent::IngestReady) && r.hasFinished) {
+        epaper::inkpath::Span span("ingestDoc");
         ingestCurrentStroke(r.finished);
+    }
     if (has(r.intent, StrokeIntent::AbortGesture))
         m_session.document.abortGesture();
     if (has(r.intent, StrokeIntent::NotifyHistory))
@@ -856,7 +868,10 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
 {
     epaper::UiStallSection stall("rasterizeVectors");
     using epaper::document::refreshAllConnectorWarps;
-    refreshAllConnectorWarps(m_session.document);
+    {
+        epaper::inkpath::Span span("rasterize.warp");
+        refreshAllConnectorWarps(m_session.document);
+    }
     if (!m_paintsInk)
         return;
     ensureImage();
@@ -883,13 +898,19 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
         st.widthMul = std::max(st.widthMul, 2.0);
     }
 
-    epaper::render::QImagePixelSink sink(&m_image);
-    m_renderer.render(m_session.document, proj, req, sink);
+    {
+        epaper::inkpath::Span span("rasterize.render");
+        epaper::render::QImagePixelSink sink(&m_image);
+        m_renderer.render(m_session.document, proj, req, sink);
+    }
 
     m_refreshClock.restart();
     // Full-rect update. Pen-mode swap only when explicitly requested (RM_EP_SWAP) —
     // unconditional swap after every settle starved the stroke path on device.
-    update(m_image.rect());
+    {
+        epaper::inkpath::Span span("rasterize.update");
+        update(m_image.rect());
+    }
     if (sharp && qEnvironmentVariableIsSet("RM_EP_SWAP")) {
         if (auto *win = window()) {
             const QRect scene = mapRectToScene(QRectF(m_image.rect())).toAlignedRect();
@@ -902,8 +923,11 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
             win->update();
         }
     }
+    const std::size_t visits =
+        m_renderer.algorithm() ? m_renderer.algorithm()->lastVisitCount() : 0;
     qInfo() << "[sync] vector rasterize ink" << m_session.document.inkCount() << "nodes"
-            << m_session.document.nodeCount() << "sharp" << sharp << "seq" << m_viewportSeq;
+            << m_session.document.nodeCount() << "visits" << int(visits) << "sharp" << sharp
+            << "seq" << m_viewportSeq;
 }
 
 /**

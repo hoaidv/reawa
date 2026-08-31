@@ -13,4 +13,5 @@ Engineering narratives and reference material preserved from legacy docs. Normat
 | [native-stylus-packaging.md](./native-stylus-packaging.md) | Entitlements, signing, and packaging checklist |
 | [learn.ipynb](./learn.ipynb) | evdev / Linux input event format reference notebook |
 | [erase-brush-commit.md](./erase-brush-commit.md) | Brush erase: duplicate remnant ids, not clip miss; generateNodeId |
+| [ink-path-density-hitch.md](./ink-path-density-hitch.md) | Dense-doc ink hitch: first millimetre queued behind full rasterize; `/tmp/epaper-ink-path.log` |
 | [object-erase-and-connector-ux2.md](./object-erase-and-connector-ux2.md) | Object-erase overlay: append-only dashed raster, no per-event restroke; connector UX2 is last-3 free inks, not DFS |

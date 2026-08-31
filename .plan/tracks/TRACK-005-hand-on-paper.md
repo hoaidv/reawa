@@ -56,7 +56,7 @@ stories:
   - STORY-EP-067
   - STORY-EP-068
   - STORY-EP-069
-cursor: "NOW STORY-EP-069 ToolContextImpl/SelectionOverlay in-progress; erase EP-062…068 done (human-verified 2026-08-31); clipboard W3 frozen"
+cursor: "WAIT human next pick; STORY-EP-069 ToolContextImpl/SelectionOverlay done (human-verified 2026-08-31); erase EP-062…068 done; clipboard W3 frozen"
 paused_reason: ""
 interrupts: []
 ---
@@ -116,21 +116,21 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 | [EP-066](../iter-005/stories/STORY-EP-066.md) | implement | P0 | Object 80% — **done** (human-verified 2026-08-31) · depends EP-062, EP-068 |
 | [EP-067](../iter-005/stories/STORY-EP-067.md) | implement | P0 | Singleton generateNodeId — **done** (human-verified 2026-08-31) |
 | [EP-068](../iter-005/stories/STORY-EP-068.md) | implement | P0 | Operations own overlay paint; ToolCanvasContext stays generic — **done** (human-verified 2026-08-31) |
-| [EP-069](../iter-005/stories/STORY-EP-069.md) | implement | P0 | ToolContextImpl host ports and SelectionOverlay — **in-progress** |
+| [EP-069](../iter-005/stories/STORY-EP-069.md) | implement | P0 | ToolContextImpl host ports and SelectionOverlay — **done** (human-verified 2026-08-31) |
 
 W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). Hand-touch and follow implement stories that shipped are **done**. Other committed stories stay **draft** until their wave. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) **done** 2026-08-20.
 
 ## Cursor
 
-**NOW:** [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl host ports / SelectionOverlay **in-progress**. Erase [STORY-EP-062](../iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](../iter-005/stories/STORY-EP-068.md) **done** (human-verified 2026-08-31). Clipboard / Device Settings stay queued. Remaining Infini follow field test still outstanding.
+**NOW:** WAIT human next pick. [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl host ports / SelectionOverlay **done** (human-verified 2026-08-31). Erase [STORY-EP-062](../iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](../iter-005/stories/STORY-EP-068.md) **done**. Clipboard / Device Settings stay queued. Remaining Infini follow field test still outstanding.
 
 Tool-system interrupt [TRACK-006](./TRACK-006-tool-system-refactor.md) is **done** (2026-08-27). Default pointer map is Primary=Pen, Secondary=Finger under [ADR-0033](../../../.docs/adr/ADR-0033-tool-abstraction.md).
 
-## Freeze note (clipboard W3 frozen; erase done)
+## Freeze note (clipboard W3 frozen; erase + EP-069 done)
 
-- In flight: [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **in-progress**. Erase EP-062…068 **done**, human verified 2026-08-31. EP-059…061 **done**, human verified undo/redo. IN-038 **cancelled**.
+- In flight: none. [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **done**, human verified 2026-08-31. Erase EP-062…068 **done**. EP-059…061 **done**, human verified undo/redo. IN-038 **cancelled**.
 - Open files / risks: [CHL-0027](../iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md) still open; no RM2 panel / no live TCP `:9877`; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open. Leftover snapshot wording in deprecated Infini [SRS-IN-12](../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) — do not implement.
-- Resume: finish EP-069. Clipboard / Device Settings still need an explicit pick. Follow field-test notes still wanted. Do **not** reopen TRACK-006.
+- Resume: Clipboard / Device Settings still need an explicit pick. Follow field-test notes still wanted. Do **not** reopen TRACK-006.
 
 ## Execution board
 
@@ -159,3 +159,4 @@ Tool-system interrupt [TRACK-006](./TRACK-006-tool-system-refactor.md) is **done
 | 2026-08-29 | [CHL-0028](../iter-005/challenges/CHL-0028-eraser-three-tools.md) **adopted**. Erase PRD + SRS + three icons. Implement stories EP-062…066 **draft**. Cursor → wait human review. Clipboard W3 still frozen. |
 | 2026-08-30 | EP-067/068/065/066 implemented. Host tests green. Stories **in-review**. Cursor → wait human panel QA. Clipboard W3 still frozen. |
 | 2026-08-31 | Human **verified** EP-067, EP-068, EP-065, EP-066. Erase implement **done**. Cursor → STORY-EP-069 in-progress. Clipboard W3 still frozen. |
+| 2026-08-31 | Human **verified** [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) (code already on device). Cursor → WAIT human next pick. Clipboard W3 still frozen. |

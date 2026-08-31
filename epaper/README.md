@@ -45,6 +45,9 @@ Optional env, forwarded to the device by `deploy-rm2.sh` when set locally:
 | Env | Effect |
 |---|---|
 | `RM_INK_TRACE=1` | Dump arrival→flush / flush→swap percentiles on exit |
+| `EPAPER_INK_PATH=0` | Disable always-on ink-path stall log (default on) |
+| `EPAPER_INK_PATH_MS` | Ink-path log threshold in ms (default 30) |
+| `EPAPER_INK_PATH_LOG` | Ink-path log file (default `/tmp/epaper-ink-path.log`) |
 | `RM_INK_MODE=pool` | Fall back to the old QML `Rectangle` ink pool |
 | `RM_DOC_PROBE=1` | STORY-EP-013: resident 500-node / 50k-sample stub + hit-test on ingest (not in `paint()`) |
 | `RM_DOC_PROBE_SYNTH=1` | Inject synthetic strokes then exit (device-runnable; still not panel p95) |
