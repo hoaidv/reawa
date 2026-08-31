@@ -18,7 +18,8 @@ If this folder and the code disagree, the code wins — then update these pages.
 
 **Read first:** [principles.md](./principles.md) — MUST / MUST NOT for `tools/` and
 `toolcanvasitem.*`. Conceptual why: [ADR-0033](../../adr/ADR-0033-tool-abstraction.md). Host-ports
-lock: [ADR-0035](../../adr/ADR-0035-tool-context-is-host-ports.md). Names in ADR-0033 are slightly
+lock: [ADR-0035](../../adr/ADR-0035-tool-context-is-host-ports.md). Live overlay:
+[ADR-0036](../../adr/ADR-0036-toolcanvas-live-overlay.md). Names in ADR-0033 are slightly
 older; this folder uses **current** code names.
 
 ## Read this folder

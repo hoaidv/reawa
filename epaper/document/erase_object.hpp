@@ -222,10 +222,8 @@ inline void collectObjectEraseSubjects(const std::vector<DocNode> &nodes, const 
             collectObjectEraseSubjects(n.children, lassoAabb, pass, out);
             continue;
         }
-        if (n.kind == NodeKind::Group) {
-            collectObjectEraseSubjects(n.children, lassoAabb, pass, out);
+        if (n.kind == NodeKind::Group)
             continue;
-        }
         if (pass == ObjectErasePass::Overlay
             && (n.kind == NodeKind::Ink || n.kind == NodeKind::Connector))
             continue;

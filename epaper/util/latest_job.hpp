@@ -16,6 +16,13 @@
 #include <thread>
 #include <utility>
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#elif defined(__linux__)
+#include <pthread.h>
+#include <sched.h>
+#endif
+
 namespace epaper {
 
 template <typename Request, typename Result>
@@ -71,6 +78,7 @@ public:
 private:
     void loop()
     {
+        lowerThisThread();
         for (;;) {
             Request req;
             {
@@ -98,6 +106,20 @@ private:
             if (m_deliver)
                 m_deliver(std::move(r));
         }
+    }
+
+    static void lowerThisThread()
+    {
+#if defined(__APPLE__)
+        pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+#elif defined(__linux__)
+        struct sched_param sp {};
+#if defined(SCHED_IDLE)
+        pthread_setschedparam(pthread_self(), SCHED_IDLE, &sp);
+#elif defined(SCHED_BATCH)
+        pthread_setschedparam(pthread_self(), SCHED_BATCH, &sp);
+#endif
+#endif
     }
 
     Compute m_compute;

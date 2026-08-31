@@ -43,7 +43,7 @@ Call the window inks by role (not z-order):
 | **C** | Exactly **one** end within `R_SNAP` of a **different** ink-box | — |
 | **A** | **Neither** end snaps to a shape | Intersects or comes within `R_JOIN` **6 u** of **both** B and C |
 
-Try in order, no graph search:
+Try in order. **No graph search** — no DFS, no longest-path, no “last N consecutive root siblings, stop at a box.” Decision: [ADR-0036](../../../../adr/ADR-0036-toolcanvas-live-overlay.md).
 
 1. **B–A–C** when all three roles are present in the window.
 2. **B–C** when two arms join each other (intersect or `R_JOIN` 6 u) with no bridge — `<box1> seg1 seg2 <box2>`. Prefer the other arm **newest** in paint order that matches the current stroke.

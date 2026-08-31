@@ -181,8 +181,9 @@ Draw a **white ghost polyline** on ToolCanvas, stroke width = eraser size, along
 
 ### 9.1 While down
 
-- Dotted polyline on ToolCanvas (same close rule as area: auto-close last→first, no minimum area). Paint the **drawn** samples; a coarsened copy is for hit-test only.
-- **Highlight (deletion-rect):** a second outline on ToolCanvas of each candidate that currently passes the 80% test. Outline = that node’s **AABB** (selection-style), not a second copy of the ink path. Stroke **2.5 panel pixels**, cosmetic (unchanged apparent width when the camera zooms). Live 80% is **not** on the UI thread: one in-flight compute, at most one queued latest lasso (newer events replace the waiting job). Overlay skips Ink and Connector. SmartGroup live/commit 80% uses a **downsampled boundary polyline** (the product table is still boundary area, not the fitted AABB).
+- Dotted polyline on ToolCanvas (same close rule as area: auto-close last→first, no minimum area). Paint from an **append-only raster** (one dash-continuous stroke, running dash offset). A coarsened copy is for hit-test only. Decision: [ADR-0036](../../adr/ADR-0036-toolcanvas-live-overlay.md).
+- **Highlight (deletion-rect):** AABB outline of each 80% candidate. Cosmetic panel px. Dirty **outline strips** only — not the box interior. Live 80% is **not** on the UI thread (`LatestJob`). Overlay skips Ink and Connector. Walk Frame only. SmartGroup 80% uses a **downsampled boundary polyline**.
+- Remaining hitch when a candidate appears is the **panel refreshing that box** (Qt may union outline dirty rects into an AABB). It is **not** restroking the lasso. Do not “fix” lag by rebuilding the polyline from samples.
 - Never restroke the document during the gesture.
 - No cover/mask of document content.
 
@@ -284,6 +285,7 @@ Nib is still a **different HID channel** from barrel ([ADR-0025](../../adr/ADR-0
 | New Ink from brush/area clip | Only remnant `append_ink` as in §10 — never a new stroke from the eraser gesture itself |
 | Connector from **brush** | **0** mutations |
 | Frame from any eraser | **0** removals |
+| Live object-erase polyline | Pointer-move stamps one dashed segment onto a raster; paint **blits**. Adding/removing a deletion-rect must not restroke the lasso ([ADR-0036](../../adr/ADR-0036-toolcanvas-live-overlay.md)) |
 | No session | Same local result |
 
 Publish: `set_ink_samples`, `append_ink`, `remove_node`, `reparent` (attachments), `compound` as needed. Never `restore_snapshot` for erase.

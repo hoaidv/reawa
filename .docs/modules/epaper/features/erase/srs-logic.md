@@ -8,7 +8,7 @@ version: 0.1.0
 
 # SRS — Erase
 
-**Parent:** [REQ-11](../../prd.md#erase). **Product (normative UI/UX):** [prd-erase.md](../../prd-erase.md). **Decision:** [ADR-0034](../../../../adr/ADR-0034-erase-clip-remnants.md). **Mode:** [ADR-0033](../../../../adr/ADR-0033-tool-abstraction.md). **Undo:** [ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md).
+**Parent:** [REQ-11](../../prd.md#erase). **Product (normative UI/UX):** [prd-erase.md](../../prd-erase.md). **Decision:** [ADR-0034](../../../../adr/ADR-0034-erase-clip-remnants.md) (clip + remnants), [ADR-0036](../../../../adr/ADR-0036-toolcanvas-live-overlay.md) (live overlay). **Mode:** [ADR-0033](../../../../adr/ADR-0033-tool-abstraction.md). **Undo:** [ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md).
 
 This file binds algorithms, closed ids, and measures. It does not repeat the PRD job.
 
@@ -18,7 +18,7 @@ This file binds algorithms, closed ids, and measures. It does not repeat the PRD
 
 ## [SRS-EP-54] Eraser mode, ToolChip, routing, barrel, nib {#srs-ep-54-erase-mode}
 
-**Parent:** [REQ-11](../../prd.md#erase), [REQ-03](../../prd.md#tool-modes), [REQ-18](../../prd.md#pen-buttons). Product: [prd-erase.md §2–4, §12](../../prd-erase.md).
+**Parent:** [REQ-11](../../prd.md#erase). **Product (normative UI/UX):** [prd-erase.md](../../prd-erase.md). **Decision:** [ADR-0034](../../../../adr/ADR-0034-erase-clip-remnants.md), [ADR-0036](../../../../adr/ADR-0036-toolcanvas-live-overlay.md). **Mode:** [ADR-0033](../../../../adr/ADR-0033-tool-abstraction.md). **Undo:** [ADR-0032](../../../../adr/ADR-0032-inverse-op-undo.md).
 
 | Rule | Value |
 |---|---|
@@ -93,7 +93,7 @@ Empty erase gesture: 0 tree ops, 0 undo entries.
 
 | Phase | Rule |
 |---|---|
-| Down | Dotted **full** freeform on ToolCanvas (compute may coarsen a copy). **Deletion-rect:** AABB outline of current 80% candidates, stroke **2.5 panel px**, `cosmetic` (same px at any world zoom). Live 80% runs **off the UI thread**; at most one in-flight job and one pending latest snapshot ([`latest_job.hpp`](../../../epaper/util/latest_job.hpp)). Overlay skips Ink and Connector. SmartGroup uses a **downsampled boundary polyline** (not AABB-only). |
+| Down | Dotted freeform on ToolCanvas. Pointer-move **only appends**: stamp one dash-continuous segment onto an overlay raster (running `dashOffset`) and dirty that segment. **Never** rebuild or restroke all samples; **never** `drawLine` each sample with a fresh `DotLine` (looks solid). `paintOverlay` **blits** the raster, then deletion-rects. **Deletion-rect dirty is outline strips**, not the AABB interior (so add/remove of a candidate does not restroke the lasso). Live 80% is a **low-priority** worker ([`latest_job.hpp`](../../../epaper/util/latest_job.hpp)), timer-sampled, never on the pointer path. Walk **Frame** children only — do not enter SmartGroup or Group. Overlay skips Ink and Connector. SmartGroup uses a downsampled **boundary polyline**. Decision: [ADR-0036](../../../../adr/ADR-0036-toolcanvas-live-overlay.md). |
 | Up | Auto-close; remove whole nodes that pass the table on the **full** lasso; SmartGroup boundary may be downsampled for the 8×8 area test; 0 remnants |
 
 | Kind | Remove when |
@@ -119,6 +119,7 @@ Connector remove (this section **or** area fully-inside): unbind attachments; re
 | Undo | One entry; ±1 px @ 100% zoom when `lastOpId` matches; skip/no-op [SRS-EP-07](../device-document/srs-logic.md) |
 | Chip arm | p95 ≤ **300 ms** |
 | Pen-tip ink | [SRS-EP-01](../local-pen-ink/srs-logic.md) unchanged |
+| Live object-erase overlay | Pointer-move appends one dashed segment; 80% is timer + worker. Deletion-rect add/remove **blits** the raster — do not restroke the lasso ([ADR-0036](../../../../adr/ADR-0036-toolcanvas-live-overlay.md)) |
 | Chords | 0 |
 | Frame removed | 0 |
 | Brush vs connector | 0 mutations |

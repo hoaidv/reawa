@@ -18,7 +18,8 @@ owner: architect
   [ADR-0021](../../../../adr/ADR-0021-connector-toolchip.md) ToolChip ·
   [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) dispatch ·
   [ADR-0026](../../../../adr/ADR-0026-endpoint-ink-membership.md) endpoint-ink ·
-  [ADR-0027](../../../../adr/ADR-0027-attachment-t-rest-spine.md) attachment `t`
+  [ADR-0027](../../../../adr/ADR-0027-attachment-t-rest-spine.md) attachment `t` ·
+  [ADR-0036](../../../../adr/ADR-0036-toolcanvas-live-overlay.md) UX2 is last-3 free inks, not DFS
 - **Brainstorm / EXP:** [BS-0001](../../../../.plan/iter-004/brainstorms/BS-0001-auto-connector-ink.md) ·
   [EXP-0002](../../../../.plan/iter-004/explorations/EXP-0002-connector-ink-warp.md)
 - **Active iter:** [iter-004](../../../../.plan/iter-004/iter.md)

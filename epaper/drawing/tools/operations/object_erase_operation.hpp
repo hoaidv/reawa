@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- * ObjectErase — full dotted freeform paint; 80% overlay off the UI thread.
+ * ObjectErase — append-only dotted raster; 80% overlay off the UI thread.
  * @implements [SRS-EP-54] erase_object exclusive
  * @implements [SRS-EP-58] object erase
  */
@@ -15,13 +15,16 @@
 #include "util/latest_job.hpp"
 
 #include <QCoreApplication>
+#include <QImage>
 #include <QLatin1String>
+#include <QLineF>
 #include <QMetaObject>
 #include <QPainter>
-#include <QPainterPath>
 #include <QPen>
 #include <QPointF>
 #include <QRectF>
+#include <QTimer>
+#include <QVector>
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
@@ -63,10 +66,14 @@ public:
                     },
                     Qt::QueuedConnection);
             });
+        m_hitTimer.setInterval(kHitPeriodMs);
+        m_hitTimer.setTimerType(Qt::CoarseTimer);
+        QObject::connect(&m_hitTimer, &QTimer::timeout, &m_hitTimer, [this]() { onHitTimer(); });
     }
 
     ~ObjectEraseOperation() override
     {
+        m_hitTimer.stop();
         if (m_bridge) {
             m_bridge->alive = false;
             m_bridge->op = nullptr;
@@ -95,12 +102,15 @@ public:
         bumpEpoch();
         m_pts.clear();
         m_hitPanelRects.clear();
+        dropPolyRaster();
         m_pts.push_back(s.panel);
+        stampPolyPoint(s.panel);
         if (m_caps && m_caps->toolUi) {
             m_caps->toolUi->syncOverlayPresence();
             m_caps->toolUi->setStrokeWaveform(true);
             m_caps->toolUi->damageChrome(QRectF(s.panel, s.panel).adjusted(-12, -12, 12, 12));
         }
+        m_hitTimer.start();
     }
     void onMove(const PointerSample &s) override
     {
@@ -108,17 +118,20 @@ public:
             return;
         const QPointF prev = m_pts.back();
         m_pts.push_back(s.panel);
+        m_resnapWaiting = true;
+        stampPolySegment(prev, s.panel);
         m_caps->toolUi->damageChromeSegment(
             QRectF(prev, s.panel).normalized().adjusted(-16, -16, 16, 16));
-        requestOverlayHits();
     }
     void onUp(const PointerSample &) override { commit(); }
     void onCancel() override { cancel(); }
     void cancel() override
     {
+        m_hitTimer.stop();
         bumpEpoch();
         m_pts.clear();
         m_hitPanelRects.clear();
+        dropPolyRaster();
         if (m_caps && m_caps->toolUi) {
             m_caps->toolUi->setStrokeWaveform(false);
             m_caps->toolUi->refreshChrome();
@@ -130,27 +143,25 @@ public:
         if (!painter)
             return;
         painter->save();
-        QPen dotted(Qt::black);
-        dotted.setWidthF(kFreeformStrokePanelPx);
-        dotted.setStyle(Qt::DotLine);
         painter->setBrush(Qt::NoBrush);
-        painter->setPen(dotted);
-        if (m_pts.size() == 1) {
-            painter->drawEllipse(m_pts.front(), 2.0, 2.0);
-        } else if (m_pts.size() > 1) {
-            QPainterPath path;
-            path.moveTo(m_pts.front());
-            for (size_t i = 1; i < m_pts.size(); ++i)
-                path.lineTo(m_pts[i]);
-            painter->drawPath(path);
+        if (!m_polyRaster.isNull()) {
+            const QRectF clip = painter->clipBoundingRect();
+            if (clip.isEmpty())
+                painter->drawImage(0, 0, m_polyRaster);
+            else
+                painter->drawImage(clip.topLeft(), m_polyRaster, clip);
         }
         QPen thick(Qt::black);
         thick.setWidthF(kDeletionRectStrokePanelPx);
         thick.setCosmetic(true);
         thick.setStyle(Qt::DotLine);
         painter->setPen(thick);
-        for (const QRectF &r : m_hitPanelRects)
-            painter->drawRect(r);
+        const QRectF clip = painter->clipBoundingRect().adjusted(-8, -8, 8, 8);
+        const bool all = !clip.isValid() || clip.isEmpty();
+        for (const QRectF &r : m_hitPanelRects) {
+            if (all || r.intersects(clip))
+                painter->drawRect(r);
+        }
         painter->restore();
     }
 
@@ -162,8 +173,9 @@ private:
 
     /** Dotted freeform — panel pixels (ToolCanvas). */
     static constexpr qreal kFreeformStrokePanelPx = 3.0;
-    /** Deletion-rect around 80% candidates. Cosmetic: same px at any world zoom. Half of 5. */
-    static constexpr qreal kDeletionRectStrokePanelPx = 2.0;
+    /** Deletion-rect around 80% candidates. Cosmetic: same px at any world zoom. */
+    static constexpr qreal kDeletionRectStrokePanelPx = 3.0;
+    static constexpr int kHitPeriodMs = 150;
 
     std::vector<epaper::document::ErasePt> worldPoly() const
     {
@@ -226,12 +238,97 @@ private:
         return paddedPanelAabb(m_caps->toolUi->worldBoundsToPanel(wb));
     }
 
-    QRectF unionHitRects(const std::vector<QRectF> &rects) const
+    QPen polyPen(qreal dashOffset) const
     {
-        QRectF u;
-        for (const QRectF &r : rects)
-            u = u.united(r);
-        return u;
+        QPen dotted(Qt::black);
+        dotted.setWidthF(kFreeformStrokePanelPx);
+        dotted.setCapStyle(Qt::RoundCap);
+        dotted.setStyle(Qt::CustomDashLine);
+        dotted.setDashPattern(QVector<qreal>{1.5, 2.0});
+        dotted.setDashOffset(dashOffset);
+        return dotted;
+    }
+
+    void dropPolyRaster()
+    {
+        m_polyRaster = QImage();
+        m_dashOffset = 0;
+    }
+
+    void paintPolyDot(const QPointF &p)
+    {
+        QPainter gp(&m_polyRaster);
+        gp.setRenderHint(QPainter::Antialiasing, false);
+        gp.setPen(polyPen(m_dashOffset));
+        gp.setBrush(Qt::NoBrush);
+        gp.drawEllipse(p, 2.0, 2.0);
+    }
+
+    void paintPolySegment(const QPointF &from, const QPointF &to)
+    {
+        QPainter gp(&m_polyRaster);
+        gp.setRenderHint(QPainter::Antialiasing, false);
+        gp.setPen(polyPen(m_dashOffset));
+        gp.setBrush(Qt::NoBrush);
+        gp.drawLine(from, to);
+        const qreal w = std::max<qreal>(1.0, kFreeformStrokePanelPx);
+        m_dashOffset += QLineF(from, to).length() / w;
+    }
+
+    void restampPolyRaster()
+    {
+        if (m_polyRaster.isNull() || m_pts.empty())
+            return;
+        paintPolyDot(m_pts.front());
+        for (size_t i = 1; i < m_pts.size(); ++i)
+            paintPolySegment(m_pts[i - 1], m_pts[i]);
+    }
+
+    /** @return true if allocated and already restamped from m_pts (caller must not stamp again). */
+    bool ensurePolyRaster()
+    {
+        if (!m_caps || !m_caps->toolUi)
+            return false;
+        const QSizeF hs = m_caps->toolUi->hostSize();
+        const QSize sz(std::max(1, int(hs.width())), std::max(1, int(hs.height())));
+        if (m_polyRaster.size() == sz)
+            return false;
+        QImage next(sz, QImage::Format_ARGB32_Premultiplied);
+        next.fill(Qt::transparent);
+        m_polyRaster = next;
+        m_dashOffset = 0;
+        restampPolyRaster();
+        return true;
+    }
+
+    void stampPolyPoint(const QPointF &p)
+    {
+        if (ensurePolyRaster())
+            return;
+        if (m_polyRaster.isNull())
+            return;
+        paintPolyDot(p);
+    }
+
+    void stampPolySegment(const QPointF &from, const QPointF &to)
+    {
+        if (ensurePolyRaster())
+            return;
+        if (m_polyRaster.isNull())
+            return;
+        paintPolySegment(from, to);
+    }
+
+    void damageRectOutline(const QRectF &r)
+    {
+        if (!m_caps || !m_caps->toolUi)
+            return;
+        const qreal t = kDeletionRectStrokePanelPx + 6.0;
+        auto strip = [this](const QRectF &s) { m_caps->toolUi->damageChromeSegment(s); };
+        strip(QRectF(r.left() - t, r.top() - t, r.width() + 2 * t, 2 * t));
+        strip(QRectF(r.left() - t, r.bottom() - t, r.width() + 2 * t, 2 * t));
+        strip(QRectF(r.left() - t, r.top() - t, 2 * t, r.height() + 2 * t));
+        strip(QRectF(r.right() - t, r.top() - t, 2 * t, r.height() + 2 * t));
     }
 
     void bumpEpoch()
@@ -242,16 +339,12 @@ private:
         m_resnapWaiting = false;
     }
 
-    void requestOverlayHits()
+    void onHitTimer()
     {
-        if (!m_caps || !m_caps->doc || !m_caps->toolUi)
+        if (!m_resnapWaiting || m_jobBusy)
             return;
-        if (m_pts.size() < 3)
+        if (!m_caps || !m_caps->doc || !m_caps->toolUi || m_pts.size() < 3)
             return;
-        if (m_jobBusy) {
-            m_resnapWaiting = true;
-            return;
-        }
         startOverlayJob();
     }
 
@@ -270,17 +363,11 @@ private:
     void onOverlayResult(epaper::document::ObjectEraseOverlayResult result)
     {
         m_jobBusy = false;
-        if (result.gen < m_appliedGen) {
-            if (m_resnapWaiting && !m_pts.empty())
-                startOverlayJob();
+        if (result.gen < m_appliedGen)
             return;
-        }
         m_appliedGen = result.gen;
-        if (!m_caps || !m_caps->doc || !m_caps->toolUi || m_pts.size() < 3) {
-            if (m_resnapWaiting && !m_pts.empty())
-                startOverlayJob();
+        if (!m_caps || !m_caps->doc || !m_caps->toolUi || m_pts.size() < 3)
             return;
-        }
         std::vector<QRectF> next;
         next.reserve(result.ids.size());
         for (const auto &id : result.ids) {
@@ -294,22 +381,23 @@ private:
         const bool same = next.size() == m_hitPanelRects.size()
             && std::equal(next.begin(), next.end(), m_hitPanelRects.begin());
         if (!same) {
-            const QRectF dirty = unionHitRects(m_hitPanelRects).united(unionHitRects(next));
+            for (const QRectF &r : m_hitPanelRects)
+                damageRectOutline(r);
+            for (const QRectF &r : next)
+                damageRectOutline(r);
             m_hitPanelRects = std::move(next);
-            if (!dirty.isEmpty())
-                m_caps->toolUi->damageChrome(dirty);
         }
-        if (m_resnapWaiting && !m_pts.empty())
-            startOverlayJob();
     }
 
     void commit()
     {
         using namespace epaper::document;
         std::vector<ErasePt> world = worldPoly();
+        m_hitTimer.stop();
         bumpEpoch();
         m_pts.clear();
         m_hitPanelRects.clear();
+        dropPolyRaster();
         if (!m_caps || !m_caps->doc || !m_caps->toolUi)
             return;
         m_caps->toolUi->setStrokeWaveform(false);
@@ -334,6 +422,9 @@ private:
     HostCaps *m_caps = nullptr;
     std::vector<QPointF> m_pts;
     std::vector<QRectF> m_hitPanelRects;
+    QImage m_polyRaster;
+    qreal m_dashOffset = 0;
+    QTimer m_hitTimer;
     OperationDescriptor m_desc;
     epaper::LatestJob<epaper::document::ObjectEraseOverlayJob, epaper::document::ObjectEraseOverlayResult>
         m_job;

@@ -156,6 +156,7 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 - [ADR-0019](../../adr/ADR-0019-selection-chrome-layers.md) — CanvasLayer / ToolCanvasLayer / ToolLayer (Pen / Mono / UI)
 - [ADR-0033](../../adr/ADR-0033-tool-abstraction.md) — Mode / Operation / Modifier / overlay split (overview)
 - [ADR-0035](../../adr/ADR-0035-tool-context-is-host-ports.md) — ToolContextImpl is host ports; Mode owns overlay policy; SelectionOverlay is host-owned
+- [ADR-0036](../../adr/ADR-0036-toolcanvas-live-overlay.md) — ToolCanvas live overlay: append-only dashed raster, blit on paint, 80% off UI; connector UX2 is not DFS
 - **Implementation view:** [tool-system/](./tool-system/index.md) — current `epaper/drawing/tools/` catalog, routing, how to add tools
 - [ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md) — independent cameras + exclusive one-way follow (supersedes [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md))
 - [ADR-0024](../../adr/ADR-0024-in-document-clipboard.md) — in-document clipboard (one slot)

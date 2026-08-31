@@ -10,14 +10,15 @@ kind: implementation-view
 Normative for anyone editing [`epaper/drawing/tools/`](../../../epaper/drawing/tools/) or
 [`toolcanvasitem.cpp`](../../../epaper/drawing/toolcanvasitem.cpp). Conceptual why:
 [ADR-0033](../../adr/ADR-0033-tool-abstraction.md). Host-ports lock:
-[ADR-0035](../../adr/ADR-0035-tool-context-is-host-ports.md). Inventory: [catalog.md](./catalog.md).
+[ADR-0035](../../adr/ADR-0035-tool-context-is-host-ports.md). Live overlay paint:
+[ADR-0036](../../adr/ADR-0036-toolcanvas-live-overlay.md). Inventory: [catalog.md](./catalog.md).
 
 If this page and the code disagree, the code wins — then update this page **or** file a challenge.
 Do **not** silently fork policy.
 
 **Gate:** a change that would put Mode / chip / selection policy on `ToolContextImpl`, merge
 `SelectionOverlay` into `ToolCanvasItem`, or branch `Operation::match` on `PointerDevice` **stops**.
-File `.plan/iter-005/challenges/CHL-<slug>.md`. Architect amends this page / ADR-0035 only after
+File `.plan/iter-005/challenges/CHL-<slug>.md`. Architect amends this page / ADR-0035 / ADR-0036 only after
 adopt. Same stop as SRS in [docs-first](../../../.agent/rules/docs-first.md).
 
 ## Roles
@@ -58,3 +59,6 @@ Cite [ADR-0019](../../adr/ADR-0019-selection-chrome-layers.md):
 - Merge `SelectionOverlay` into `toolcanvasitem.cpp`.
 - `if (s.device == PointerDevice::Pen)` in `Operation::match` (except InkStroke digitizer stash).
 - Chip-string → ModeId anywhere except `ToolCanvasItem::syncActiveMode`.
+- Rebuild or restroke a live ToolCanvas overlay from **all** samples on pointer-move or on deletion-rect damage (append-only raster + blit; [ADR-0036](../../adr/ADR-0036-toolcanvas-live-overlay.md)).
+- `drawLine` each overlay sample with a fresh `DotLine` (dash restarts; looks solid).
+- Run object-erase 80% / document snapshot on the pointer callback.

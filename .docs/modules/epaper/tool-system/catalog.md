@@ -39,7 +39,7 @@ Registered in `ToolCanvasItem::registerOperations`. One instance per kind on the
 | InkStroke | `operations/ink_stroke_operation.hpp` | RawPointer | RawPointer | 10 | Primary only | `InkSink`; skip stylus stash if `device != Pen` |
 | BrushErase | `operations/brush_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Ghost; `StylusHoverSink` near-circle; `erase_brush` |
 | AreaErase | `operations/area_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Dotted freeform; polygon clip + fully-inside remove |
-| ObjectErase | `operations/object_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Full dotted freeform paint; deletion-rect 2.5 px cosmetic; live 80% off UI via `util/latest_job.hpp` |
+| ObjectErase | `operations/object_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Append-only dashed raster (never restroke all samples); deletion-rect outline dirty; live 80% off UI via `util/latest_job.hpp`. [ADR-0036](../../adr/ADR-0036-toolcanvas-live-overlay.md) |
 | Rotate | — | — | — | — | — | enum + Mode list only |
 
 Shared move/resize math: `operations/transform_session.hpp` (Qt-free) +
