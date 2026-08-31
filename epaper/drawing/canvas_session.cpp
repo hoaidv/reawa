@@ -124,6 +124,11 @@ void CanvasSession::noteDocumentMutated()
     emit documentMutated();
 }
 
+void CanvasSession::emitRecogChrome(int kind, const QStringList &ids)
+{
+    emit recogChrome(kind, ids);
+}
+
 void CanvasSession::noteCameraChanged()
 {
     emit cameraChanged();

@@ -27,6 +27,21 @@ struct WorldAabb {
     bool valid() const { return maxX > minX && maxY > minY; }
 };
 
+/** [D03] Invalid clip means “no restriction”. */
+inline WorldAabb intersectWorldAabb(WorldAabb a, WorldAabb b)
+{
+    if (!a.valid())
+        return b;
+    if (!b.valid())
+        return a;
+    WorldAabb o;
+    o.minX = a.minX > b.minX ? a.minX : b.minX;
+    o.minY = a.minY > b.minY ? a.minY : b.minY;
+    o.maxX = a.maxX < b.maxX ? a.maxX : b.maxX;
+    o.maxY = a.maxY < b.maxY ? a.maxY : b.maxY;
+    return o;
+}
+
 struct StyleOverride {
     double widthMul = 1.0;
 };

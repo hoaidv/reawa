@@ -13,6 +13,7 @@
 #include "../contexts/session_doc_context.hpp"
 #include "../contexts/tool_context.hpp"
 #include "../ui/selection_overlay.hpp"
+#include "../ui/node_emphasis.hpp"
 
 #include <QPainter>
 #include <QString>
@@ -43,6 +44,7 @@ public:
 
     void paintOverlay(QPainter *painter, HostCaps &caps, InputHub &hub) override
     {
+        paintNodeEmphasis(painter, caps);
         if (!caps.selection || !caps.overlay)
             return;
         if (caps.selection->phase() != SelectionPhase::Transforming)
@@ -59,8 +61,9 @@ public:
             return;
         const bool transforming =
             caps.selection && caps.selection->phase() == SelectionPhase::Transforming;
-        caps.toolUi->setOverlayVisible(transforming);
-        if (transforming)
+        const bool emph = caps.emphasis && caps.emphasis->active();
+        caps.toolUi->setOverlayVisible(transforming || emph);
+        if (transforming || emph)
             caps.toolUi->setStrokeWaveform(false);
     }
 
@@ -79,6 +82,10 @@ public:
         syncOverlay(caps, hub);
         if (caps.overlay)
             caps.toolUi->damageChrome(caps.overlay->state().selectionChromeDirty);
+        if (caps.emphasis) {
+            caps.emphasis->recompute(caps);
+            caps.toolUi->damageChrome(caps.emphasis->dirtyUnion());
+        }
     }
 };
 

@@ -42,16 +42,23 @@ public:
         m_ghost.invalidate();
         if (caps->overlay) {
             epaper::document::SmartBounds originWorld;
-            if (epaper::document::boundsOf(*subject, originWorld))
-                caps->overlay->setOriginPanelRect(
-                    caps->toolUi->worldBoundsToPanel(originWorld).adjusted(-8, -8, 8, 8));
-            else
+            if (epaper::document::boundsOf(*subject, originWorld)) {
+                m_originPanel =
+                    caps->toolUi->worldBoundsToPanel(originWorld).adjusted(-8, -8, 8, 8);
+                caps->overlay->setOriginPanelRect(m_originPanel);
+            } else {
                 caps->overlay->clearOriginPanelRect();
+                m_originPanel = QRectF();
+            }
         }
         caps->doc->setLiveManipSuppressIds(subject->id);
         caps->doc->beginGesture();
         caps->doc->refreshAllConnectorWarps();
-        caps->doc->noteDocumentMutated();
+        // [D08] Punch origin AABB only — not FullClear.
+        if (m_originPanel.isEmpty())
+            caps->doc->noteDocumentMutated();
+        else
+            caps->doc->noteDocumentDirty(m_originPanel);
         caps->toolUi->refreshChrome();
         if (caps->overlay)
             caps->overlay->redrawLiveManip(*caps, m_live.resizing());
@@ -94,11 +101,25 @@ public:
         const TransformResult r = m_live.commit();
         caps->selection->setPhase(SelectionPhase::Selected);
         caps->selection->setIds({id});
+        QRectF live;
+        if (const epaper::document::DocNode *n = caps->doc->document().find(id)) {
+            epaper::document::SmartBounds b;
+            if (epaper::document::boundsOf(*n, b))
+                live = caps->toolUi->worldBoundsToPanel(b).adjusted(-8, -8, 8, 8);
+        }
+        const QRectF dirty =
+            m_originPanel.isEmpty() ? live : (live.isEmpty() ? m_originPanel : m_originPanel.united(live));
+        auto punch = [&]() {
+            if (dirty.isEmpty())
+                caps->doc->noteDocumentMutated();
+            else
+                caps->doc->noteDocumentDirty(dirty);
+        };
         if (!r.moved) {
             caps->doc->applyLiveSmartGeometry(id, originT, originB);
             caps->doc->abortGesture();
             caps->doc->clearLiveManipSuppressIds();
-            caps->doc->noteDocumentMutated();
+            punch();
             caps->toolUi->refreshChrome();
             caps->doc->notifyHistory();
         } else {
@@ -115,7 +136,7 @@ public:
                 caps->overlay->clearOriginPanelRect();
             caps->doc->clearLiveManipSuppressIds();
             caps->doc->refreshAllConnectorWarps();
-            caps->doc->noteDocumentMutated();
+            punch();
             caps->toolUi->refreshChrome();
             caps->doc->notifyHistory();
             caps->doc->flushWire();
@@ -136,7 +157,19 @@ public:
             caps->doc->abortGesture();
             caps->doc->refreshAllConnectorWarps();
             caps->doc->clearLiveManipSuppressIds();
-            caps->doc->noteDocumentMutated();
+            QRectF live;
+            if (const epaper::document::DocNode *n = caps->doc->document().find(id)) {
+                epaper::document::SmartBounds b;
+                if (epaper::document::boundsOf(*n, b))
+                    live = caps->toolUi->worldBoundsToPanel(b).adjusted(-8, -8, 8, 8);
+            }
+            const QRectF dirty = m_originPanel.isEmpty()
+                ? live
+                : (live.isEmpty() ? m_originPanel : m_originPanel.united(live));
+            if (dirty.isEmpty())
+                caps->doc->noteDocumentMutated();
+            else
+                caps->doc->noteDocumentDirty(dirty);
             caps->selection->setPhase(caps->selection->ids().empty() ? SelectionPhase::Idle
                                                                      : SelectionPhase::Selected);
             caps->toolUi->refreshChrome();
@@ -155,6 +188,7 @@ public:
 private:
     TransformSession m_live;
     QElapsedTimer m_ghost;
+    QRectF m_originPanel;
     bool m_didMutate = false;
 };
 

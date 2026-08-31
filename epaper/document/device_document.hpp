@@ -117,6 +117,7 @@ public:
 
     const UndoRingEntry *oldestEntry() const { return m_history.oldestUndo(); }
     const UndoRingEntry *newestEntry() const { return m_history.newestUndo(); }
+    const UndoRingEntry *newestRedoEntry() const { return m_history.newestRedo(); }
 
     /** Inverse ring has no whole-tree snapshot. Always 0. */
     static bool entryHasSnapshot(const UndoRingEntry &) { return false; }

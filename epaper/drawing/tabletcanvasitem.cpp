@@ -8,12 +8,15 @@
 #include "document/recognizer_dispatch.hpp"
 #include "document/recognize_enclose.hpp"
 #include "document/membership.hpp"
+#include "document/manipulate.hpp"
 #include "debug/debug_log_format.hpp"
 #include "primary_toolbar.hpp"
 #include "ingest_origin_guard.hpp"
 #include "rasterize_gate.hpp"
 #include "rendering/rendering_qt.hpp"
 
+#include <QStringList>
+#include <algorithm>
 #include <QPainter>
 #include <QPainterPath>
 #include <QJsonDocument>
@@ -159,13 +162,14 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
         scheduleVectorRasterize(false);
     });
     connect(&m_session, &CanvasSession::documentMutated, this, [this]() {
+        // [D05] noteDocumentDirty already painted; FullClear would hitch the next down.
+        if (m_consumeMutatedRasterize) {
+            m_consumeMutatedRasterize = false;
+            return;
+        }
         scheduleVectorRasterize(true);
     });
     connect(&m_session, &CanvasSession::exclusiveToolChanged, this, [this]() {
-        const bool hadHighlight = !m_highlightInkIds.empty();
-        clearMembershipHighlight();
-        if (hadHighlight && !m_stroke.active)
-            scheduleVectorRasterize(true);
         emit toolModeChanged();
         m_debugInfo = QStringLiteral("tool=%1").arg(toolMode());
         emit debugChanged();
@@ -465,11 +469,37 @@ void TabletCanvasItem::requestRedo()
 void TabletCanvasItem::applyHistoryRestore(bool isUndo)
 {
     using namespace epaper::document;
+    const UndoRingEntry *peek =
+        isUndo ? m_session.document.newestEntry() : m_session.document.newestRedoEntry();
+    std::vector<std::string> ids;
+    QRectF dirty;
+    if (peek) {
+        for (const auto &t : peek->targets)
+            ids.push_back(t.nodeId);
+    }
+    for (const auto &id : ids) {
+        const QRectF b = panelBoundOfNodeId(id);
+        if (!b.isEmpty())
+            dirty = dirty.isEmpty() ? b : dirty.united(b);
+    }
+
     const UndoResult r = isUndo ? m_session.document.undo() : m_session.document.redo();
     (void)r;
-    clearMembershipHighlight();
+    emitRecogChrome(0, {});
     notifyHistory();
-    m_session.noteDocumentMutated();
+
+    for (const auto &id : ids) {
+        const QRectF b = panelBoundOfNodeId(id);
+        if (!b.isEmpty())
+            dirty = dirty.isEmpty() ? b : dirty.united(b);
+    }
+    // [D09] disappeared node with no before/after AABB → FullClear (no hole).
+    if (dirty.isEmpty())
+        m_session.noteDocumentMutated();
+    else {
+        scheduleDirtyRasterize(dirty, true);
+        m_session.noteDocumentMutated();
+    }
     flushOneWayWire();
 }
 
@@ -593,8 +623,6 @@ void TabletCanvasItem::applyStrokeIntent(const epaper::strokecapture::StrokeResu
 {
     using epaper::strokecapture::StrokeIntent;
     using epaper::strokecapture::has;
-    if (has(r.intent, StrokeIntent::CancelSettle))
-        ++m_settleFollowUpToken;
     if (has(r.intent, StrokeIntent::BeginGesture))
         m_session.document.beginGesture();
     if (has(r.intent, StrokeIntent::LatchChip)) {
@@ -678,19 +706,33 @@ void TabletCanvasItem::endStroke()
     epaper::UiStallSection stall("endStroke");
     applyStrokeIntent(m_stroke.end());
 
-    // Rasterize after enclose so group-local ink is visible (not in paint()).
+    // [D06] Enclose/connector: one InPlaceDirty of the changed AABB (group-local bake).
     if (m_needEncloseRasterize) {
         m_needEncloseRasterize = false;
-        rasterizeVectors(true);
+        const QRectF dirty = m_encloseDirtyPanel;
+        m_encloseDirtyPanel = QRectF();
         m_rasterizeDeferredSharp = false;
         m_rasterizePending = false;
-        ++m_settleFollowUpToken;
+        m_pendingInPlaceDirty = QRectF();
+        rasterizeVectors(true, dirty);
     } else if (m_rasterizeDeferredSharp) {
         m_rasterizeDeferredSharp = false;
-        scheduleVectorRasterize(true);
+        if (!m_pendingInPlaceDirty.isEmpty()) {
+            const QRectF dirty = m_pendingInPlaceDirty;
+            m_pendingInPlaceDirty = QRectF();
+            rasterizeVectors(true, dirty);
+        } else {
+            scheduleVectorRasterize(true);
+        }
     } else if (m_rasterizePending) {
         m_rasterizePending = false;
-        scheduleVectorRasterize(false);
+        if (!m_pendingInPlaceDirty.isEmpty()) {
+            const QRectF dirty = m_pendingInPlaceDirty;
+            m_pendingInPlaceDirty = QRectF();
+            rasterizeVectors(false, dirty);
+        } else {
+            scheduleVectorRasterize(false);
+        }
     }
 
     // Status text is refreshed between strokes only: during a stroke it would
@@ -748,52 +790,47 @@ void TabletCanvasItem::ingestCurrentStroke(const epaper::document::FinishedStrok
             "Created", d.enclose.reason, d.enclose.smartGroupId, d.enclose.childIds);
         qInfo().noquote() << QString::fromStdString(line);
         m_needEncloseRasterize = true;
-        if (const DocNode *sg = m_session.document.find(d.enclose.smartGroupId)) {
-            std::vector<std::string> ids;
+        m_encloseDirtyPanel = panelBoundOfNodeId(d.enclose.smartGroupId);
+        std::vector<std::string> ids;
+        ids.push_back(d.enclose.smartGroupId);
+        if (const DocNode *sg = m_session.document.find(d.enclose.smartGroupId))
             collectSmartGroupInkIds(*sg, false, &ids);
-            beginRecogWidthBlink(ids);
-        }
-        clearMembershipHighlight();
+        emitRecogChrome(1, ids);
     } else if (d.outcome == RecogOutcome::Membership) {
-        bool highlightChanged = false;
-        if (const DocNode *sg = m_session.document.find(d.membership.smartGroupId)) {
-            std::vector<std::string> ids;
+        std::vector<std::string> ids;
+        if (const DocNode *sg = m_session.document.find(d.membership.smartGroupId))
             collectSmartGroupInkIds(*sg, true, &ids);
-            highlightChanged = setMembershipHighlight(ids);
-        } else {
-            highlightChanged = !m_highlightInkIds.empty();
-            clearMembershipHighlight();
-        }
-        // Same parent already highlighted: live pixels are the new ink. A full
-        // white-clear rasterize here is what lagged Pen every few draw-intos.
-        if (highlightChanged)
-            m_needEncloseRasterize = true;
+        // [D01][D16] live stamps are the join; bold is ToolCanvas. Skip Tablet rasterize.
+        emitRecogChrome(3, ids);
     } else if (d.outcome == RecogOutcome::Connector) {
-        // ovl.conn_blink — width pulse on connector body + both bound nodes (UI-EP-05).
         m_needEncloseRasterize = true;
         std::vector<std::string> ids = d.connector.bodyIds;
+        ids.push_back(d.connector.fromId);
+        ids.push_back(d.connector.toId);
+        QRectF dirty;
+        if (const DocNode *conn = m_session.document.find(d.connector.connectorId))
+            dirty = warpedConnectorPanelRect(*conn);
+        dirty = dirty.isEmpty() ? panelBoundOfNodeId(d.connector.fromId)
+                                : dirty.united(panelBoundOfNodeId(d.connector.fromId));
+        dirty = dirty.united(panelBoundOfNodeId(d.connector.toId));
+        m_encloseDirtyPanel = dirty;
         if (const DocNode *sg = m_session.document.find(d.connector.fromId))
             collectSmartGroupInkIds(*sg, false, &ids);
         if (const DocNode *sg = m_session.document.find(d.connector.toId))
             collectSmartGroupInkIds(*sg, false, &ids);
-        beginRecogWidthBlink(ids);
-        clearMembershipHighlight();
+        emitRecogChrome(2, ids);
     } else {
         // Failed empty enclose stays live ink. Do not white-clear the panel.
         const std::string &why = d.enclose.reason;
         const bool failedEncloseStayInk =
             why.find("not_primitive") != std::string::npos
             || why.find("too_small") != std::string::npos;
+        emitRecogChrome(0, {});
         if (failedEncloseStayInk) {
-            clearMembershipHighlight();
             m_rasterizeDeferredSharp = false;
             m_rasterizePending = false;
-            ++m_settleFollowUpToken;
-        } else {
-            if (!m_highlightInkIds.empty())
-                m_needEncloseRasterize = true;
-            clearMembershipHighlight();
         }
+        // [D01] ordinary Ink: skip document rasterize (live stamps are the settle).
     }
 }
 
@@ -818,36 +855,25 @@ qreal TabletCanvasItem::worldStrokeWidth(qreal pressure) const
 /** Queue soft/sharp vector refresh (defer if pen down). */
 void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
 {
-    // FullClear would wipe live ink / erase ghost and stall the GUI thread.
-    // Transform punch (suppressIds) must still run; erasePointerActive is eraser-only.
+    // [D02] No 180 ms follow-up FullClear. Camera still coalesces at 250 ms.
     if (epaper::render::deferFullDocumentRasterize(m_stroke.active, m_erasePointerActive)) {
         if (sharp)
             m_rasterizeDeferredSharp = true;
         else if (!m_rasterizeDeferredSharp)
-            m_rasterizePending = true; // soft after stroke ends
+            m_rasterizePending = true;
         return;
     }
 
     if (sharp)
         m_rasterizeSharp = true;
-    if (m_rasterizePending && !sharp) {
-        // Already scheduled; keep pending soft refresh (region already updated).
+    if (m_rasterizePending && !sharp)
         return;
-    }
     if (sharp) {
-        // Settle: one sharp redraw now. Optional light follow-up cancels if another
-        // settle/stroke arrives — no per-frame swapPen (that starved ink).
         m_rasterizePending = false;
         m_rasterizeDeferredSharp = false;
+        m_pendingInPlaceDirty = QRectF();
         rasterizeVectors(true);
         m_rasterizeSharp = false;
-        const int token = ++m_settleFollowUpToken;
-        QTimer::singleShot(int(kSettleFollowUpMs), this, [this, token]() {
-            if (token != m_settleFollowUpToken
-                || epaper::render::deferFullDocumentRasterize(m_stroke.active, m_erasePointerActive))
-                return;
-            rasterizeVectors(true);
-        });
         return;
     }
     m_rasterizePending = true;
@@ -859,12 +885,77 @@ void TabletCanvasItem::scheduleVectorRasterize(bool sharp)
         const bool doSharp = m_rasterizeSharp || m_rasterizeDeferredSharp;
         m_rasterizeSharp = false;
         m_rasterizeDeferredSharp = false;
-        rasterizeVectors(doSharp);
+        if (!m_pendingInPlaceDirty.isEmpty()) {
+            const QRectF dirty = m_pendingInPlaceDirty;
+            m_pendingInPlaceDirty = QRectF();
+            rasterizeVectors(doSharp, dirty);
+        } else {
+            rasterizeVectors(doSharp);
+        }
     });
 }
 
+/** [D05] InPlaceDirty of a panel AABB; FullClear wins if also requested. */
+void TabletCanvasItem::scheduleDirtyRasterize(const QRectF &panelDirty, bool sharp)
+{
+    m_consumeMutatedRasterize = true;
+    const QRectF padded = padRasterDirty(panelDirty);
+    if (epaper::render::deferFullDocumentRasterize(m_stroke.active, m_erasePointerActive)) {
+        m_pendingInPlaceDirty = m_pendingInPlaceDirty.isEmpty()
+            ? padded
+            : m_pendingInPlaceDirty.united(padded);
+        if (sharp)
+            m_rasterizeDeferredSharp = true;
+        else if (!m_rasterizeDeferredSharp)
+            m_rasterizePending = true;
+        return;
+    }
+    m_pendingInPlaceDirty = QRectF();
+    rasterizeVectors(sharp, padded);
+}
+
+QRectF TabletCanvasItem::padRasterDirty(const QRectF &panel) const
+{
+    const qreal pad = std::max(16.0, 8.0 * panelScale());
+    return panel.adjusted(-pad, -pad, pad, pad);
+}
+
+epaper::render::WorldAabb TabletCanvasItem::panelRectToWorldClip(const QRectF &panel) const
+{
+    const WorldPt a = panelToWorld(panel.topLeft());
+    const WorldPt b = panelToWorld(panel.topRight());
+    const WorldPt c = panelToWorld(panel.bottomLeft());
+    const WorldPt d = panelToWorld(panel.bottomRight());
+    epaper::render::WorldAabb w;
+    w.minX = std::min({a.x, b.x, c.x, d.x});
+    w.maxX = std::max({a.x, b.x, c.x, d.x});
+    w.minY = std::min({a.y, b.y, c.y, d.y});
+    w.maxY = std::max({a.y, b.y, c.y, d.y});
+    return w;
+}
+
+QRectF TabletCanvasItem::panelBoundOfNodeId(const std::string &id) const
+{
+    using namespace epaper::document;
+    const DocNode *n = m_session.document.find(id);
+    if (!n)
+        return {};
+    SmartBounds b;
+    if (!boundsOf(*n, b))
+        return {};
+    return worldBoundsToPanel(b);
+}
+
+void TabletCanvasItem::emitRecogChrome(int kind, const std::vector<std::string> &ids)
+{
+    QStringList list;
+    for (const auto &id : ids)
+        list.push_back(QString::fromStdString(id));
+    m_session.emitRecogChrome(kind, list);
+}
+
 /** Clear image and paint the local doc tree ∩ camera via DocumentRenderer. */
-void TabletCanvasItem::rasterizeVectors(bool sharp)
+void TabletCanvasItem::rasterizeVectors(bool sharp, const QRectF &panelDirty)
 {
     epaper::UiStallSection stall("rasterizeVectors");
     using epaper::document::refreshAllConnectorWarps;
@@ -883,20 +974,30 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
     epaper::render::FrameProjector proj;
     proj.frame = &m_session.frame;
 
+    const QRect img = m_image.rect();
+    QRectF dirty = panelDirty;
+    const double imgArea = double(img.width()) * double(img.height());
+    const bool useDirty = dirty.isValid() && !dirty.isEmpty()
+        && (dirty.width() * dirty.height() <= 0.5 * imgArea);
+
     epaper::render::RenderRequest req;
     req.sharp = sharp;
-    req.mode = epaper::render::RenderRequest::BufferMode::FullClear;
-    req.worldClip = proj.drawingWorldClip();
+    if (useDirty) {
+        // [D03] Tight worldClip + painter clip. FullClear if dirty is huge/empty.
+        req.mode = epaper::render::RenderRequest::BufferMode::InPlaceDirty;
+        dirty = padRasterDirty(dirty);
+        req.dirtyPanelX = dirty.x();
+        req.dirtyPanelY = dirty.y();
+        req.dirtyPanelW = dirty.width();
+        req.dirtyPanelH = dirty.height();
+        req.worldClip = epaper::render::intersectWorldAabb(
+            proj.drawingWorldClip(), panelRectToWorldClip(dirty));
+    } else {
+        req.mode = epaper::render::RenderRequest::BufferMode::FullClear;
+        req.worldClip = proj.drawingWorldClip();
+    }
     for (const auto &id : m_session.liveManipSuppressIds())
         req.suppressIds.insert(id);
-    if (m_blinkWidthMul > 1.0) {
-        for (const auto &id : m_blinkInkIds)
-            req.styles[id] = epaper::render::StyleOverride{double(m_blinkWidthMul)};
-    }
-    for (const auto &id : m_highlightInkIds) {
-        auto &st = req.styles[id];
-        st.widthMul = std::max(st.widthMul, 2.0);
-    }
 
     {
         epaper::inkpath::Span span("rasterize.render");
@@ -905,15 +1006,14 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
     }
 
     m_refreshClock.restart();
-    // Full-rect update. Pen-mode swap only when explicitly requested (RM_EP_SWAP) —
-    // unconditional swap after every settle starved the stroke path on device.
     {
         epaper::inkpath::Span span("rasterize.update");
-        update(m_image.rect());
+        update(useDirty ? dirty.toAlignedRect() : img);
     }
     if (sharp && qEnvironmentVariableIsSet("RM_EP_SWAP")) {
         if (auto *win = window()) {
-            const QRect scene = mapRectToScene(QRectF(m_image.rect())).toAlignedRect();
+            const QRect scene = mapRectToScene(QRectF(useDirty ? dirty : QRectF(img)))
+                                    .toAlignedRect();
             QObject::connect(
                 win,
                 &QQuickWindow::afterRendering,
@@ -927,7 +1027,7 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
         m_renderer.algorithm() ? m_renderer.algorithm()->lastVisitCount() : 0;
     qInfo() << "[sync] vector rasterize ink" << m_session.document.inkCount() << "nodes"
             << m_session.document.nodeCount() << "visits" << int(visits) << "sharp" << sharp
-            << "seq" << m_viewportSeq;
+            << "inplace" << useDirty << "seq" << m_viewportSeq;
 }
 
 /**
@@ -943,49 +1043,9 @@ void TabletCanvasItem::rasterizeVectors(bool sharp)
  * =================================================================================================
  * Recognizer feedback
  *
- * Temporary ink-width blink and membership highlight after enclose / join. Timers
- * self-expire via m_blinkToken so stale callbacks no-op.
+ * [D13] Blink / membership stamp live on ToolCanvas NodeEmphasis.
  * =================================================================================================
  */
-
-/** Pulse ink width for listed ink ids, then clear. */
-void TabletCanvasItem::beginRecogWidthBlink(const std::vector<std::string> &inkIds)
-{
-    if (inkIds.empty())
-        return;
-    ++m_blinkToken;
-    const int token = m_blinkToken;
-    m_blinkInkIds.clear();
-    for (const auto &id : inkIds)
-        m_blinkInkIds.insert(id);
-    m_blinkWidthMul = 2.0;
-    QTimer::singleShot(250, this, [this, token]() {
-        if (token != m_blinkToken)
-            return;
-        m_blinkInkIds.clear();
-        m_blinkWidthMul = 1.0;
-        if (!m_stroke.active)
-            rasterizeVectors(true);
-    });
-}
-
-/** Mark boundary inks for UI-EP-06 highlight. */
-bool TabletCanvasItem::setMembershipHighlight(const std::vector<std::string> &boundaryInkIds)
-{
-    std::unordered_set<std::string> next;
-    for (const auto &id : boundaryInkIds)
-        next.insert(id);
-    if (next == m_highlightInkIds)
-        return false;
-    m_highlightInkIds = std::move(next);
-    return true;
-}
-
-/** Clear membership highlight set. */
-void TabletCanvasItem::clearMembershipHighlight()
-{
-    m_highlightInkIds.clear();
-}
 
 /** Gather ink ids under a SmartGroup (boundary or all). */
 void TabletCanvasItem::collectSmartGroupInkIds(const epaper::document::DocNode &sg, bool boundaryOnly,

@@ -11,6 +11,7 @@
 #include "../operation.hpp"
 #include "../contexts/doc_context.hpp"
 #include "../contexts/tool_context.hpp"
+#include "../ui/node_emphasis.hpp"
 
 #include <QLatin1String>
 #include <QPainter>
@@ -38,7 +39,7 @@ public:
 
     void paintOverlay(QPainter *painter, HostCaps &caps, InputHub &hub) override
     {
-        (void)caps;
+        paintNodeEmphasis(painter, caps);
         if (Operation *locked = hub.lockedOperation()) {
             locked->paintOverlay(painter);
             return;

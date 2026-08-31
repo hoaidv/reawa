@@ -303,7 +303,20 @@ private:
                 << "inks" << int(m_caps->doc->document().inkCount())
                 << "reason" << QString::fromStdString(r.reason);
         if (r.applied && r.reason != "noop") {
-            m_caps->doc->noteDocumentMutated();
+            QRectF dirty;
+            if (m_caps->toolUi) {
+                for (const auto &pt : region.path) {
+                    const QPointF p = m_caps->toolUi->worldToPanel(pt.x, pt.y);
+                    const QRectF cell(p, p);
+                    dirty = dirty.isEmpty() ? cell : dirty.united(cell);
+                }
+                const qreal pad = region.radius * m_caps->toolUi->panelScale() + 16.0;
+                dirty.adjust(-pad, -pad, pad, pad);
+            }
+            if (dirty.isEmpty())
+                m_caps->doc->noteDocumentMutated();
+            else
+                m_caps->doc->noteDocumentDirty(dirty);
             m_caps->doc->notifyHistory();
             m_caps->doc->flushWire();
         }

@@ -39,6 +39,10 @@ public:
     {
         return m_undo.empty() ? nullptr : &m_undo.back();
     }
+    const UndoRingEntry *newestRedo() const
+    {
+        return m_redo.empty() ? nullptr : &m_redo.back();
+    }
 
     void clear()
     {

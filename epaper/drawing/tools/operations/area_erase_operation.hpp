@@ -128,7 +128,18 @@ private:
             r = commitAreaErase(m_caps->doc->document(), opId, std::move(world));
         }
         if (r.applied && r.reason != "noop") {
-            m_caps->doc->noteDocumentMutated();
+            QRectF dirty;
+            if (m_caps->toolUi) {
+                for (const auto &p : pts) {
+                    const QRectF cell(p, p);
+                    dirty = dirty.isEmpty() ? cell : dirty.united(cell);
+                }
+                dirty.adjust(-24, -24, 24, 24);
+            }
+            if (dirty.isEmpty())
+                m_caps->doc->noteDocumentMutated();
+            else
+                m_caps->doc->noteDocumentDirty(dirty);
             m_caps->doc->notifyHistory();
             m_caps->doc->flushWire();
         }

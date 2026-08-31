@@ -15,6 +15,7 @@
 #include "../contexts/tool_context.hpp"
 #include "../ui/selection_context_bar.hpp"
 #include "../ui/selection_overlay.hpp"
+#include "../ui/node_emphasis.hpp"
 
 #include <QLatin1String>
 #include <QPainter>
@@ -48,6 +49,7 @@ public:
 
     void paintOverlay(QPainter *painter, HostCaps &caps, InputHub &hub) override
     {
+        paintNodeEmphasis(painter, caps);
         if (!caps.selection || !caps.overlay)
             return;
         const SelectionPhase phase = caps.selection->phase();

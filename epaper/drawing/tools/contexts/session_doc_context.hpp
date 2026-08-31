@@ -60,6 +60,7 @@ public:
 
     void notifyHistory() override;
     void noteDocumentMutated() override;
+    void noteDocumentDirty(const QRectF &panelDirty) override;
     void flushWire() override;
     void clearLiveManipSuppressIds() override;
     void setLiveManipSuppressIds(const std::string &nodeId) override;
@@ -192,6 +193,14 @@ inline void SessionDocContext::notifyHistory()
 
 inline void SessionDocContext::noteDocumentMutated()
 {
+    if (m_session)
+        m_session->noteDocumentMutated();
+}
+
+inline void SessionDocContext::noteDocumentDirty(const QRectF &panelDirty)
+{
+    if (m_surface)
+        m_surface->scheduleDirtyRasterize(panelDirty, true);
     if (m_session)
         m_session->noteDocumentMutated();
 }
@@ -411,7 +420,16 @@ inline bool SessionDocContext::encloseSelection(const std::vector<std::string> &
     qInfo().noquote() << QString::fromStdString(line);
     if (m_surface)
         m_surface->setInteractionDebug(QString::fromStdString(line));
-    noteDocumentMutated();
+    QRectF dirty;
+    if (const DocNode *sg = document().find(r.smartGroupId)) {
+        SmartBounds b;
+        if (boundsOf(*sg, b) && m_surface)
+            dirty = worldBoundsToPanel(b);
+    }
+    if (dirty.isEmpty())
+        noteDocumentMutated();
+    else
+        noteDocumentDirty(dirty);
     notifyHistory();
     flushWire();
     return true;
@@ -429,7 +447,16 @@ inline void SessionDocContext::toggleInkScaleMode(const std::string &nodeId)
     edit.setId(std::string("ism-") + std::to_string(++seq));
     edit.setOldMode(selected->inkScaleMode);
     document().commitEdit(edit);
-    noteDocumentMutated();
+    QRectF dirty;
+    if (const DocNode *n = document().find(nodeId)) {
+        SmartBounds b;
+        if (boundsOf(*n, b) && m_surface)
+            dirty = worldBoundsToPanel(b);
+    }
+    if (dirty.isEmpty())
+        noteDocumentMutated();
+    else
+        noteDocumentDirty(dirty);
     notifyHistory();
     flushWire();
 }

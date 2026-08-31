@@ -74,6 +74,7 @@ Copy, Paste. Cut/Copy/Paste chrome exists; clipboard wiring may still be incompl
 | `ToolContext` | `contexts/tool_context.hpp` | Host ports (damage, waveform, panel↔world, `refreshChrome`) |
 | `ToolContextImpl` | `contexts/tool_context_impl.*` | Adapter: forwards paint / sync / refresh to the active Mode. Owns overlay dirty-union. Zero exclusive-id compares. |
 | `SelectionOverlay` | `ui/selection_overlay.*` | Host-owned selection ToolCanvasLayer (settled AABB, knobs, live fill, hits). Not a member of `ToolContextImpl`. |
+| `NodeEmphasis` | `ui/node_emphasis.*` | Host-owned ToolCanvas emphasis: blink, stroke-stamp (Bold/Dotted), AABB highlight. Painted by every Mode. [CHL-0030](../../../.plan/iter-005/challenges/CHL-0030-node-emphasis.md). |
 
 Phases: Idle → Selecting → Selected → Transforming.
 
@@ -83,7 +84,7 @@ Phases: Idle → Selecting → Selected → Transforming.
 |---|---|---|---|
 | Selection | Idle: nothing. Selecting: locked Lasso/Marquee. Selected: `paintSettled`. Transforming: locked Move/Resize then `paintLiveManip`. | Overlay always on. Pen while Selecting, or Idle `sel_freeform`. Mono when Selected/Transforming. | Overlay refresh with knobs iff Selected; bar; emit; `publishOverlayHits`; sync; damage |
 | Eraser | Locked op, else exclusive-armed op (`match`). Brush idle = hover circle. | Overlay on. Pen while `erase_*`. | `syncOverlay` only |
-| Ink | Transforming only: locked Move then `paintLiveManip`. | Visible only while Transforming (Mono). | Overlay refresh without knobs; Transforming live dirty; sync; damage |
+| Ink | Transforming: locked Move then `paintLiveManip`. Always `paintNodeEmphasis`. | Visible while Transforming **or** NodeEmphasis active (Mono). | Overlay refresh without knobs; Transforming live dirty; emphasis dirty; sync; damage |
 
 Operations still **tell** `setStrokeWaveform` at gesture down/up. Mode restores idle Pen after up (e.g. empty freeform). Hover is `StylusHoverSink` (enter/move/leave); hub demuxes without taking the lock.
 
@@ -102,7 +103,7 @@ epaper/drawing/tools/
   operation.hpp         OperationKind, OperationDescriptor, Operation
   mode.hpp              ModeId, InteractionMode (paintOverlay / syncOverlay / refreshChrome)
   input_hub.hpp/.cpp    Router: match/lock/feed, hover cycle, interventions, device map
-  host_caps.hpp         ports: ink, doc, toolUi, selection, overlay, bar, emitChromeChanged
+  host_caps.hpp         ports: ink, doc, toolUi, selection, overlay, bar, emphasis, emitChromeChanged
   interventions.hpp     PenProximity, PenDown, SecondContact
   ink_sink.hpp / tablet_ink_sink.hpp
   viewport.hpp
@@ -112,7 +113,7 @@ epaper/drawing/tools/
   actions/              enclose, ink_scale, cut, copy, paste
   modifiers/            tool_modifier, secondary_device, ink_box_recognizer, connector_recognizer
   contexts/             doc, session_doc, selection, tool, tool_context_impl
-  ui/                   SelectionContextToolbar.qml, selection_overlay, selection_context_bar,
+  ui/                   SelectionContextToolbar.qml, selection_overlay, node_emphasis, selection_context_bar,
                         action_list_model
 ```
 

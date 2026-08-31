@@ -19,6 +19,7 @@
 
 #include <QDebug>
 #include <QPainter>
+#include <QStringList>
 
 /**
  * ToolCanvasItem — Qt entry; InputHub owns match/lock/feed (ADR-0033).
@@ -82,6 +83,8 @@ void ToolCanvasItem::setSession(CanvasSession *session)
         disconnect(m_camConn);
     if (m_toolConn)
         disconnect(m_toolConn);
+    if (m_recogConn)
+        disconnect(m_recogConn);
     m_session = session;
     if (m_session) {
         m_docConn = connect(m_session, &CanvasSession::documentMutated, this, [this] {
@@ -98,12 +101,28 @@ void ToolCanvasItem::setSession(CanvasSession *session)
         });
         m_toolConn = connect(m_session, &CanvasSession::exclusiveToolChanged, this, [this]() {
             m_hub.dispatchHoverLeave();
+            m_emphasis.clearStrokeStamp(m_hub.hostCaps());
+            m_emphasis.hideAllAabbs(m_hub.hostCaps());
             syncActiveMode();
             if (m_toolCtx)
                 m_toolCtx->syncOverlayPresence();
             if (m_toolCtx)
                 m_toolCtx->refreshChrome();
         });
+        m_recogConn = connect(m_session, &CanvasSession::recogChrome, this,
+            [this](int kind, const QStringList &ids) {
+                std::vector<std::string> v;
+                v.reserve(size_t(ids.size()));
+                for (const auto &s : ids)
+                    v.push_back(s.toStdString());
+                epaper::tools::HostCaps &caps = m_hub.hostCaps();
+                if (kind == 0)
+                    m_emphasis.clearStrokeStamp(caps);
+                else if (kind == 1 || kind == 2)
+                    m_emphasis.blink(caps, v);
+                else if (kind == 3)
+                    m_emphasis.setStrokeStamp(caps, v, epaper::tools::StrokeStamp::Bold);
+            });
     }
     syncToolHost();
     syncActiveMode();
@@ -126,6 +145,7 @@ void ToolCanvasItem::syncToolHost()
     m_toolCtx->setRepaint([this](const QRectF &r) { update(r.toAlignedRect()); });
     m_toolCtx->setSetVisible([this](bool on) { setVisible(on); });
     m_toolCtx->setSetStrokeWaveform([this](bool w) { setStrokeWaveform(w); });
+    m_emphasis.setTimerHost(this);
 
     m_inkSink = std::make_unique<epaper::tools::TabletInkSink>(m_surface);
     epaper::tools::HostCaps caps;
@@ -135,6 +155,7 @@ void ToolCanvasItem::syncToolHost()
     caps.selection = &m_selCtx;
     caps.overlay = &m_overlay;
     caps.bar = &m_selBar;
+    caps.emphasis = &m_emphasis;
     caps.emitChromeChanged = [this]() { emit selectionChromeChanged(); };
     caps.setExclusiveTool = [this](const QString &id) {
         if (m_surface)

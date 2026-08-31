@@ -19,6 +19,7 @@ class ToolContext;
 class SelectionContext;
 class SelectionOverlay;
 class SelectionContextBar;
+class NodeEmphasis;
 
 struct HostCaps {
     InkSink *ink = nullptr;
@@ -27,6 +28,7 @@ struct HostCaps {
     SelectionContext *selection = nullptr;
     SelectionOverlay *overlay = nullptr;
     SelectionContextBar *bar = nullptr;
+    NodeEmphasis *emphasis = nullptr;
     std::function<void()> emitChromeChanged;
     /** Switch primary exclusive tool id (e.g. sel_freeform). Empty = unsupported. */
     std::function<void(const QString &exclusiveToolId)> setExclusiveTool;

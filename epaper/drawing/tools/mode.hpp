@@ -7,6 +7,7 @@
 
 #include "host_caps.hpp"
 #include "operation.hpp"
+#include "ui/node_emphasis.hpp"
 
 #include <vector>
 
@@ -70,6 +71,13 @@ public:
     {
         (void)caps;
         (void)hub;
+    }
+
+    /** [D13] Every Mode paints NodeEmphasis (under in-flight Operation overlay). */
+    void paintNodeEmphasis(QPainter *painter, HostCaps &caps)
+    {
+        if (caps.emphasis)
+            caps.emphasis->paint(painter, caps);
     }
 };
 

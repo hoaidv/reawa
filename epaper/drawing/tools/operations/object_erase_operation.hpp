@@ -393,6 +393,9 @@ private:
     {
         using namespace epaper::document;
         std::vector<ErasePt> world = worldPoly();
+        QRectF dirty;
+        for (const QRectF &r : m_hitPanelRects)
+            dirty = dirty.isEmpty() ? r : dirty.united(r);
         m_hitTimer.stop();
         bumpEpoch();
         m_pts.clear();
@@ -412,7 +415,10 @@ private:
             r = commitObjectErase(m_caps->doc->document(), opId, std::move(world));
         }
         if (r.applied && r.reason != "noop") {
-            m_caps->doc->noteDocumentMutated();
+            if (dirty.isEmpty())
+                m_caps->doc->noteDocumentMutated();
+            else
+                m_caps->doc->noteDocumentDirty(dirty);
             m_caps->doc->notifyHistory();
             m_caps->doc->flushWire();
         }

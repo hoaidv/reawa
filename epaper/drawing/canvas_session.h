@@ -12,6 +12,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 
 #include <string>
 #include <unordered_set>
@@ -53,6 +54,8 @@ public:
 
     void applyCamera(const epaper::handtouch::WorldAabb &region, bool markValid);
     void noteDocumentMutated();
+    /** [D13] Recog chrome hint for ToolCanvas NodeEmphasis — not a document rasterize. */
+    void emitRecogChrome(int kind, const QStringList &ids);
     /** Emit cameraChanged when frame was mutated outside applyCamera (e.g. applyFrameIntent). */
     void noteCameraChanged();
     void setFollowDirection(const QString &id);
@@ -71,6 +74,8 @@ signals:
     void recogChanged();
     void cameraChanged();
     void documentMutated();
+    /** kind: 0 clear stamp, 1 enclose blink, 2 connector blink, 3 membership bold. */
+    void recogChrome(int kind, const QStringList &ids);
     void followChanged();
     void eraseBrushHoverChanged();
 

@@ -259,14 +259,20 @@ private:
  * =================================================================================================
  * Rasterize scheduling and document tree paint
  * 
- * Cycle: scheduleVectorRasterize → rasterizeVectors → DocumentRenderer
+ * Cycle: scheduleVectorRasterize / scheduleDirtyRasterize → rasterizeVectors → DocumentRenderer
  * =================================================================================================
  */
 
 private:
 
     void scheduleVectorRasterize(bool sharp);
-    void rasterizeVectors(bool sharp);
+    void rasterizeVectors(bool sharp, const QRectF &panelDirty = QRectF());
+    QRectF padRasterDirty(const QRectF &panel) const;
+    epaper::render::WorldAabb panelRectToWorldClip(const QRectF &panel) const;
+    QRectF panelBoundOfNodeId(const std::string &id) const;
+    void emitRecogChrome(int kind, const std::vector<std::string> &ids);
+    void collectSmartGroupInkIds(const epaper::document::DocNode &sg, bool boundaryOnly,
+        std::vector<std::string> *out) const;
 
     bool m_rasterizePending = false;
     bool m_rasterizeSharp = false;
@@ -275,13 +281,14 @@ private:
     /** Erase primary down — defer FullClear so the ghost is not wiped. Not set
      *  for move/resize: those need an immediate rasterize with suppressIds. */
     bool m_erasePointerActive = false;
-    int m_settleFollowUpToken = 0;
+    /** [D05] documentMutated after noteDocumentDirty must not FullClear. */
+    bool m_consumeMutatedRasterize = false;
+    QRectF m_pendingInPlaceDirty;
+    QRectF m_encloseDirtyPanel;
     epaper::render::DocumentRenderer m_renderer;
 
     QElapsedTimer m_refreshClock;
     static constexpr qint64 kRefreshMinIntervalMs = 250;
-    /** Single deferred settle pass — keep light; avoid swap storms. */
-    static constexpr qint64 kSettleFollowUpMs = 180;
     
 /**
  * =================================================================================================
@@ -293,27 +300,9 @@ private:
  * =================================================================================================
  * Recognizer feedback
  *
- * Cycles: 
- *      beginRecogWidthBlink (self-expiring via m_blinkToken guard in its timer lambda); 
- *      setMembershipHighlight ↔ clearMembershipHighlight
+ * Recognizer feedback is ToolCanvas NodeEmphasis (CHL-0030). Tablet only emits ids.
  * =================================================================================================
  */
-
-private:
-
-    void beginRecogWidthBlink(const std::vector<std::string> &inkIds);
-    /** Returns true when the highlighted boundary set changed. */
-    bool setMembershipHighlight(const std::vector<std::string> &boundaryInkIds);
-    void clearMembershipHighlight();
-    void collectSmartGroupInkIds(const epaper::document::DocNode &sg, bool boundaryOnly,
-        std::vector<std::string> *out) const;
-
-    
-    /** @implements [SRS-EP-12] UI-EP-06 enclose pulse + last-join highlight (CHL-0020) */
-    std::unordered_set<std::string> m_blinkInkIds;
-    qreal m_blinkWidthMul = 1.0;
-    int m_blinkToken = 0;
-    std::unordered_set<std::string> m_highlightInkIds;
 
 /**
  * =================================================================================================
@@ -373,6 +362,7 @@ public:
     void cancelActiveStroke();
 
     void scheduleDocumentRasterize(bool sharp);
+    void scheduleDirtyRasterize(const QRectF &panelDirty, bool sharp);
     void publishManipPreview(const std::string &nodeId,
                              const epaper::document::SmartTransform &liveT,
                              const epaper::document::SmartBounds *liveB);

@@ -9,6 +9,8 @@
 #include "document/manipulate.hpp"
 
 #include <QString>
+#include <QRectF>
+#include <QStringList>
 
 #include <string>
 #include <vector>
@@ -37,6 +39,7 @@ public:
 
     virtual void notifyHistory() = 0;
     virtual void noteDocumentMutated() = 0;
+    virtual void noteDocumentDirty(const QRectF &panelDirty) = 0;
     virtual void flushWire() = 0;
     virtual void clearLiveManipSuppressIds() = 0;
     virtual void setLiveManipSuppressIds(const std::string &nodeId) = 0;

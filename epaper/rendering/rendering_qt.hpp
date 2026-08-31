@@ -32,12 +32,16 @@ public:
     {
         if (!m_image)
             return;
+        m_painter.setClipping(false);
         m_painter.fillRect(m_image->rect(), Qt::white);
     }
 
     void clearRect(double x, double y, double w, double h) override
     {
-        m_painter.fillRect(QRectF(x, y, w, h), Qt::white);
+        // [D03] Clip so overlapping polylines cannot overpaint outside the dirty halo.
+        const QRectF r(x, y, w, h);
+        m_painter.setClipRect(r);
+        m_painter.fillRect(r, Qt::white);
     }
 
     void drawPolyline(const PanelPolyline &poly) override

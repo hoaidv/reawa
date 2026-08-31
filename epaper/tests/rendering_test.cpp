@@ -28,11 +28,13 @@ static int g_fails = 0;
 
 struct RecordingSink : IPixelSink {
     int polylineCount = 0;
+    int clearFullCount = 0;
+    int clearRectCount = 0;
     std::vector<double> widths;
 
     void begin(bool) override {}
-    void clearFull() override {}
-    void clearRect(double, double, double, double) override {}
+    void clearFull() override { ++clearFullCount; }
+    void clearRect(double, double, double, double) override { ++clearRectCount; }
     void drawPolyline(const PanelPolyline &poly) override
     {
         if (poly.pts.size() < 2)
@@ -292,6 +294,41 @@ static void test_suppress_and_style()
     CHECK(sink.widths[0] > 2.0); // widthMul applied
 }
 
+static void test_inplace_dirty_clearRect_and_tight_clip()
+{
+    DeviceDocument doc;
+    doc.rootChildren.push_back(makeFreeInk("near", 10, 10, 20, 20));
+    doc.rootChildren.push_back(makeFreeInk("far", 8000, 8000, 8010, 8010));
+
+    CanvasFrame frame;
+    frame.setPanelSize(1404, 1872);
+    frame.applyDrawingRegion({0, 0, 10000, 10000}, true);
+    FrameProjector proj;
+    proj.frame = &frame;
+
+    RenderRequest req;
+    req.sharp = true;
+    req.mode = RenderRequest::BufferMode::InPlaceDirty;
+    req.dirtyPanelX = 0;
+    req.dirtyPanelY = 0;
+    req.dirtyPanelW = 50;
+    req.dirtyPanelH = 50;
+    WorldAabb dirtyWorld;
+    dirtyWorld.minX = 0;
+    dirtyWorld.minY = 0;
+    dirtyWorld.maxX = 50;
+    dirtyWorld.maxY = 50;
+    req.worldClip = intersectWorldAabb(proj.drawingWorldClip(), dirtyWorld);
+
+    RecordingSink sink;
+    DocumentRenderer renderer;
+    renderer.setAlgorithm(std::make_unique<HierarchyCullAlgorithm>());
+    renderer.render(doc, proj, req, sink);
+    CHECK(sink.clearFullCount == 0);
+    CHECK(sink.clearRectCount == 1);
+    CHECK(sink.polylineCount == 1);
+}
+
 int main()
 {
     test_full_clip_same_polylines();
@@ -301,6 +338,7 @@ int main()
     test_renderSubtree_sg_and_connector();
     test_collectManipSuppressIds();
     test_suppress_and_style();
+    test_inplace_dirty_clearRect_and_tight_clip();
     if (g_fails) {
         std::cerr << "rendering_test: " << g_fails << " failure(s)\n";
         return 1;
