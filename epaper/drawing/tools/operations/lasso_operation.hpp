@@ -7,7 +7,12 @@
 
 #include "../host_caps.hpp"
 #include "../operation.hpp"
+#include "../contexts/doc_context.hpp"
+#include "../contexts/tool_context.hpp"
+#include "../ui/selection_overlay.hpp"
 #include "document/surround_create.hpp"
+
+#include <QLatin1String>
 
 #include <QPainter>
 #include <QPainterPath>
@@ -44,9 +49,9 @@ public:
         (void)s;
         if (channel != StrategyKind::RawPointer)
             return false;
-        if (!m_caps || !m_caps->toolUi)
+        if (!m_caps || !m_caps->doc)
             return false;
-        return m_caps->toolUi->exclusiveTool() == QLatin1String("sel_freeform");
+        return m_caps->doc->exclusiveTool() == QLatin1String("sel_freeform");
     }
 
     void onDown(const PointerSample &s) override
@@ -57,8 +62,10 @@ public:
         m_pts.clear();
         m_pts.push_back(s.panel);
         m_caps->selection->setPhase(SelectionPhase::Selecting);
-        m_caps->toolUi->resetTransientChromeFlags();
-        m_caps->toolUi->emitChromeChanged();
+        if (m_caps->overlay)
+            m_caps->overlay->resetTransientFlags();
+        if (m_caps->emitChromeChanged)
+            m_caps->emitChromeChanged();
         m_caps->toolUi->syncOverlayPresence();
         m_caps->toolUi->setStrokeWaveform(true);
         m_caps->toolUi->damageChrome(QRectF(s.panel, s.panel).adjusted(-12, -12, 12, 12));
@@ -90,7 +97,7 @@ public:
         m_caps->selection->setPhase(m_caps->selection->ids().empty() ? SelectionPhase::Idle
                                                                      : SelectionPhase::Selected);
         m_caps->toolUi->setStrokeWaveform(false);
-        m_caps->toolUi->requestChromeRefresh();
+        m_caps->toolUi->refreshChrome();
     }
 
     void paintOverlay(QPainter *painter) override
@@ -141,9 +148,10 @@ private:
         if (gestureSize < kMinGesture) {
             m_caps->selection->clear();
             m_caps->selection->setPhase(SelectionPhase::Idle);
-            m_caps->toolUi->setInteractionDebug("sel=0 (tap)");
+            if (m_caps->doc)
+                m_caps->doc->setInteractionDebug("sel=0 (tap)");
             m_pts.clear();
-            m_caps->toolUi->requestChromeRefresh();
+            m_caps->toolUi->refreshChrome();
             return;
         }
         std::vector<epaper::document::InkSample> poly;
@@ -163,9 +171,10 @@ private:
                                         : ("sel=" + std::to_string(hit.size()));
         for (const auto &id : hit)
             debug += " " + id;
-        m_caps->toolUi->setInteractionDebug(debug);
+        if (m_caps->doc)
+            m_caps->doc->setInteractionDebug(debug);
         m_pts.clear();
-        m_caps->toolUi->requestChromeRefresh();
+        m_caps->toolUi->refreshChrome();
     }
 
     HostCaps *m_caps = nullptr;

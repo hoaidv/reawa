@@ -1,19 +1,32 @@
-#include "tool_chrome.hpp"
+#include "selection_overlay.hpp"
 
+#include "../contexts/tool_context.hpp"
+#include "../input_hub.hpp"
 #include "document/capability.hpp"
 #include "document/hand_touch.hpp"
 #include "document/manipulate.hpp"
-#include "input_hub.hpp"
 #include "rendering/rendering.hpp"
 #include "rendering/rendering_qt.hpp"
+#include "selection_context_bar.hpp"
 
 #include <QPainter>
 #include <QtMath>
+#include <algorithm>
+#include <cstdint>
 
 namespace epaper {
 namespace tools {
 
-void ToolChrome::refresh(SelectionContext &selection, SessionDocContext &doc, bool isSelectionTool)
+namespace {
+
+SessionDocContext *sessionDoc(HostCaps &caps)
+{
+    return dynamic_cast<SessionDocContext *>(caps.doc);
+}
+
+} // namespace
+
+void SelectionOverlay::refresh(SelectionContext &selection, SessionDocContext &doc, bool showKnobs)
 {
     using namespace epaper::document;
     m_state.encloseRefuseReason.clear();
@@ -27,7 +40,6 @@ void ToolChrome::refresh(SelectionContext &selection, SessionDocContext &doc, bo
         bounds = QRectF(tl, br).normalized();
     }
     const bool stroke = selection.phase() == SelectionPhase::Selecting;
-    const bool transforming = selection.phase() == SelectionPhase::Transforming;
     QRectF dirty = bounds;
     if (!bounds.isEmpty() && !stroke)
         dirty = bounds.adjusted(-12, -12, 12, 120);
@@ -38,7 +50,7 @@ void ToolChrome::refresh(SelectionContext &selection, SessionDocContext &doc, bo
     m_state.liveDirtyPrev = QRectF();
     m_state.handleCount = 0;
     m_state.handleSize = 16.0;
-    if (isSelectionTool && !ids.empty() && !bounds.isEmpty() && !stroke && !transforming) {
+    if (showKnobs && !ids.empty() && !bounds.isEmpty()) {
         const DocNode *one = ids.size() == 1 ? doc.document().find(ids[0]) : nullptr;
         const bool manipChrome = one && descriptorFor(one->kind).has(Verb::Resize);
         m_state.handleCount = manipChrome ? 8 : 6;
@@ -46,68 +58,62 @@ void ToolChrome::refresh(SelectionContext &selection, SessionDocContext &doc, bo
     }
 }
 
-void ToolChrome::damage(const QRectF &next, const std::function<void(const QRectF &)> &repaint)
+void SelectionOverlay::paintLiveManip(QPainter *painter, HostCaps &caps)
 {
-    const QRectF u = m_toolChromePrev.isNull() ? next : m_toolChromePrev.united(next);
-    m_toolChromePrev = next;
-    if (u.isEmpty() || !repaint)
+    SessionDocContext *sess = sessionDoc(caps);
+    if (!painter || !caps.selection || !sess)
         return;
-    repaint(u.toAlignedRect().adjusted(-8, -8, 8, 8));
+    paintLiveManip(painter, *caps.selection, *sess);
 }
 
-void ToolChrome::damageSegment(const QRectF &seg,
-                               const std::function<void(const QRectF &)> &repaint)
+void SelectionOverlay::paintSettled(QPainter *painter, HostCaps &caps)
 {
-    m_toolChromePrev = m_toolChromePrev.united(seg);
-    if (seg.isEmpty() || !repaint)
+    SessionDocContext *sess = sessionDoc(caps);
+    if (!painter || !caps.selection || !sess)
         return;
-    repaint(seg.toAlignedRect());
+    paintSettled(painter, *caps.selection, *sess);
 }
 
-void ToolChrome::paint(QPainter *painter, SelectionContext &selection, SessionDocContext &doc,
-                       bool isSelectionTool)
+void SelectionOverlay::paintLiveManip(QPainter *painter, SelectionContext &selection,
+                                      SessionDocContext &doc)
 {
-    if (!isSelectionTool && selection.phase() != SelectionPhase::Transforming)
-        return;
-
     painter->save();
     painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
 
-    if (selection.phase() == SelectionPhase::Transforming) {
-        using namespace epaper::document;
-        const std::string &id = selection.pickableId();
-        const DocNode *n = doc.document().find(id);
-        if (n) {
-            epaper::render::FrameProjector proj;
-            proj.frame = &doc.frame();
-            epaper::render::RenderRequest req;
-            req.sharp = true;
-            epaper::render::DocumentRenderer renderer;
-            epaper::render::QPainterPixelSink sink(painter);
-            renderer.renderSubtree(doc.document(), proj, req, id, sink);
+    using namespace epaper::document;
+    const std::string &id = selection.pickableId();
+    const DocNode *n = doc.document().find(id);
+    if (n) {
+        epaper::render::FrameProjector proj;
+        proj.frame = &doc.frame();
+        epaper::render::RenderRequest req;
+        req.sharp = true;
+        epaper::render::DocumentRenderer renderer;
+        epaper::render::QPainterPixelSink sink(painter);
+        renderer.renderSubtree(doc.document(), proj, req, id, sink);
 
-            SmartBounds wb;
-            if (boundsOf(*n, wb)) {
-                const QRectF r =
-                    QRectF(doc.worldToPanel(wb.x, wb.y),
-                           doc.worldToPanel(wb.x + wb.width, wb.y + wb.height))
-                        .normalized();
-                QPen dotted(Qt::black);
-                dotted.setWidthF(3.0);
-                dotted.setStyle(Qt::DotLine);
-                painter->setBrush(Qt::NoBrush);
-                painter->setPen(dotted);
-                painter->drawRect(r);
-            }
+        SmartBounds wb;
+        if (boundsOf(*n, wb)) {
+            const QRectF r =
+                QRectF(doc.worldToPanel(wb.x, wb.y),
+                       doc.worldToPanel(wb.x + wb.width, wb.y + wb.height))
+                    .normalized();
+            QPen dotted(Qt::black);
+            dotted.setWidthF(3.0);
+            dotted.setStyle(Qt::DotLine);
+            painter->setBrush(Qt::NoBrush);
+            painter->setPen(dotted);
+            painter->drawRect(r);
         }
-        painter->restore();
-        return;
     }
+    painter->restore();
+}
 
-    if (selection.phase() == SelectionPhase::Selecting) {
-        painter->restore();
-        return;
-    }
+void SelectionOverlay::paintSettled(QPainter *painter, SelectionContext &selection,
+                                    SessionDocContext &doc)
+{
+    painter->save();
+    painter->setCompositionMode(QPainter::CompositionMode_SourceOver);
 
     QPen dotted(Qt::black);
     dotted.setWidthF(3.0);
@@ -142,9 +148,9 @@ void ToolChrome::paint(QPainter *painter, SelectionContext &selection, SessionDo
     painter->restore();
 }
 
-void ToolChrome::redrawLiveManip(SelectionContext &selection, SessionDocContext &doc, bool resizing,
-                                 const std::function<void(const QRectF &)> &repaint,
-                                 const std::function<void()> &emitChanged)
+void SelectionOverlay::redrawLiveManip(SelectionContext &selection, SessionDocContext &doc,
+                                       bool resizing, const std::function<void(const QRectF &)> &repaint,
+                                       const std::function<void()> &emitChanged)
 {
     using namespace epaper::document;
     (void)resizing;
@@ -171,10 +177,25 @@ void ToolChrome::redrawLiveManip(SelectionContext &selection, SessionDocContext 
     m_state.handleCount = 0;
     if (emitChanged)
         emitChanged();
-    damage(toolDirty, repaint);
+    if (repaint && !toolDirty.isEmpty())
+        repaint(toolDirty);
 }
 
-void ToolChrome::publishOverlayHits(InputHub &hub) const
+void SelectionOverlay::redrawLiveManip(HostCaps &caps, bool resizing)
+{
+    SessionDocContext *sess = sessionDoc(caps);
+    if (!caps.selection || !sess)
+        return;
+    auto damage = [&](const QRectF &r) {
+        if (caps.toolUi)
+            caps.toolUi->damageChrome(r);
+    };
+    redrawLiveManip(*caps.selection, *sess, resizing, damage, caps.emitChromeChanged);
+    if (caps.toolUi)
+        caps.toolUi->syncOverlayPresence();
+}
+
+void SelectionOverlay::publishOverlayHits(InputHub &hub) const
 {
     hub.clearHitRegions();
     if (m_state.handleCount != 8)
@@ -203,10 +224,10 @@ void ToolChrome::publishOverlayHits(InputHub &hub) const
     }
 }
 
-void ToolChrome::showManipUnavailable(const epaper::document::SmartBounds &wb,
-                                      SessionDocContext &doc, qreal hostWidth, qreal hostHeight,
-                                      const std::function<void(const QRectF &)> &repaint,
-                                      const std::function<void()> &emitChanged)
+void SelectionOverlay::showManipUnavailable(const epaper::document::SmartBounds &wb,
+                                            SessionDocContext &doc, qreal hostWidth, qreal hostHeight,
+                                            const std::function<void(const QRectF &)> &repaint,
+                                            const std::function<void()> &emitChanged)
 {
     m_state.manipUnavailable = QStringLiteral("Too far out to move");
     const QRectF box = doc.worldBoundsToPanel(wb);
@@ -220,12 +241,44 @@ void ToolChrome::showManipUnavailable(const epaper::document::SmartBounds &wb,
     m_state.manipUnavailableRect = QRectF(x, y, kW, kH);
     if (emitChanged)
         emitChanged();
-    damage(m_state.manipUnavailableRect, repaint);
+    if (repaint && !m_state.manipUnavailableRect.isEmpty())
+        repaint(m_state.manipUnavailableRect);
 }
 
-void ToolChrome::resetTransientFlags()
+void SelectionOverlay::showManipUnavailable(HostCaps &caps,
+                                            const epaper::document::SmartBounds &wb)
+{
+    SessionDocContext *sess = sessionDoc(caps);
+    if (!sess || !caps.toolUi)
+        return;
+    const QSizeF host = caps.toolUi->hostSize();
+    auto damage = [&](const QRectF &r) {
+        caps.toolUi->damageChrome(r);
+    };
+    showManipUnavailable(wb, *sess, host.width(), host.height(), damage, caps.emitChromeChanged);
+}
+
+void SelectionOverlay::setRefuseReason(HostCaps &caps, const QString &reason)
+{
+    m_state.encloseRefuseReason = reason;
+    if (caps.bar)
+        caps.bar->refresh(caps, m_state);
+    if (caps.emitChromeChanged)
+        caps.emitChromeChanged();
+    if (caps.toolUi)
+        caps.toolUi->damageChrome(m_state.selectionChromeDirty);
+}
+
+void SelectionOverlay::resetTransientFlags()
 {
     m_state.handleCount = 0;
+}
+
+void SelectionOverlay::clearManipUnavailable()
+{
+    m_state.encloseRefuseReason.clear();
+    m_state.manipUnavailable.clear();
+    m_state.manipUnavailableRect = QRectF();
 }
 
 } // namespace tools

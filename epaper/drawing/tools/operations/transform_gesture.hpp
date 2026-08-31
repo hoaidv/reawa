@@ -11,7 +11,10 @@
 #include "document/manipulate.hpp"
 #include "document/operations/set_smart_transform_edit.hpp"
 #include "../host_caps.hpp"
+#include "../contexts/doc_context.hpp"
 #include "../contexts/selection_context.hpp"
+#include "../contexts/tool_context.hpp"
+#include "../ui/selection_overlay.hpp"
 
 #include <QElapsedTimer>
 #include <QRectF>
@@ -37,18 +40,21 @@ public:
         caps->selection->setPhase(SelectionPhase::Transforming);
         m_live.begin(subject->id, handle, world, subject->transform, subject->smartBounds);
         m_ghost.invalidate();
-        epaper::document::SmartBounds originWorld;
-        if (epaper::document::boundsOf(*subject, originWorld))
-            caps->toolUi->setOriginPanelRect(
-                caps->toolUi->worldBoundsToPanel(originWorld).adjusted(-8, -8, 8, 8));
-        else
-            caps->toolUi->clearOriginPanelRect();
+        if (caps->overlay) {
+            epaper::document::SmartBounds originWorld;
+            if (epaper::document::boundsOf(*subject, originWorld))
+                caps->overlay->setOriginPanelRect(
+                    caps->toolUi->worldBoundsToPanel(originWorld).adjusted(-8, -8, 8, 8));
+            else
+                caps->overlay->clearOriginPanelRect();
+        }
         caps->doc->setLiveManipSuppressIds(subject->id);
         caps->doc->beginGesture();
         caps->doc->refreshAllConnectorWarps();
         caps->doc->noteDocumentMutated();
-        caps->toolUi->requestChromeRefresh();
-        caps->toolUi->redrawLiveManip(m_live.resizing());
+        caps->toolUi->refreshChrome();
+        if (caps->overlay)
+            caps->overlay->redrawLiveManip(*caps, m_live.resizing());
         m_didMutate = true;
     }
 
@@ -64,9 +70,16 @@ public:
         caps->doc->applyLiveSmartGeometry(m_live.nodeId, m_live.liveT, m_live.liveB);
         caps->doc->refreshConnectorsBoundTo(m_live.nodeId);
         caps->doc->previewManipulationFrame();
-        caps->toolUi->redrawLiveManip(m_live.resizing());
-        if (previewDue) {
-            caps->toolUi->sendManipPreview(m_live.resizing());
+        if (caps->overlay)
+            caps->overlay->redrawLiveManip(*caps, m_live.resizing());
+        if (previewDue && caps->selection) {
+            const auto &id = caps->selection->pickableId();
+            const epaper::document::DocNode *cur = caps->doc->document().find(id);
+            if (cur) {
+                const epaper::document::SmartBounds *bptr =
+                    m_live.resizing() ? &cur->smartBounds : nullptr;
+                caps->doc->publishManipPreview(cur->id, cur->transform, bptr);
+            }
             m_ghost.restart();
         }
     }
@@ -86,7 +99,7 @@ public:
             caps->doc->abortGesture();
             caps->doc->clearLiveManipSuppressIds();
             caps->doc->noteDocumentMutated();
-            caps->toolUi->requestChromeRefresh();
+            caps->toolUi->refreshChrome();
             caps->doc->notifyHistory();
         } else {
             // MoveOperation and ResizeOperation each own a TransformGesture.
@@ -98,11 +111,12 @@ public:
             epaper::document::SetSmartTransformEdit edit(
                 opId, id, originT, originB, m_live.liveT, liveB, true);
             caps->doc->applyEdit(edit);
-            caps->toolUi->clearOriginPanelRect();
+            if (caps->overlay)
+                caps->overlay->clearOriginPanelRect();
             caps->doc->clearLiveManipSuppressIds();
             caps->doc->refreshAllConnectorWarps();
             caps->doc->noteDocumentMutated();
-            caps->toolUi->requestChromeRefresh();
+            caps->toolUi->refreshChrome();
             caps->doc->notifyHistory();
             caps->doc->flushWire();
         }
@@ -125,13 +139,14 @@ public:
             caps->doc->noteDocumentMutated();
             caps->selection->setPhase(caps->selection->ids().empty() ? SelectionPhase::Idle
                                                                      : SelectionPhase::Selected);
-            caps->toolUi->requestChromeRefresh();
+            caps->toolUi->refreshChrome();
             m_live.reset();
         } else if (caps->selection->phase() == SelectionPhase::Transforming) {
             caps->selection->setPhase(caps->selection->ids().empty() ? SelectionPhase::Idle
                                                                      : SelectionPhase::Selected);
         }
-        caps->toolUi->clearOriginPanelRect();
+        if (caps->overlay)
+            caps->overlay->clearOriginPanelRect();
     }
 
     bool didMutateSelection() const { return m_didMutate; }

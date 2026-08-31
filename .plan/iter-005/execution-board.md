@@ -117,6 +117,7 @@ Work-in-progress 2 = campaign capacity. Implement lanes A/B are complete; wait p
 | STORY-EP-066 | Object erase 80 percent table | P0 | SRS-EP-58 | — | **in-review** | W3 | Quality Assurance Engineer (panel) | — | Host tests for 80% ink + Frame 0 + undo. Wait panel: AABB highlight, whole-node delete, Frame survives. |
 | STORY-EP-067 | Singleton generateNodeId for all tree nodes | P0 | SRS-EP-07 / EP-08 / EP-55 / IN-09 | — | **in-review** | W3-erase-ids | Quality Assurance Engineer (panel) | A | Folded `allocEraseRemnantId`, `s-` strokeSeq, `conn_`, `sg_sel_`. Infini apply inbound ids, no remint. Opaque `n-N`. |
 | STORY-EP-068 | Operations own overlay paint; ToolCanvasContext stays generic | P0 | SRS-EP-04 / EP-12 / EP-56 | — | **in-review** | W3-erase-ids | Quality Assurance Engineer (panel) | B | Hover + waveform on Operations. Catalog Contexts row updated. |
+| STORY-EP-069 | ToolContextImpl host ports and SelectionOverlay | P0 | SRS-EP-04 / EP-12 | — | **in-progress** | W3-erase-ids | Developer | — | ADR-0035; principles.md; ToolChrome → SelectionOverlay. |
 | CHORE-7 | Three exclusive erasers (CHL-0028) | Must | [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted** | icons only | brush **done**; EP-067/068/065/066 **in-review** | W3-erase-ids | Quality Assurance Engineer (panel) | — | Path A/B retired. Human is Quality Assurance Engineer. |
 
 ### Current-wave sub-agent roster

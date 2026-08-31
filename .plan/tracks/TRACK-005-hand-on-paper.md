@@ -55,7 +55,8 @@ stories:
   - STORY-EP-066
   - STORY-EP-067
   - STORY-EP-068
-cursor: "WAIT human QA STORY-EP-067/068/065/066 in-review; brush EP-062…064 done; clipboard W3 frozen"
+  - STORY-EP-069
+cursor: "NOW STORY-EP-069 ToolContextImpl/SelectionOverlay in-progress; WAIT human QA STORY-EP-067/068/065/066 in-review; brush EP-062…064 done; clipboard W3 frozen"
 paused_reason: ""
 interrupts: []
 ---
@@ -115,18 +116,19 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 | [EP-066](../iter-005/stories/STORY-EP-066.md) | implement | P0 | Object 80% — **in-review** · depends EP-062, EP-068 |
 | [EP-067](../iter-005/stories/STORY-EP-067.md) | implement | P0 | Singleton generateNodeId — **in-review** |
 | [EP-068](../iter-005/stories/STORY-EP-068.md) | implement | P0 | Operations own overlay paint; ToolCanvasContext stays generic — **in-review** |
+| [EP-069](../iter-005/stories/STORY-EP-069.md) | implement | P0 | ToolContextImpl host ports and SelectionOverlay — **in-progress** |
 
 W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). Hand-touch and follow implement stories that shipped are **done**. Other committed stories stay **draft** until their wave. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) **done** 2026-08-20.
 
 ## Cursor
 
-**WAIT:** human QA on [STORY-EP-067](../iter-005/stories/STORY-EP-067.md)/[STORY-EP-068](../iter-005/stories/STORY-EP-068.md)/[STORY-EP-065](../iter-005/stories/STORY-EP-065.md)/[STORY-EP-066](../iter-005/stories/STORY-EP-066.md) (**in-review**). Brush [STORY-EP-062](../iter-005/stories/STORY-EP-062.md)…[STORY-EP-064](../iter-005/stories/STORY-EP-064.md) **done** (human-verified 2026-08-29). Clipboard / Device Settings stay queued. Remaining Infini follow field test still outstanding.
+**NOW:** [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl host ports / SelectionOverlay **in-progress**. **WAIT:** human QA on [STORY-EP-067](../iter-005/stories/STORY-EP-067.md)/[STORY-EP-068](../iter-005/stories/STORY-EP-068.md)/[STORY-EP-065](../iter-005/stories/STORY-EP-065.md)/[STORY-EP-066](../iter-005/stories/STORY-EP-066.md) (**in-review**). Brush [STORY-EP-062](../iter-005/stories/STORY-EP-062.md)…[STORY-EP-064](../iter-005/stories/STORY-EP-064.md) **done** (human-verified 2026-08-29). Clipboard / Device Settings stay queued. Remaining Infini follow field test still outstanding.
 
 Tool-system interrupt [TRACK-006](./TRACK-006-tool-system-refactor.md) is **done** (2026-08-27). Default pointer map is Primary=Pen, Secondary=Finger under [ADR-0033](../../../.docs/adr/ADR-0033-tool-abstraction.md).
 
 ## Freeze note (clipboard W3 frozen; brush done)
 
-- In flight: none — EP-067/068/065/066 **in-review**, wait panel. Brush EP-062…064 **done**, human verified. EP-059…061 **done**, human verified undo/redo. IN-038 **cancelled**.
+- In flight: [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **in-progress**. EP-067/068/065/066 **in-review**, wait panel. Brush EP-062…064 **done**, human verified. EP-059…061 **done**, human verified undo/redo. IN-038 **cancelled**.
 - Open files / risks: [CHL-0027](../iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md) still open; no RM2 panel / no live TCP `:9877`; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open. Leftover snapshot wording in deprecated Infini [SRS-IN-12](../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) — do not implement.
 - Resume: panel-confirm EP-067 then overlay, area, object. Clipboard / Device Settings still need an explicit pick. Follow field-test notes still wanted. Do **not** reopen TRACK-006.
 

@@ -62,6 +62,15 @@ public:
         (void)caps;
         (void)hub;
     }
+    /**
+     * Settled overlay / knobs / hits after a gesture or document change.
+     * Policy is Mode-specific; ToolContextImpl only forwards.
+     */
+    virtual void refreshChrome(HostCaps &caps, InputHub &hub)
+    {
+        (void)caps;
+        (void)hub;
+    }
 };
 
 } // namespace tools

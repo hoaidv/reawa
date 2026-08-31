@@ -10,9 +10,11 @@ source: tool system refactor planning
 
 Implementation catalog and current type names (code is truth):
 [`.docs/modules/epaper/tool-system/`](../modules/epaper/tool-system/index.md). This ADR stays the
-conceptual overview. Where names drifted (`PenMode` → `InkMode`, HandTouch profiles →
-`PointerRole` + Mode allow-lists, Transform as exclusive Mode → Move/Resize Operations), follow
-the implementation view.
+conceptual overview. Host-ports working contract: [ADR-0035](./ADR-0035-tool-context-is-host-ports.md)
+and [principles.md](../modules/epaper/tool-system/principles.md). Where names drifted (`PenMode` →
+`InkMode`, HandTouch profiles → `PointerRole` + Mode allow-lists, Transform as exclusive Mode →
+Move/Resize Operations, `ToolCanvasContext` → `ToolContextImpl`, `ToolChrome` → `SelectionOverlay`),
+follow the implementation view.
 
 # Question
 

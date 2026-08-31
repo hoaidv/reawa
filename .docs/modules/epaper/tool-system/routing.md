@@ -100,8 +100,8 @@ Active **Mode** `syncOverlay` / `paintOverlay` (not `InputHub::overlayOperation`
 Hover is an unlocked `StylusHoverSink` cycle (`dispatchHoverMove` / `dispatchHoverLeave`). Brush
 erase implements it. Pointer-down and cancel end hover.
 
-`TransformGesture::apply`: document live geometry every sample; overlay `redrawLiveManip` every
-sample; Infini `sendManipPreview` throttled to 200 ms.
+`TransformGesture::apply`: document live geometry every sample; `caps.overlay->redrawLiveManip`
+every sample; Infini `DocContext::publishManipPreview` throttled to 200 ms.
 
 Begin of move/resize **suppresses** the node on Tablet. If the overlay is not shown, the node
 vanishes. That is why Transforming forces overlay even in InkMode.
@@ -111,9 +111,9 @@ return after commit refresh.
 
 ## Host wiring
 
-`ToolCanvasItem` is the Qt host only: `syncToolHost` fills `HostCaps`, `registerOperations` once,
-`registerInterventions`, `syncActiveMode` on `exclusiveToolChanged`. Gesture bodies do not live on
-the host.
+`ToolCanvasItem` is the Qt host only: chip-string → `ModeId` in `syncActiveMode`; owns impl,
+overlay, bar, modes, hub; `syncToolHost` fills `HostCaps`. Gesture bodies do not live on the host.
+The item does not implement `redrawLiveManip` / `publishOverlayHits` / `showManipUnavailable`.
 
 ## Ink path (do not remap)
 

@@ -6,6 +6,8 @@
  * @implements [SRS-EP-11]
  */
 
+#include "document/device_document.hpp"
+
 #include <string>
 #include <vector>
 
@@ -41,6 +43,17 @@ public:
     }
 
     void setPhase(SelectionPhase phase) { m_phase = phase; }
+
+    void retainExisting(const epaper::document::DeviceDocument &doc)
+    {
+        std::vector<std::string> keep;
+        keep.reserve(m_ids.size());
+        for (const std::string &id : m_ids) {
+            if (doc.find(id))
+                keep.push_back(id);
+        }
+        setIds(keep);
+    }
 
 private:
     std::vector<std::string> m_ids;

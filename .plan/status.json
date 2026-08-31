@@ -1,11 +1,11 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-30T05:27:12+00:00",
+  "generated_at": "2026-08-31T06:58:13+00:00",
   "current_iter": "iter-005",
   "by_status": {
     "draft": 13,
     "ready": 1,
-    "in-progress": 0,
+    "in-progress": 1,
     "in-review": 4,
     "done": 135,
     "blocked": 13,
@@ -18,7 +18,7 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 68,
+      "total": 69,
       "done": 41,
       "in_review": 4
     },
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "NOW STORY-EP-067 generateNodeId then STORY-EP-068 overlay-on-operations; brush EP-062\u2026064 done; area/object EP-065/066 draft until overlay refactor; clipboard W3 frozen",
+      "cursor": "NOW STORY-EP-069 ToolContextImpl/SelectionOverlay in-progress; WAIT human QA STORY-EP-067/068/065/066 in-review; brush EP-062\u2026064 done; clipboard W3 frozen",
       "iter": "iter-005"
     },
     {

@@ -13,8 +13,8 @@ qt_add_executable(epaper_bin
     drawing/tabletcanvasitem.cpp
     drawing/toolcanvasitem.cpp
     drawing/tools/input_hub.cpp
-    drawing/tools/tool_chrome.cpp
-    drawing/tools/contexts/tool_canvas_context.cpp
+    drawing/tools/ui/selection_overlay.cpp
+    drawing/tools/contexts/tool_context_impl.cpp
     drawing/tools/ui/action_list_model.cpp
     drawing/tools/ui/selection_context_bar.cpp
     drawing/tabletwindow.cpp

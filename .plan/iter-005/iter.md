@@ -39,6 +39,7 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-EP-066](./stories/STORY-EP-066.md) — implement — 5 — object — **in-review**
 - [STORY-EP-067](./stories/STORY-EP-067.md) — implement — 3 — singleton generateNodeId — **in-review**
 - [STORY-EP-068](./stories/STORY-EP-068.md) — implement — 5 — overlay paint on Operations — **in-review**
+- [STORY-EP-069](./stories/STORY-EP-069.md) — implement — 5 — ToolContextImpl host ports + SelectionOverlay — **in-progress**
 - [STORY-EP-043](./stories/STORY-EP-043.md) — design — 3 — clipboard
 - [STORY-EP-045](./stories/STORY-EP-045.md) — design — 3 — connector ends
 - [STORY-EP-048](./stories/STORY-EP-048.md) — design — 3 — attachments

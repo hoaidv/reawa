@@ -12,6 +12,7 @@
 #include "../host_caps.hpp"
 #include "../contexts/selection_context.hpp"
 #include "../contexts/tool_context.hpp"
+#include "../ui/selection_overlay.hpp"
 
 namespace epaper {
 namespace tools {
@@ -31,8 +32,6 @@ public:
     {
         if (!caps.toolUi || !caps.selection || !caps.doc)
             return false;
-        if (!caps.toolUi->isSelectionTool())
-            return false;
         if (caps.selection->phase() != SelectionPhase::Selected)
             return false;
         const epaper::document::DocNode *n = selected(caps);
@@ -50,11 +49,12 @@ public:
             return;
         epaper::document::SmartBounds wb;
         if (epaper::document::boundsOf(*n, wb) && !caps.toolUi->lodOkPanel(wb)) {
-            caps.toolUi->showManipUnavailable(wb);
+            if (caps.overlay)
+                caps.overlay->showManipUnavailable(caps, wb);
             return;
         }
         caps.doc->toggleInkScaleMode(n->id);
-        caps.toolUi->requestChromeRefresh();
+        caps.toolUi->refreshChrome();
     }
 
 private:

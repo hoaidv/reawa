@@ -9,6 +9,7 @@
 #include "../input_hub.hpp"
 #include "../mode.hpp"
 #include "../operation.hpp"
+#include "../contexts/doc_context.hpp"
 #include "../contexts/tool_context.hpp"
 
 #include <QLatin1String>
@@ -49,13 +50,15 @@ public:
     void syncOverlay(HostCaps &caps, InputHub &hub) override
     {
         (void)hub;
-        if (!caps.toolUi)
+        if (!caps.toolUi || !caps.doc)
             return;
         caps.toolUi->setOverlayVisible(true);
-        const QString ex = caps.toolUi->exclusiveTool();
+        const QString ex = caps.doc->exclusiveTool();
         const bool pen = ex.startsWith(QLatin1String("erase_"));
         caps.toolUi->setStrokeWaveform(pen);
     }
+
+    void refreshChrome(HostCaps &caps, InputHub &hub) override { syncOverlay(caps, hub); }
 
 private:
     Operation *armedExclusive(InputHub &hub) const

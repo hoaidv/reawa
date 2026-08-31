@@ -10,7 +10,9 @@
 #include "../mode.hpp"
 #include "../operation.hpp"
 #include "../contexts/selection_context.hpp"
+#include "../contexts/session_doc_context.hpp"
 #include "../contexts/tool_context.hpp"
+#include "../ui/selection_overlay.hpp"
 
 #include <QPainter>
 #include <QString>
@@ -41,13 +43,13 @@ public:
 
     void paintOverlay(QPainter *painter, HostCaps &caps, InputHub &hub) override
     {
-        if (!caps.selection || !caps.toolUi)
+        if (!caps.selection || !caps.overlay)
             return;
         if (caps.selection->phase() != SelectionPhase::Transforming)
             return;
         if (Operation *op = hub.lockedOperation())
             op->paintOverlay(painter);
-        caps.toolUi->paintSelectionChrome(painter);
+        caps.overlay->paintLiveManip(painter, caps);
     }
 
     void syncOverlay(HostCaps &caps, InputHub &hub) override
@@ -60,6 +62,23 @@ public:
         caps.toolUi->setOverlayVisible(transforming);
         if (transforming)
             caps.toolUi->setStrokeWaveform(false);
+    }
+
+    void refreshChrome(HostCaps &caps, InputHub &hub) override
+    {
+        if (!caps.toolUi)
+            return;
+        if (caps.overlay && caps.selection) {
+            auto *sess = dynamic_cast<SessionDocContext *>(caps.doc);
+            if (sess) {
+                caps.overlay->refresh(*caps.selection, *sess, false);
+                if (caps.selection->phase() == SelectionPhase::Transforming)
+                    caps.overlay->redrawLiveManip(caps, false);
+            }
+        }
+        syncOverlay(caps, hub);
+        if (caps.overlay)
+            caps.toolUi->damageChrome(caps.overlay->state().selectionChromeDirty);
     }
 };
 

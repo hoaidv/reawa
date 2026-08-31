@@ -82,12 +82,16 @@ void ToolCanvasItem::setSession(CanvasSession *session)
     m_session = session;
     if (m_session) {
         m_docConn = connect(m_session, &CanvasSession::documentMutated, this, [this] {
+            if (m_docCtx)
+                m_selCtx.retainExisting(m_docCtx->document());
             if (m_toolCtx)
-                m_toolCtx->onDocumentOrCameraChanged();
+                m_toolCtx->refreshChrome();
         });
         m_camConn = connect(m_session, &CanvasSession::cameraChanged, this, [this] {
+            if (m_docCtx)
+                m_selCtx.retainExisting(m_docCtx->document());
             if (m_toolCtx)
-                m_toolCtx->onDocumentOrCameraChanged();
+                m_toolCtx->refreshChrome();
         });
         m_toolConn = connect(m_session, &CanvasSession::exclusiveToolChanged, this, [this]() {
             m_hub.dispatchHoverLeave();
@@ -95,7 +99,7 @@ void ToolCanvasItem::setSession(CanvasSession *session)
             if (m_toolCtx)
                 m_toolCtx->syncOverlayPresence();
             if (m_toolCtx)
-                m_toolCtx->requestChromeRefresh();
+                m_toolCtx->refreshChrome();
         });
     }
     syncToolHost();
@@ -112,15 +116,12 @@ void ToolCanvasItem::syncToolHost()
         m_docCtx->setSurface(m_surface);
     }
     if (!m_toolCtx)
-        m_toolCtx = std::make_unique<epaper::tools::ToolCanvasContext>(this);
+        m_toolCtx = std::make_unique<epaper::tools::ToolContextImpl>(this);
 
     m_toolCtx->setDoc(m_docCtx.get());
-    m_toolCtx->setSelection(&m_selCtx);
     m_toolCtx->setHub(&m_hub);
-    m_toolCtx->setSelectionBar(&m_selBar);
     m_toolCtx->setRepaint([this](const QRectF &r) { update(r.toAlignedRect()); });
     m_toolCtx->setSetVisible([this](bool on) { setVisible(on); });
-    m_toolCtx->setEmitChromeChanged([this]() { emit selectionChromeChanged(); });
     m_toolCtx->setSetStrokeWaveform([this](bool w) { setStrokeWaveform(w); });
 
     m_inkSink = std::make_unique<epaper::tools::TabletInkSink>(m_surface);
@@ -129,6 +130,9 @@ void ToolCanvasItem::syncToolHost()
     caps.doc = m_docCtx.get();
     caps.toolUi = m_toolCtx.get();
     caps.selection = &m_selCtx;
+    caps.overlay = &m_overlay;
+    caps.bar = &m_selBar;
+    caps.emitChromeChanged = [this]() { emit selectionChromeChanged(); };
     caps.setExclusiveTool = [this](const QString &id) {
         if (m_surface)
             m_surface->setToolMode(id);
@@ -172,16 +176,13 @@ void ToolCanvasItem::registerInterventions()
 void ToolCanvasItem::syncActiveMode()
 {
     const QString ex = m_docCtx ? m_docCtx->exclusiveTool() : QStringLiteral("pen");
-    const bool wantInk = ex == QLatin1String("pen");
-    const bool wantSel = m_toolCtx && m_toolCtx->isSelectionTool();
-    const bool wantErase = m_toolCtx && m_toolCtx->isEraserTool();
     epaper::tools::InteractionMode *want = nullptr;
-    if (wantInk)
-        want = &m_inkMode;
-    else if (wantSel)
-        want = &m_selectionMode;
-    else if (wantErase)
+    if (ex.startsWith(QLatin1String("erase_")))
         want = &m_eraserMode;
+    else if (ex == QLatin1String("sel_rect") || ex == QLatin1String("sel_freeform"))
+        want = &m_selectionMode;
+    else
+        want = &m_inkMode;
 
     if (m_hub.activeMode() == want)
         return;
@@ -214,7 +215,8 @@ void ToolCanvasItem::onPointerStart(qreal x, qreal y, qreal pressure, bool pen, 
 {
     // Erase only: deferring rasterize on move/resize leaves the origin node on
     // TabletCanvas (suppress punch never runs). Nib erase starts as pen exclusive.
-    if (m_surface && (eraserNib || (m_toolCtx && m_toolCtx->isEraserTool())))
+    if (m_surface && (eraserNib || (m_hub.activeMode() &&
+                                    m_hub.activeMode()->id() == epaper::tools::ModeId::Eraser)))
         m_surface->setErasePointerActive(true);
     if (eraserNib && m_session && !m_nibArmed)
         m_nibArmed = m_session->beginNibErase();

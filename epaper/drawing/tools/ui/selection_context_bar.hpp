@@ -12,7 +12,7 @@
 #include "../actions/ink_scale_action.hpp"
 #include "../actions/paste_action.hpp"
 #include "../host_caps.hpp"
-#include "../tool_chrome.hpp"
+#include "selection_overlay.hpp"
 
 #include <QObject>
 #include <QRectF>
@@ -52,7 +52,7 @@ public:
     QString manipUnavailable() const { return m_manip; }
     QRectF manipUnavailableRect() const { return m_manipRect; }
 
-    void refresh(HostCaps &caps, const ToolChromeState &chrome)
+    void refresh(HostCaps &caps, const SelectionOverlayState &chrome)
     {
         m_caps = &caps;
         m_bounds = chrome.selectionBoundsRect;

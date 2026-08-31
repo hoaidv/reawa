@@ -8,6 +8,8 @@
 #include "../host_caps.hpp"
 #include "../operation.hpp"
 #include "../viewport.hpp"
+#include "../contexts/tool_context.hpp"
+#include "../contexts/selection_context.hpp"
 #include "document/hand_touch.hpp"
 
 #include <QElapsedTimer>
@@ -116,7 +118,7 @@ public:
             const double dy = s.panel.y() - m_downPanel.y;
             if (epaper::handtouch::emptyTapClearsSelection(epaper::handtouch::travelDu(dx, dy))) {
                 m_caps->selection->clear();
-                m_caps->toolUi->requestChromeRefresh();
+                m_caps->toolUi->refreshChrome();
                 m_clearedOnTap = true;
             }
         }
@@ -202,7 +204,7 @@ private:
         m_viewport->publishViewport(settle);
         m_viewport->scheduleRasterize(settle);
         if (m_caps && m_caps->toolUi)
-            m_caps->toolUi->requestChromeRefresh();
+            m_caps->toolUi->refreshChrome();
         if (previewDue)
             m_previewClock.restart();
     }

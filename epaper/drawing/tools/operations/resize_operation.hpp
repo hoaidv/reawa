@@ -11,6 +11,7 @@
 #include "transform_gesture.hpp"
 #include "document/capability.hpp"
 #include "document/manipulate.hpp"
+#include "../ui/selection_overlay.hpp"
 
 #include <cstdint>
 
@@ -47,7 +48,8 @@ public:
         if (!m_caps || !m_caps->doc || !m_caps->toolUi || !m_caps->selection || !m_hub)
             return;
         m_gesture.resetMutate();
-        m_caps->toolUi->clearManipUnavailable();
+        if (m_caps->overlay)
+            m_caps->overlay->clearManipUnavailable();
         const HitRegion *hit = m_hub->overlayHitAt(s.panel);
         const int idx = hit ? int(reinterpret_cast<intptr_t>(hit->ownerToken)) : -1;
         const epaper::document::ResizeHandle handle = handleFromIndex(idx);
@@ -61,7 +63,8 @@ public:
         if (!epaper::document::boundsOf(*selected, wb))
             return;
         if (!m_caps->toolUi->lodOkPanel(wb)) {
-            m_caps->toolUi->showManipUnavailable(wb);
+            if (m_caps->overlay)
+                m_caps->overlay->showManipUnavailable(*m_caps, wb);
             return;
         }
         const auto w = m_caps->toolUi->panelToWorld(s.panel);

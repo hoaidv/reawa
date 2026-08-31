@@ -8,6 +8,8 @@
 
 #include "../host_caps.hpp"
 #include "../operation.hpp"
+#include "../contexts/doc_context.hpp"
+#include "../contexts/tool_context.hpp"
 #include "document/erase_area.hpp"
 #include "debug/ui_stall.hpp"
 
@@ -15,6 +17,7 @@
 #include <QPainterPath>
 #include <QPen>
 #include <QPointF>
+#include <QLatin1String>
 #include <string>
 #include <vector>
 
@@ -42,9 +45,9 @@ public:
         (void)s;
         if (channel != StrategyKind::RawPointer)
             return false;
-        if (!m_caps || !m_caps->toolUi)
+        if (!m_caps || !m_caps->doc)
             return false;
-        return m_caps->toolUi->exclusiveTool() == QLatin1String("erase_area");
+        return m_caps->doc->exclusiveTool() == QLatin1String("erase_area");
     }
 
     void onDown(const PointerSample &s) override
@@ -73,7 +76,7 @@ public:
         m_pts.clear();
         if (m_caps && m_caps->toolUi) {
             m_caps->toolUi->setStrokeWaveform(false);
-            m_caps->toolUi->requestChromeRefresh();
+            m_caps->toolUi->refreshChrome();
         }
     }
 
@@ -108,7 +111,7 @@ private:
         if (!m_caps || !m_caps->doc || !m_caps->toolUi)
             return;
         m_caps->toolUi->setStrokeWaveform(false);
-        m_caps->toolUi->requestChromeRefresh();
+        m_caps->toolUi->refreshChrome();
         if (pts.size() < 2)
             return;
         std::vector<ErasePt> world;
@@ -129,7 +132,7 @@ private:
             m_caps->doc->notifyHistory();
             m_caps->doc->flushWire();
         }
-        m_caps->toolUi->requestChromeRefresh();
+        m_caps->toolUi->refreshChrome();
     }
 
     HostCaps *m_caps = nullptr;

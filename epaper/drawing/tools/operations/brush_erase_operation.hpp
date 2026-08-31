@@ -12,6 +12,8 @@
 #include "../host_caps.hpp"
 #include "../operation.hpp"
 #include "../contexts/session_doc_context.hpp"
+#include "../contexts/doc_context.hpp"
+#include "../contexts/tool_context.hpp"
 #include "document/erase_clip.hpp"
 #include "document/erase_commit.hpp"
 #include "debug/ui_stall.hpp"
@@ -24,6 +26,7 @@
 #include <QRectF>
 #include <QSize>
 #include <QString>
+#include <QLatin1String>
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -53,9 +56,9 @@ public:
         (void)s;
         if (channel != StrategyKind::RawPointer && channel != StrategyKind::StylusHover)
             return false;
-        if (!m_caps || !m_caps->toolUi)
+        if (!m_caps || !m_caps->doc)
             return false;
-        return m_caps->toolUi->exclusiveTool() == QLatin1String("erase_brush");
+        return m_caps->doc->exclusiveTool() == QLatin1String("erase_brush");
     }
 
     void onHoverEnter(const PointerSample &s) override { applyHover(s.panel); }
@@ -108,7 +111,7 @@ public:
         m_world.clear();
         dropGhost();
         if (m_caps && m_caps->toolUi)
-            m_caps->toolUi->requestChromeRefresh();
+            m_caps->toolUi->refreshChrome();
     }
 
     void paintOverlay(QPainter *painter) override
@@ -283,7 +286,7 @@ private:
         dropGhost();
         if (!m_caps || !m_caps->doc || !m_caps->toolUi)
             return;
-        m_caps->toolUi->requestChromeRefresh();
+        m_caps->toolUi->refreshChrome();
         if (path.empty())
             return;
         static int seq = 0;
@@ -304,7 +307,7 @@ private:
             m_caps->doc->notifyHistory();
             m_caps->doc->flushWire();
         }
-        m_caps->toolUi->requestChromeRefresh();
+        m_caps->toolUi->refreshChrome();
     }
 
     HostCaps *m_caps = nullptr;

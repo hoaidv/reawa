@@ -16,14 +16,16 @@ defines no requirement ids. Product behaviour lives in [SRS-EP-04](../features/t
 **Source of truth for types and lists:** [`epaper/drawing/tools/`](../../../epaper/drawing/tools/).
 If this folder and the code disagree, the code wins — then update these pages.
 
-**Conceptual overview (why the split exists):** [ADR-0033](../../adr/ADR-0033-tool-abstraction.md).
-Read that first if you are new. Names in the ADR are slightly older; this folder uses **current**
-code names.
+**Read first:** [principles.md](./principles.md) — MUST / MUST NOT for `tools/` and
+`toolcanvasitem.*`. Conceptual why: [ADR-0033](../../adr/ADR-0033-tool-abstraction.md). Host-ports
+lock: [ADR-0035](../../adr/ADR-0035-tool-context-is-host-ports.md). Names in ADR-0033 are slightly
+older; this folder uses **current** code names.
 
 ## Read this folder
 
 | Page | Use when |
 |---|---|
+| [principles.md](./principles.md) | Working contract — Mode policy, host ports, SelectionOverlay |
 | [concepts.md](./concepts.md) | What is a Mode vs Operation vs Modifier vs Action vs Role |
 | [routing.md](./routing.md) | How a pointer sample becomes a locked Operation; DeviceMap; interventions; overlay |
 | [catalog.md](./catalog.md) | What is registered today (files, allow-lists, priorities) |
@@ -47,6 +49,8 @@ dissolve-host-bags, ToolAction) are history. They are not the catalog.
 | Finger vs Pen as the routing axis | `PointerRole` (`Primary`/`Secondary`) via `DeviceMap`; QML still stamps `PointerDevice` |
 | Transform as exclusive Mode | Move / Resize **Operations** on Ink and Selection Modes |
 | Interaction Router | `InputHub` hosted by `ToolCanvasItem` |
+| ToolCanvasContext | `ToolContextImpl` (host ports only) |
+| ToolChrome | `SelectionOverlay` (host-owned; not inlined into the item) |
 
 ## Standing rules
 
@@ -55,5 +59,7 @@ dissolve-host-bags, ToolAction) are history. They are not the catalog.
 3. **Operations do not bind Qt.** QML stamps `PointerDevice`; the hub stamps `PointerRole`; the Op
    matches geometry / exclusive-tool id, not Pen vs Finger.
 4. **One lock.** The hub matches, locks one Operation, feeds it until up/cancel.
-5. **Live ink paints TabletCanvas** (`InkSink`). Selection chrome and live manip paint ToolCanvas
-   (`ToolContext`). Do not invert that for latency.
+5. **Live ink paints TabletCanvas** (`InkSink`). Overlay stroke paints ToolCanvas (`ToolContext`
+   host ports). Selection knobs / live-manip live on `SelectionOverlay`, not on `ToolContextImpl`.
+6. **Chip-string → `ModeId` only in `ToolCanvasItem::syncActiveMode`.** Violate [principles.md](./principles.md)
+   → file a challenge; do not silently fork.

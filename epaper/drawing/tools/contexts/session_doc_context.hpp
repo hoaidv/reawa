@@ -71,6 +71,12 @@ public:
     bool encloseSelection(const std::vector<std::string> &ids, QString *refuseReason) override;
     void toggleInkScaleMode(const std::string &nodeId) override;
 
+    QString exclusiveTool() const override;
+    void publishManipPreview(const std::string &nodeId,
+                             const epaper::document::SmartTransform &liveT,
+                             const epaper::document::SmartBounds *liveB) override;
+    void setInteractionDebug(const std::string &line) override;
+
     void applyCamera(const epaper::handtouch::WorldAabb &region, bool markValid) override;
     void publishViewport(bool settle) override;
     void scheduleRasterize(bool sharp) override;
@@ -88,7 +94,6 @@ public:
     CanvasSession *session() const { return m_session; }
     TabletCanvasItem *surface() const { return m_surface; }
 
-    QString exclusiveTool() const;
     void setExclusiveTool(const QString &id);
 
     epaper::canvasframe::CanvasFrame &frame();
@@ -206,6 +211,20 @@ inline void SessionDocContext::clearLiveManipSuppressIds()
 inline QString SessionDocContext::exclusiveTool() const
 {
     return m_session ? m_session->exclusiveTool() : QStringLiteral("pen");
+}
+
+inline void SessionDocContext::publishManipPreview(const std::string &nodeId,
+                                                   const epaper::document::SmartTransform &liveT,
+                                                   const epaper::document::SmartBounds *liveB)
+{
+    if (m_surface)
+        m_surface->publishManipPreview(nodeId, liveT, liveB);
+}
+
+inline void SessionDocContext::setInteractionDebug(const std::string &line)
+{
+    if (m_surface)
+        m_surface->setInteractionDebug(QString::fromStdString(line));
 }
 
 inline void SessionDocContext::setExclusiveTool(const QString &id)

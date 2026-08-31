@@ -7,6 +7,9 @@
 
 #include "../host_caps.hpp"
 #include "../operation.hpp"
+#include "../contexts/doc_context.hpp"
+#include "../contexts/selection_context.hpp"
+#include "../contexts/tool_context.hpp"
 
 namespace epaper {
 namespace tools {
@@ -49,7 +52,7 @@ public:
             m_caps->selection->clear();
             m_didMutate = true;
         }
-        m_caps->toolUi->requestChromeRefresh();
+        m_caps->toolUi->refreshChrome();
     }
 
     void cancel() override {}

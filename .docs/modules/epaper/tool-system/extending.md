@@ -13,9 +13,11 @@ Cookbook. Code lives in [`epaper/drawing/tools/`](../../../epaper/drawing/tools/
 If the change would violate an SRS, stop and file a challenge — do not silently fork policy in an
 Operation `match()` on `PointerDevice`.
 
-The architectural test from [ADR-0033](../../adr/ADR-0033-tool-abstraction.md): **adding a tool
-should primarily add code**; it should not require a new branch in the router, `ToolCanvasContext`,
-or a sibling Operation. Overlay **policy** (when to paint, Pen vs Mono) belongs on the active Mode.
+The architectural test from [ADR-0033](../../adr/ADR-0033-tool-abstraction.md) /
+[ADR-0035](../../adr/ADR-0035-tool-context-is-host-ports.md): **adding a tool should primarily add
+code**; it should not require a new branch in the router, `ToolContextImpl`, or a sibling Operation.
+Overlay **policy** (when to paint, Pen vs Mono, `refreshChrome`) belongs on the active Mode.
+Violate [principles.md](./principles.md) → file a challenge.
 
 ## Add an Operation (most common)
 
@@ -46,8 +48,9 @@ Navigation from that list or raise eraser above 30 (and accept losing pan). Tap-
 ## Add an exclusive Mode
 
 1. `ModeId` in [`mode.hpp`](../../../epaper/drawing/tools/mode.hpp).
-2. `modes/<name>_mode.hpp` with `primaryOps` / `secondaryOps` plus `paintOverlay` / `syncOverlay`.
-   Put Mode-only policy there (phase, exclusive chip, waveform), not inside `ToolCanvasContext`.
+2. `modes/<name>_mode.hpp` with `primaryOps` / `secondaryOps` plus `paintOverlay` / `syncOverlay` /
+   `refreshChrome`. Put Mode-only policy there (phase, exclusive chip, waveform), not inside
+   `ToolContextImpl`.
 3. Chip exclusive string in `CanvasSession` / `primary_toolbar.hpp` / Main.qml tile.
 4. `ToolCanvasItem::syncActiveMode` — map that string to the Mode object.
 5. Do **not** make recognizers or hand-touch exclusive Modes ([ADR-0033](../../adr/ADR-0033-tool-abstraction.md)).
@@ -89,7 +92,9 @@ from `activeMode()`.
 - Giving an Op `CanvasSession *` / `TabletCanvasItem *` — use `HostCaps`.
 - Merging `StrokeCapture` into `InkSink` or `TransformSession` into `TransformGesture` without a
   new ADR: one is Qt-free math/pool, the other is host ports + e-ink timing.
-- Showing live manip only when `isSelectionTool`: Transforming in InkMode must still show
-  ToolCanvas or the suppressed node disappears.
 - Treating `.docs/memory/plan_epaper-tool-system-refactor.md` as the catalog (HandTouch profiles,
   TransformMode, PenMode).
+- A new method on `ToolContextImpl` that names a Mode, chip id, or selection knob.
+- Merging `SelectionOverlay` into `toolcanvasitem.cpp` (host owns it; Modes/Ops use `caps.overlay`).
+- Showing live manip only in SelectionMode: Transforming in InkMode must still show ToolCanvas or
+  the suppressed node disappears.

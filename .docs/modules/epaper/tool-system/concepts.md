@@ -17,7 +17,7 @@ The primary toolbar mixes **exclusive Modes**, **Modifiers**, and (later) settin
 
 | Kind | Exclusive on chip? | Receives pointer lock? | Examples |
 |---|---|---|---|
-| **InteractionMode** | Yes (`exclusiveTool` id) | No — publishes allow-lists | `InkMode`, `SelectionMode` |
+| **InteractionMode** | Yes (`exclusiveTool` id) | No — publishes allow-lists | `InkMode`, `SelectionMode`, `EraserMode` |
 | **Operation** | No | Yes — one locked gesture | InkStroke, Lasso, Move, Resize, Navigation |
 | **ToolModifier** | No | Only SecondaryDeviceModifier gates Secondary | Hand-touch armed, ink-box / connector recog |
 | **ToolAction** | No | No — click → document command | Enclose, InkScale, Cut, Copy, Paste |
@@ -41,7 +41,7 @@ Policy that is **Mode-specific** (example: secondary Select/Move in Ink that act
 `sel_freeform`) lives on the Mode, not inside Select/Move. Those Operations are shared with
 SelectionMode.
 
-Reserved: `ModeId::Eraser` (no body yet).
+`EraserMode` (`ModeId::Eraser`) is real: chip ids `erase_brush` / `erase_area` / `erase_object`.
 
 ## Operation
 
@@ -90,13 +90,17 @@ Narrow ports, not the whole app ([ADR-0033](../../adr/ADR-0033-tool-abstraction.
 | Port | Role |
 |---|---|
 | `InkSink *ink` | Live stroke to Tablet (Pen waveform) |
-| `DocContext *doc` | Document + gesture/command helpers |
-| `ToolContext *toolUi` | Overlay chrome, panel↔world, waveform |
+| `DocContext *doc` | Document + edits + session exclusive id + Infini preview + Tablet debug |
+| `ToolContext *toolUi` | Host ports only: damage, visible, waveform, panel↔world, size |
 | `SelectionContext *selection` | Durable ids + phase |
+| `SelectionOverlay *overlay` | Selection ToolCanvasLayer (AABB, knobs, live fill, hits) |
+| `SelectionContextBar *bar` | ToolLayer action strip |
+| `emitChromeChanged` | QML knob/bar invalidate |
 | `setExclusiveTool` | Switch chip exclusive id |
 
-Concrete adapters: `TabletInkSink`, `SessionDocContext`, `ToolCanvasContext`. Selection store is
-`SelectionContext` itself (no extra host).
+Concrete adapters: `TabletInkSink`, `SessionDocContext`, `ToolContextImpl`. `SelectionOverlay` and
+the bar are **owned by `ToolCanvasItem`**, injected on `HostCaps`. They are not members of
+`ToolContextImpl`. Selection store is `SelectionContext` itself.
 
 ## Overlay vs document paint
 

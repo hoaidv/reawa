@@ -10,7 +10,8 @@
 #include "tools/contexts/selection_context.hpp"
 #include "tools/contexts/session_doc_context.hpp"
 #include "tools/tablet_ink_sink.hpp"
-#include "tools/contexts/tool_canvas_context.hpp"
+#include "tools/contexts/tool_context_impl.hpp"
+#include "tools/ui/selection_overlay.hpp"
 #include "tools/ui/selection_context_bar.hpp"
 
 #include <QPainter>
@@ -93,9 +94,10 @@ private:
     bool m_nibArmed = false;
     epaper::tools::SelectionContext m_selCtx;
     epaper::tools::SelectionContextBar m_selBar;
+    epaper::tools::SelectionOverlay m_overlay;
     std::unique_ptr<epaper::tools::TabletInkSink> m_inkSink;
     std::unique_ptr<epaper::tools::SessionDocContext> m_docCtx;
-    std::unique_ptr<epaper::tools::ToolCanvasContext> m_toolCtx;
+    std::unique_ptr<epaper::tools::ToolContextImpl> m_toolCtx;
     QMetaObject::Connection m_docConn;
     QMetaObject::Connection m_camConn;
     QMetaObject::Connection m_toolConn;

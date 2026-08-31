@@ -71,24 +71,28 @@ Copy, Paste. Cut/Copy/Paste chrome exists; clipboard wiring may still be incompl
 | `DocContext` | `contexts/doc_context.hpp` | Document + commands |
 | `SessionDocContext` | `contexts/session_doc_context.hpp` | Adapter over `CanvasSession` + Tablet |
 | `SelectionContext` | `contexts/selection_context.hpp` | ids, pickableId, phase |
-| `ToolContext` | `contexts/tool_context.hpp` | Overlay ports (damage, waveform, chrome paint) |
-| `ToolCanvasContext` | `contexts/tool_canvas_context.*` | Adapter: `paintOverlay` / `syncOverlayPresence` forward to the active Mode. No per-tool draw. |
+| `ToolContext` | `contexts/tool_context.hpp` | Host ports (damage, waveform, panel↔world, `refreshChrome`) |
+| `ToolContextImpl` | `contexts/tool_context_impl.*` | Adapter: forwards paint / sync / refresh to the active Mode. Owns overlay dirty-union. Zero exclusive-id compares. |
+| `SelectionOverlay` | `ui/selection_overlay.*` | Host-owned selection ToolCanvasLayer (settled AABB, knobs, live fill, hits). Not a member of `ToolContextImpl`. |
 
 Phases: Idle → Selecting → Selected → Transforming.
 
-**Overlay policy lives on the Mode** ([ADR-0033](../../adr/ADR-0033-tool-abstraction.md) Mode → Overlay). `ToolCanvasContext` does not pick an Operation to paint.
+**Overlay policy lives on the Mode** ([principles.md](./principles.md), [ADR-0035](../../adr/ADR-0035-tool-context-is-host-ports.md)). `ToolContextImpl` does not pick an Operation to paint.
 
-| Mode | `paintOverlay` | `syncOverlay` (attach + waveform) |
-|---|---|---|
-| Selection | Idle: nothing. Selecting: locked Lasso/Marquee. Selected: settled AABB/knobs via `paintSelectionChrome`. Transforming: locked Move/Resize then live chrome. | Overlay always on. Pen while Selecting, or Idle `sel_freeform`. Mono when Selected/Transforming. |
-| Eraser | Locked op, else exclusive-armed op (`match`). Brush idle = hover circle. | Overlay on. Pen while `erase_*`. |
-| Ink | Transforming only: locked Move then live chrome. | Visible only while Transforming (Mono). |
+| Mode | `paintOverlay` | `syncOverlay` (attach + waveform) | `refreshChrome` |
+|---|---|---|---|
+| Selection | Idle: nothing. Selecting: locked Lasso/Marquee. Selected: `paintSettled`. Transforming: locked Move/Resize then `paintLiveManip`. | Overlay always on. Pen while Selecting, or Idle `sel_freeform`. Mono when Selected/Transforming. | Overlay refresh with knobs iff Selected; bar; emit; `publishOverlayHits`; sync; damage |
+| Eraser | Locked op, else exclusive-armed op (`match`). Brush idle = hover circle. | Overlay on. Pen while `erase_*`. | `syncOverlay` only |
+| Ink | Transforming only: locked Move then `paintLiveManip`. | Visible only while Transforming (Mono). | Overlay refresh without knobs; Transforming live dirty; sync; damage |
 
 Operations still **tell** `setStrokeWaveform` at gesture down/up. Mode restores idle Pen after up (e.g. empty freeform). Hover is `StylusHoverSink` (enter/move/leave); hub demuxes without taking the lock.
 
 ## Selection chrome
 
-`tool_chrome.*` — overlay state, paint, damage, hit regions. **Who calls `paint` is the Mode** (`ToolContext::paintSelectionChrome`). During Transforming: `handleCount = 0` (no QML knobs on the live path). Settled knobs return on chrome refresh after commit.
+`ui/selection_overlay.*` — selection overlay state, settled/live paint, knob hits, refuse banner.
+**Who calls paint is the Mode** (`paintSettled` / `paintLiveManip`). Generic dirty-union lives on
+`ToolContextImpl`. During Transforming: `handleCount = 0` (no QML knobs on the live path). Settled
+knobs return on `refreshChrome` after commit.
 
 ## Tree (orientation)
 
@@ -96,18 +100,18 @@ Operations still **tell** `setStrokeWaveform` at gesture down/up. Mode restores 
 epaper/drawing/tools/
   strategy.hpp          PointerDevice, PointerRole, DeviceMap, PointerSample, sinks, HitRegion
   operation.hpp         OperationKind, OperationDescriptor, Operation
-  mode.hpp              ModeId, InteractionMode (paintOverlay / syncOverlay)
+  mode.hpp              ModeId, InteractionMode (paintOverlay / syncOverlay / refreshChrome)
   input_hub.hpp/.cpp    Router: match/lock/feed, hover cycle, interventions, device map
-  host_caps.hpp         InkSink, DocContext, ToolContext, SelectionContext, setExclusiveTool
+  host_caps.hpp         ports: ink, doc, toolUi, selection, overlay, bar, emitChromeChanged
   interventions.hpp     PenProximity, PenDown, SecondContact
   ink_sink.hpp / tablet_ink_sink.hpp
   viewport.hpp
-  tool_chrome.hpp/.cpp
   modes/                ink_mode, selection_mode, eraser_mode
   operations/           ink_stroke, lasso, marquee, select, move, resize, navigation,
                         brush/area/object erase, transform_gesture, transform_session
   actions/              enclose, ink_scale, cut, copy, paste
   modifiers/            tool_modifier, secondary_device, ink_box_recognizer, connector_recognizer
-  contexts/             doc, session_doc, selection, tool, tool_canvas
-  ui/                   SelectionContextToolbar.qml, selection_context_bar, action_list_model
+  contexts/             doc, session_doc, selection, tool, tool_context_impl
+  ui/                   SelectionContextToolbar.qml, selection_overlay, selection_context_bar,
+                        action_list_model
 ```

@@ -60,7 +60,7 @@ flowchart TB
 
   subgraph ctx [Context ports]
     DOC[SessionDocContext]
-    TUI[ToolCanvasContext]
+    TUI[ToolContextImpl]
   end
 
   subgraph out [Outcomes]

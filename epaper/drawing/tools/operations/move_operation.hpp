@@ -10,6 +10,7 @@
 #include "transform_gesture.hpp"
 #include "document/capability.hpp"
 #include "document/manipulate.hpp"
+#include "../ui/selection_overlay.hpp"
 
 namespace epaper {
 namespace tools {
@@ -44,7 +45,8 @@ public:
         if (!m_caps || !m_caps->doc || !m_caps->toolUi || !m_caps->selection)
             return;
         m_gesture.resetMutate();
-        m_caps->toolUi->clearManipUnavailable();
+        if (m_caps->overlay)
+            m_caps->overlay->clearManipUnavailable();
         const auto w = m_caps->toolUi->panelToWorld(s.panel);
         const epaper::document::DocNode *hit = m_caps->doc->hitMoveTarget(w.x, w.y);
         if (!hit)
@@ -58,7 +60,8 @@ public:
         const epaper::document::GestureKind kind =
             epaper::document::resolvePress(cap, lodOk, false, false, true);
         if (kind == epaper::document::GestureKind::Unavailable) {
-            m_caps->toolUi->showManipUnavailable(wb);
+            if (m_caps->overlay)
+                m_caps->overlay->showManipUnavailable(*m_caps, wb);
             return;
         }
         if (kind != epaper::document::GestureKind::SelectMove)

@@ -47,6 +47,12 @@ public:
 
     virtual bool encloseSelection(const std::vector<std::string> &ids, QString *refuseReason) = 0;
     virtual void toggleInkScaleMode(const std::string &nodeId) = 0;
+
+    virtual QString exclusiveTool() const = 0;
+    virtual void publishManipPreview(const std::string &nodeId,
+                                     const epaper::document::SmartTransform &liveT,
+                                     const epaper::document::SmartBounds *liveB) = 0;
+    virtual void setInteractionDebug(const std::string &line) = 0;
 };
 
 } // namespace tools
