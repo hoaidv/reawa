@@ -1,50 +1,65 @@
 ---
 captured: 2026-08-31
+verified: 2026-08-31
 related:
   - SRS-EP-01
   - SRS-EP-03
+  - SRS-EP-11
+  - SRS-EP-12
   - SRS-EP-13
   - CHL-0029
   - CHL-0030
 ---
 
-# Dense-document ink hitch — first millimetre then smooth
+# Dense-page ink hitch — regression note
 
-Field: after erase phase (EP-062…068), more ink-boxes + free inks make **new** strokes hitch ~100 ms then run smooth. Happens near *and* far from boxes. Recognizers and hand-touch off.
+Field interrupt on TRACK-005 after erase phase (EP-062…068): a dense page (many ink-boxes + free
+inks) made **new** strokes hitch ~100 ms then run smooth. Near and far from boxes. Recognizers and
+hand-touch off. Continuous pen-up / pen-down.
 
-## Cause (confirmed on device)
+**Verified 2026-08-31 on RM2:** ordinary ink on a dense page feels normal again (no first-millimetre
+stall, live ink stays solid).
 
-GUI-thread `rasterizeVectors` FullClear (680–946 ms) between strokes. Next pen-down is queued (`reason=queued behind=rasterizeVectors`). `InkStrokeOperation` and recognizers are not the stall. The 180 ms settle follow-up stole downs after handwriting pauses.
+## What works
 
-## Fix (2026-08-31)
+| Path | Behaviour |
+|---|---|
+| Ordinary `RecogOutcome::Ink` | No Tablet `rasterizeVectors`. Live Pen stamps **are** the settle ([CHL-0029](../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)). |
+| 180 ms settle follow-up | **Gone.** It stole downs after handwriting pauses. |
+| Camera soft coalesce | Still 250 ms. Must **not** run synchronously on pen-up of ordinary ink. |
+| InkMode overlay | **Hidden while a stroke is active** so ToolCanvas Mono cannot cover live Pen ink. |
+| NodeEmphasis blink / membership Bold | ToolCanvas only. Paints **`includeIds`** (styled nodes), not every overlapping ink in the AABB. |
+| Draw-into membership with recog off | Still **joins** (not an ink-box recognizer). Chrome must not stay Mono over the next stroke. |
 
-- Ordinary `RecogOutcome::Ink`: skip Tablet rasterize (live stamps are the settle). [CHL-0029](../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)
-- No 180 ms follow-up FullClear. Camera still coalesces at 250 ms.
-- Structural ops: `InPlaceDirty` of the changed AABB (painter clip + tight `worldClip`); FullClear if AABB missing/huge.
-- Recog blink + membership bold: ToolCanvas [`NodeEmphasis`](../../epaper/drawing/tools/ui/node_emphasis.hpp) (Mono, partial AABB). [CHL-0030](../../.plan/iter-005/challenges/CHL-0030-node-emphasis.md)
+## What does not (known leftover / do not “fix” by FullClear)
 
-Guided review: [`.plan/iter-005/handoffs/2026-08-31-dev-guided-review-rasterize-dirty.md`](../../.plan/iter-005/handoffs/2026-08-31-dev-guided-review-rasterize-dirty.md)
+| Path | Behaviour |
+|---|---|
+| Move / resize pen-down | Still runs InPlaceDirty origin punch on that down (`slow_sample rasterize.render`). Correct; not an ink stroke. |
+| `doc_load`, camera, resize, missing AABB | Still FullClear. |
+| Enclose / connector **create** | One InPlaceDirty of the group / spine∪boxes at pen-up. |
+| Camera pending during a stroke | Coalesced to the 250 ms timer **after** pen-up, not inside `endStroke`. A pan mid-write can still FullClear once idle. |
+| Recognizers off | Does **not** disable draw-into membership. Overlay must hide on the next ink down. |
 
-## Follow-up (2026-08-31, same session)
+## Causes we hit (in order)
 
-Device log after the FullClear skip, recognizers off:
+1. **FullClear between strokes** (680–946 ms). `reason=queued i=0 behind=rasterizeVectors`. GUI thread, not `InkStrokeOperation`. 180 ms follow-up + `documentMutated` + camera.
+2. **ToolCanvas Mono over Pen ink.** After (1), downs were `behind=toolPaint` 77–357 ms. Ink went solid → dash-dash-dash → solid. Membership Bold kept overlay visible; `paint()` HierarchyCull’d the box AABB and re-stroked every neighbor in Mono.
+3. **Sync rasterize on ordinary pen-up.** Camera-pending `rasterizeVectors` inside `endStroke` (438–624 ms) or the next down (`slow_sample rasterize.render` 24–120 ms, `inplace true`).
 
-- Downs at the **end** of a dense page: `behind=toolPaint` 77–357 ms, not `rasterizeVectors`.
-- Long stroke (~every 100 samples, `gap_ms≈100`): another `toolPaint` ~90–105 ms. Ink goes solid → dash-dash-dash → solid.
-- Recog lines still `fail=recog_off`, but **draw-into membership still runs** and `NodeEmphasis` Bold keeps ToolCanvas visible + Mono. `paint()` HierarchyCull’d the group AABB and re-stroked every overlapping ink in Mono.
+## How to attribute a regression
 
-Fix: hide ToolCanvas while an ink stroke is active; `includeIds` so emphasis paints only blink/stamp ids; `clearStrokeStamp` syncs overlay off.
+Always-on probe: `/tmp/epaper-ink-path.log` (stderr too). `EPAPER_INK_PATH=0` off. Stall: `/tmp/epaper-ui-stall.log`. Rasterize: `[sync] vector rasterize … inplace … visits` in `/tmp/epaper.log`.
 
-## Follow-up (2026-08-31) — camera settle on pen-up
+| Log | Meaning | Likely revert |
+|---|---|---|
+| `event=down … behind=rasterizeVectors` 100s of ms, `inplace false` | FullClear stole the first sample | Ordinary ink skip; 180 ms follow-up; `documentMutated` consume flag |
+| `event=down … behind=toolPaint` | ToolCanvas Mono painted on the GUI thread | InkMode hide-while-stroke; `includeIds`; stamp clear → `syncOverlayPresence` |
+| Solid ink becomes dash-dash then solid | Mono (or non-Pen) refresh over Pen stamps | Overlay visible during ink, or Tablet `update()` of a huge rect |
+| `event=down … slow_sample slowest=rasterize.render` with `spans=rasterize.*` | Rasterize **on the pointer stack** | Camera/enclose running on ink down; transform punch is OK if they were moving a box |
+| `endStroke` stall 400+ ms on ordinary ink | Sync rasterize or heavy ingest on up | Camera pending must timer-coalesce, not `rasterizeVectors` in `endStroke` |
+| `[recog] … fail=recog_off` **and** `outcome=membership` | Draw-into still ran | Expected. Chrome, not join, is the hitch |
 
-Latest log after overlay hide: many downs are `slow_sample rasterize.render` 24–120 ms **inside** the pointer callback (`inplace true`). `endStroke` 438–624 ms when camera-pending rasterize ran synchronously on pen-up. Ordinary ink now **queues** that camera pass on the 250 ms timer instead of running it on up.
+Guided review of the first slice: [`.plan/iter-005/handoffs/2026-08-31-dev-guided-review-rasterize-dirty.md`](../../.plan/iter-005/handoffs/2026-08-31-dev-guided-review-rasterize-dirty.md).
 
-Move/resize downs still rasterize (origin punch). That punch must include bound connector spines or the origin connector remains on TabletCanvas.
-
-## How to attribute
-
-Always-on probe: `/tmp/epaper-ink-path.log` (stderr too). `EPAPER_INK_PATH=0` off.
-
-- `reason=queued i=0 event=down behind=rasterizeVectors` — rasterize stole the first sample
-- `reason=queued behind=toolPaint` — ToolCanvas Mono overlay stole the sample (membership/blink)
-- `reason=slow_sample slowest=flushPending|syncPoint|ingestDoc|tabletPaint` — the callback itself
+Connector origin punch (same InPlaceDirty machinery): [connector-live-manip-settle.md](./connector-live-manip-settle.md).

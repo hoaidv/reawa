@@ -115,11 +115,13 @@ An unsolicited `doc_load` mid-session is a protocol defect: reject, log, surface
 
 | Mode | Behavior |
 |---|---|
-| Soft (`settle=false`) | Coalesce to ≥ **250 ms** between soft rasterizes |
-| Sharp (`settle=true`, accepted `doc_load`, or a committed local op) | Immediate full redraw; antialiasing on for sharp |
+| Soft (`settle=false`) | Coalesce to ≥ **250 ms** between soft rasterizes. Must **not** run inside ordinary-ink `endStroke` / the next pen-down ([CHL-0029](../../../../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)). |
+| Sharp (`settle=true`, accepted `doc_load`) | Immediate full redraw; antialiasing on for sharp |
+| Ordinary local `append_ink` | **No** document rasterize — live Pen stamps already match the new node ([CHL-0029](../../../../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)). SRS-EP-01 outranks a full-panel reading of this row. |
+| Structural local op (enclose, connector create, erase, live-manip punch, undo when AABB unknown) | Sharp **InPlaceDirty** of the changed AABB (painter clip + tight `worldClip`); FullClear if the AABB is missing, huge, or the whole map |
 | During a manipulation gesture | **Partial refresh only** — no full-panel invalidation ([SRS-EP-11](../ink-box/srs-logic.md)) |
 
-Soft may look faded on e-ink; settle must sharpen.
+Soft may look faded on e-ink; camera/doc_load settle must sharpen. Ordinary ink must not FullClear to “sharpen.”
 
 ### Paint pass
 

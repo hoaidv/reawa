@@ -30,7 +30,7 @@ adopt. Same stop as SRS in [docs-first](../../../.agent/rules/docs-first.md).
 | **InputHub** | DeviceMap, match, one lock, hover demux | Overlay compositor; exclusive-id catalogue |
 | **ToolContext / ToolContextImpl** | Host ports: damage, visible, waveform, panel↔world, size / scale. Forwards paint / sync / `refreshChrome` to the active Mode | Exclusive-id string compares; knob / live-manip methods |
 | **SelectionOverlay + SelectionContextBar** | Selection ToolCanvasLayer state and ToolLayer widgets | Live inside ToolContextImpl or inlined into ToolCanvasItem |
-| **NodeEmphasis** | Recog blink, membership stroke-stamp, AABB highlight (ToolCanvas Mono, partial damage) | Selection knobs; document FullClear; inlined into ToolCanvasItem::paint |
+| **NodeEmphasis** | Recog blink, membership stroke-stamp, AABB highlight (ToolCanvas Mono, **`includeIds` only**) | Selection knobs; document FullClear; painting overlapping neighbors; inlined into ToolCanvasItem::paint |
 | **DocContext** | Document, edits, Infini preview, session exclusive id, Tablet debug | Overlay paint |
 | **ToolCanvasItem** | Chip-string → `ModeId` (the **only** map); QML I/O; owns impl, overlay, bar, emphasis, modes, hub | Implement `redrawLiveManip` / `publishOverlayHits` / `showManipUnavailable` / NodeEmphasis paint |
 
@@ -41,7 +41,7 @@ adopt. Same stop as SRS in [docs-first](../../../.agent/rules/docs-first.md).
 - Operations → **HostCaps** ports only.
 - Never Operation → `CanvasSession` / `ToolCanvasItem`.
 - `SelectionOverlay` is **host-owned**, used by SelectionMode, InkMode (Transforming), TransformGesture, ToolActions.
-- `NodeEmphasis` is **host-owned** ([CHL-0030](../../../.plan/iter-005/challenges/CHL-0030-node-emphasis.md)). Every Mode paints it (under in-flight Operation overlay). TabletCanvas does not bake blink/highlight into `m_image`.
+- `NodeEmphasis` is **host-owned** ([CHL-0030](../../../.plan/iter-005/challenges/CHL-0030-node-emphasis.md)). Every Mode paints it (under in-flight Operation overlay). TabletCanvas does not bake blink/highlight into `m_image`. InkMode **hides** ToolCanvas while an ink stroke is active (Mono over Pen dashes live ink and `toolPaint` steals samples).
 
 ## Integration (epaper)
 
@@ -64,3 +64,6 @@ Cite [ADR-0019](../../adr/ADR-0019-selection-chrome-layers.md):
 - Rebuild or restroke a live ToolCanvas overlay from **all** samples on pointer-move or on deletion-rect damage (append-only raster + blit; [ADR-0036](../../adr/ADR-0036-toolcanvas-live-overlay.md)).
 - `drawLine` each overlay sample with a fresh `DotLine` (dash restarts; looks solid).
 - Run object-erase 80% / document snapshot on the pointer callback.
+- Show ToolCanvas (Mono) while an **ink** stroke is in flight.
+- NodeEmphasis `DocumentRenderer` of a group AABB without `includeIds` (re-strokes neighbors).
+- InPlaceDirty of a live-manip **box** without bound connector spines (origin connector remains).

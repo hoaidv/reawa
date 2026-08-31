@@ -38,7 +38,7 @@ line, stay glued when a box moves, and not ask them to pick a routing tool. The 
 | BR-C03 | UX2 retro-chains at completion; no pending half-connector. Auto-pick Ink/Curve from the **merged** rest spine. | D6, D40 |
 | BR-C04 | Style names: **Ink** = morph, **Curve** = cubic. Auto: ≤1 inflection on `S` → Curve; else Ink. Override on the selected connector. | D33, D37 |
 | BR-C05 | Edge facing is the drawn departure, carried with the edge. Centre facing is drawn departure in a 60° cone about the peer ray. Edge never re-selected. | D26, D29 |
-| BR-C06 | A node move/resize/rotate emits **no** connector op. Warp is a pure function of rest shape + endpoints + style. | D4, ADR-0020 |
+| BR-C06 | A node move/resize/rotate emits **no** connector op. Warp is a pure function of rest shape + endpoints + style. Live preview is ToolCanvas; CanvasLayer origin punch **includes the spine AABB**, not only the box. | D4, ADR-0020, [BR-B19](../ink-box/srs-product.md) |
 | BR-C07 | Rest shape is never re-baked from a warped result. | D5 |
 | BR-C08 | Delete of a bound box **keeps** connectors; missing node resolves from last live pose; undo glues back. | D39 |
 | BR-C09 | Recognition is best-effort plus **one undo**. Chrome: blink connector + both nodes **once**. Does not name the style. | D38, BR-B09 analogue |

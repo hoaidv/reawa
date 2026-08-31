@@ -38,11 +38,14 @@ Object-erase deletion rects stay on `ObjectEraseOperation` this slice ([ADR-0036
 ## Resolution
 
 **Adopted** 2026-08-31 with the hitch interrupt. Principles + catalog updated in the same change.
+**Field-verified 2026-08-31:** membership Bold must not keep ToolCanvas Mono visible during the next
+ink stroke; paint uses `includeIds` (not HierarchyCull of the group AABB).
 
 ## Product doc updates
 
 - [`.docs/modules/epaper/tool-system/principles.md`](../../../.docs/modules/epaper/tool-system/principles.md)
 - [`.docs/modules/epaper/tool-system/catalog.md`](../../../.docs/modules/epaper/tool-system/catalog.md)
+- [`.docs/memory/ink-path-density-hitch.md`](../../../.docs/memory/ink-path-density-hitch.md)
 
 ## Interrupt / expedite
 

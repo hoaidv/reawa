@@ -195,8 +195,8 @@ EP-018. Anchor resolution for connectors lands in [REQ-08](../../prd.md#node-man
 | Rule | Value |
 |---|---|
 | What moves | The **document's** ink, transformed live. There is no advisory outline that a peer later corrects |
-| Paint during the gesture | **ToolCanvasLayer** draws the live node; CanvasLayer hides the origin box only ([CHL-0018](../../../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md)). Not a second document, not a ghost |
-| Commit | On release, the committed transform **equals** the last previewed transform. 0 px jump, 0 snap-back. Settled raster returns to CanvasLayer |
+| Paint during the gesture | **ToolCanvasLayer** draws the live node **and bound connector spines**; CanvasLayer hides the origin box **and those spines** ([CHL-0018](../../../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md), [BR-B19](./srs-product.md)). Suppress ids without punching the spine AABB leaves origin connector pixels. Not a second document, not a ghost |
+| Commit | On release, the committed transform **equals** the last previewed transform. 0 px jump, 0 snap-back. Settled raster returns to CanvasLayer: InPlaceDirty of **origin ∪ live box ∪ origin and live connector spines**. A box-only dirty rect misses the middle of the spine and leaves the origin connector. |
 | Op granularity | **One** `set_smart_transform` per completed gesture, not per frame — intermediate frames are local paint only |
 | Refresh | Partial refresh only during the gesture; **0** full-panel invalidations ([SRS-EP-02](../region-sync/srs-logic.md)) |
 | Feedback rate | ≥5 Hz; no stall >200 ms. Slow is acceptable, wrong is not (CHL-0006) |

@@ -75,7 +75,8 @@ Do not copy the EXP probe; reimplement the ADR.
 | Morph | `m = 0.5·(1−cos(π·min(1, turn/90°)))`; `m=0` is a true skip (`V=U`) |
 | Cubic | Hermite through endpoints with facings; handle speed = `L'` |
 | `d` | absolute world units; never scaled; never re-bake rest shape |
-| Live drag | re-warp each move sample; damage old∪new AABB; 0 full-panel invalidations |
+| Live drag | re-warp each move sample; ToolCanvas damage old∪new connector AABB; CanvasLayer punches **origin box ∪ origin spine** (suppress ids are not enough — InPlaceDirty must cover the spine). 0 full-panel invalidations |
+| Settle after bound-node drag | InPlaceDirty **origin ∪ live box ∪ origin and live spines**; then 1× document paint. Box-only dirty leaves origin connector and holes the new middle |
 | Missed frame | keep last warped pose; commit warp on pen-up |
 | Delete | keep connector; missing `nodeId` resolves from last live world pose (derived cache, persisted, not an op) |
 | Undo delete | same `nodeId` restored → live resolve again |

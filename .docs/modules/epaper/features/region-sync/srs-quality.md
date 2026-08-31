@@ -28,7 +28,9 @@ Parent REQ: [REQ-02](../../prd.md#region-sync). Follow quality: [SRS-EP-51](#srs
 | **Panel raster vs the device's own document** | Same figures for the region after settle | Always ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §2) |
 | **Panel raster vs desktop mirror** | Same figures after the change stream settles | Always — convergence measured on the desktop ([SRS-IN-08](../../../infini/features/tablet-sync/srs-quality.md)) |
 | Soft refresh under pan/zoom spam | Min interval between soft paints | ≥ **250 ms**; latest pending wins |
-| Settle / accepted `doc_load` / committed local op | Sharp paint | Immediate; AA on; no soft fade left behind |
+| Settle / accepted `doc_load` | Sharp paint | Immediate; AA on; no soft fade left behind |
+| Ordinary local `append_ink` | Document FullClear / InPlaceDirty on that pen-up | **0** — live stamps are settle ([CHL-0029](../../../../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)); must not steal the next pen-down ([SRS-EP-01](../local-pen-ink/srs-logic.md)) |
+| Structural local op | Sharp paint of the changed AABB | InPlaceDirty (or FullClear if AABB missing/huge) |
 | **Repaints sourced from an inbound peer picture** | Count | **0** |
 | Local ink → wire | `stroke_*` (preview) with world brush + **world** x/y | Always |
 | Stroke width | Live + vector: `world × s_panel` | Always ([ADR-0012](../../../../adr/ADR-0012-world-stroke-viewport-parity.md)) |
@@ -41,6 +43,9 @@ Parent REQ: [REQ-02](../../prd.md#region-sync). Follow quality: [SRS-EP-51](#srs
 - **Map** is never coalesced; **paint** is. Ghosting between paints is accepted.
 - Ghosting is a *timing* allowance, never a *content* allowance: a settled frame that disagrees with
   the local document is a defect, not slow e-ink.
+- **Ordinary ink settle** is live stamps, not a full-panel sharp paint
+  ([CHL-0029](../../../../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)).
+  A FullClear that agrees with the document still **fails SRS-EP-01** if it queues the next pen-down.
 - Library `RegionSession` coalesce semantics remain the target for a future Qt wiring story.
 
 ---

@@ -32,8 +32,8 @@ Does not relax [SRS-EP-01](../local-pen-ink/srs-logic.md) ink latency or
 | Scenario | Target |
 |---|---|
 | Pen-up → connector visible | p95 ≤500 ms; 0 peer messages |
-| Re-warp during drag | ≥5 Hz; 0 full-panel invalidations; UI freeze ≤200 ms |
-| Commit vs last preview | 0 px jump @ 100% zoom |
+| Re-warp during drag | ≥5 Hz; 0 full-panel invalidations; UI freeze ≤200 ms; origin spine **gone** from CanvasLayer (not only the box) |
+| Commit vs last preview | 0 px jump @ 100% zoom; **0** leftover origin connector pixels; **0** missing middle of the new spine |
 | Never re-bake round-trip | 0.000 u on host fixtures (ADR-0020 I1) |
 | Device vs Infini samples | 0 divergent nodes on shared fixtures |
 | False positives (both armed) | ≤2% of `pen` strokes; 0 on a fresh page's first 20 unless named |

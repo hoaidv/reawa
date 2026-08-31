@@ -45,6 +45,18 @@ module: epaper
    `RM_SYNC_HOST` is set, and must not perform socket I/O on the pen hot path.
 9. Keep status/debug text off the stroke hot path — refresh it between strokes
    so it never adds a second damage region while drawing.
+10. **Do not steal the GUI thread between strokes** on a dense page
+    ([CHL-0029](../../../../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md),
+    [CHL-0030](../../../../../.plan/iter-005/challenges/CHL-0030-node-emphasis.md)):
+    - Ordinary `append_ink` must not `rasterizeVectors` the document (live stamps are settle).
+    - Do not FullClear ~180 ms after pen-up.
+    - Camera soft coalesce (250 ms) must not run inside `endStroke` or the next pen-down.
+    - ToolCanvas must stay **hidden** while an ink stroke is active (Mono over Pen looks
+      dash-dash-dash then solid, and `toolPaint` queues the next sample).
+    - NodeEmphasis paints only emphasized ids (`includeIds`), never every overlapping ink.
+
+Regression probe: `/tmp/epaper-ink-path.log` — see
+[memory/ink-path-density-hitch.md](../../../memory/ink-path-density-hitch.md).
 
 ### Latency quality target
 

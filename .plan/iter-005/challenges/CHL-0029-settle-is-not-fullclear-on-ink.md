@@ -39,12 +39,13 @@ Interpret settle as **pixels matching the local document**, not “white-fill th
 
 **Adopted** 2026-08-31 (interrupt TRACK-005 / SRS-EP-01). Architecture goal 1 outranks a
 full-panel reading of SRS-EP-03 settle. Sharp InPlaceDirty counts as settle paint. Ordinary Ink skip
-counts as settle because pixels already match.
+counts as settle because pixels already match. **Field-verified 2026-08-31** on a dense page
+(recog off): ordinary ink no longer hitch-then-smooth.
 
 ## Product doc updates
 
-- This challenge is the recorded interpretation; SRS-EP-03 table is unchanged this slice
-  (PM may later add a row: ordinary append_ink = live stamps, 0 FullClear).
+- [SRS-EP-03](../../../.docs/modules/epaper/features/region-sync/srs-quality.md) / [SRS-EP-02 coalesce](../../../.docs/modules/epaper/features/region-sync/srs-logic.md): ordinary `append_ink` is live stamps, not FullClear; camera 250 ms must not run on that pen-up.
+- [SRS-EP-01](../../../.docs/modules/epaper/features/local-pen-ink/srs-logic.md) item 10: GUI-thread steal rules.
 - [`.docs/memory/ink-path-density-hitch.md`](../../../.docs/memory/ink-path-density-hitch.md)
 
 ## Interrupt / expedite

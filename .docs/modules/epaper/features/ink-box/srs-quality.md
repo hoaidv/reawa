@@ -37,9 +37,10 @@ Logic: [SRS-EP-10 / SRS-EP-11](./srs-logic.md). Document budgets:
 | Selection feel | p95 pen-down → selection affordance | ≤100 ms |
 | Commit fidelity | Committed geometry vs last previewed geometry, 20 scripted gestures | **0 px jump, 0 snap-backs** (**CHL-0006 / CHL-0007 regression**) |
 | Ghost artifacts | Advisory outlines that move independently of the ink | **0** — the model no longer has one |
-| Live node during move/resize | Where the moving pixels are painted | **ToolCanvasLayer** ([CHL-0018](../../../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md)); CanvasLayer origin hole only — not origin∪trail |
-| Live node during move/resize | Duplicate box on CanvasLayer while overlay shows the live copy | **0** |
+| Live node during move/resize | Where the moving pixels are painted | **ToolCanvasLayer** ([CHL-0018](../../../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md)); CanvasLayer origin hole = box **and bound connector spines** — not origin∪trail |
+| Live node during move/resize | Duplicate box **or origin connector** on CanvasLayer while overlay shows the live copy | **0** |
 | Pen-up after move/resize | Settled copies of that box | **1** on CanvasLayer; ToolCanvasLayer live copy gone |
+| Pen-up after move/resize of a connected box | Settled connector | **1** spine; **0** leftover origin pixels; **0** missing middle ([memory](../../../memory/connector-live-manip-settle.md)) |
 | Mid-gesture e-ink ghosting / dirty traces | Product fail? | **No** — refresh allowance; settled-frame mismatch **is** a fail (BR-B15) |
 | `fixedInk` resize | Content sample size change | ≤1 px; each UV preserved ±1 world unit (**CHL-0004 / CHL-0005 regression**) |
 | `fixedInk` resize | Boundary ink follows the frame | Always — `inkScaleMode` never governs boundary |
