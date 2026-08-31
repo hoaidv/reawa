@@ -9,8 +9,9 @@
 #include "erase_area.hpp"
 #include "surround_create.hpp"
 
-#include <chrono>
+#include <atomic>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -18,11 +19,12 @@
 namespace epaper {
 namespace document {
 
-inline std::vector<ErasePt> downsampleErasePoly(const std::vector<ErasePt> &p, size_t maxPts)
+template <typename Pt>
+inline std::vector<Pt> downsamplePolyline(const std::vector<Pt> &p, size_t maxPts)
 {
     if (maxPts < 2 || p.size() <= maxPts)
         return p;
-    std::vector<ErasePt> o;
+    std::vector<Pt> o;
     o.reserve(maxPts);
     const size_t last = p.size() - 1;
     for (size_t i = 0; i < maxPts; ++i) {
@@ -30,6 +32,11 @@ inline std::vector<ErasePt> downsampleErasePoly(const std::vector<ErasePt> &p, s
         o.push_back(p[j]);
     }
     return o;
+}
+
+inline std::vector<ErasePt> downsampleErasePoly(const std::vector<ErasePt> &p, size_t maxPts)
+{
+    return downsamplePolyline(p, maxPts);
 }
 
 inline std::vector<InkSample> erasePolyToSamples(const std::vector<ErasePt> &poly)
@@ -88,9 +95,16 @@ inline std::vector<InkSample> smartGroupBoundaryWorld(const DocNode &sg)
     return world;
 }
 
-inline double fractionBoundaryAreaInside(const DocNode &sg, const std::vector<InkSample> &lasso)
+enum class ObjectErasePass { Commit, Overlay };
+
+/** Compute copies only. Paint uses the full freeform. */
+constexpr size_t kObjectEraseOverlayLassoMax = 48;
+constexpr size_t kObjectEraseBoundaryMax = 48;
+
+/** 8×8 even-odd area of `poly` that also lies in `lasso`. `poly` should already be coarsened. */
+inline double fractionPolyAreaInside(const std::vector<InkSample> &poly,
+                                     const std::vector<InkSample> &lasso)
 {
-    const std::vector<InkSample> poly = smartGroupBoundaryWorld(sg);
     if (poly.size() < 3)
         return 0;
     SmartBounds b = samplesAabb(poly);
@@ -110,6 +124,32 @@ inline double fractionBoundaryAreaInside(const DocNode &sg, const std::vector<In
     return inPoly == 0 ? 0 : static_cast<double>(inBoth) / static_cast<double>(inPoly);
 }
 
+inline double fractionBoundaryAreaInside(const DocNode &sg, const std::vector<InkSample> &lasso)
+{
+    return fractionPolyAreaInside(
+        downsamplePolyline(smartGroupBoundaryWorld(sg), kObjectEraseBoundaryMax), lasso);
+}
+
+struct ObjectEraseSubject {
+    std::string id;
+    NodeKind kind = NodeKind::Ink;
+    SmartBounds aabb;
+    std::vector<InkSample> inkSamples;
+    std::vector<InkSample> boundaryWorld;
+    std::vector<InkSample> connectorPath;
+};
+
+struct ObjectEraseOverlayJob {
+    std::uint64_t gen = 0;
+    std::vector<InkSample> lasso;
+    std::vector<ObjectEraseSubject> subjects;
+};
+
+struct ObjectEraseOverlayResult {
+    std::uint64_t gen = 0;
+    std::vector<std::string> ids;
+};
+
 inline bool aabbIntersectsInclusive(const SmartBounds &a, const SmartBounds &b)
 {
     return a.x <= b.x + b.width && b.x <= a.x + a.width && a.y <= b.y + b.height
@@ -128,14 +168,30 @@ inline bool objectEraseCullAabb(const DocNode &n, SmartBounds *out)
     return nodeWorldAabb(n, *out);
 }
 
-enum class ObjectErasePass { Commit, Overlay };
-
-constexpr size_t kObjectEraseOverlayLassoMax = 48;
-constexpr int kObjectEraseOverlayBudgetUs = 8000;
+inline bool objectEraseHitsSubject(const ObjectEraseSubject &s, const std::vector<InkSample> &lasso)
+{
+    if (s.kind == NodeKind::Frame)
+        return false;
+    if (s.kind == NodeKind::Ink) {
+        if (s.inkSamples.empty())
+            return false;
+        if (s.inkSamples.size() < 2)
+            return pointInPolygonEvenOdd(s.inkSamples[0].x, s.inkSamples[0].y, lasso);
+        return fractionArcLengthInside(s.inkSamples, lasso) >= 0.8;
+    }
+    if (s.kind == NodeKind::SmartGroup)
+        return fractionPolyAreaInside(s.boundaryWorld, lasso) >= 0.8;
+    if (s.kind == NodeKind::Connector)
+        return fractionArcLengthInside(s.connectorPath, lasso) >= 0.8;
+    if (s.kind == NodeKind::Primitive || s.kind == NodeKind::Text)
+        return fractionAabbInsidePolygon(s.aabb, lasso) >= 0.8;
+    return false;
+}
 
 inline bool objectEraseHits(const DocNode &n, const std::vector<InkSample> &lasso,
                             ObjectErasePass pass = ObjectErasePass::Commit)
 {
+    (void)pass;
     if (n.kind == NodeKind::Frame)
         return false;
     if (n.kind == NodeKind::Ink) {
@@ -145,15 +201,8 @@ inline bool objectEraseHits(const DocNode &n, const std::vector<InkSample> &lass
             return pointInPolygonEvenOdd(n.samples[0].x, n.samples[0].y, lasso);
         return fractionArcLengthInside(n.samples, lasso) >= 0.8;
     }
-    if (n.kind == NodeKind::SmartGroup) {
-        if (pass == ObjectErasePass::Overlay) {
-            SmartBounds wb;
-            if (!nodeWorldAabb(n, wb))
-                return false;
-            return fractionAabbInsidePolygon(wb, lasso) >= 0.8;
-        }
+    if (n.kind == NodeKind::SmartGroup)
         return fractionBoundaryAreaInside(n, lasso) >= 0.8;
-    }
     if (n.kind == NodeKind::Connector)
         return fractionArcLengthInside(connectorWorldPath(n), lasso) >= 0.8;
     if (n.kind == NodeKind::Primitive || n.kind == NodeKind::Text) {
@@ -165,31 +214,62 @@ inline bool objectEraseHits(const DocNode &n, const std::vector<InkSample> &lass
     return false;
 }
 
-inline void collectObjectHits(const std::vector<DocNode> &nodes, const std::vector<InkSample> &lasso,
-                              const SmartBounds &lassoAabb, ObjectErasePass pass,
-                              std::vector<std::string> *hitIds,
-                              const std::chrono::steady_clock::time_point *deadline = nullptr)
+inline void collectObjectEraseSubjects(const std::vector<DocNode> &nodes, const SmartBounds &lassoAabb,
+                                       ObjectErasePass pass, std::vector<ObjectEraseSubject> *out)
 {
     for (const auto &n : nodes) {
-        if (deadline && std::chrono::steady_clock::now() > *deadline)
-            return;
         if (n.kind == NodeKind::Frame) {
-            collectObjectHits(n.children, lasso, lassoAabb, pass, hitIds, deadline);
+            collectObjectEraseSubjects(n.children, lassoAabb, pass, out);
             continue;
         }
         if (n.kind == NodeKind::Group) {
-            collectObjectHits(n.children, lasso, lassoAabb, pass, hitIds, deadline);
+            collectObjectEraseSubjects(n.children, lassoAabb, pass, out);
             continue;
         }
         if (pass == ObjectErasePass::Overlay
             && (n.kind == NodeKind::Ink || n.kind == NodeKind::Connector))
             continue;
-        SmartBounds nb;
-        if (objectEraseCullAabb(n, &nb) && !aabbIntersectsInclusive(nb, lassoAabb))
+        ObjectEraseSubject s;
+        s.id = n.id;
+        s.kind = n.kind;
+        if (!objectEraseCullAabb(n, &s.aabb) || !aabbIntersectsInclusive(s.aabb, lassoAabb))
             continue;
-        if (objectEraseHits(n, lasso, pass))
-            hitIds->push_back(n.id);
+        if (n.kind == NodeKind::Ink)
+            s.inkSamples = n.samples;
+        else if (n.kind == NodeKind::SmartGroup)
+            s.boundaryWorld =
+                downsamplePolyline(smartGroupBoundaryWorld(n), kObjectEraseBoundaryMax);
+        else if (n.kind == NodeKind::Connector)
+            s.connectorPath = connectorWorldPath(n);
+        else if (n.kind == NodeKind::Primitive || n.kind == NodeKind::Text) {
+            if (!boundsOf(n, s.aabb))
+                continue;
+        }
+        out->push_back(std::move(s));
     }
+}
+
+inline std::vector<std::string> objectEraseHitIds(const std::vector<ObjectEraseSubject> &subjects,
+                                                  const std::vector<InkSample> &lasso,
+                                                  const std::atomic<bool> *cancel = nullptr)
+{
+    std::vector<std::string> ids;
+    for (const auto &s : subjects) {
+        if (cancel && cancel->load())
+            break;
+        if (objectEraseHitsSubject(s, lasso))
+            ids.push_back(s.id);
+    }
+    return ids;
+}
+
+inline void collectObjectHits(const std::vector<DocNode> &nodes, const std::vector<InkSample> &lasso,
+                              const SmartBounds &lassoAabb, ObjectErasePass pass,
+                              std::vector<std::string> *hitIds)
+{
+    std::vector<ObjectEraseSubject> subjects;
+    collectObjectEraseSubjects(nodes, lassoAabb, pass, &subjects);
+    *hitIds = objectEraseHitIds(subjects, lasso);
 }
 
 inline std::vector<std::string> objectEraseCandidateIds(const DeviceDocument &doc,
@@ -203,15 +283,34 @@ inline std::vector<std::string> objectEraseCandidateIds(const DeviceDocument &do
     if (lasso.size() < 3)
         return {};
     std::vector<std::string> ids;
-    const std::chrono::steady_clock::time_point *deadline = nullptr;
-    std::chrono::steady_clock::time_point until;
-    if (pass == ObjectErasePass::Overlay) {
-        until = std::chrono::steady_clock::now()
-            + std::chrono::microseconds(kObjectEraseOverlayBudgetUs);
-        deadline = &until;
-    }
-    collectObjectHits(doc.rootChildren, lasso, samplesAabb(lasso), pass, &ids, deadline);
+    collectObjectHits(doc.rootChildren, lasso, samplesAabb(lasso), pass, &ids);
     return ids;
+}
+
+inline ObjectEraseOverlayJob objectEraseMakeOverlayJob(const DeviceDocument &doc,
+                                                       const std::vector<ErasePt> &poly,
+                                                       std::uint64_t gen)
+{
+    ObjectEraseOverlayJob job;
+    job.gen = gen;
+    const auto closed =
+        downsampleErasePoly(autoCloseErasePoly(poly), kObjectEraseOverlayLassoMax);
+    job.lasso = erasePolyToSamples(closed);
+    if (job.lasso.size() >= 3)
+        collectObjectEraseSubjects(doc.rootChildren, samplesAabb(job.lasso),
+                                   ObjectErasePass::Overlay, &job.subjects);
+    return job;
+}
+
+inline ObjectEraseOverlayResult objectEraseRunOverlayJob(const ObjectEraseOverlayJob &job,
+                                                         const std::atomic<bool> &cancel)
+{
+    ObjectEraseOverlayResult out;
+    out.gen = job.gen;
+    if (cancel.load() || job.lasso.size() < 3)
+        return out;
+    out.ids = objectEraseHitIds(job.subjects, job.lasso, &cancel);
+    return out;
 }
 
 inline ApplyResult commitObjectErase(DeviceDocument &doc, const std::string &opId,

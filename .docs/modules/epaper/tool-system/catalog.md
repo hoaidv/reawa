@@ -39,7 +39,7 @@ Registered in `ToolCanvasItem::registerOperations`. One instance per kind on the
 | InkStroke | `operations/ink_stroke_operation.hpp` | RawPointer | RawPointer | 10 | Primary only | `InkSink`; skip stylus stash if `device != Pen` |
 | BrushErase | `operations/brush_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Ghost; `StylusHoverSink` near-circle; `erase_brush` |
 | AreaErase | `operations/area_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Dotted freeform; polygon clip + fully-inside remove |
-| ObjectErase | `operations/object_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Dotted freeform + AABB; 80% table; 0 remnants |
+| ObjectErase | `operations/object_erase_operation.hpp` | RawPointer | RawPointer | 20 | Primary | Full dotted freeform paint; deletion-rect 2.5 px cosmetic; live 80% off UI via `util/latest_job.hpp` |
 | Rotate | — | — | — | — | — | enum + Mode list only |
 
 Shared move/resize math: `operations/transform_session.hpp` (Qt-free) +
@@ -115,3 +115,5 @@ epaper/drawing/tools/
   ui/                   SelectionContextToolbar.qml, selection_overlay, selection_context_bar,
                         action_list_model
 ```
+
+Shared coalesce (not a Mode/Operation): [`epaper/util/latest_job.hpp`](../../../epaper/util/latest_job.hpp) — one in-flight job, at most one pending; a newer submit replaces the waiting request and cooperatively cancels in-flight.

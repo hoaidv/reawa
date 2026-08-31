@@ -181,8 +181,8 @@ Draw a **white ghost polyline** on ToolCanvas, stroke width = eraser size, along
 
 ### 9.1 While down
 
-- Dotted polyline on ToolCanvas (same close rule as area: auto-close last→first, no minimum area).
-- **Highlight:** a second, **thicker outline on ToolCanvas** of each candidate that currently passes the 80% test. Outline = that node’s **AABB** (selection-style), not a second copy of the ink path. Live highlight may coarsen the lasso and test SmartGroup by AABB so the gesture stays live; **commit** still uses the table below on the full polyline.
+- Dotted polyline on ToolCanvas (same close rule as area: auto-close last→first, no minimum area). Paint the **drawn** samples; a coarsened copy is for hit-test only.
+- **Highlight (deletion-rect):** a second outline on ToolCanvas of each candidate that currently passes the 80% test. Outline = that node’s **AABB** (selection-style), not a second copy of the ink path. Stroke **2.5 panel pixels**, cosmetic (unchanged apparent width when the camera zooms). Live 80% is **not** on the UI thread: one in-flight compute, at most one queued latest lasso (newer events replace the waiting job). Overlay skips Ink and Connector. SmartGroup live/commit 80% uses a **downsampled boundary polyline** (the product table is still boundary area, not the fitted AABB).
 - Never restroke the document during the gesture.
 - No cover/mask of document content.
 

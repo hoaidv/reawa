@@ -9,6 +9,8 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/erase_clip_test.cpp -o /tmp/erase_cli
 /tmp/erase_clip_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/erase_area_object_test.cpp -o /tmp/erase_area_object_test
 /tmp/erase_area_object_test
+c++ -std=c++17 -Wall -Wextra -O2 -pthread -I. tests/latest_job_test.cpp -o /tmp/latest_job_test
+/tmp/latest_job_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/enclose_test.cpp -o /tmp/enclose_test
 /tmp/enclose_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/membership_test.cpp -o /tmp/membership_test

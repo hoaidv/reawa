@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- * ObjectErase — dotted freeform + AABB highlight for 80% candidates.
+ * ObjectErase — full dotted freeform paint; 80% overlay off the UI thread.
  * @implements [SRS-EP-54] erase_object exclusive
  * @implements [SRS-EP-58] object erase
  */
@@ -12,14 +12,20 @@
 #include "../contexts/tool_context.hpp"
 #include "document/erase_object.hpp"
 #include "debug/ui_stall.hpp"
+#include "util/latest_job.hpp"
 
-#include <QElapsedTimer>
+#include <QCoreApplication>
 #include <QLatin1String>
+#include <QMetaObject>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
 #include <QPointF>
 #include <QRectF>
+#include <algorithm>
+#include <atomic>
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -30,6 +36,7 @@ class ObjectEraseOperation final : public Operation, public RawPointerSink {
 public:
     explicit ObjectEraseOperation(HostCaps *caps)
         : m_caps(caps)
+        , m_bridge(std::make_shared<Bridge>())
     {
         m_desc.kind = OperationKind::ObjectErase;
         m_desc.matchOn = StrategyKind::RawPointer;
@@ -37,7 +44,38 @@ public:
         m_desc.priority = 20;
         m_desc.acceptPrimary = true;
         m_desc.acceptSecondary = false;
+        m_bridge->op = this;
+        m_job.start(
+            [](const epaper::document::ObjectEraseOverlayJob &job,
+               const std::atomic<bool> &cancel) {
+                return epaper::document::objectEraseRunOverlayJob(job, cancel);
+            },
+            [bridge = m_bridge](epaper::document::ObjectEraseOverlayResult result) {
+                QCoreApplication *app = QCoreApplication::instance();
+                if (!app)
+                    return;
+                QMetaObject::invokeMethod(
+                    app,
+                    [bridge, result = std::move(result)]() mutable {
+                        if (!bridge->alive.load() || !bridge->op)
+                            return;
+                        bridge->op->onOverlayResult(std::move(result));
+                    },
+                    Qt::QueuedConnection);
+            });
     }
+
+    ~ObjectEraseOperation() override
+    {
+        if (m_bridge) {
+            m_bridge->alive = false;
+            m_bridge->op = nullptr;
+        }
+        m_job.stop();
+    }
+
+    ObjectEraseOperation(const ObjectEraseOperation &) = delete;
+    ObjectEraseOperation &operator=(const ObjectEraseOperation &) = delete;
 
     OperationKind kind() const override { return OperationKind::ObjectErase; }
     const OperationDescriptor &descriptor() const override { return m_desc; }
@@ -54,9 +92,9 @@ public:
 
     void onDown(const PointerSample &s) override
     {
+        bumpEpoch();
         m_pts.clear();
         m_hitPanelRects.clear();
-        m_candidateClock.invalidate();
         m_pts.push_back(s.panel);
         if (m_caps && m_caps->toolUi) {
             m_caps->toolUi->syncOverlayPresence();
@@ -72,15 +110,15 @@ public:
         m_pts.push_back(s.panel);
         m_caps->toolUi->damageChromeSegment(
             QRectF(prev, s.panel).normalized().adjusted(-16, -16, 16, 16));
-        maybeRefreshCandidates();
+        requestOverlayHits();
     }
     void onUp(const PointerSample &) override { commit(); }
     void onCancel() override { cancel(); }
     void cancel() override
     {
+        bumpEpoch();
         m_pts.clear();
         m_hitPanelRects.clear();
-        m_candidateClock.invalidate();
         if (m_caps && m_caps->toolUi) {
             m_caps->toolUi->setStrokeWaveform(false);
             m_caps->toolUi->refreshChrome();
@@ -93,22 +131,22 @@ public:
             return;
         painter->save();
         QPen dotted(Qt::black);
-        dotted.setWidthF(3.0);
+        dotted.setWidthF(kFreeformStrokePanelPx);
         dotted.setStyle(Qt::DotLine);
         painter->setBrush(Qt::NoBrush);
         painter->setPen(dotted);
         if (m_pts.size() == 1) {
             painter->drawEllipse(m_pts.front(), 2.0, 2.0);
         } else if (m_pts.size() > 1) {
-            const std::vector<QPointF> draw = downsamplePanel(m_pts, kOverlayPaintMax);
             QPainterPath path;
-            path.moveTo(draw.front());
-            for (size_t i = 1; i < draw.size(); ++i)
-                path.lineTo(draw[i]);
+            path.moveTo(m_pts.front());
+            for (size_t i = 1; i < m_pts.size(); ++i)
+                path.lineTo(m_pts[i]);
             painter->drawPath(path);
         }
         QPen thick(Qt::black);
-        thick.setWidthF(5.0);
+        thick.setWidthF(kDeletionRectStrokePanelPx);
+        thick.setCosmetic(true);
         thick.setStyle(Qt::DotLine);
         painter->setPen(thick);
         for (const QRectF &r : m_hitPanelRects)
@@ -117,22 +155,15 @@ public:
     }
 
 private:
-    static constexpr size_t kOverlayPaintMax = 96;
-    static constexpr size_t kOverlayHitMax = 48;
+    struct Bridge {
+        std::atomic<bool> alive{true};
+        ObjectEraseOperation *op = nullptr;
+    };
 
-    static std::vector<QPointF> downsamplePanel(const std::vector<QPointF> &pts, size_t maxPts)
-    {
-        if (maxPts < 2 || pts.size() <= maxPts)
-            return pts;
-        std::vector<QPointF> o;
-        o.reserve(maxPts);
-        const size_t last = pts.size() - 1;
-        for (size_t i = 0; i < maxPts; ++i) {
-            const size_t j = i * last / (maxPts - 1);
-            o.push_back(pts[j]);
-        }
-        return o;
-    }
+    /** Dotted freeform — panel pixels (ToolCanvas). */
+    static constexpr qreal kFreeformStrokePanelPx = 3.0;
+    /** Deletion-rect around 80% candidates. Cosmetic: same px at any world zoom. Half of 5. */
+    static constexpr qreal kDeletionRectStrokePanelPx = 2.0;
 
     std::vector<epaper::document::ErasePt> worldPoly() const
     {
@@ -150,6 +181,18 @@ private:
             world.push_back({w.x, w.y});
         }
         return world;
+    }
+
+    static std::vector<QPointF> downsamplePanel(const std::vector<QPointF> &pts, size_t maxPts)
+    {
+        if (maxPts < 2 || pts.size() <= maxPts)
+            return pts;
+        std::vector<QPointF> o;
+        o.reserve(maxPts);
+        const size_t last = pts.size() - 1;
+        for (size_t i = 0; i < maxPts; ++i)
+            o.push_back(pts[i * last / (maxPts - 1)]);
+        return o;
     }
 
     static QRectF paddedPanelAabb(QRectF r)
@@ -191,26 +234,56 @@ private:
         return u;
     }
 
-    void maybeRefreshCandidates()
+    void bumpEpoch()
+    {
+        ++m_submitGen;
+        m_appliedGen = m_submitGen;
+        m_jobBusy = false;
+        m_resnapWaiting = false;
+    }
+
+    void requestOverlayHits()
     {
         if (!m_caps || !m_caps->doc || !m_caps->toolUi)
             return;
         if (m_pts.size() < 3)
             return;
-        int period = kCandidatePeriodMs;
-        if (m_pts.size() > 400)
-            period = 100;
-        if (m_pts.size() > 1200)
-            period = 160;
-        if (m_candidateClock.isValid() && m_candidateClock.elapsed() < period)
+        if (m_jobBusy) {
+            m_resnapWaiting = true;
             return;
-        m_candidateClock.start();
-        const auto ids = epaper::document::objectEraseCandidateIds(
-            m_caps->doc->document(), worldPolyFrom(downsamplePanel(m_pts, kOverlayHitMax)),
-            epaper::document::ObjectErasePass::Overlay);
+        }
+        startOverlayJob();
+    }
+
+    void startOverlayJob()
+    {
+        m_resnapWaiting = false;
+        m_jobBusy = true;
+        const std::uint64_t gen = ++m_submitGen;
+        auto job = epaper::document::objectEraseMakeOverlayJob(
+            m_caps->doc->document(),
+            worldPolyFrom(downsamplePanel(m_pts, epaper::document::kObjectEraseOverlayLassoMax)),
+            gen);
+        m_job.submit(std::move(job));
+    }
+
+    void onOverlayResult(epaper::document::ObjectEraseOverlayResult result)
+    {
+        m_jobBusy = false;
+        if (result.gen < m_appliedGen) {
+            if (m_resnapWaiting && !m_pts.empty())
+                startOverlayJob();
+            return;
+        }
+        m_appliedGen = result.gen;
+        if (!m_caps || !m_caps->doc || !m_caps->toolUi || m_pts.size() < 3) {
+            if (m_resnapWaiting && !m_pts.empty())
+                startOverlayJob();
+            return;
+        }
         std::vector<QRectF> next;
-        next.reserve(ids.size());
-        for (const auto &id : ids) {
+        next.reserve(result.ids.size());
+        for (const auto &id : result.ids) {
             const epaper::document::DocNode *n = m_caps->doc->document().find(id);
             if (!n)
                 continue;
@@ -218,30 +291,25 @@ private:
             if (!r.isNull())
                 next.push_back(r);
         }
-        if (next.size() == m_hitPanelRects.size()) {
-            bool same = true;
-            for (size_t i = 0; i < next.size(); ++i) {
-                if (next[i] != m_hitPanelRects[i]) {
-                    same = false;
-                    break;
-                }
-            }
-            if (same)
-                return;
+        const bool same = next.size() == m_hitPanelRects.size()
+            && std::equal(next.begin(), next.end(), m_hitPanelRects.begin());
+        if (!same) {
+            const QRectF dirty = unionHitRects(m_hitPanelRects).united(unionHitRects(next));
+            m_hitPanelRects = std::move(next);
+            if (!dirty.isEmpty())
+                m_caps->toolUi->damageChrome(dirty);
         }
-        const QRectF dirty = unionHitRects(m_hitPanelRects).united(unionHitRects(next));
-        m_hitPanelRects = std::move(next);
-        if (!dirty.isEmpty())
-            m_caps->toolUi->damageChrome(dirty);
+        if (m_resnapWaiting && !m_pts.empty())
+            startOverlayJob();
     }
 
     void commit()
     {
         using namespace epaper::document;
         std::vector<ErasePt> world = worldPoly();
+        bumpEpoch();
         m_pts.clear();
         m_hitPanelRects.clear();
-        m_candidateClock.invalidate();
         if (!m_caps || !m_caps->doc || !m_caps->toolUi)
             return;
         m_caps->toolUi->setStrokeWaveform(false);
@@ -263,13 +331,17 @@ private:
         m_caps->toolUi->refreshChrome();
     }
 
-    static constexpr int kCandidatePeriodMs = 50;
-
     HostCaps *m_caps = nullptr;
     std::vector<QPointF> m_pts;
     std::vector<QRectF> m_hitPanelRects;
-    QElapsedTimer m_candidateClock;
     OperationDescriptor m_desc;
+    epaper::LatestJob<epaper::document::ObjectEraseOverlayJob, epaper::document::ObjectEraseOverlayResult>
+        m_job;
+    std::shared_ptr<Bridge> m_bridge;
+    std::uint64_t m_submitGen = 0;
+    std::uint64_t m_appliedGen = 0;
+    bool m_jobBusy = false;
+    bool m_resnapWaiting = false;
 };
 
 } // namespace tools

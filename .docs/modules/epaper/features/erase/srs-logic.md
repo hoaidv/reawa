@@ -93,8 +93,8 @@ Empty erase gesture: 0 tree ops, 0 undo entries.
 
 | Phase | Rule |
 |---|---|
-| Down | Dotted freeform; ToolCanvas **AABB** outline (thicker) for current 80% candidates; never restroke document. Live highlight may coarsen the lasso and use SmartGroup **AABB** (5×5) so a concave path stays inside the pointer budget; overlay skips Ink and Connector. |
-| Up | Auto-close; remove whole nodes that pass the table on the **full** polyline; 0 remnants |
+| Down | Dotted **full** freeform on ToolCanvas (compute may coarsen a copy). **Deletion-rect:** AABB outline of current 80% candidates, stroke **2.5 panel px**, `cosmetic` (same px at any world zoom). Live 80% runs **off the UI thread**; at most one in-flight job and one pending latest snapshot ([`latest_job.hpp`](../../../epaper/util/latest_job.hpp)). Overlay skips Ink and Connector. SmartGroup uses a **downsampled boundary polyline** (not AABB-only). |
+| Up | Auto-close; remove whole nodes that pass the table on the **full** lasso; SmartGroup boundary may be downsampled for the 8×8 area test; 0 remnants |
 
 | Kind | Remove when |
 |---|---|
