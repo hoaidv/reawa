@@ -288,14 +288,15 @@ static void test_ux2_gap_between_strokes()
 {
     DeviceDocument doc;
     addSg(doc, "A", 0, 0, 80, 80);
-    addSg(doc, "C", 220, 0, 80, 80);
-    appendInk(doc, "s1", lineX(40, 140, 40, 10));
+    addSg(doc, "C", 300, 0, 80, 80);
+    appendInk(doc, "s1", lineX(40, 136, 40, 10));
+    appendInk(doc, "s2", lineX(140, 216, 40, 10));
     RecogLatch latch;
-    const RecogDispatchResult d = penUp(doc, "s2", lineX(144, 260, 40, 10), latch);
+    const RecogDispatchResult d = penUp(doc, "s3", lineX(220, 302, 40, 10), latch);
     if (d.outcome != RecogOutcome::Connector)
         std::cerr << "ux2-gap outcome=" << d.outcomeName() << " guard=" << d.guard << "\n";
     CHECK(d.outcome == RecogOutcome::Connector);
-    CHECK(d.connector.bodyIds.size() == 2);
+    CHECK(d.connector.bodyIds.size() == 3);
 }
 
 static void test_ux2_any_order_and_z()
@@ -323,7 +324,21 @@ static void test_ux2_any_order_and_z()
     CHECK(dz.connector.bodyIds.size() == 3);
 }
 
-static void test_ux2_crossing_splice()
+static void test_ux2_two_arms()
+{
+    DeviceDocument doc;
+    addSg(doc, "A", 0, 0, 80, 80);
+    addSg(doc, "C", 220, 0, 80, 80);
+    appendInk(doc, "s1", lineX(40, 140, 40, 10));
+    RecogLatch latch;
+    const RecogDispatchResult d = penUp(doc, "s2", lineX(144, 260, 40, 10), latch);
+    if (d.outcome != RecogOutcome::Connector)
+        std::cerr << "ux2-two-arm outcome=" << d.outcomeName() << " guard=" << d.guard << "\n";
+    CHECK(d.outcome == RecogOutcome::Connector);
+    CHECK(d.connector.bodyIds.size() == 2);
+}
+
+static void test_ux2_two_arm_cross()
 {
     DeviceDocument doc;
     addSg(doc, "A", 0, 0, 80, 80);
@@ -332,41 +347,58 @@ static void test_ux2_crossing_splice()
     RecogLatch latch;
     const RecogDispatchResult d = penUp(doc, "v", lineXY(140, 10, 140, 240, 12), latch);
     if (d.outcome != RecogOutcome::Connector)
-        std::cerr << "cross outcome=" << d.outcomeName() << " guard=" << d.guard << "\n";
+        std::cerr << "ux2-two-arm-cross outcome=" << d.outcomeName() << " guard=" << d.guard << "\n";
     CHECK(d.outcome == RecogOutcome::Connector);
     CHECK(d.connector.bodyIds.size() == 2);
+}
+
+static void test_ux2_crossing_splice()
+{
+    DeviceDocument doc;
+    addSg(doc, "A", 0, 0, 80, 80);
+    addSg(doc, "C", 100, 200, 80, 80);
+    appendInk(doc, "h", lineXY(70, 40, 200, 40, 10));
+    appendInk(doc, "mid", lineXY(130, 30, 150, 50, 8));
+    RecogLatch latch;
+    const RecogDispatchResult d = penUp(doc, "v", lineXY(140, 10, 140, 240, 12), latch);
+    if (d.outcome != RecogOutcome::Connector)
+        std::cerr << "cross outcome=" << d.outcomeName() << " guard=" << d.guard << "\n";
+    CHECK(d.outcome == RecogOutcome::Connector);
+    CHECK(d.connector.bodyIds.size() == 3);
     const DocNode *conn = doc.find(d.connector.connectorId);
     CHECK(conn);
     if (!conn)
         return;
     bool sawJoin = false;
     for (const auto &p : conn->restSpine) {
-        if (std::hypot(p.x - 140, p.y - 40) < 4)
+        if (std::hypot(p.x - 140, p.y - 40) < 8)
             sawJoin = true;
     }
     CHECK(sawJoin);
 }
 
-static void test_consecutive_stops_at_box()
+static void test_ux2_skips_box_and_older_ink()
 {
     DeviceDocument doc;
-    appendInk(doc, "old", lineX(40, 140, 40, 8));
     addSg(doc, "A", 0, 0, 80, 80);
-    addSg(doc, "C", 220, 0, 80, 80);
-    appendInk(doc, "s1", lineX(70, 140, 40, 8));
+    addSg(doc, "C", 300, 0, 80, 80);
+    appendInk(doc, "old", lineX(40, 140, 40, 8));
+    addSg(doc, "decoy", 500, 400, 40, 40);
+    appendInk(doc, "s1", lineX(78, 140, 40, 8));
+    appendInk(doc, "s2", lineX(140, 220, 40, 8));
     RecogLatch latch;
-    const RecogDispatchResult d = penUp(doc, "s2", lineX(144, 260, 40, 8), latch);
+    const RecogDispatchResult d = penUp(doc, "s3", lineX(220, 302, 40, 8), latch);
     if (d.outcome != RecogOutcome::Connector)
-        std::cerr << "consec outcome=" << d.outcomeName() << " guard=" << d.guard
+        std::cerr << "skip-box outcome=" << d.outcomeName() << " guard=" << d.guard
                   << " " << d.connector.diag << "\n";
     CHECK(d.outcome == RecogOutcome::Connector);
-    CHECK(d.connector.bodyIds.size() == 2);
+    CHECK(d.connector.bodyIds.size() == 3);
     bool hasOld = false;
     for (const auto &id : d.connector.bodyIds)
         if (id == "old")
             hasOld = true;
     CHECK(!hasOld);
-    CHECK(d.connector.diag.find("stop=sg:") != std::string::npos);
+    CHECK(d.connector.diag.find("stop=sg:") == std::string::npos);
 }
 
 /** Infini reconnect snapshot uses restSpine, not restShape — paint needs warp spine. */
@@ -422,6 +454,26 @@ static void test_infini_snapshot_rest_spine_warps()
     CHECK(c && c->warpedSamples.size() >= 2);
 }
 
+/** Crossing grid + 2 SmartGroups used to freeze pen-up (dense join × DFS). Last 3 are not B-A-C. */
+static void test_grid_penup_does_not_hang()
+{
+    DeviceDocument doc;
+    addSg(doc, "A", 0, 0, 40, 40);
+    addSg(doc, "C", 800, 0, 40, 40);
+    for (int i = 0; i < 3; ++i)
+        appendInk(doc, "v" + std::to_string(i), lineXY(100.0 + i * 80, 20, 100.0 + i * 80, 400, 400));
+    appendInk(doc, "h0", lineXY(40, 120, 400, 120, 400));
+    RecogLatch latch;
+    const RecogDispatchResult d = penUp(doc, "h1", lineXY(40, 220, 400, 220, 400), latch);
+    CHECK(d.outcome == RecogOutcome::Ink);
+    CHECK(doc.find("h1"));
+}
+
+static void test_crossing_dense_polylines_join()
+{
+    CHECK(polylineIntersect(lineXY(0, 50, 200, 50, 800), lineXY(100, 0, 100, 200, 800)).ok);
+}
+
 int main()
 {
     test_ux1_create();
@@ -433,9 +485,13 @@ int main()
     test_last_end_prefers_other_group();
     test_ux2_gap_between_strokes();
     test_ux2_any_order_and_z();
+    test_ux2_two_arms();
+    test_ux2_two_arm_cross();
     test_ux2_crossing_splice();
-    test_consecutive_stops_at_box();
+    test_ux2_skips_box_and_older_ink();
     test_infini_snapshot_rest_spine_warps();
+    test_grid_penup_does_not_hang();
+    test_crossing_dense_polylines_join();
     if (g_fails) {
         std::cerr << g_fails << " failure(s)\n";
         return 1;

@@ -13,7 +13,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -22,12 +21,12 @@ namespace epaper {
 namespace document {
 
 constexpr double kMinConnectorWorld = 48;
-/** R_SNAP to boundary ink. R_JOIN is tight (6 u). Chain ≤5 free inks, any draw order. */
+/** R_SNAP to boundary ink. R_JOIN is tight (6 u). UX2 window = last 3 free inks (B–A–C). */
 constexpr double kConnectorSnapWorld = 24;
 constexpr double kConnectorJoinWorld = 6;
 /** Convex-hull area / L² — not AABB (a diagonal's AABB / L² is ~0.5). Wiggles must pass. */
 constexpr double kPathLikeHullOverLen2 = 0.5;
-constexpr int kConnectorChainMax = 5;
+constexpr int kConnectorChainMax = 3;
 
 enum class ConnectorKind {
     Created,
@@ -182,28 +181,16 @@ inline void collectFreeInks(const std::vector<DocNode> &nodes, std::vector<const
     }
 }
 
-/** Newest root inks until a SmartGroup/Connector/other, max 5. Does not skip over a box. */
-inline std::vector<const DocNode *> consecutiveTailInks(const std::vector<DocNode> &root, std::string *stopWhy)
+/** Newest free inks in paint order (skips SmartGroup / Connector / membership). */
+inline std::vector<const DocNode *> lastFreeInks(const std::vector<DocNode> &root, int n)
 {
-    std::vector<const DocNode *> tail;
-    for (int i = int(root.size()) - 1; i >= 0 && int(tail.size()) < kConnectorChainMax; --i) {
-        const DocNode &n = root[size_t(i)];
-        if (n.kind == NodeKind::Ink) {
-            tail.push_back(&n);
-            continue;
-        }
-        if (stopWhy) {
-            if (n.kind == NodeKind::SmartGroup)
-                *stopWhy = "sg:" + n.id;
-            else if (n.kind == NodeKind::Connector)
-                *stopWhy = "conn:" + n.id;
-            else
-                *stopWhy = n.id;
-        }
-        break;
-    }
-    std::reverse(tail.begin(), tail.end());
-    return tail;
+    std::vector<const DocNode *> all;
+    collectFreeInks(root, all);
+    if (n <= 0 || all.empty())
+        return {};
+    if (int(all.size()) <= n)
+        return all;
+    return std::vector<const DocNode *>(all.end() - n, all.end());
 }
 
 inline Vec2 inkEnd(const DocNode &n, bool first)
@@ -222,6 +209,9 @@ inline bool endsJoin(Vec2 a, Vec2 b)
 struct SegHit {
     bool ok = false;
     Vec2 p;
+    /** Segment end indices in the polylines that were tested (a[ia-1]–a[ia]). */
+    size_t ia = 0;
+    size_t ib = 0;
 };
 
 inline SegHit segmentIntersect(Vec2 a, Vec2 b, Vec2 c, Vec2 d)
@@ -326,54 +316,93 @@ inline std::vector<InkSample> coarsenForJoin(const std::vector<InkSample> &s, do
     return out;
 }
 
+struct CoarsePoly {
+    std::vector<InkSample> pts;
+    std::vector<size_t> orig;
+};
+
+inline CoarsePoly coarsenForJoinIndexed(const std::vector<InkSample> &s, double minStep)
+{
+    CoarsePoly c;
+    if (s.empty())
+        return c;
+    c.pts.push_back(s.front());
+    c.orig.push_back(0);
+    for (size_t i = 1; i + 1 < s.size(); ++i) {
+        if (std::hypot(s[i].x - c.pts.back().x, s[i].y - c.pts.back().y) >= minStep) {
+            c.pts.push_back(s[i]);
+            c.orig.push_back(i);
+        }
+    }
+    c.pts.push_back(s.back());
+    c.orig.push_back(s.size() - 1);
+    return c;
+}
+
 inline SegHit polylineIntersectDense(const std::vector<InkSample> &a,
                                      const std::vector<InkSample> &b,
-                                     double joinTol = kConnectorJoinWorld)
+                                     double joinTol = kConnectorJoinWorld,
+                                     size_t aLo = 1, size_t aHi = static_cast<size_t>(-1),
+                                     size_t bLo = 1, size_t bHi = static_cast<size_t>(-1))
 {
     SegHit best;
     double bestT = 1e300;
-    auto consider = [&](Vec2 p, double score) {
+    auto consider = [&](Vec2 p, double score, size_t ia, size_t ib) {
         if (!best.ok || score < bestT) {
             best.ok = true;
             best.p = p;
             bestT = score;
+            best.ia = ia;
+            best.ib = ib;
         }
     };
-    for (size_t i = 1; i < a.size(); ++i) {
+    if (aHi > a.size())
+        aHi = a.size();
+    if (bHi > b.size())
+        bHi = b.size();
+    aLo = std::max(aLo, size_t(1));
+    bLo = std::max(bLo, size_t(1));
+    for (size_t i = aLo; i < aHi; ++i) {
         const Vec2 a0{a[i - 1].x, a[i - 1].y};
         const Vec2 a1{a[i].x, a[i].y};
-        for (size_t j = 1; j < b.size(); ++j) {
+        for (size_t j = bLo; j < bHi; ++j) {
             const Vec2 b0{b[j - 1].x, b[j - 1].y};
             const Vec2 b1{b[j].x, b[j].y};
             const SegHit h = segmentIntersect(a0, a1, b0, b1);
-            if (h.ok)
-                consider(h.p, 0);
+            if (h.ok) {
+                consider(h.p, 0, i, j);
+                return best;
+            }
         }
     }
-    if (best.ok && bestT == 0)
-        return best;
-    auto tHits = [&](const std::vector<InkSample> &poly, Vec2 end) {
-        for (size_t i = 1; i < poly.size(); ++i) {
+    auto tHits = [&](const std::vector<InkSample> &poly, Vec2 end, bool polyIsA) {
+        const size_t lo = polyIsA ? aLo : bLo;
+        const size_t hi = polyIsA ? aHi : bHi;
+        for (size_t i = lo; i < hi; ++i) {
             Vec2 q;
             const double d = distPointSegClamped(end, {poly[i - 1].x, poly[i - 1].y},
                                                  {poly[i].x, poly[i].y}, &q);
             if (d <= joinTol)
-                consider(q, 1 + d);
+                consider(q, 1 + d, polyIsA ? i : 0, polyIsA ? 0 : i);
         }
     };
     if (a.size() >= 2 && b.size() >= 2) {
-        tHits(b, {a.front().x, a.front().y});
-        tHits(b, {a.back().x, a.back().y});
-        tHits(a, {b.front().x, b.front().y});
-        tHits(a, {b.back().x, b.back().y});
-        for (size_t i = 1; i < a.size(); ++i) {
+        tHits(b, {a.front().x, a.front().y}, false);
+        tHits(b, {a.back().x, a.back().y}, false);
+        tHits(a, {b.front().x, b.front().y}, true);
+        tHits(a, {b.back().x, b.back().y}, true);
+        if (best.ok)
+            return best;
+        for (size_t i = aLo; i < aHi; ++i) {
             const Vec2 a0{a[i - 1].x, a[i - 1].y};
             const Vec2 a1{a[i].x, a[i].y};
-            for (size_t j = 1; j < b.size(); ++j) {
+            for (size_t j = bLo; j < bHi; ++j) {
                 Vec2 pa, pb;
                 const double d = distSegSeg(a0, a1, {b[j - 1].x, b[j - 1].y}, {b[j].x, b[j].y}, &pa, &pb);
-                if (d <= joinTol)
-                    consider({(pa.x + pb.x) * 0.5, (pa.y + pb.y) * 0.5}, 2 + d);
+                if (d <= joinTol) {
+                    consider({(pa.x + pb.x) * 0.5, (pa.y + pb.y) * 0.5}, 2 + d, i, j);
+                    return best;
+                }
             }
         }
     }
@@ -381,26 +410,43 @@ inline SegHit polylineIntersectDense(const std::vector<InkSample> &a,
 }
 
 /**
- * Every free-ink pair on the page reaches this test, and the dense form is
+ * Every free-ink pair on the page reaches this test, and a naive dense form is
  * O(|a|*|b|): two 1900-sample strokes cost seconds on device, which is what
- * froze pen-up. Two rejection stages run first, and only the exact test can
- * return a hit, so verdicts and join points are unchanged.
+ * froze pen-up (grids with 2+ SmartGroups). Two rejection stages run first.
  *   1. Padded sample bounds — no point of one can be within tolerance of the
  *      other, so no branch below can fire.
  *   2. A coarsened re-test. Dropping samples moves the path by at most one
  *      step, so the filter runs at a tolerance inflated by 2 steps and can
- *      only over-accept, never hide a real touch.
+ *      only over-accept, never hide a real touch. A hit is confirmed on a
+ *      small original-sample window around the coarse segments — not a second
+ *      full dense pass (that re-froze crossing grid lines).
  */
 inline SegHit polylineIntersect(const std::vector<InkSample> &a, const std::vector<InkSample> &b)
 {
     if (!sampleBoundsMayTouch(a, b, kConnectorJoinWorld))
         return SegHit{};
     const double step = kConnectorJoinWorld * 0.25;
-    const std::vector<InkSample> ca = coarsenForJoin(a, step);
-    const std::vector<InkSample> cb = coarsenForJoin(b, step);
-    if (ca.size() < a.size() || cb.size() < b.size()) {
-        if (!polylineIntersectDense(ca, cb, kConnectorJoinWorld + 2.0 * step).ok)
+    const CoarsePoly ca = coarsenForJoinIndexed(a, step);
+    const CoarsePoly cb = coarsenForJoinIndexed(b, step);
+    if (ca.pts.size() < a.size() || cb.pts.size() < b.size()) {
+        const SegHit coarse =
+            polylineIntersectDense(ca.pts, cb.pts, kConnectorJoinWorld + 2.0 * step);
+        if (!coarse.ok)
             return SegHit{};
+        const size_t iaPrev = coarse.ia > 0 ? coarse.ia - 1 : 0;
+        const size_t ibPrev = coarse.ib > 0 ? coarse.ib - 1 : 0;
+        const size_t ia0 = ca.orig[std::min(iaPrev, ca.orig.size() - 1)];
+        const size_t ia1 = ca.orig[std::min(coarse.ia, ca.orig.size() - 1)];
+        const size_t ib0 = cb.orig[std::min(ibPrev, cb.orig.size() - 1)];
+        const size_t ib1 = cb.orig[std::min(coarse.ib, cb.orig.size() - 1)];
+        const size_t aLo = ia0 > 2 ? ia0 - 1 : 1;
+        const size_t bLo = ib0 > 2 ? ib0 - 1 : 1;
+        const size_t aHi = std::min(a.size(), ia1 + 3);
+        const size_t bHi = std::min(b.size(), ib1 + 3);
+        const SegHit exact = polylineIntersectDense(a, b, kConnectorJoinWorld, aLo, aHi, bLo, bHi);
+        if (exact.ok)
+            return exact;
+        return SegHit{};
     }
     return polylineIntersectDense(a, b);
 }
@@ -420,20 +466,6 @@ inline bool strokesJoin(const DocNode &a, const DocNode &b)
     if (polylineIntersect(a.samples, b.samples).ok)
         return true;
     return strokesJoinEnds(a, b);
-}
-
-inline bool strokesJoinCross(const DocNode &a, const DocNode &b)
-{
-    return polylineIntersect(a.samples, b.samples).ok;
-}
-
-inline std::string joinKind(const DocNode &a, const DocNode &b)
-{
-    if (polylineIntersect(a.samples, b.samples).ok)
-        return "cross";
-    if (strokesJoinEnds(a, b))
-        return "rjoin";
-    return "none";
 }
 
 inline double polyParam(const std::vector<InkSample> &s, Vec2 p)
@@ -588,16 +620,63 @@ inline bool concatPath(const std::vector<const DocNode *> &path, bool startFirst
     return out->concat.size() >= 2;
 }
 
-/** Last ≤5 free inks, undirected endpoint graph, any draw order. Prefer longest path that binds A≠B. */
+struct InkEnds {
+    const DocNode *gFirst = nullptr;
+    const DocNode *gLast = nullptr;
+    int nShapeEnds() const { return (gFirst ? 1 : 0) + (gLast ? 1 : 0); }
+    const DocNode *onlyGroup() const
+    {
+        if (gFirst && !gLast)
+            return gFirst;
+        if (gLast && !gFirst)
+            return gLast;
+        return nullptr;
+    }
+};
+
+inline InkEnds classifyFreeInk(const DocNode &ink, const std::vector<const DocNode *> &groups)
+{
+    InkEnds e;
+    if (ink.samples.size() < 2)
+        return e;
+    e.gFirst = nearestSnapGroup(groups, ink.samples.front().x, ink.samples.front().y);
+    e.gLast = nearestSnapGroup(groups, ink.samples.back().x, ink.samples.back().y);
+    return e;
+}
+
+inline bool chainBindsTwoGroups(const ChainBuild &b, const std::vector<const DocNode *> &groups)
+{
+    if (b.concat.size() < 2)
+        return false;
+    const DocNode *fromG = nearestSnapGroup(groups, b.concat.front().x, b.concat.front().y);
+    if (!fromG)
+        return false;
+    const std::string fid = fromG->id;
+    const DocNode *toG = nearestSnapGroup(groups, b.concat.back().x, b.concat.back().y, &fid);
+    return toG && toG->id != fromG->id;
+}
+
+inline bool concatOriented(const std::vector<const DocNode *> &nodes,
+                           const std::vector<const DocNode *> &groups, ChainBuild *out)
+{
+    for (int sf = 0; sf < 2; ++sf) {
+        for (int ef = 0; ef < 2; ++ef) {
+            if (concatPath(nodes, sf != 0, ef != 0, out) && chainBindsTwoGroups(*out, groups))
+                return true;
+        }
+    }
+    return false;
+}
+
+/** Last 3 free inks: B-A-C, else two arms B-C that join. Else current stroke. */
 inline ChainBuild assembleChain(const std::vector<const DocNode *> &freeInks, int curIdx,
                                 const std::vector<const DocNode *> &groups)
 {
     ChainBuild best;
     const int nAll = int(freeInks.size());
-    const int start = std::max(0, nAll - kConnectorChainMax);
     std::vector<const DocNode *> cand;
     int curLocal = -1;
-    for (int i = start; i < nAll; ++i) {
+    for (int i = 0; i < nAll; ++i) {
         if (i == curIdx)
             curLocal = int(cand.size());
         cand.push_back(freeInks[size_t(i)]);
@@ -608,84 +687,70 @@ inline ChainBuild assembleChain(const std::vector<const DocNode *> &freeInks, in
         curLocal = 0;
     }
     const int m = int(cand.size());
-    std::vector<std::vector<int>> adj(static_cast<size_t>(m));
-    for (int i = 0; i < m; ++i) {
-        std::vector<int> cross, ends;
-        for (int j = 0; j < m; ++j) {
-            if (i == j)
+    std::vector<InkEnds> role(static_cast<size_t>(m));
+    for (int i = 0; i < m; ++i)
+        role[size_t(i)] = classifyFreeInk(*cand[size_t(i)], groups);
+
+    if (m == 3) {
+        for (int ai = 0; ai < 3; ++ai) {
+            if (role[size_t(ai)].nShapeEnds() != 0)
                 continue;
-            if (strokesJoinCross(*cand[size_t(i)], *cand[size_t(j)]))
-                cross.push_back(j);
-            // Not strokesJoin: the cross test above is the expensive half of it.
-            else if (strokesJoinEnds(*cand[size_t(i)], *cand[size_t(j)]))
-                ends.push_back(j);
+            int arms[2];
+            int na = 0;
+            bool okArms = true;
+            for (int j = 0; j < 3; ++j) {
+                if (j == ai)
+                    continue;
+                if (role[size_t(j)].nShapeEnds() != 1) {
+                    okArms = false;
+                    break;
+                }
+                arms[na++] = j;
+            }
+            if (!okArms || na != 2)
+                continue;
+            const DocNode *gB = role[size_t(arms[0])].onlyGroup();
+            const DocNode *gC = role[size_t(arms[1])].onlyGroup();
+            if (!gB || !gC || gB->id == gC->id)
+                continue;
+            if (!strokesJoin(*cand[size_t(ai)], *cand[size_t(arms[0])])
+                || !strokesJoin(*cand[size_t(ai)], *cand[size_t(arms[1])]))
+                continue;
+            const std::vector<const DocNode *> bac = {cand[size_t(arms[0])], cand[size_t(ai)],
+                                                      cand[size_t(arms[1])]};
+            if (concatOriented(bac, groups, &best))
+                return best;
+            const std::vector<const DocNode *> cab = {cand[size_t(arms[1])], cand[size_t(ai)],
+                                                      cand[size_t(arms[0])]};
+            if (concatOriented(cab, groups, &best))
+                return best;
         }
-        adj[size_t(i)] = std::move(cross);
-        adj[size_t(i)].insert(adj[size_t(i)].end(), ends.begin(), ends.end());
     }
 
-    auto binds = [&](const ChainBuild &b) -> bool {
-        if (b.concat.size() < 2)
-            return false;
-        const DocNode *fromG = nearestSnapGroup(groups, b.concat.front().x, b.concat.front().y);
-        if (!fromG)
-            return false;
-        const std::string fid = fromG->id;
-        const DocNode *toG = nearestSnapGroup(groups, b.concat.back().x, b.concat.back().y, &fid);
-        return toG && toG->id != fromG->id;
-    };
+    if (m >= 2 && role[size_t(curLocal)].nShapeEnds() == 1) {
+        const DocNode *gCur = role[size_t(curLocal)].onlyGroup();
+        if (gCur) {
+            for (int j = m - 1; j >= 0; --j) {
+                if (j == curLocal)
+                    continue;
+                if (role[size_t(j)].nShapeEnds() != 1)
+                    continue;
+                const DocNode *gO = role[size_t(j)].onlyGroup();
+                if (!gO || gO->id == gCur->id)
+                    continue;
+                if (!strokesJoin(*cand[size_t(curLocal)], *cand[size_t(j)]))
+                    continue;
+                const std::vector<const DocNode *> bc = {cand[size_t(j)], cand[size_t(curLocal)]};
+                if (concatOriented(bc, groups, &best))
+                    return best;
+                const std::vector<const DocNode *> cb = {cand[size_t(curLocal)], cand[size_t(j)]};
+                if (concatOriented(cb, groups, &best))
+                    return best;
+            }
+        }
+    }
 
-    std::vector<int> path;
-    std::vector<char> used(size_t(m), 0);
-    int bestLen = 0;
-    std::function<void()> dfs;
-    dfs = [&]() {
-        if (int(path.size()) > bestLen) {
-            bool hasCur = false;
-            for (int i : path) {
-                if (i == curLocal)
-                    hasCur = true;
-            }
-            if (hasCur) {
-                std::vector<const DocNode *> nodes;
-                for (int i : path)
-                    nodes.push_back(cand[size_t(i)]);
-                ChainBuild built;
-                bool ok = false;
-                for (int sf = 0; sf < 2 && !ok; ++sf) {
-                    for (int ef = 0; ef < 2 && !ok; ++ef) {
-                        if (concatPath(nodes, sf != 0, ef != 0, &built) && binds(built))
-                            ok = true;
-                    }
-                }
-                if (ok) {
-                    bestLen = int(path.size());
-                    best = std::move(built);
-                }
-            }
-        }
-        if (int(path.size()) >= m)
-            return;
-        const int last = path.back();
-        for (int nei : adj[size_t(last)]) {
-            if (used[size_t(nei)])
-                continue;
-            used[size_t(nei)] = 1;
-            path.push_back(nei);
-            dfs();
-            path.pop_back();
-            used[size_t(nei)] = 0;
-        }
-    };
-    for (int s = 0; s < m; ++s) {
-        path = {s};
-        std::fill(used.begin(), used.end(), 0);
-        used[size_t(s)] = 1;
-        dfs();
-    }
-    if (best.path.empty()) {
-        concatPath({cand[size_t(curLocal)]}, true, false, &best);
-    }
+    concatPath({cand[size_t(curLocal)]}, true, false, &best);
     return best;
 }
 
@@ -917,8 +982,7 @@ inline ConnectorResult tryRecognizeConnector(DeviceDocument &doc, const std::str
         return out;
     }
 
-    std::string stopWhy;
-    std::vector<const DocNode *> freeInks = consecutiveTailInks(doc.rootChildren, &stopWhy);
+    std::vector<const DocNode *> freeInks = lastFreeInks(doc.rootChildren, kConnectorChainMax);
     int curIdx = -1;
     for (int i = 0; i < int(freeInks.size()); ++i) {
         if (freeInks[size_t(i)]->id == strokeId)
@@ -927,8 +991,6 @@ inline ConnectorResult tryRecognizeConnector(DeviceDocument &doc, const std::str
     if (curIdx < 0) {
         freeInks = {cur};
         curIdx = 0;
-        if (stopWhy.empty())
-            stopWhy = "not_in_tail";
     }
 
     auto rnd = [](double x) { return std::to_string(int(std::lround(x))); };
@@ -937,14 +999,6 @@ inline ConnectorResult tryRecognizeConnector(DeviceDocument &doc, const std::str
         if (i)
             diag += ",";
         diag += freeInks[i]->id;
-    }
-    if (!stopWhy.empty())
-        diag += " stop=" + stopWhy;
-    for (size_t i = 0; i < freeInks.size(); ++i) {
-        for (size_t j = i + 1; j < freeInks.size(); ++j) {
-            diag += " " + freeInks[i]->id + "~" + freeInks[j]->id + "="
-                    + joinKind(*freeInks[i], *freeInks[j]);
-        }
     }
     out.diag = diag;
 
