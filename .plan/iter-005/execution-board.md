@@ -5,22 +5,22 @@ track: TRACK-005
 owner: sm
 date: 2026-08-31
 lock: vertical · verified · wip 2
-wave: W3-erase-ids
-verdict: "Erase EP-062…068 and STORY-EP-069 done (human-verified 2026-08-31). WAIT human next pick. Clipboard W3 frozen."
+wave: W-field-latency
+verdict: "STORY-EP-069 done. Field follow-ups EP-070…072 ready (ink lag, selection settle probe, camera stress). Clipboard W3 frozen."
 ---
 
 # Execution board — hand-on-paper
 
-**Canonical board** for [TRACK-005](../tracks/TRACK-005-hand-on-paper.md). Track **active**. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **done** 2026-08-27. Inverse-undo implement **done**. Erase product bound 2026-08-29. Erase implement **human-verified** 2026-08-31. [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Clipboard W3 still frozen.
+**Canonical board** for [TRACK-005](../tracks/TRACK-005-hand-on-paper.md). Track **active**. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **done** 2026-08-27. Inverse-undo implement **done**. Erase product bound 2026-08-29. Erase implement **human-verified** 2026-08-31. [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Camera LatestJob field: **better**. Field follow-ups [STORY-EP-070](./stories/STORY-EP-070.md)…[STORY-EP-072](./stories/STORY-EP-072.md) **ready**. Clipboard W3 still frozen.
 
 ---
 
-## Summary (as of 2026-08-31)
+## Summary (as of 2026-08-31, evening)
 
 | Band | Count | Meaning |
 |---|---|---|
 | Design **done** | 5 current | [UI-EP-06](../../.docs/design/index.md) hand-touch (EP-054; field-test delta 20 mm + HT) · [UI-EP-07](../../.docs/design/index.md) follow Epaper · [UI-IN-04](../../.docs/design/index.md) follow Infini · [UI-EP-08](../../.docs/design/index.md) Device Settings · Pen buttons |
-| Wave **NOW** | 0 | WAIT human next pick. [STORY-EP-069](./stories/STORY-EP-069.md) **done** |
+| Wave **NOW** | 3 ready | [STORY-EP-070](./stories/STORY-EP-070.md)…[STORY-EP-072](./stories/STORY-EP-072.md) field latency / probes. Not in-progress. |
 | Closed interrupt | TRACK-006 | Tablet/Tool split + [ADR-0033](../../.docs/adr/ADR-0033-tool-abstraction.md) + pointer roles. Do **not** continue. |
 | Queued | — | Clipboard / Device Settings still wait. Follow hardware score still outstanding. Infini undo apply parked (IN-038 cancelled). |
 
@@ -44,8 +44,8 @@ modules: epaper, infini
 features: epaper/ink-box; epaper/tool-modes; epaper/connector-ink; epaper/region-sync; epaper/local-pen-ink; epaper/device-document; epaper/erase; infini/infinity-canvas; infini/tablet-sync; infini/vector-document
 personas: developer, human
 forbidden: REQ-15 tables; REQ-08; CHL-0011; CHL-0012; EP-032; AI; last-writer ADR-0023; TRACK-006 reopen; DeviceMap invert UI; Mouse DragHandler; STORY-IN-038; infini undo apply; tablet-to-desktop undo sync
-NOW: WAIT human next pick; STORY-EP-069 done; erase EP-062…068 done; do not start clipboard
-cursor: WAIT clipboard / Device Settings / follow field notes; do not continue TRACK-006; IN-038 cancelled
+NOW: field follow-ups EP-070…072 ready; do not start clipboard
+cursor: pick EP-070 or EP-071 or EP-072 (WIP 2); do not continue TRACK-006; IN-038 cancelled
 ```
 
 ---
@@ -72,6 +72,7 @@ cursor: WAIT clipboard / Device Settings / follow field notes; do not continue T
 | **W-undo-wire** | **dropped** | — | Infini apply cancelled (IN-038). Device queue is EP-061 in W-undo-local |
 | **W-undo-local** | **done** 2026-08-27 | serial (one Quality Assurance Engineer then one Developer; both stories) | [STORY-EP-060](./stories/STORY-EP-060.md) + [STORY-EP-061](./stories/STORY-EP-061.md) **done**. Human verified device undo/redo 2026-08-27. No `infini/` |
 | **W3** | **done** 2026-08-31 | | erase EP-062…068 **done**; [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified) |
+| **W-field-latency** | **NOW** (ready, not started) | **∥** (different write sets; WIP 2) | [STORY-EP-070](./stories/STORY-EP-070.md) residual ink lag · [STORY-EP-071](./stories/STORY-EP-071.md) selection settle probe · [STORY-EP-072](./stories/STORY-EP-072.md) camera stress probe |
 | **W4** | queued | | connector ends / attachments |
 | **W5** | queued | | barrel BDD then EP-052 / EP-058 / EP-057. IN-035 cancelled. |
 | **W6** | queued | | manual create |
@@ -81,9 +82,11 @@ cursor: WAIT clipboard / Device Settings / follow field notes; do not continue T
 
 | Lane | Story | Writes | Conflicts |
 |---|---|---|---|
-| **human** | next pick | confirm | do not start clipboard until human says go |
+| **A** | [STORY-EP-070](./stories/STORY-EP-070.md) | ink-path / TabletCanvas sample path | same `tabletcanvasitem.cpp` as C — not parallel with EP-072 without a stitch owner |
+| **B** | [STORY-EP-071](./stories/STORY-EP-071.md) | SelectionOverlay / select Operations settle | overlay files; can run beside A if A stays in ink-path |
+| **C** | [STORY-EP-072](./stories/STORY-EP-072.md) | rasterize probe / camera job log | `tabletcanvasitem.cpp` + `rasterize_probe` — conflicts with A |
 
-Work-in-progress 2 = campaign capacity. No implement lane in flight.
+Work-in-progress 2 = campaign capacity. Start at most two of A/B/C; **do not** run A and C in parallel (same canvas rasterize file).
 
 ### Full task table
 
@@ -117,16 +120,21 @@ Work-in-progress 2 = campaign capacity. No implement lane in flight.
 | STORY-EP-066 | Object erase 80 percent table | P0 | SRS-EP-58 | — | **done** | W3 | — | — | Human-verified 2026-08-31. Append-only dashed raster; deletion-rect outline dirty. [ADR-0036](../../.docs/adr/ADR-0036-toolcanvas-live-overlay.md). |
 | STORY-EP-067 | Singleton generateNodeId for all tree nodes | P0 | SRS-EP-07 / EP-08 / EP-55 / IN-09 | — | **done** | W3-erase-ids | — | A | Human-verified 2026-08-31. Folded remnant / stroke / connector / enclose mint sites. Opaque `n-N`. |
 | STORY-EP-068 | Operations own overlay paint; ToolCanvasContext stays generic | P0 | SRS-EP-04 / EP-12 / EP-56 | — | **done** | W3-erase-ids | — | B | Human-verified 2026-08-31. Hover + waveform on Operations. |
-| STORY-EP-069 | ToolContextImpl host ports and SelectionOverlay | P0 | SRS-EP-04 / EP-12 | — | **done** | W3-erase-ids | — | — | Human-verified 2026-08-31. [ADR-0035](../../.docs/adr/ADR-0035-tool-context-is-host-ports.md); `SelectionOverlay` host-owned; grep clean. |
+| STORY-EP-069 | ToolContextImpl host ports and SelectionOverlay | P0 | SRS-EP-04 / EP-12 | — | **done** | W3-erase-ids | — | — | Human-verified 2026-08-31. [ADR-0035](../../.docs/adr/ADR-0035-tool-context-is-host-ports.md); `SelectionOverlay` host-owned; grep clean. Seeing `selection_overlay.cpp` **is** this story — already delivered. |
+| STORY-EP-070 | Residual pen-to-ink lag on moderately dense pages | P0 | SRS-EP-01 / EP-03 | — | **ready** | W-field-latency | developer | A | Human 2026-08-31: ~4 sentences + ink-boxes; small random pen-to-ink gaps. Stroke op fine. Do not FullClear ink ([CHL-0029](./challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)). |
+| STORY-EP-071 | Instrument sel_rect and sel_freeform settle to knobs | P0 | SRS-EP-12 / EP-04 | — | **ready** | W-field-latency | developer | B | Human: Selecting overlay smooth; pointer-up → settled rect + knobs slow. Instrument first. |
+| STORY-EP-072 | Camera-change stress probe on a full handwriting page | P0 | SRS-EP-03 / EP-24 | — | **ready** | W-field-latency | developer | C | Human: LatestJob camera **better**; need stress log on a full handwriting + ink-box page. Conflicts with EP-070 on `tabletcanvasitem.cpp`. |
 | CHORE-7 | Three exclusive erasers (CHL-0028) | Must | [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted** | icons only | EP-062…068 **done** (human-verified 2026-08-31) | W3-erase-ids | — | — | Path A/B retired. Human is Quality Assurance Engineer. |
 
 ### Current-wave sub-agent roster
 
 | Lane | Agent role | Story | Writes | Done when |
 |---|---|---|---|---|
-| human | — | next pick | confirm | Human names clipboard, Device Settings, follow field notes, or stop |
+| A | Developer | [STORY-EP-070](./stories/STORY-EP-070.md) | ink-path / sample path | Device log names residual steal; human confirms gaps gone or e-ink only |
+| B | Developer | [STORY-EP-071](./stories/STORY-EP-071.md) | SelectionOverlay settle | Pointer-up → knobs stages + ms in a tail-able log |
+| C | Developer | [STORY-EP-072](./stories/STORY-EP-072.md) | camera job / raster probe | Stress recipe + log on a full handwriting page |
 
-Wait: do **not** start clipboard. Do **not** implement IN-038. Do **not** reopen TRACK-006.
+Wait: do **not** start A and C together (same `tabletcanvasitem.cpp`). Do **not** start clipboard. Do **not** implement IN-038. Do **not** reopen TRACK-006.
 
 ### Backlog sink
 
@@ -147,4 +155,4 @@ Wait: do **not** start clipboard. Do **not** implement IN-038. Do **not** reopen
 
 ## Verdict
 
-[STORY-EP-059](./stories/STORY-EP-059.md)…[STORY-EP-061](./stories/STORY-EP-061.md) **done** (human-verified 2026-08-27). [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**. [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**. [ADR-0035](../../.docs/adr/ADR-0035-tool-context-is-host-ports.md) **accepted**. [ADR-0036](../../.docs/adr/ADR-0036-toolcanvas-live-overlay.md) **accepted**. **WAIT** human next pick. Clipboard W3 stays queued.
+[STORY-EP-059](./stories/STORY-EP-059.md)…[STORY-EP-061](./stories/STORY-EP-061.md) **done** (human-verified 2026-08-27). [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Field follow-ups [STORY-EP-070](./stories/STORY-EP-070.md)…[STORY-EP-072](./stories/STORY-EP-072.md) **ready**. [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**. [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**. [ADR-0035](../../.docs/adr/ADR-0035-tool-context-is-host-ports.md) **accepted**. [ADR-0036](../../.docs/adr/ADR-0036-toolcanvas-live-overlay.md) **accepted**. Clipboard W3 stays queued.

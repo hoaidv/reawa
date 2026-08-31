@@ -12,6 +12,8 @@ related:
 
 # Connector live preview vs settle — regression note
 
+Session index: [2026-08-31-field-latency.md](./2026-08-31-field-latency.md).
+
 **Verified 2026-08-31 on RM2:** move/resize a bound SmartGroup — ToolCanvas live connector matches
 the drag; origin connector is gone for the gesture; settle is one spine (no leftover origin, no
 missing middle).

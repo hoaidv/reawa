@@ -58,6 +58,9 @@ Parent REQ: [REQ-02](../../prd.md#region-sync). Follow quality: [SRS-EP-51](#srs
 - **Ordinary ink settle** is live stamps, not a full-panel sharp paint
   ([CHL-0029](../../../../../.plan/iter-005/challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)).
   A FullClear that agrees with the document still **fails SRS-EP-01** if it queues the next pen-down.
+- Field 2026-08-31 (blit + LatestJob, ink skip, connector punch):
+  [memory/2026-08-31-field-latency.md](../../../memory/2026-08-31-field-latency.md),
+  [memory/camera-pan-zoom-rasterize.md](../../../memory/camera-pan-zoom-rasterize.md).
 - Library `RegionSession` coalesce semantics remain the target for a future Qt wiring story.
 
 ---

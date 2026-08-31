@@ -13,12 +13,16 @@ related:
 
 # Dense-page ink hitch — regression note
 
+Session index: [2026-08-31-field-latency.md](./2026-08-31-field-latency.md).
+
 Field interrupt on TRACK-005 after erase phase (EP-062…068): a dense page (many ink-boxes + free
 inks) made **new** strokes hitch ~100 ms then run smooth. Near and far from boxes. Recognizers and
 hand-touch off. Continuous pen-up / pen-down.
 
-**Verified 2026-08-31 on RM2:** ordinary ink on a dense page feels normal again (no first-millimetre
-stall, live ink stays solid).
+**Verified 2026-08-31 on RM2:** packed dense-page hitch (FullClear between strokes) is gone.
+**Same day, later:** pan/zoom LatestJob pipeline made camera **better**; residual **small random
+pen-to-ink lag** remains on a *moderately* dense page (~4 sentences + ink-boxes) —
+[STORY-EP-070](../../.plan/iter-005/stories/STORY-EP-070.md).
 
 ## What works
 
@@ -41,12 +45,14 @@ stall, live ink stays solid).
 | Camera pending during a stroke | Job is held until pen-up, then a **new** snapshot (includes the stroke). Must not FullClear on the pointer stack. |
 | Overlay paint after `setVisible(false)` | Sync `overlayPaintOk` + skip `paint()` while `strokeActive()`. Membership Bold is cleared on ink down. |
 | Recognizers off | Does **not** disable draw-into membership. Overlay must hide on the next ink down. |
+| Residual pen-to-ink on a 4-sentence + ink-box page | Small, random, noticeable. Stroke op is fine. Attribute with ink-path, then keep LatestJob / full-panel `update()` / overlay off the sample. [STORY-EP-070](../../.plan/iter-005/stories/STORY-EP-070.md). |
 
 ## Causes we hit (in order)
 
 1. **FullClear between strokes** (680–946 ms). `reason=queued i=0 behind=rasterizeVectors`. GUI thread, not `InkStrokeOperation`. 180 ms follow-up + `documentMutated` + camera.
 2. **ToolCanvas Mono over Pen ink.** After (1), downs were `behind=toolPaint` 77–357 ms. Ink went solid → dash-dash-dash → solid. Membership Bold kept overlay visible; `paint()` HierarchyCull’d the box AABB and re-stroked every neighbor in Mono.
 3. **Sync rasterize on ordinary pen-up.** Camera-pending `rasterizeVectors` inside `endStroke` (438–624 ms) or the next down (`slow_sample rasterize.render` 24–120 ms, `inplace true`).
+4. **(later same day)** GUI camera FullClear / 250 ms timer / strip fill on the pointer stack — replaced by blit + LatestJob. Residual lag after that is [STORY-EP-070](../../.plan/iter-005/stories/STORY-EP-070.md).
 
 ## How to attribute a regression
 

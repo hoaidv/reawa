@@ -13,6 +13,7 @@ execution:
       - epaper/tool-modes
       - epaper/connector-ink
       - epaper/region-sync
+      - epaper/local-pen-ink
       - epaper/erase
       - epaper/device-document
       - infini/infinity-canvas
@@ -22,7 +23,7 @@ execution:
   autonomy: bounded
   out_of_scope: backlog
   wip: 2
-  # Erase EP-062…068 and STORY-EP-069 done (human-verified 2026-08-31). Clipboard W3 frozen. WAIT human next pick.
+  # Field follow-ups EP-070…072 ready (ink lag, selection settle probe, camera stress). STORY-EP-069 done. Clipboard W3 frozen.
   validated_by: ""
 ---
 
@@ -39,7 +40,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Scope | epaper ink-box, tool-modes, connector-ink, region-sync, local-pen-ink, device-document, erase; infini canvas, tablet-sync, vector-document | REQ-10…14, 17, 18 + infini REQ-05 |
 | Stop line | **verified** | design → BDD → implement → human confirm |
 | Autonomy | **bounded** | Run inside lock; sink REQ-15 / REQ-08 |
-| WIP | **2** | No implement story in flight. Erase [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](./iter-005/stories/STORY-EP-068.md) **done**. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **done** (human-verified 2026-08-31). Clipboard W3 frozen. WAIT human next pick. |
+| WIP | **2** | No implement story in flight. Field follow-ups [STORY-EP-070](./iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](./iter-005/stories/STORY-EP-072.md) **ready**. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **done** (human-verified 2026-08-31). Erase EP-062…068 **done**. Clipboard W3 frozen. |
 | Validated | — | Follow toggles EP-055 + IN-037 **done**; EP-038 + EP-039 **done**; **hand-touch human-approved** 2026-08-20 (20 mm / HT); IN-033 **done** (host); Device Settings on-device (REQ-20 / ADR-0031). Tool system [ADR-0033](../.docs/adr/ADR-0033-tool-abstraction.md) accepted. Inverse-op undo product + bind **done**; **human verified device undo/redo** 2026-08-27. Erase product [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) **adopted**; [ADR-0034](../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**; [ADR-0036](../.docs/adr/ADR-0036-toolcanvas-live-overlay.md) **accepted**. Erase implement **human-verified** 2026-08-31. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) / [ADR-0035](../.docs/adr/ADR-0035-tool-context-is-host-ports.md) **human-verified** 2026-08-31. |
 
 **Out-of-scope log**
@@ -68,7 +69,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 ### Goal & capacity
 
 - Goal: **Hand-on-paper** plus **viewport follow** (human 2026-08-20). Cameras independent by default.
-- Capacity: committed stories include EP-053…069 / IN-036…038. [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) **done**. [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) **adopted**. Erase [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](./iter-005/stories/STORY-EP-068.md) **done**. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). IN-038 **cancelled**. Clipboard W3 still frozen. WAIT human next pick.
+- Capacity: committed stories include EP-053…072 / IN-036…038. [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) **done**. [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) **adopted**. Erase [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](./iter-005/stories/STORY-EP-068.md) **done**. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Field follow-ups [STORY-EP-070](./iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](./iter-005/stories/STORY-EP-072.md) **ready**. IN-038 **cancelled**. Clipboard W3 still frozen.
 - Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); [CHL-0027](./iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md); remaining Infini follow field test; device/Qt `epaper_bin` not built in this environment. Deprecated Infini snapshot rows — do not implement.
 
 ### Tracks
@@ -76,7 +77,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | Track | Kind | Status | Cursor (next) | Link |
 |---|---|---|---|---|
 | TRACK-001…004 | planned | **done** | — | [tracks](./tracks/) |
-| TRACK-005 | planned | **active** | WAIT human next pick. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **done** (human-verified 2026-08-31). Erase EP-062…068 **done**. Clipboard W3 frozen. Remaining follow field test outstanding. | [track](./tracks/TRACK-005-hand-on-paper.md) |
+| TRACK-005 | planned | **active** | Field follow-ups [STORY-EP-070](./iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](./iter-005/stories/STORY-EP-072.md) **ready**. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **done**. Erase EP-062…068 **done**. Clipboard W3 frozen. Remaining follow field test outstanding. | [track](./tracks/TRACK-005-hand-on-paper.md) |
 | TRACK-006 | expedite | **done** | Closed 2026-08-27. Interrupted TRACK-005 (tool system / ADR-0033). Do not continue. | [track](./tracks/TRACK-006-tool-system-refactor.md) |
 
 ### Open challenges / blocked
@@ -99,7 +100,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [iter-005 execution-board](./iter-005/execution-board.md) — WAIT human next pick. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Erase EP-062…068 **done**. Clipboard W3 still frozen.
+- [iter-005 execution-board](./iter-005/execution-board.md) — Field follow-ups EP-070…072 **ready**. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) **done**. Erase EP-062…068 **done**. Clipboard W3 still frozen.
 
 ### Freeze notes
 
@@ -111,6 +112,6 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 - Inverse-op undo (device): [ADR-0032](../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. [STORY-EP-059](./iter-005/stories/STORY-EP-059.md), [STORY-EP-060](./iter-005/stories/STORY-EP-060.md), and [STORY-EP-061](./iter-005/stories/STORY-EP-061.md) **done** and **human-verified** 2026-08-27. [STORY-IN-038](./iter-005/stories/STORY-IN-038.md) **cancelled** (tablet→desktop undo apply deferred until an independent sync algorithm).
 - After remaining follow field test: still outstanding (does not block erase story review).
-- Erase: [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](./iter-005/stories/STORY-EP-068.md) **done**. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Do **not** start clipboard / Device Settings unless the human says so.
+- Erase: [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](./iter-005/stories/STORY-EP-068.md) **done**. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Field latency: [STORY-EP-070](./iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](./iter-005/stories/STORY-EP-072.md) **ready**. Do **not** start clipboard / Device Settings unless the human says so.
 - Parked: REQ-15, REQ-08, CHL-0011, CHL-0012, EP-035 measure, DeviceMap invert user interface, Mouse DragHandler, Infini undo apply (IN-038). Do **not** reopen TRACK-006.
 - Backlog: [backlog.md](./backlog.md)

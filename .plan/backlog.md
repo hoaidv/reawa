@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-31T10:30:28+00:00
+generated_at: 2026-08-31T16:41:45+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -76,6 +76,9 @@ generated_at: 2026-08-31T10:30:28+00:00
 | [STORY-EP-067](./iter-005/stories/STORY-EP-067.md) | Singleton generateNodeId for all tree nodes | implement | dev | epaper | [SRS-EP-07], [SRS-EP-08], [SRS-EP-55], [SRS-IN-09] | done | iter-005 | 3 |
 | [STORY-EP-068](./iter-005/stories/STORY-EP-068.md) | Operations own overlay paint; ToolCanvasContext stays generic | implement | dev | epaper | [SRS-EP-04], [SRS-EP-12], [SRS-EP-56] | done | iter-005 | 5 |
 | [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) | ToolContextImpl host ports and SelectionOverlay | implement | dev | epaper | [SRS-EP-04], [SRS-EP-12] | done | iter-005 | 5 |
+| [STORY-EP-070](./iter-005/stories/STORY-EP-070.md) | Residual pen-to-ink lag on moderately dense pages | implement | dev | epaper | [SRS-EP-01], [SRS-EP-03] | ready | iter-005 | 5 |
+| [STORY-EP-071](./iter-005/stories/STORY-EP-071.md) | Instrument sel_rect and sel_freeform settle to knobs | implement | dev | epaper | [SRS-EP-12], [SRS-EP-04] | ready | iter-005 | 3 |
+| [STORY-EP-072](./iter-005/stories/STORY-EP-072.md) | Camera-change stress probe on a full handwriting page | implement | dev | epaper | [SRS-EP-03], [SRS-EP-24] | ready | iter-005 | 3 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |

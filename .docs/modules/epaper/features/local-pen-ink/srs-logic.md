@@ -60,6 +60,7 @@ module: epaper
 
 Regression probe: `/tmp/epaper-ink-path.log` — see
 [memory/ink-path-density-hitch.md](../../../memory/ink-path-density-hitch.md).
+Session recap (2026-08-31 field): [memory/2026-08-31-field-latency.md](../../../memory/2026-08-31-field-latency.md).
 
 ### Latency quality target
 

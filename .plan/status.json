@@ -1,10 +1,10 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-31T10:30:28+00:00",
+  "generated_at": "2026-08-31T16:41:45+00:00",
   "current_iter": "iter-005",
   "by_status": {
     "draft": 13,
-    "ready": 1,
+    "ready": 4,
     "in-progress": 0,
     "in-review": 0,
     "done": 140,
@@ -18,7 +18,7 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 69,
+      "total": 72,
       "done": 46,
       "in_review": 0
     },
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "WAIT human next pick; STORY-EP-069 ToolContextImpl/SelectionOverlay done (human-verified 2026-08-31); erase EP-062\u2026068 done; clipboard W3 frozen",
+      "cursor": "Field follow-ups EP-070\u2026072 ready (ink lag, selection settle probe, camera stress). Clipboard W3 frozen. STORY-EP-069 done.",
       "iter": "iter-005"
     },
     {
