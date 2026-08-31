@@ -4,7 +4,7 @@ title: Singleton generateNodeId for all tree nodes
 kind: implement
 parent_srs: [SRS-EP-07, SRS-EP-08, SRS-EP-55, SRS-IN-09]
 parent_req: [REQ-04, REQ-07, REQ-11]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 3
@@ -54,3 +54,4 @@ Known private mint sites to retire (not exhaustive — grep before claiming done
 - Collision with the live tree and with ids reserved in the current gesture is impossible by construction
 - Infini mirror keeps device ids on apply; no local remint
 - Host test covers second remnant split after `s-3_r1` already exists (extends `test_second_split_skips_taken_remnant_id`)
+- **Human verified 2026-08-31** on device

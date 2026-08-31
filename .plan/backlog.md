@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-31T06:58:13+00:00
+generated_at: 2026-08-31T10:19:46+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -71,10 +71,10 @@ generated_at: 2026-08-31T06:58:13+00:00
 | [STORY-EP-062](./iter-005/stories/STORY-EP-062.md) | Eraser mode, ToolChip, barrel last-used | implement | dev | epaper | [SRS-EP-54], [SRS-EP-59] | done | iter-005 | 5 |
 | [STORY-EP-063](./iter-005/stories/STORY-EP-063.md) | Geometric clip, remnant split, boundary polyline | implement | dev | epaper | [SRS-EP-55], [SRS-EP-59] | done | iter-005 | 8 |
 | [STORY-EP-064](./iter-005/stories/STORY-EP-064.md) | Brush erase capsule clip | implement | dev | epaper | [SRS-EP-56], [SRS-EP-59] | done | iter-005 | 5 |
-| [STORY-EP-065](./iter-005/stories/STORY-EP-065.md) | Area erase clip and fully-inside remove | implement | dev | epaper | [SRS-EP-57], [SRS-EP-59] | in-review | iter-005 | 5 |
-| [STORY-EP-066](./iter-005/stories/STORY-EP-066.md) | Object erase 80 percent table | implement | dev | epaper | [SRS-EP-58], [SRS-EP-59] | in-review | iter-005 | 5 |
-| [STORY-EP-067](./iter-005/stories/STORY-EP-067.md) | Singleton generateNodeId for all tree nodes | implement | dev | epaper | [SRS-EP-07], [SRS-EP-08], [SRS-EP-55], [SRS-IN-09] | in-review | iter-005 | 3 |
-| [STORY-EP-068](./iter-005/stories/STORY-EP-068.md) | Operations own overlay paint; ToolCanvasContext stays generic | implement | dev | epaper | [SRS-EP-04], [SRS-EP-12], [SRS-EP-56] | in-review | iter-005 | 5 |
+| [STORY-EP-065](./iter-005/stories/STORY-EP-065.md) | Area erase clip and fully-inside remove | implement | dev | epaper | [SRS-EP-57], [SRS-EP-59] | done | iter-005 | 5 |
+| [STORY-EP-066](./iter-005/stories/STORY-EP-066.md) | Object erase 80 percent table | implement | dev | epaper | [SRS-EP-58], [SRS-EP-59] | done | iter-005 | 5 |
+| [STORY-EP-067](./iter-005/stories/STORY-EP-067.md) | Singleton generateNodeId for all tree nodes | implement | dev | epaper | [SRS-EP-07], [SRS-EP-08], [SRS-EP-55], [SRS-IN-09] | done | iter-005 | 3 |
+| [STORY-EP-068](./iter-005/stories/STORY-EP-068.md) | Operations own overlay paint; ToolCanvasContext stays generic | implement | dev | epaper | [SRS-EP-04], [SRS-EP-12], [SRS-EP-56] | done | iter-005 | 5 |
 | [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) | ToolContextImpl host ports and SelectionOverlay | implement | dev | epaper | [SRS-EP-04], [SRS-EP-12] | in-progress | iter-005 | 5 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |

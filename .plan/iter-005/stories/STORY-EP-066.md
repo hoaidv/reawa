@@ -4,7 +4,7 @@ title: Object erase 80 percent table
 kind: implement
 parent_srs: [SRS-EP-58, SRS-EP-59]
 parent_req: [REQ-11]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -57,3 +57,4 @@ Human is QA this wave: host tests + human confirm. No BDD ceremony required befo
 - 80% table honored; Frame 0; SmartGroup all-or-nothing
 - Connector unbind + undo rebind
 - AABB highlight on ToolCanvas only
+- **Human verified 2026-08-31** on device (dotted append-only overlay; deletion-rect highlight)

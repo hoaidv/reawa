@@ -4,7 +4,7 @@ title: Operations own overlay paint; ToolCanvasContext stays generic
 kind: implement
 parent_srs: [SRS-EP-04, SRS-EP-12, SRS-EP-56]
 parent_req: [REQ-03, REQ-06, REQ-11]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -56,3 +56,4 @@ Keep **in** `ToolCanvasContext`: generic `paintOverlay` loop (locked op, then ch
 - Adding area/object overlay does not touch `tool_canvas_context.cpp` except registration
 - Catalog `Contexts` row matches: adapter + ports, not per-tool draw
 - Brush hover and selection-gesture paint still match current panel behaviour (human confirm)
+- **Human verified 2026-08-31** on device

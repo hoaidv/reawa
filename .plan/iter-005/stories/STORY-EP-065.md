@@ -4,7 +4,7 @@ title: Area erase clip and fully-inside remove
 kind: implement
 parent_srs: [SRS-EP-57, SRS-EP-59]
 parent_req: [REQ-11]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -43,3 +43,4 @@ Human is QA this wave: host tests + human confirm. No BDD ceremony required befo
 
 - Auto-close + even-odd Ink clip; fully-inside remove; Frame 0; partial connector 0
 - One undo; p95 ≤50 ms; 0 chords
+- **Human verified 2026-08-31** on device
