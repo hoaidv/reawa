@@ -27,8 +27,8 @@ Journeys for [REQ-09](../../prd.md#device-connectors). Chrome contract:
 | # | Step | State id | Notes |
 |---|---|---|---|
 | 1 | Draws X1 from A into void | ordinary ink | No pending connector node |
-| 2 | Draws X2 continuing X1 | ordinary ink | Chrome-only free-end tick allowed |
-| 3 | Draws X3 onto C | `conn.created` | Merge in one op; style from merged spine |
+| 2 | Draws X2 onto C (joins X1) | `conn.created` | B–C two-arm; or continues as ordinary ink if X2 does not yet bind C |
+| 3 | Draws X3 onto C after a bridge X2 | `conn.created` | Last 3 free inks = B–A–C; one op; style from merged spine |
 
 ## Journey: `journey.connector_ux3` — Move a bound box
 

@@ -93,8 +93,8 @@ Empty erase gesture: 0 tree ops, 0 undo entries.
 
 | Phase | Rule |
 |---|---|
-| Down | Dotted freeform; ToolCanvas **AABB** outline (thicker) for current 80% candidates; never restroke document |
-| Up | Auto-close; remove whole nodes that pass the table; 0 remnants |
+| Down | Dotted freeform; ToolCanvas **AABB** outline (thicker) for current 80% candidates; never restroke document. Live highlight may coarsen the lasso and use SmartGroup **AABB** (5×5) so a concave path stays inside the pointer budget; overlay skips Ink and Connector. |
+| Up | Auto-close; remove whole nodes that pass the table on the **full** polyline; 0 remnants |
 
 | Kind | Remove when |
 |---|---|

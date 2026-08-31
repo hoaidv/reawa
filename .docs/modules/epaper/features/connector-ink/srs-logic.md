@@ -30,9 +30,25 @@ v1 targets **SmartGroup only**.
 
 ### Chain (UX2)
 
-On a stroke, take only the **latest consecutive free inks at root** (max **5**). Stop at a
-SmartGroup or Connector — do not skip over an ink-box. Join if they **intersect** or come
-within `R_JOIN` **6 u** (near-miss counts). No tangent test.
+On a stroke, take the **last 3 free inks** in paint order — not the last 3 consecutive root
+siblings. Skip SmartGroups, connectors, draw-into membership, and other non-ink nodes in
+z-order; those do not drop older free inks from the window. Ignore free ink and connector
+when asking what an endpoint **touches** (those are non-shape).
+
+Call the window inks by role (not z-order):
+
+| Role | Shape snap | Join |
+|---|---|---|
+| **B** | Exactly **one** end within `R_SNAP` of an ink-box | — |
+| **C** | Exactly **one** end within `R_SNAP` of a **different** ink-box | — |
+| **A** | **Neither** end snaps to a shape | Intersects or comes within `R_JOIN` **6 u** of **both** B and C |
+
+Try in order, no graph search:
+
+1. **B–A–C** when all three roles are present in the window.
+2. **B–C** when two arms join each other (intersect or `R_JOIN` 6 u) with no bridge — `<box1> seg1 seg2 <box2>`. Prefer the other arm **newest** in paint order that matches the current stroke.
+
+If both fail, UX1 on the **current** stroke only. Older free inks outside the last-3 window are ignored.
 
 ### Style pick
 

@@ -182,7 +182,7 @@ Draw a **white ghost polyline** on ToolCanvas, stroke width = eraser size, along
 ### 9.1 While down
 
 - Dotted polyline on ToolCanvas (same close rule as area: auto-close last→first, no minimum area).
-- **Highlight:** a second, **thicker outline on ToolCanvas** of each candidate that currently passes the 80% test. Outline = that node’s **AABB** (selection-style), not a second copy of the ink path.
+- **Highlight:** a second, **thicker outline on ToolCanvas** of each candidate that currently passes the 80% test. Outline = that node’s **AABB** (selection-style), not a second copy of the ink path. Live highlight may coarsen the lasso and test SmartGroup by AABB so the gesture stays live; **commit** still uses the table below on the full polyline.
 - Never restroke the document during the gesture.
 - No cover/mask of document content.
 

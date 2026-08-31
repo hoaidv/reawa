@@ -5,7 +5,7 @@ Feature: On-device connector recognition
   So that the line stays my ink and is attached without a fifth tool
 
   # STORY-EP-030 — SRS-EP-17 / SRS-EP-19. Chrome matches UI-EP-05.
-  # Constants named in SRS: MIN_CONNECTOR_WORLD 48 u; R_JOIN 6 u; chain max 5; body ≤20% in A/B.
+  # Constants named in SRS: MIN_CONNECTOR_WORLD 48 u; R_JOIN 6 u; last 3 free inks B-A-C; body ≤20% in A/B.
 
   @SRS-EP-17
   Scenario: UX1 open stroke A to C commits create_connector
@@ -25,11 +25,22 @@ Feature: On-device connector recognition
   Scenario: UX2 chained strokes merge into one connector and one undo
     Given two distinct Smart Groups A and C
     And tgl.recog.connector is armed
-    When up to five free top-level inks join by R_JOIN 6 in any order
-    And the assembled path binds A at one end and C at the other
+    When the last three free inks (skipping ink-boxes and connectors in z-order) form B-A-C
+    And B and C each snap exactly one end to a distinct SmartGroup
+    And A snaps to no shape but joins B and C by intersect or R_JOIN 6
     Then exactly one create_connector exists
-    And body children are those strokes in draw order
+    And body children are B, A, and C
     And warpStyle is picked from the merged rest spine S: at most one inflection yields cubic else morph
+    And exactly one undo entry restores the chain
+
+  @SRS-EP-17
+  Scenario: UX2 two arms join without a bridge
+    Given two distinct Smart Groups A and C
+    And tgl.recog.connector is armed
+    When the last free inks include two strokes that each snap exactly one end to a distinct SmartGroup
+    And those two strokes join by intersect or R_JOIN 6
+    Then exactly one create_connector exists
+    And body children are those two strokes
     And exactly one undo entry restores the chain
 
   @SRS-EP-17
