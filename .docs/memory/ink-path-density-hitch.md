@@ -32,7 +32,7 @@ pen-to-ink lag** remains on a *moderately* dense page (~4 sentences + ink-boxes)
 | 180 ms settle follow-up | **Gone.** It stole downs after handwriting pauses. |
 | Camera soft coalesce | Vector FullClear is a **LatestJob** off the GUI thread. Must **not** swap `m_image` during a stroke (wipes Pen stamps). Pan/zoom preview **blits**. |
 | InkMode overlay | **Hidden while a stroke is active** so ToolCanvas Mono cannot cover live Pen ink. |
-| NodeEmphasis blink / membership Bold | ToolCanvas only. Paints **`includeIds`** (styled nodes), not every overlapping ink in the AABB. |
+| NodeEmphasis blink / membership Bold | Enclose/connector blink on ToolCanvas with `includeIds`. **Draw-into does not Bold** — box-AABB damage stalled every pen-up. |
 | Draw-into membership with recog off | Still **joins** (not an ink-box recognizer). Chrome must not stay Mono over the next stroke. |
 
 ## What does not (known leftover / do not “fix” by FullClear)

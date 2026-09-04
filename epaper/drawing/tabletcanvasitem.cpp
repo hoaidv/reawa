@@ -823,11 +823,9 @@ void TabletCanvasItem::ingestCurrentStroke(const epaper::document::FinishedStrok
             collectSmartGroupInkIds(*sg, false, &ids);
         emitRecogChrome(1, ids);
     } else if (d.outcome == RecogOutcome::Membership) {
-        std::vector<std::string> ids;
-        if (const DocNode *sg = m_session.document.find(d.membership.smartGroupId))
-            collectSmartGroupInkIds(*sg, true, &ids);
-        // [D01][D16] live stamps are the join; bold is ToolCanvas. Skip Tablet rasterize.
-        emitRecogChrome(3, ids);
+        // Live Pen stamps are the join. Do not ToolCanvas-Bold the boundary:
+        // damage of the box AABB stalls every pen-up ([CHL-0030] field, 2026-09-05).
+        emitRecogChrome(0, {});
     } else if (d.outcome == RecogOutcome::Connector) {
         m_needEncloseRasterize = true;
         std::vector<std::string> ids = d.connector.bodyIds;

@@ -19,20 +19,19 @@ Human 2026-08-15 (revised after device lag): **do not blink** on draw-into. A Mo
 
 `ovl.enclose_blink`: whole box (boundary + content). Semantic: current width → **2×** → current. One Mono ~250 ms, then idle.
 
-## Draw-into membership — persistent highlight, no blink
+## Draw-into membership — no ToolCanvas highlight
+
+Live Pen stamps **are** the join. Do **not** 2× the boundary on ToolCanvas: damaging the box AABB
+on every pen-up stalls the next down (human 2026-09-05). Enclose still blinks once.
 
 | Step | Feedback |
 |---|---|
-| First stroke joins box A | **Highlight A's boundary-ink** (2× width). No pulse. |
-| Further strokes also join A | A's boundary **stays** highlighted |
-| Stroke does **not** join A | **Clear** A's highlight |
-| Latest join is box B | Highlight **only B** (last draw-into event) |
+| Stroke joins a box | Content reparents; boundary stays 1×; no overlay pulse |
+| Stroke does not join | Ordinary ink / other verdict; clear any leftover stamp |
 
-Reset highlight to none: exclusive **tool change**, **Undo**, **Redo**.
+Reset leftover stamp: exclusive **tool change**, **Undo**, **Redo**, non-join pen-up.
 
-`ovl.membership_highlight` = boundary inks of the SmartGroup of the **latest** `membership` verdict.
-
-Rejected / ordinary ink / enclose: not a join → clear previous membership highlight.
+`ovl.membership_highlight` is **retired** (was 2× last-join boundary).
 
 ## Anti-patterns
 
@@ -40,5 +39,6 @@ Rejected / ordinary ink / enclose: not a join → clear previous membership high
 - Invert-fill (connector)
 - Highlighting content ink on membership
 - Full-panel flash
+- ToolCanvas 2× of the box boundary on every draw-into (stalls pen-up)
 
 Promote via [CHL-0020](../../challenges/CHL-0020-recog-width-blink.md). Device UI state machine is **[STORY-EP-032](../../stories/STORY-EP-032.md)** for `/architect` later.

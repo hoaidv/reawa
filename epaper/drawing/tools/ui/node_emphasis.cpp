@@ -105,16 +105,21 @@ void NodeEmphasis::blink(HostCaps &caps, const std::vector<std::string> &ids, in
 void NodeEmphasis::setStrokeStamp(HostCaps &caps, const std::vector<std::string> &ids,
                                   StrokeStamp stamp)
 {
+    std::unordered_set<std::string> next;
+    if (stamp != StrokeStamp::Off) {
+        for (const auto &id : ids) {
+            if (!id.empty())
+                next.insert(id);
+        }
+    }
+    if (stamp == m_stamp && next == m_stampIds)
+        return;
     const QRectF prev = m_dirty;
-    m_stampIds.clear();
+    m_stampIds = std::move(next);
     m_stamp = stamp;
     if (stamp == StrokeStamp::Off) {
         damage(caps, prev);
         return;
-    }
-    for (const auto &id : ids) {
-        if (!id.empty())
-            m_stampIds.insert(id);
     }
     if (caps.toolUi) {
         caps.toolUi->setOverlayVisible(true);

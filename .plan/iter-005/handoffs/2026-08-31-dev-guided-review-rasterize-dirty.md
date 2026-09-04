@@ -183,7 +183,7 @@ You are reading it.
 |---|---|---|
 | Enclose Created | one InPlaceDirty of group AABB | `blink(group + inks)` |
 | Connector | InPlaceDirty spine ∪ two boxes | `blink(body ∪ boxes)` |
-| Membership | skip | `setStrokeStamp(boundary, Bold)` |
+| Membership | skip | `clearStrokeStamp` (no Bold; box-AABB damage stalled pen-up) |
 | Ordinary Ink / fail | skip | `clearStrokeStamp` |
 
 **Read:** `ingestCurrentStroke` outcomes + ToolCanvas `recogChrome` kinds 0–3.

@@ -30,7 +30,7 @@ adopt. Same stop as SRS in [docs-first](../../../.agent/rules/docs-first.md).
 | **InputHub** | DeviceMap, match, one lock, hover demux | Overlay compositor; exclusive-id catalogue |
 | **ToolContext / ToolContextImpl** | Host ports: damage, visible, waveform, panel↔world, size / scale. Forwards paint / sync / `refreshChrome` to the active Mode | Exclusive-id string compares; knob / live-manip methods |
 | **SelectionOverlay + SelectionContextBar** | Selection ToolCanvasLayer state and ToolLayer widgets | Live inside ToolContextImpl or inlined into ToolCanvasItem |
-| **NodeEmphasis** | Recog blink, membership stroke-stamp, AABB highlight (ToolCanvas Mono, **`includeIds` only**) | Selection knobs; document FullClear; painting overlapping neighbors; inlined into ToolCanvasItem::paint |
+| **NodeEmphasis** | Recog blink, optional stroke-stamp, AABB highlight (ToolCanvas Mono, **`includeIds` only**). Draw-into membership does **not** stamp. | Selection knobs; document FullClear; painting overlapping neighbors; inlined into ToolCanvasItem::paint |
 | **DocContext** | Document, edits, Infini preview, session exclusive id, Tablet debug | Overlay paint |
 | **ToolCanvasItem** | Chip-string → `ModeId` (the **only** map); QML I/O; owns impl, overlay, bar, emphasis, modes, hub | Implement `redrawLiveManip` / `publishOverlayHits` / `showManipUnavailable` / NodeEmphasis paint |
 
