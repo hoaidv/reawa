@@ -8,6 +8,7 @@ epaper/build-clangd/
 epaper/build-warn/
 epaper/.cache/
 epaper/compile_commands.json
+epaper/cmake-build-debug
 
 # IPython Notebooks
 .ipynb_checkpoints/
