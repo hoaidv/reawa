@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-09-04T17:39:11+00:00
+generated_at: 2026-09-04T17:55:28+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -53,7 +53,7 @@ generated_at: 2026-09-04T17:39:11+00:00
 | [STORY-EP-044](./iter-005/stories/STORY-EP-044.md) | In-document copy cut paste and tap-origin paste | implement | dev | epaper | [SRS-EP-31], [SRS-EP-32], [SRS-EP-33], [SRS-EP-11] | done | iter-005 | 8 |
 | [STORY-EP-045](./iter-005/stories/STORY-EP-045.md) | Design connector endpoint style toolbar | design | designer | epaper | [SRS-EP-36], [SRS-EP-34] | blocked | iter-005 | 3 |
 | [STORY-EP-046](./iter-005/stories/STORY-EP-046.md) | Apply per-end connector styles from toolbar | implement | dev | epaper | [SRS-EP-34], [SRS-EP-37] | blocked | iter-005 | 5 |
-| [STORY-EP-047](./iter-005/stories/STORY-EP-047.md) | Recognize and preserve endpoint ink | implement | dev | epaper | [SRS-EP-74], [SRS-EP-35], [SRS-EP-37], [SRS-EP-10] | in-review | iter-005 | 5 |
+| [STORY-EP-047](./iter-005/stories/STORY-EP-047.md) | Recognize and preserve endpoint ink | implement | dev | epaper | [SRS-EP-74], [SRS-EP-35], [SRS-EP-37], [SRS-EP-10] | done | iter-005 | 5 |
 | [STORY-EP-048](./iter-005/stories/STORY-EP-048.md) | Design connector mid-attachments | design | designer | epaper | [SRS-EP-39], [SRS-EP-38] | draft | iter-005 | 3 |
 | [STORY-EP-049](./iter-005/stories/STORY-EP-049.md) | Mid-attachments follow connector warp | implement | dev | epaper | [SRS-EP-38], [SRS-EP-40] | draft | iter-005 | 5 |
 | [STORY-EP-050](./iter-005/stories/STORY-EP-050.md) | Design manual create: frame connector primitive | design | designer | epaper | [SRS-EP-47], [SRS-EP-44] | draft | iter-005 | 5 |

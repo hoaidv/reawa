@@ -4,7 +4,7 @@ title: Recognize and preserve endpoint ink
 kind: implement
 parent_srs: [SRS-EP-74, SRS-EP-35, SRS-EP-37, SRS-EP-10]
 parent_req: [REQ-13]
-status: in-review
+status: done
 priority: P1
 iter: iter-005
 estimate: 5
@@ -27,7 +27,7 @@ wireframe: ""
 
 # STORY-EP-047 — Recognize and preserve endpoint ink
 
-TRACK-005. Parent [REQ-13](../../../.docs/modules/epaper/prd.md#connector-ends) Path B. Product: [SRS-EP-74](../../../.docs/modules/epaper/features/connector-ink/srs-product.md#srs-ep-74-endpoint-ink-product). Logic: [SRS-EP-35](../../../.docs/modules/epaper/features/connector-ink/srs-logic.md#srs-ep-35-endpoint-ink). Decision: [ADR-0038](../../../.docs/adr/ADR-0038-endpoint-ink-face-frame.md). **No** design `depends_on`. Host tests in `epaper/tests/endpoint_ink_test.cpp`. Human QA on device.
+TRACK-005. Parent [REQ-13](../../../.docs/modules/epaper/prd.md#connector-ends) Path B. Product: [SRS-EP-74](../../../.docs/modules/epaper/features/connector-ink/srs-product.md#srs-ep-74-endpoint-ink-product). Logic: [SRS-EP-35](../../../.docs/modules/epaper/features/connector-ink/srs-logic.md#srs-ep-35-endpoint-ink). Decision: [ADR-0038](../../../.docs/adr/ADR-0038-endpoint-ink-face-frame.md). **No** design `depends_on`. Host tests in `epaper/tests/endpoint_ink_test.cpp`. **Human-verified on device 2026-09-05.**
 
 
 
