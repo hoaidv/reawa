@@ -98,7 +98,7 @@ void ToolCanvasItem::setSession(CanvasSession *session)
                 m_toolCtx->refreshChrome();
         });
         m_camConn = connect(m_session, &CanvasSession::cameraChanged, this, [this] {
-            m_hub.hostCaps().clearPasteOrigin();
+            m_selCtx.clearPasteOrigin();
             if (m_docCtx)
                 m_selCtx.retainExisting(m_docCtx->document());
             if (m_toolCtx)
@@ -106,7 +106,7 @@ void ToolCanvasItem::setSession(CanvasSession *session)
         });
         m_toolConn = connect(m_session, &CanvasSession::exclusiveToolChanged, this, [this]() {
             m_hub.dispatchHoverLeave();
-            m_hub.hostCaps().clearPasteOrigin();
+            m_selCtx.clearPasteOrigin();
             m_emphasis.clearStrokeStamp(m_hub.hostCaps());
             m_emphasis.hideAllAabbs(m_hub.hostCaps());
             syncActiveMode();

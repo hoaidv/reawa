@@ -52,10 +52,10 @@ canvas or a node), because the device has no right-click.
 | BR-C04 | **Paste is one undoable gesture.** New ids; union AABB **top-left** lands on the **tap** world point; items keep relative layout. One undo removes the copies. Slot unchanged. Empty slot → 0 nodes, 0 undo, **0 banners**. | |
 | BR-C05 | **Copy/cut chrome** only when SelectionMode (`sel_rect` or `sel_freeform`) and `SelectionPhase::Selected` with a non-empty selection. Tiles live on the **normal** context toolbar (selection AABB). | `cta.copy` / `cta.cut` |
 | BR-C06 | **Paste chrome** when the slot is non-empty **and** a tap location exists (tap empty canvas, or tap a node). Same toolbar as copy/cut when a node is selected; paste-only strip at the tap point when the canvas is empty. **Not** after freeform / marquee (no tap location). Not on the ToolChip. | `cta.paste` |
-| BR-C07 | **Tap vs travel.** Panel travel ≤ **1 mm** then lift is a tap (select or clear, and records paste origin). Travel > 1 mm begins Move / lasso / marquee as today. **No** 500 ms hold menu. | Stylus tap equals finger tap |
-| BR-C08 | **Tap empty** with a non-empty slot: selection clears; paste origin = tap; paste-only chrome at the tap panel point (clamped). Empty slot → clear selection, **0** paste chrome. | |
+| BR-C07 | **Tap vs travel.** Panel travel ≤ **1 mm** then lift is a tap. Node tap: select and record paste origin. Empty tap while selected: **deselect only** (no paste origin, no chrome). Empty tap while already idle: record paste origin. Travel > 1 mm begins Move / lasso / marquee as today. **No** 500 ms hold menu. | Stylus tap equals finger tap |
+| BR-C08 | **Tap empty while idle** with a non-empty slot: paste origin = tap; paste-only chrome at the tap panel point (clamped). Empty slot → **0** paste chrome. **Tap empty while selected:** clear selection, **0** paste origin, **0** chrome (CHL-0007). | |
 | BR-C09 | Toolbar clamp (empty-canvas paste strip) does **not** move the paste origin. | Chrome ≠ geometry |
-| BR-C10 | Paste origin **clears** on: freeform / marquee that is a real gesture (not a tap), pan, mode switch, camera pan/zoom, successful paste. A new tap replaces it. | |
+| BR-C10 | Paste origin **clears** on: empty tap while a selection exists, freeform / marquee that is a real gesture (not a tap), pan, mode switch, camera pan/zoom, successful paste. A new tap replaces it. | |
 | BR-C11 | **Stylus tap** in SelectionMode (travel ≤ 1 mm) **selects** like finger. | |
 | BR-C12 | **Clone grain.** Slot roots are selected nodes that are **not** descendants of another selected node. If a root is selected and **no descendant is selected**, clone the **full subtree** (tap-select of an ink-box copies the box and its ink). If some descendants are also selected, keep only the selected-descendant spine (unselected siblings dropped). Children of a slot root are not extra paste roots. | |
 | BR-C13 | **Paste parent.** After translate, hit-test at the tap (same as tap-select). If the hit is a legal parent (SmartGroup, Frame, Group), that is the parent (tap on an ink-box **puts the copy in the box**). Else walk ancestors with **20% overlap** vs natural boundary. Else **document root**. Do not 20%-test the document root. Free ink parented into a SmartGroup uses the same local-ink rule as draw-into membership. | |
@@ -70,7 +70,7 @@ canvas or a node), because the device has no right-click.
 |---|---|
 | Empty selection copy/cut | No-op; slot unchanged; 0 undo |
 | Empty slot paste / tap empty | 0 nodes; 0 undo; **no** paste chrome |
-| Copy then tap empty | Deselect; paste on the toolbar at the tap; copies become document-root if the tap is not a legal parent |
+| Copy then tap empty | First tap deselects only (0 paste chrome). A second tap while idle sets paste origin; copies become document-root if the tap is not a legal parent |
 | Copy then tap an ink-box (not a live source) | Paste parents into that SmartGroup |
 | Copy then tap a live source node | Error; slot kept; originals unchanged |
 | Cut then tap empty and paste | Sources gone → BR-C14 does not fire |
@@ -91,6 +91,7 @@ canvas or a node), because the device has no right-click.
 - Given free ink in the slot, When the creator taps an ink-box that is not a live source and pastes, Then the copy is a child of that SmartGroup.
 - Given a non-empty slot after copy, When the creator taps a live source node and taps Paste, Then 0 nodes change, an error is shown, and the slot is unchanged.
 - Given an empty slot, When the creator taps empty, Then selection clears and **0** paste chrome appears.
+- Given a non-empty selection, When the creator taps empty canvas, Then selection clears and **0** paste chrome appears (a further idle tap may set paste origin).
 - Given an empty slot, When Paste is invoked, Then 0 nodes change and 0 undo entries are pushed.
 - Given cut then paste, When the creator undoes once, Then the copies are gone and the originals are still gone; a second undo restores the originals.
 - Given pointer-down on a node in SelectionMode with travel ≤ 1 mm and lift, When observed, Then the node is selected and its world pose is unchanged (0 nudge).

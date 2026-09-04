@@ -166,7 +166,7 @@ private:
         const auto hit = epaper::document::selectByFreeform(m_caps->doc->document(), poly);
         m_caps->selection->setIds(hit);
         m_caps->selection->setPhase(hit.empty() ? SelectionPhase::Idle : SelectionPhase::Selected);
-        m_caps->clearPasteOrigin();
+        m_caps->selection->clearPasteOrigin();
         m_didMutate = true;
         std::string debug = hit.empty() ? "sel=0 (no nodes ≥80% inside)"
                                         : ("sel=" + std::to_string(hit.size()));

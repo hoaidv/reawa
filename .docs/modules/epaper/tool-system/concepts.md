@@ -92,7 +92,7 @@ Narrow ports, not the whole app ([ADR-0033](../../adr/ADR-0033-tool-abstraction.
 | `InkSink *ink` | Live stroke to Tablet (Pen waveform) |
 | `DocContext *doc` | Document + edits + session exclusive id + Infini preview + Tablet debug |
 | `ToolContext *toolUi` | Host ports only: damage, visible, waveform, panel↔world, size |
-| `SelectionContext *selection` | Durable ids + phase |
+| `SelectionContext *selection` | Durable ids + phase + paste origin |
 | `SelectionOverlay *overlay` | Selection ToolCanvasLayer (AABB, knobs, live fill, hits) |
 | `SelectionContextBar *bar` | ToolLayer action strip |
 | `emitChromeChanged` | QML knob/bar invalidate |

@@ -349,6 +349,17 @@ static void test_paste_free_ink_into_ink_box()
     DeviceDocument::NodePlace pl;
     CHECK(doc.findPlace(pastedId, &pl));
     CHECK(pl.parentId == "G");
+    SmartBounds childLocal;
+    CHECK(epaper::document::nodeWorldAabb(*doc.find(pastedId), childLocal));
+    SmartBounds boxWorld;
+    CHECK(epaper::document::nodeWorldAabb(*doc.find("G"), boxWorld));
+    SmartBounds dirty;
+    CHECK(epaper::document::nodeInvalidateAabb(doc, pastedId, dirty));
+    CHECK(near(dirty.x, boxWorld.x));
+    CHECK(near(dirty.y, boxWorld.y));
+    CHECK(near(dirty.width, boxWorld.width));
+    CHECK(near(dirty.height, boxWorld.height));
+    CHECK(!near(childLocal.x, boxWorld.x) || !near(childLocal.y, boxWorld.y));
 }
 
 static void test_paste_copied_ink_box_onto_canvas()

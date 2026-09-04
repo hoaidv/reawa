@@ -59,7 +59,8 @@ stories:
   - STORY-EP-070
   - STORY-EP-071
   - STORY-EP-072
-cursor: "Field follow-ups EP-070…072 ready (ink lag, selection settle probe, camera stress). Clipboard W3 frozen. STORY-EP-069 done."
+  - STORY-EP-073
+cursor: "Field follow-ups EP-070…072 ready (ink lag, selection settle probe, camera stress). Clipboard EP-044 done (human-verified 2026-09-04). STORY-EP-073 later. STORY-EP-069 done."
 paused_reason: ""
 interrupts: []
 ---
@@ -93,8 +94,8 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 | [EP-040](../iter-005/stories/STORY-EP-040.md) | design | P0 | **cancelled** — icons only |
 | [EP-041](../iter-005/stories/STORY-EP-041.md) | implement | P0 | **cancelled** — Path A |
 | [EP-042](../iter-005/stories/STORY-EP-042.md) | implement | P0 | **cancelled** — Path B |
-| [EP-043](../iter-005/stories/STORY-EP-043.md) | design | P0 | clipboard chrome |
-| [EP-044](../iter-005/stories/STORY-EP-044.md) | implement | P0 | copy/cut/paste |
+| [EP-043](../iter-005/stories/STORY-EP-043.md) | design | P0 | **cancelled** — chrome frozen in SRS |
+| [EP-044](../iter-005/stories/STORY-EP-044.md) | implement | P0 | copy/cut/paste — **done** (human-verified 2026-09-04) |
 | [EP-045](../iter-005/stories/STORY-EP-045.md) | design | P1 | endpoint toolbar |
 | [EP-046](../iter-005/stories/STORY-EP-046.md) | implement | P1 | end styles |
 | [EP-047](../iter-005/stories/STORY-EP-047.md) | implement | P1 | endpoint ink |
@@ -123,20 +124,21 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 | [EP-070](../iter-005/stories/STORY-EP-070.md) | implement | P0 | Residual pen-to-ink lag on moderately dense pages — **ready** |
 | [EP-071](../iter-005/stories/STORY-EP-071.md) | implement | P0 | Instrument sel_rect / sel_freeform settle to knobs — **ready** |
 | [EP-072](../iter-005/stories/STORY-EP-072.md) | implement | P0 | Camera-change stress probe on a full handwriting page — **ready** |
+| [EP-073](../iter-005/stories/STORY-EP-073.md) | implement | P2 | Split clipboard clipops — **draft** later · depends EP-044 |
 
 W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). Hand-touch and follow implement stories that shipped are **done**. Other committed stories stay **draft** until their wave. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) **done** 2026-08-20.
 
 ## Cursor
 
-**NOW:** Field follow-ups [STORY-EP-070](../iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](../iter-005/stories/STORY-EP-072.md) **ready** (human 2026-08-31 after LatestJob camera felt better). [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl host ports / SelectionOverlay **done**. Erase [STORY-EP-062](../iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](../iter-005/stories/STORY-EP-068.md) **done**. Clipboard / Device Settings stay queued. Remaining Infini follow field test still outstanding.
+**NOW:** Field follow-ups [STORY-EP-070](../iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](../iter-005/stories/STORY-EP-072.md) **ready** (human 2026-08-31 after LatestJob camera felt better). [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl host ports / SelectionOverlay **done**. Erase [STORY-EP-062](../iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](../iter-005/stories/STORY-EP-068.md) **done**. Clipboard [STORY-EP-044](../iter-005/stories/STORY-EP-044.md) **done**. [STORY-EP-073](../iter-005/stories/STORY-EP-073.md) later. Device Settings stay queued. Remaining Infini follow field test still outstanding.
 
 Tool-system interrupt [TRACK-006](./TRACK-006-tool-system-refactor.md) is **done** (2026-08-27). Default pointer map is Primary=Pen, Secondary=Finger under [ADR-0033](../../../.docs/adr/ADR-0033-tool-abstraction.md).
 
-## Freeze note (clipboard W3 frozen; erase + EP-069 done; field latency ready)
+## Freeze note (clipboard product done; EP-073 later; field latency ready)
 
-- In flight: none. Field follow-ups EP-070…072 **ready** (not started). [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **done**, human verified 2026-08-31. Erase EP-062…068 **done**. EP-059…061 **done**, human verified undo/redo. IN-038 **cancelled**.
+- In flight: none. Field follow-ups EP-070…072 **ready** (not started). [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **done**, human verified 2026-08-31. Erase EP-062…068 **done**. EP-059…061 **done**, human verified undo/redo. Clipboard [STORY-EP-044](../iter-005/stories/STORY-EP-044.md) **done**, human verified 2026-09-04. [STORY-EP-073](../iter-005/stories/STORY-EP-073.md) later. IN-038 **cancelled**.
 - Open files / risks: [CHL-0027](../iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md) still open; no RM2 panel / no live TCP `:9877`; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open. Leftover snapshot wording in deprecated Infini [SRS-IN-12](../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) — do not implement.
-- Resume: Human named ink lag / selection settle / camera stress — **not** clipboard. Follow field-test notes still wanted. Do **not** reopen TRACK-006.
+- Resume: Human named ink lag / selection settle / camera stress for NOW. Clipboard product is done; do **not** start EP-073 until the human picks it. Follow field-test notes still wanted. Do **not** reopen TRACK-006.
 
 ## Execution board
 
@@ -167,3 +169,4 @@ Tool-system interrupt [TRACK-006](./TRACK-006-tool-system-refactor.md) is **done
 | 2026-08-31 | Human **verified** EP-067, EP-068, EP-065, EP-066. Erase implement **done**. Cursor → STORY-EP-069 in-progress. Clipboard W3 still frozen. |
 | 2026-08-31 | Human **verified** [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) (code already on device). Cursor → WAIT human next pick. Clipboard W3 still frozen. |
 | 2026-08-31 | Human: LatestJob camera **better**. Filed [STORY-EP-070](../iter-005/stories/STORY-EP-070.md) residual pen-to-ink, [STORY-EP-071](../iter-005/stories/STORY-EP-071.md) selection settle probe, [STORY-EP-072](../iter-005/stories/STORY-EP-072.md) camera stress. Clipboard still frozen. |
+| 2026-09-04 | Human **verified** [STORY-EP-044](../iter-005/stories/STORY-EP-044.md) clipboard complete. Filed [STORY-EP-073](../iter-005/stories/STORY-EP-073.md) clipops split — later, not NOW. |

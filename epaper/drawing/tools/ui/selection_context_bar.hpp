@@ -12,6 +12,7 @@
 #include "../actions/enclose_action.hpp"
 #include "../actions/ink_scale_action.hpp"
 #include "../actions/paste_action.hpp"
+#include "../contexts/selection_context.hpp"
 #include "../host_caps.hpp"
 #include "selection_overlay.hpp"
 
@@ -67,8 +68,13 @@ public:
         m_refuse = chrome.encloseRefuseReason;
         m_manip = chrome.manipUnavailable;
         m_manipRect = chrome.manipUnavailableRect;
-        m_tapOriginValid = caps.pasteOriginValid;
-        m_tapOrigin = caps.pastePressPanel;
+        m_tapOriginValid = caps.selection && caps.selection->pasteOriginValid();
+        if (m_tapOriginValid) {
+            const PasteOrigin &o = caps.selection->pasteOrigin();
+            m_tapOrigin = QPointF(o.panelX, o.panelY);
+        } else {
+            m_tapOrigin = QPointF();
+        }
         m_model->rebuild(m_owned, caps);
         emit chromeChanged();
     }

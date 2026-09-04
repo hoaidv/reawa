@@ -312,7 +312,8 @@ bool InputHub::dispatchPinchBegin(qreal x, qreal y, qreal scale)
     if (!m_secondary.armed())
         return false;
     endHover();
-    m_caps.clearPasteOrigin();
+    if (m_caps.selection)
+        m_caps.selection->clearPasteOrigin();
     if (m_lockedOp)
         cancelAll();
 

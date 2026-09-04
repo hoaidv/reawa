@@ -517,7 +517,7 @@ Cut then paste: undo paste removes each pasted id (originals still gone, slot st
 |---|---|
 | `selection.empty` | Enable copy/cut on the **Selected** strip |
 | `clipboard.empty` | Enable paste on the tap toolbar |
-| `clipboard.tapWorld` | Paste union AABB top-left — logic, not Designer |
+| `selection.pasteOrigin` | Paste union AABB top-left — logic, not Designer |
 
 ---
 

@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-09-04T14:45:50+00:00",
+  "generated_at": "2026-09-04T15:32:01+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 11,
+    "draft": 12,
     "ready": 4,
     "in-progress": 0,
-    "in-review": 1,
-    "done": 140,
+    "in-review": 0,
+    "done": 141,
     "blocked": 13,
     "cancelled": 7
   },
@@ -18,9 +18,9 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 72,
-      "done": 46,
-      "in_review": 1
+      "total": 73,
+      "done": 47,
+      "in_review": 0
     },
     "infini": {
       "total": 38,
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "Field follow-ups EP-070\u2026072 ready (ink lag, selection settle probe, camera stress). Clipboard W3 frozen. STORY-EP-069 done.",
+      "cursor": "Field follow-ups EP-070\u2026072 ready (ink lag, selection settle probe, camera stress). Clipboard EP-044 done (human-verified 2026-09-04). STORY-EP-073 later. STORY-EP-069 done.",
       "iter": "iter-005"
     },
     {

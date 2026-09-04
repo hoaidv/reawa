@@ -11,10 +11,12 @@
 #include "../clipboard.hpp"
 #include "../host_caps.hpp"
 #include "../contexts/doc_context.hpp"
+#include "../contexts/selection_context.hpp"
 #include "../contexts/tool_context.hpp"
 #include "../ui/selection_overlay.hpp"
 #include "document/surround_create.hpp"
 
+#include <QPointF>
 #include <QRectF>
 #include <QString>
 
@@ -28,18 +30,17 @@ public:
     QString label(const HostCaps &) const override { return QStringLiteral("Paste"); }
     bool visible(const HostCaps &caps) const override
     {
-        return !clipboard().empty() && caps.pasteOriginValid;
+        return !clipboard().empty() && caps.selection && caps.selection->pasteOriginValid();
     }
     bool enabled(const HostCaps &caps) const override { return visible(caps); }
     void trigger(HostCaps &caps) override
     {
-        if (!caps.doc || !visible(caps))
+        if (!caps.doc || !caps.selection || !visible(caps))
             return;
-        const std::string hit = caps.doc->hitSelectTarget(caps.pastePressWorld.x(),
-                                                          caps.pastePressWorld.y());
-        const auto out = clipops::commitPaste(caps.doc->document(), clipboard(),
-                                              caps.pastePressWorld.x(), caps.pastePressWorld.y(),
-                                              hit, /*enqueue=*/false);
+        const PasteOrigin &origin = caps.selection->pasteOrigin();
+        const std::string hit = caps.doc->hitSelectTarget(origin.worldX, origin.worldY);
+        const auto out = clipops::commitPaste(caps.doc->document(), clipboard(), origin.worldX,
+                                              origin.worldY, hit, /*enqueue=*/false);
         if (out.refuse == clipops::PasteRefuse::LiveOriginal) {
             if (caps.overlay)
                 caps.overlay->setRefuseReason(
@@ -50,8 +51,8 @@ public:
             return;
         epaper::document::SmartBounds world;
         if (clipops::unionAabb(clipboard().nodes, world) && caps.toolUi) {
-            world.x = caps.pastePressWorld.x();
-            world.y = caps.pastePressWorld.y();
+            world.x = origin.worldX;
+            world.y = origin.worldY;
             const QPointF tl = caps.toolUi->worldToPanel(world.x, world.y);
             const QPointF br =
                 caps.toolUi->worldToPanel(world.x + world.width, world.y + world.height);
@@ -60,7 +61,7 @@ public:
             caps.doc->noteDocumentMutated();
         }
         caps.doc->notifyHistory();
-        caps.clearPasteOrigin();
+        caps.selection->clearPasteOrigin();
         if (caps.toolUi)
             caps.toolUi->refreshChrome();
     }

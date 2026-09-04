@@ -295,12 +295,13 @@ Tiles ≥64 du. **No** ToolChip row. **No** hold / long-press strip.
 | Entry | When | Actions | Placement |
 |---|---|---|---|
 | Selected (tap a node) | `SelectionPhase::Selected` **and** tap location | copy, cut, paste (paste if slot non-empty) | Existing selection AABB strip |
-| Empty tap | Selection empty **and** tap location **and** slot non-empty | paste only | Toolbar at the tap panel point, then **clamped**. Clamp does not move paste origin. |
+| Empty tap | Selection **already** empty **and** tap location **and** slot non-empty | paste only | Toolbar at the tap panel point, then **clamped**. Clamp does not move paste origin. |
+| Empty tap while selected | Selection non-empty | — | Deselect only; **do not** record a tap location; **0** chrome |
 | Freeform / marquee | Real gesture (not a tap) | copy, cut if selected; **no paste** | Selection AABB; tap location cleared |
 
 ### Dismiss / clear tap location
 
-Freeform / marquee gesture · pan · mode switch · camera pan/zoom · successful paste. A new tap replaces the location. No extra timeout.
+Freeform / marquee gesture · empty tap while selected · pan · mode switch · camera pan/zoom · successful paste. A new tap replaces the location. No extra timeout.
 
 ### States
 

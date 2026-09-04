@@ -4,7 +4,7 @@ title: In-document copy cut paste and tap-origin paste
 kind: implement
 parent_srs: [SRS-EP-31, SRS-EP-32, SRS-EP-33, SRS-EP-11]
 parent_req: [REQ-12]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 8
@@ -19,6 +19,7 @@ acceptance_criteria:
   - "Given pointer-down on a node with travel ≤1 mm and lift, When observed, Then the node is selected and its world pose is unchanged."
   - "Given copy then tap a live source, When paste is tapped, Then 0 nodes change, refuse is shown, slot kept."
   - "Given a freeform or marquee selection, When the toolbar is shown, Then paste is absent."
+  - "Given a non-empty selection, When the creator taps empty canvas, Then selection clears and 0 paste chrome appears."
 ---
 
 # STORY-EP-044 — In-document copy cut paste and tap-origin paste
@@ -33,6 +34,8 @@ ADR [ADR-0037](../../../.docs/adr/ADR-0037-device-clipboard-singleton.md). BDD
 Adopted [CHL-0031](../challenges/CHL-0031-clipboard-tap-paste.md).
 
 No design `depends_on` (EP-043 cancelled). Infini apply out of this story.
+
+**Human verified complete** 2026-09-04 (device). Follow-up structure: [STORY-EP-073](./STORY-EP-073.md).
 
 ## Kind
 

@@ -56,6 +56,13 @@ Feature: In-document clipboard on the device
     And undo depth is unchanged
 
   @SRS-EP-32
+  Scenario: Empty tap while selected only deselects
+    Given a non-empty selection and a non-empty clipboard slot
+    When the creator taps empty canvas
+    Then selection is empty
+    And paste is not on the toolbar
+
+  @SRS-EP-32
   Scenario: Empty clipboard tap shows no paste chrome
     Given an empty clipboard slot
     And SelectionMode

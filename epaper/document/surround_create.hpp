@@ -166,6 +166,25 @@ inline bool nodeWorldAabb(const DocNode &n, SmartBounds &out)
     return false;
 }
 
+/**
+ * InPlaceDirty AABB for a node. Ink inside a SmartGroup is group-local; dirty the parent box
+ * or undo/redo of paste-into-box misses the ink-box world rect.
+ * @implements [SRS-EP-31] paste-into-box undo dirty
+ */
+inline bool nodeInvalidateAabb(const DeviceDocument &doc, const std::string &id, SmartBounds &out)
+{
+    const DocNode *n = doc.find(id);
+    if (!n)
+        return false;
+    DeviceDocument::NodePlace pl;
+    if (doc.findPlace(id, &pl) && !pl.parentId.empty()) {
+        const DocNode *p = doc.find(pl.parentId);
+        if (p && p->kind == NodeKind::SmartGroup)
+            return nodeWorldAabb(*p, out);
+    }
+    return nodeWorldAabb(*n, out);
+}
+
 /** Top-level pickable nodes (not ToolChip; not children of SmartGroup). */
 inline void collectPickable(const std::vector<DocNode> &nodes, std::vector<const DocNode *> &out)
 {

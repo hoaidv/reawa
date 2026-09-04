@@ -939,7 +939,7 @@ Accepted for epaper device implementation (2026-08-26).
 5. **Modifiers** (never exclusive): **HandTouch** (finger/pinch; profiles per Mode id → allowed Operation kinds + **`postHandling` as `std::function`** — dynamic, e.g. switch to Selection only when select/move actually selected something); **InkBoxRecognizer** + **ConnectorRecognizer** (Pen Mode pen-up behaviors, latch on pen-down).
 6. **SelectionOverlay hits** use **HitTarget** + visual-only chrome (not per-knob DragHandlers) — including future connector knobs.
 7. Capability ports: **`InkSink`**, **`DocContext`**, **`ToolContext`** (SelectionOverlay Tool UI), **`SelectionContext`**. Activate bag = **`HostCaps`**.
-8. Durable selection state lives in **SelectionContext**; ephemeral gesture geometry on the locked Operation.
+8. Durable selection state lives in **SelectionContext** (ids, phase, paste origin); ephemeral gesture geometry on the locked Operation.
 9. Code lives under `epaper/drawing/tools/`.
 
 ## Consequences

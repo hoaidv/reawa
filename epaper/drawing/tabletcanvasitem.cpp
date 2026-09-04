@@ -500,6 +500,7 @@ void TabletCanvasItem::applyHistoryRestore(bool isUndo)
         for (const auto &t : peek->targets)
             ids.push_back(t.nodeId);
     }
+    // @fix [CHL-0031] child ink of a SmartGroup is group-local; dirty the parent box
     for (const auto &id : ids) {
         const QRectF b = panelBoundOfNodeId(id);
         if (!b.isEmpty())
@@ -1220,11 +1221,8 @@ epaper::render::WorldAabb TabletCanvasItem::panelRectToWorldClip(const QRectF &p
 QRectF TabletCanvasItem::panelBoundOfNodeId(const std::string &id) const
 {
     using namespace epaper::document;
-    const DocNode *n = m_session.document.find(id);
-    if (!n)
-        return {};
     SmartBounds b;
-    if (!boundsOf(*n, b))
+    if (!nodeInvalidateAabb(m_session.document, id, b))
         return {};
     return worldBoundsToPanel(b);
 }
