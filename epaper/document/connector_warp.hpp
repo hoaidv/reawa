@@ -36,6 +36,9 @@ struct WarpResult {
     double lPrime = 0;
 };
 
+inline bool resolveConnectorEnds(const DeviceDocument &doc, const DocNode &conn, WarpEnd *from,
+                                 WarpEnd *to);
+
 inline RestVec warpAdd(RestVec a, RestVec b) { return {a.x + b.x, a.y + b.y}; }
 inline RestVec warpSub(RestVec a, RestVec b) { return {a.x - b.x, a.y - b.y}; }
 inline RestVec warpMul(RestVec a, double k) { return {a.x * k, a.y * k}; }
@@ -405,6 +408,151 @@ inline ConnectorEndPose poseFromWarpEnd(const WarpEnd &e)
     return p;
 }
 
+/** Live face frame for Path B styleInk ([ADR-0038]). */
+struct FaceFrame {
+    RestVec origin{};
+    RestVec n{1, 0};
+    RestVec e{0, 1};
+    bool ok = false;
+};
+
+inline FaceFrame liveFaceFrame(const WarpEnd &end, const ConnectorAnchor &a, const DocNode *sg)
+{
+    FaceFrame f;
+    f.origin = end.p;
+    if (sg && a.kind != "centre") {
+        const WarpBox b = warpBoxFromSmart(*sg);
+        if (b.ok) {
+            RestVec along{};
+            edgeFrameFromBox(b, a.edge, &f.n, &along);
+            f.e = along;
+            f.ok = true;
+            return f;
+        }
+    }
+    f.n = warpUnit(end.f);
+    f.e = warpLeft(f.n);
+    f.ok = true;
+    return f;
+}
+
+inline FaceFrame liveFaceFrame(const DeviceDocument &doc, const DocNode &conn, bool fromEnd)
+{
+    WarpEnd e0, e1;
+    if (!resolveConnectorEnds(doc, conn, &e0, &e1))
+        return {};
+    const ConnectorAnchor &a = fromEnd ? conn.fromAnchor : conn.toAnchor;
+    const std::string &nid = fromEnd ? conn.fromNodeId : conn.toNodeId;
+    return liveFaceFrame(fromEnd ? e0 : e1, a, doc.find(nid));
+}
+
+/** Leaving tangent of the painted spine: into the connector from that end. */
+inline RestVec warpedLeaveFromSamples(const std::vector<RestVec> &samples, bool fromEnd)
+{
+    if (samples.size() < 2)
+        return {0, 0};
+    if (fromEnd)
+        return warpSegTangent(samples, 0);
+    return warpUnit(warpMul(warpSegTangent(samples, samples.size() - 1), -1.0));
+}
+
+inline std::vector<RestVec> restVecsFromWarpedSamples(const std::vector<ConnectorRestPt> &pts)
+{
+    std::vector<RestVec> o;
+    o.reserve(pts.size());
+    for (const auto &p : pts)
+        o.push_back({p.x, p.y});
+    return o;
+}
+
+/**
+ * Paint/bind/erase frame for Path B styleInk ([SRS-EP-35]).
+ * Storage stays in the live face frame. World paint rotates that frame by
+ * α = signed angle from stored leave (drawnN/drawnE / drawnBoxX/drawnBoxY,
+ * reconstructed as WarpEnd.f) to the re-warped sample tangent. Drawn leave
+ * is not rewritten.
+ */
+inline FaceFrame styleInkPaintFrame(const FaceFrame &face, RestVec storedLeave, RestVec warpedLeave)
+{
+    if (!face.ok)
+        return face;
+    if (warpLen(storedLeave) < 1e-9 || warpLen(warpedLeave) < 1e-9)
+        return face;
+    const double rad = warpSignedDeg(storedLeave, warpedLeave) * kWarpPi / 180.0;
+    FaceFrame p = face;
+    p.n = warpRot(face.n, rad);
+    p.e = warpRot(face.e, rad);
+    return p;
+}
+
+inline FaceFrame styleInkPaintFrame(const DeviceDocument &doc, const DocNode &conn, bool fromEnd)
+{
+    WarpEnd e0, e1;
+    if (!resolveConnectorEnds(doc, conn, &e0, &e1))
+        return {};
+    const ConnectorAnchor &a = fromEnd ? conn.fromAnchor : conn.toAnchor;
+    const std::string &nid = fromEnd ? conn.fromNodeId : conn.toNodeId;
+    const FaceFrame face = liveFaceFrame(fromEnd ? e0 : e1, a, doc.find(nid));
+    const RestVec stored = fromEnd ? e0.f : e1.f;
+    const RestVec warped = warpedLeaveFromSamples(restVecsFromWarpedSamples(conn.warpedSamples),
+                                                  fromEnd);
+    return styleInkPaintFrame(face, stored, warped);
+}
+
+inline RestVec faceToWorld(const FaceFrame &f, EndpointInkPt p)
+{
+    return warpAdd(f.origin, warpAdd(warpMul(f.n, p.n), warpMul(f.e, p.e)));
+}
+
+inline EndpointInkPt worldToFace(const FaceFrame &f, RestVec w)
+{
+    const RestVec d = warpSub(w, f.origin);
+    return {warpDot(d, f.n), warpDot(d, f.e)};
+}
+
+inline std::vector<InkSample> styleInkStrokeWorld(const FaceFrame &f, const EndpointInkStroke &st)
+{
+    std::vector<InkSample> out;
+    out.reserve(st.pts.size());
+    for (const auto &p : st.pts) {
+        const RestVec w = faceToWorld(f, p);
+        InkSample s;
+        s.x = w.x;
+        s.y = w.y;
+        out.push_back(s);
+    }
+    return out;
+}
+
+inline EndpointInkStroke styleInkStrokeFromWorld(const FaceFrame &f,
+                                                 const std::vector<InkSample> &world)
+{
+    EndpointInkStroke st;
+    st.pts.reserve(world.size());
+    for (const auto &s : world)
+        st.pts.push_back(worldToFace(f, RestVec{s.x, s.y}));
+    return st;
+}
+
+inline void writeWarpedStyleInk(DocNode &conn, const FaceFrame &fromF, const FaceFrame &toF)
+{
+    conn.warpedStyleInk.clear();
+    auto appendWarped = [&](const FaceFrame &f, const std::vector<EndpointInkStroke> &strokes) {
+        for (const auto &st : strokes) {
+            std::vector<ConnectorRestPt> poly;
+            poly.reserve(st.pts.size());
+            for (const auto &p : st.pts) {
+                const RestVec w = faceToWorld(f, p);
+                poly.push_back({w.x, w.y});
+            }
+            if (poly.size() >= 2)
+                conn.warpedStyleInk.push_back(std::move(poly));
+        }
+    };
+    appendWarped(fromF, conn.fromAnchor.styleInk);
+    appendWarped(toF, conn.toAnchor.styleInk);
+}
+
 inline WarpEnd endFromPose(const ConnectorEndPose &p)
 {
     WarpEnd e;
@@ -482,6 +630,13 @@ inline bool refreshConnectorWarp(DeviceDocument &doc, DocNode &conn)
     const RestShape rs = restShapeFromNode(conn);
     const WarpResult w = warpConnector(rs, e0, e1, conn.warpStyle);
     writeWarpedSamples(&conn, w.samples);
+    const DocNode *sg0 = doc.find(conn.fromNodeId);
+    const DocNode *sg1 = doc.find(conn.toNodeId);
+    const FaceFrame fromFace = liveFaceFrame(e0, conn.fromAnchor, sg0);
+    const FaceFrame toFace = liveFaceFrame(e1, conn.toAnchor, sg1);
+    writeWarpedStyleInk(conn,
+                        styleInkPaintFrame(fromFace, e0.f, warpedLeaveFromSamples(w.samples, true)),
+                        styleInkPaintFrame(toFace, e1.f, warpedLeaveFromSamples(w.samples, false)));
     conn.fromPose = poseFromWarpEnd(e0);
     conn.toPose = poseFromWarpEnd(e1);
     conn.connectorInvalid = false;
@@ -522,15 +677,24 @@ inline void refreshConnectorsBoundTo(DeviceDocument &doc, const std::string &nod
 inline Aabb warpedSamplesAabb(const DocNode &conn)
 {
     Aabb a;
-    if (conn.warpedSamples.empty())
-        return a;
-    a.minX = a.maxX = conn.warpedSamples.front().x;
-    a.minY = a.maxY = conn.warpedSamples.front().y;
-    for (const auto &p : conn.warpedSamples) {
-        a.minX = std::min(a.minX, p.x);
-        a.minY = std::min(a.minY, p.y);
-        a.maxX = std::max(a.maxX, p.x);
-        a.maxY = std::max(a.maxY, p.y);
+    bool any = false;
+    auto acc = [&](double x, double y) {
+        if (!any) {
+            a.minX = a.maxX = x;
+            a.minY = a.maxY = y;
+            any = true;
+        } else {
+            a.minX = std::min(a.minX, x);
+            a.minY = std::min(a.minY, y);
+            a.maxX = std::max(a.maxX, x);
+            a.maxY = std::max(a.maxY, y);
+        }
+    };
+    for (const auto &p : conn.warpedSamples)
+        acc(p.x, p.y);
+    for (const auto &poly : conn.warpedStyleInk) {
+        for (const auto &p : poly)
+            acc(p.x, p.y);
     }
     return a;
 }

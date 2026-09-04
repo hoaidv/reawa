@@ -53,7 +53,7 @@ the final say. This feature removes both.
 | BR-B04 | **Captures any ink.** No content test — handwriting, sketch, or shape all qualify. | BR-09c |
 | BR-B05 | **A box always reads as a box.** A successful create always has `role: boundary` ink — the creator's own stroke, never a synthetic rectangle. | BR-09d |
 | BR-B06 | **Selection create needs a surround stroke.** One selected stroke must contain ≥80% of each other selected stroke's samples (open stroke OK — tested via an artificial closed path). That stroke becomes `boundary`; the rest `content`. If none qualify, **creation is refused** with a visible reason. | BR-09j |
-| BR-B07 | **Draw-into membership.** A new `Pen` stroke with ≥80% of samples inside one or more box bounds joins the qualifying box with the **highest paint/z order** (later sibling wins; no z-index field). Never dual-parented. | BR-09g |
+| BR-B07 | **Draw-into membership.** A new `Pen` stroke with ≥80% of **polyline length** inside one or more boxes’ **boundary ink** joins the qualifying box with the **highest paint/z order** (later sibling wins; no z-index field). Never dual-parented. **Not** ≥80% of samples inside the AABB. | BR-09g |
 | BR-B08 | **Free layout inside the box.** Appending content never reflows, realigns, or shifts existing children. Placement is as drawn. | BR-09h |
 | BR-B09 | **Recognition is best-effort plus undo.** A wrong box costs one undo. The product does not chase perfect recognition. | REQ-05 |
 
@@ -108,7 +108,7 @@ the final say. This feature removes both.
   fitted rect (±1 px @ 100% zoom).
 - Given a selection with no qualifying surround stroke, When the creator invokes Smart Group, Then
   0 boxes are created, the selection is unchanged, and the reason is visible.
-- Given a `Pen` stroke with ≥80% of samples inside a box, When it ends, Then it becomes `content`
+- Given a `Pen` stroke with ≥80% of **polyline length** inside a box’s **boundary ink**, When it ends, Then it becomes `content`
   within 300 ms and 0 existing content inks move.
 - Given 10 consecutive enclose gestures, When each completes, Then each yields exactly one correct
   box (0 desync, 0 lost boxes).

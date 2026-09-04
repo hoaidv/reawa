@@ -76,35 +76,173 @@ struct TextRun {
     bool bold = false;
 };
 
-struct ConnectorAnchor {
-    std::string nodeId;
-    std::string kind = "edge";
-    int edge = 0;
-    double t = 0;
-    double drawnN = 1;
-    double drawnE = 0;
-    double drawnBoxX = 1;
-    double drawnBoxY = 0;
-    double localX = 0;
-    double localY = 0;
-    bool hasLocal = false;
+/**
+ * How one connector end sits on a bound SmartGroup.
+ * @implements [ADR-0020] §2 anchors; [SRS-EP-18]
+ *
+ * One attach point + one drawn leave, stored in local frames so they ride the
+ * node's transform — not several competing world positions. Kind / edge / t
+ * are chosen at recognition and never re-picked when the box moves.
+ *
+ * Two leave frames hold the same unit vector: a coordinate system on the
+ * chosen face (drawnN, drawnE), and one on the box axes (drawnBoxX, drawnBoxY).
+ * Neither is a world angle.
+ *
+ * Wire: drawnEdgeLocal {n,e}, drawnBoxLocal {x,y}, optional local {x,y}.
+ */
+/** Face-frame sample. +n outward (or facing at centre); +e along the face CCW. */
+struct EndpointInkPt {
+    double n = 0;
+    double e = 0;
 };
 
+/** One Path B decoration stroke on a connector end. */
+struct EndpointInkStroke {
+    std::vector<EndpointInkPt> pts;
+};
+
+inline std::vector<EndpointInkStroke> styleInkFromJson(const JsonValue *a)
+{
+    std::vector<EndpointInkStroke> out;
+    if (!a || !a->isArray())
+        return out;
+    for (const auto &st : a->asArray()) {
+        const JsonValue *pts = st.get("pts");
+        if (!pts || !pts->isArray())
+            continue;
+        EndpointInkStroke stroke;
+        for (const auto &p : pts->asArray()) {
+            EndpointInkPt pt;
+            pt.n = p.getNumber("n", 0);
+            pt.e = p.getNumber("e", 0);
+            stroke.pts.push_back(pt);
+        }
+        if (!stroke.pts.empty())
+            out.push_back(std::move(stroke));
+    }
+    return out;
+}
+
+inline JsonValue styleInkToJson(const std::vector<EndpointInkStroke> &strokes)
+{
+    JsonValue::Array a;
+    for (const auto &st : strokes) {
+        JsonValue::Array pts;
+        for (const auto &p : st.pts) {
+            JsonValue::Object o;
+            o.emplace_back("n", JsonValue::number(p.n));
+            o.emplace_back("e", JsonValue::number(p.e));
+            pts.push_back(JsonValue::object(std::move(o)));
+        }
+        JsonValue::Object so;
+        so.emplace_back("pts", JsonValue::array(std::move(pts)));
+        a.push_back(JsonValue::object(std::move(so)));
+    }
+    return JsonValue::array(std::move(a));
+}
+
+struct ConnectorAnchor {
+    /** Bound SmartGroup id (same as fromNodeId / toNodeId on the connector). */
+    std::string nodeId;
+    /**
+     * Where the attach coordinate system is planted.
+     * "edge": on a box face (see edge, t). "centre": at the box centre — no face.
+     * Chosen at recognition; only the creator may change it. Centre is picked
+     * when d(center) < kCentreVsBoundary · d(boundary ink).
+     */
+    std::string kind = "edge";
+    /**
+     * Which face the attach coordinate system sits on. 0..3, NEWS in local box
+     * space (not a world-axis side after the node rotates). Recognition picks
+     * the nearest side of the world AABB; after that this index means that local
+     * side. Ignored when kind is centre.
+     *   0 = N (top)     t left → right
+     *   1 = E (right)   t top → bottom
+     *   2 = S (bottom)  t right → left
+     *   3 = W (left)    t bottom → top
+     * Corners of the transformed local bounds: 0 TL, 1 TR, 2 BR, 3 BL, CCW.
+     */
+    int edge = 0;
+    /**
+     * Where on that face the origin sits, t ∈ [0, 1].
+     * P = corner[edge] + (corner[(edge+1)%4] − corner[edge]) · t.
+     * 0 = start corner, 0.5 = midpoint, 1 = end corner. Unused for centre.
+     */
+    double t = 0;
+    /**
+     * Face-local leave, first component. A coordinate system is put at the
+     * chosen face: origin at the attach point, +N = outward perpendicular to
+     * the face, +E = along the face CCW. Leave is the unit vector (drawnN,
+     * drawnE) in that frame. (1, 0) means leaving perpendicularly to the face.
+     * The doodle's angle off the face rides rotate/scale; it is not vs world-north.
+     * Wire: drawnEdgeLocal.n
+     */
+    double drawnN = 1;
+    /**
+     * Face-local leave, second component — along the face, CCW (corner[edge] →
+     * corner[edge+1]). (0, 1) means leaving along the face; (0, −1) the other way.
+     * World facing after a box move: drawnN·n' + drawnE·e' with the current (n, e).
+     * Wire: drawnEdgeLocal.e
+     */
+    double drawnE = 0;
+    /**
+     * Box-local leave, first component. A second coordinate system is put on
+     * the SmartGroup itself: +X = local +X (corner 0 → 1), +Y = local +Y
+     * (corner 0 → 3). Same leave as (drawnN, drawnE), expressed in that box
+     * frame as unit vector (drawnBoxX, drawnBoxY). Live warp reconstructs
+     * facing from this pair. Wire: drawnBoxLocal.x
+     */
+    double drawnBoxX = 1;
+    /**
+     * Box-local leave, second component. For a centre end there is no face
+     * frame; this box-frame leave is clamped to a 60° cone about the ray
+     * toward the other end's centre. Wire: drawnBoxLocal.y
+     */
+    double drawnBoxY = 0;
+    /**
+     * Attach point in SmartGroup local space (a third coordinate system: the
+     * node's own local XY). Live warp prefers this over edge+t when hasLocal,
+     * so the pin rides the transform. Wire: local.x
+     */
+    double localX = 0;
+    /** Attach point, SmartGroup-local Y. Wire: local.y */
+    double localY = 0;
+    /** True when localX/Y were stored (recognition always sets this). */
+    bool hasLocal = false;
+    /**
+     * Path B decoration: ordered strokes in the live face frame.
+     * Paint rotates by the delta between stored leave and re-warped leave.
+     * @implements [SRS-EP-35] ConnectorAnchor.styleInk
+     */
+    std::vector<EndpointInkStroke> styleInk;
+};
+
+/** Rest-spine sample, or a derived warped sample, in world XY. */
 struct ConnectorRestPt {
     double x = 0;
     double y = 0;
 };
 
+/**
+ * One raw-ink sample in the rest-spine coordinate system: origin along S,
+ * +s = along the spine from the from-end, +d = signed perpendicular.
+ */
 struct ConnectorRestOff {
+    /** How far along rest spine S, normalized to [0, 1] (0 = from-end, 1 = to-end). */
     double s = 0;
+    /** Signed offset off S, world u (never scaled later). */
     double d = 0;
 };
 
-/** @implements [SRS-EP-18] last live world pose cache (D39) */
+/**
+ * Last live world pose of one connector end. World XY — not a box-local frame.
+ * Used when the bound nodeId is missing (delete); not an op.
+ * @implements [SRS-EP-18] last live world pose cache (D39)
+ */
 struct ConnectorEndPose {
-    double x = 0;
+    double x = 0;     // world attach
     double y = 0;
-    double fx = 1;
+    double fx = 1;    // unit leave in world (same role as (drawnN, drawnE), after transform)
     double fy = 0;
     bool valid = false;
 };
@@ -136,15 +274,22 @@ struct DocNode {
      * @implements [SRS-EP-55] SmartGroup boundary polyline
      */
     std::vector<InkSample> boundaryPolyline;
-    std::string fromNodeId;
+    /**
+     * Connector fields. Not a spatial parent: visible geometry is a pure function
+     * of {rest shape, two endpoint states, warpStyle} — [ADR-0020] / [SRS-EP-18].
+     * Rest shape is baked once at recognition (I1: never rewritten from a warp).
+     */
+    std::string fromNodeId; // bound SmartGroup (v1); missing → fromPose
     std::string toNodeId;
-    ConnectorAnchor fromAnchor;
+    ConnectorAnchor fromAnchor; // attach + leave on the from-node (face or centre frame)
     ConnectorAnchor toAnchor;
-    std::string warpStyle;
-    std::vector<ConnectorRestPt> restSpine;
-    std::vector<ConnectorRestOff> restOffsets;
-    std::vector<ConnectorRestPt> warpedSamples; // derived; not an op
-    ConnectorEndPose fromPose; // last live world pose (D39)
+    std::string warpStyle; // "morph" (Ink) | "cubic" (Curve)
+    std::vector<ConnectorRestPt> restSpine;     // S in world XY; warp coordinate system's backbone
+    std::vector<ConnectorRestOff> restOffsets;  // body ink in S's (s, d) frame
+    std::vector<ConnectorRestPt> warpedSamples; // derived world polyline; not an op
+    /** Derived world polylines of both ends' styleInk; not an op. */
+    std::vector<std::vector<ConnectorRestPt>> warpedStyleInk;
+    ConnectorEndPose fromPose; // last live world pose (D39) — world XY, not box-local
     ConnectorEndPose toPose;
     bool connectorInvalid = false;
     std::vector<DocNode> children;

@@ -4,7 +4,7 @@ title: Apply per-end connector styles from toolbar
 kind: implement
 parent_srs: [SRS-EP-34, SRS-EP-37]
 parent_req: [REQ-13]
-status: draft
+status: blocked
 priority: P1
 iter: iter-005
 estimate: 5
@@ -22,7 +22,7 @@ wireframe: ""
 
 # STORY-EP-046 — Apply per-end connector styles from toolbar
 
-TRACK-005. Parent [REQ-13]. [REQ-13](../../../.docs/modules/epaper/prd.md#connector-ends) Path A.
+**Frozen 2026-09-04 (Product Manager).** Path A is not Epaper this campaign. Depends on frozen [STORY-EP-045](./STORY-EP-045.md).
 
 
 

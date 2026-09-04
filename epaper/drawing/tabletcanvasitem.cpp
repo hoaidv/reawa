@@ -802,8 +802,11 @@ void TabletCanvasItem::ingestCurrentStroke(const epaper::document::FinishedStrok
         ++m_ingestApplied;
     else
         ++m_ingestRejected;
+    std::string extra;
+    if (d.outcome == RecogOutcome::EndpointInk && d.endpointInk.bound)
+        extra = "end=" + d.endpointInk.end + " id=" + d.endpointInk.connectorId;
     qInfo().noquote() << QString::fromStdString(
-        epaper::debuglog::formatRecogLog(d.outcomeName(), d.guard, d.encloseWhy));
+        epaper::debuglog::formatRecogLog(d.outcomeName(), d.guard, d.encloseWhy, extra));
     if (!d.connector.diag.empty()) {
         qInfo().noquote() << QString::fromStdString(
             epaper::debuglog::formatConnLog(d.connector.diag, d.connector.reason));

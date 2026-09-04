@@ -529,6 +529,7 @@ public:
             o.localY = lp->getNumber("y", 0);
             o.hasLocal = true;
         }
+        o.styleInk = styleInkFromJson(a->get("styleInk"));
         return o;
     }
 
@@ -553,6 +554,8 @@ public:
             lp.emplace_back("y", JsonValue::number(a.localY));
             o.emplace_back("local", JsonValue::object(std::move(lp)));
         }
+        if (!a.styleInk.empty())
+            o.emplace_back("styleInk", styleInkToJson(a.styleInk));
         return JsonValue::object(std::move(o));
     }
 
@@ -868,12 +871,14 @@ public:
         }
         case NodeKind::Connector: {
             o.emplace_back("kind", JsonValue::string("connector"));
-            o.emplace_back("from", DeviceDocument::anchorToJson(n.fromAnchor.nodeId.empty()
-                                                                    ? ConnectorAnchor{n.fromNodeId}
-                                                                    : n.fromAnchor));
-            o.emplace_back("to", DeviceDocument::anchorToJson(n.toAnchor.nodeId.empty()
-                                                                  ? ConnectorAnchor{n.toNodeId}
-                                                                  : n.toAnchor));
+            ConnectorAnchor fromA = n.fromAnchor;
+            if (fromA.nodeId.empty())
+                fromA.nodeId = n.fromNodeId;
+            ConnectorAnchor toA = n.toAnchor;
+            if (toA.nodeId.empty())
+                toA.nodeId = n.toNodeId;
+            o.emplace_back("from", DeviceDocument::anchorToJson(fromA));
+            o.emplace_back("to", DeviceDocument::anchorToJson(toA));
             if (!n.warpStyle.empty())
                 o.emplace_back("warpStyle", JsonValue::string(n.warpStyle));
             if (!n.restSpine.empty() || !n.restOffsets.empty()) {
@@ -991,7 +996,8 @@ inline UndoResult DeviceDocument::applyHistoryEntry(UndoRingEntry e, bool isUndo
         } else if (kindEq(inv->kind(), edit_kind::kSetSmartTransform)
                    || kindEq(inv->kind(), edit_kind::kSetInkScaleMode)
                    || kindEq(inv->kind(), edit_kind::kRemoveNode)
-                   || kindEq(inv->kind(), edit_kind::kSetInkSamples)) {
+                   || kindEq(inv->kind(), edit_kind::kSetInkSamples)
+                   || kindEq(inv->kind(), edit_kind::kSetEndpointInk)) {
             const auto ts = inv->targets();
             if (!ts.empty() && !find(ts.front()))
                 continue;

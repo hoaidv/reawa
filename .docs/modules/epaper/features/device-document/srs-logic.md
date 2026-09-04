@@ -92,6 +92,7 @@ The device applies these locally; it never applies an inbound op except by whole
 | `append_ink` | Pen-up ingest (this section). Draw-into may set `parentId` on the same op so membership is one gesture |
 | `create_smart_group` | [SRS-EP-10](../ink-box/srs-logic.md) enclose / selection-create |
 | `create_connector` | [SRS-EP-17](../connector-ink/srs-logic.md) recognition (device **is** an author this campaign) |
+| `set_endpoint_ink` | [SRS-EP-35](../connector-ink/srs-logic.md#srs-ep-35-endpoint-ink) Path B bind / tick-erase ([ADR-0038](../../../../adr/ADR-0038-endpoint-ink-face-frame.md)); local undo required; Infini apply not this track |
 | `set_smart_transform` | [SRS-EP-11](../ink-box/srs-logic.md) move / resize commit |
 | `set_ink_scale_mode` | [SRS-EP-11](../ink-box/srs-logic.md) toggle |
 | `reparent` | [SRS-EP-10](../ink-box/srs-logic.md) when membership cannot be expressed as `append_ink.parentId` |

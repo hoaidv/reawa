@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace epaper {
@@ -84,7 +85,7 @@ inline double fractionArcLengthInside(const std::vector<InkSample> &samples,
     return inside / total;
 }
 
-inline std::vector<InkSample> smartGroupBoundaryWorld(const DocNode &sg)
+inline std::vector<InkSample> smartGroupBoundaryWorldSamples(const DocNode &sg)
 {
     std::vector<InkSample> world = sg.boundaryPolyline;
     for (auto &s : world) {
@@ -127,7 +128,7 @@ inline double fractionPolyAreaInside(const std::vector<InkSample> &poly,
 inline double fractionBoundaryAreaInside(const DocNode &sg, const std::vector<InkSample> &lasso)
 {
     return fractionPolyAreaInside(
-        downsamplePolyline(smartGroupBoundaryWorld(sg), kObjectEraseBoundaryMax), lasso);
+        downsamplePolyline(smartGroupBoundaryWorldSamples(sg), kObjectEraseBoundaryMax), lasso);
 }
 
 struct ObjectEraseSubject {
@@ -236,7 +237,7 @@ inline void collectObjectEraseSubjects(const std::vector<DocNode> &nodes, const 
             s.inkSamples = n.samples;
         else if (n.kind == NodeKind::SmartGroup)
             s.boundaryWorld =
-                downsamplePolyline(smartGroupBoundaryWorld(n), kObjectEraseBoundaryMax);
+                downsamplePolyline(smartGroupBoundaryWorldSamples(n), kObjectEraseBoundaryMax);
         else if (n.kind == NodeKind::Connector)
             s.connectorPath = connectorWorldPath(n);
         else if (n.kind == NodeKind::Primitive || n.kind == NodeKind::Text) {
@@ -320,8 +321,6 @@ inline ApplyResult commitObjectErase(DeviceDocument &doc, const std::string &opI
     const auto lasso = erasePolyToSamples(poly);
     std::vector<std::string> hitIds;
     collectObjectHits(doc.rootChildren, lasso, samplesAabb(lasso), ObjectErasePass::Commit, &hitIds);
-    if (hitIds.empty())
-        return {true, "noop"};
     std::vector<std::unique_ptr<DocEdit>> parts;
     for (const auto &id : hitIds) {
         const DocNode *n = doc.find(id);
@@ -330,6 +329,12 @@ inline ApplyResult commitObjectErase(DeviceDocument &doc, const std::string &opI
         else
             parts.push_back(makeRemoveEdit(opId, id));
     }
+    std::unordered_set<std::string> removed(hitIds.begin(), hitIds.end());
+    auto styleParts = planStyleInkObjectErase(doc, opId, lasso, removed);
+    for (auto &e : styleParts)
+        parts.push_back(std::move(e));
+    if (parts.empty())
+        return {true, "noop"};
     return doc.commitGesture(opId, std::move(parts));
 }
 

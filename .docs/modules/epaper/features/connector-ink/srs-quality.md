@@ -50,11 +50,12 @@ Does not relax [SRS-EP-01](../local-pen-ink/srs-logic.md) ink latency or
 
 | Scenario | Target |
 |---|---|
-| Pick end style on selected connector | Visible p95 ≤**300 ms**; other end unchanged; one undo reverts |
-| Bound box drag with styles | Styles stay on correct ends; committed geometry = last preview (**0 px** jump) |
-| Endpoint-ink over an end | **0** new free Ink there; **0** second connector; survives bound-node drag (**0** orphaned samples) |
-| Same stroke on spine or empty | **0** endpoint-ink steals |
+| Endpoint-ink over an end (Path B) | **0** new free Ink there; **0** second connector; stored `{n, e}` and drawn leave survive bound-node transform; world paint follows re-warped leave (**0** orphaned samples) |
+| Append on same end | List grows; one undo peels **last** stroke only |
+| Same stroke on spine, empty, or recog off | **0** endpoint-ink steals |
+| Brush/object/area on ticks only | Decoration clipped or gone; connector **remains** |
 | Unintended endpoint-ink on writing corpus | Counts toward ≤**2%** false-positive ship gate with REQ-09 recognizers |
+| Path A toolbar on Epaper | **0** (not this campaign) |
 
 ---
 
@@ -80,7 +81,7 @@ Does not relax [SRS-EP-01](../local-pen-ink/srs-logic.md) ink latency or
 | `conn.rejected` | required | required |
 | `conn.live_warp` | required | required |
 | `conn.orphan` | required | required |
-| `conn.end_style_*` | required ([SRS-EP-36](./srs-ui.md)) | required ([SRS-EP-37](#srs-ep-37-endpoint-quality)) |
+| `conn.end_style_*` | Infini / later ([SRS-EP-36](./srs-ui.md)) — **not Epaper this campaign** | Path B bars live on [SRS-EP-37](#srs-ep-37-endpoint-quality); Path A chrome is 0 on device |
 | `attach.*` | required ([SRS-EP-39](./srs-ui.md)) | required ([SRS-EP-40](#srs-ep-40-attachment-quality)) |
 
 ## Non-goals

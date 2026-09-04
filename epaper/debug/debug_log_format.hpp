@@ -104,10 +104,12 @@ inline std::string formatEncloseLog(const std::string &kind, const std::string &
 
 /** @implements [SRS-EP-10] one [recog] line per pen-up (ADR-0022) */
 inline std::string formatRecogLog(const std::string &outcome, const std::string &guard,
-                                 const std::string &encloseWhy = {})
+                                 const std::string &encloseWhy = {}, const std::string &extra = {})
 {
     std::string g = guard.empty() ? "none" : guard;
     std::string line = "[recog] outcome=" + outcome + " guard=" + g;
+    if (!extra.empty())
+        line += " " + extra;
     if (!encloseWhy.empty())
         line += " " + encloseWhy;
     return line;

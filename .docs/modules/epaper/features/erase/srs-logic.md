@@ -68,7 +68,7 @@ Empty erase gesture: 0 tree ops, 0 undo entries.
 | Near (pen Primary) | Circle diameter **8 mm**, fill white, stroke **0.5 mm** black; **0** erase. Enter proximity **and** up→near. Kill-switch for field test |
 | Down | White ghost polyline, width = eraser size, ToolCanvas |
 | Up | Commit clip ([SRS-EP-55](#srs-ep-55-clip-remnants)); drop ghost **in the same refresh** as document damage |
-| Kinds | Ink only (incl. SmartGroup content/boundary ink). Primitive, Text, Frame, Connector: no-op |
+| Kinds | Ink (incl. SmartGroup content/boundary ink) **and connector endpoint `styleInk`**. Primitive, Text, Frame, Connector **spine**: no-op |
 
 ---
 
@@ -83,7 +83,7 @@ Empty erase gesture: 0 tree ops, 0 undo entries.
 | Ink | Clip interior even-odd ([SRS-EP-55](#srs-ep-55-clip-remnants)) |
 | Other (Primitive, Text, SmartGroup, Connector, Group) | `remove_node` if **fully inside** the closed polygon. SmartGroup → whole group. Connector → [SRS-EP-58](#srs-ep-58-object) attachment unbind |
 | Frame | Never remove |
-| Connector partial | Unchanged (no clip, no convert) |
+| Connector partial | Spine unchanged (no clip, no convert). Endpoint `styleInk` clips like Ink |
 
 ---
 
@@ -101,7 +101,8 @@ Empty erase gesture: 0 tree ops, 0 undo entries.
 | Ink | ≥80% **arc length** inside (even-odd) |
 | SmartGroup | ≥80% **polygon area** of **boundary polyline** |
 | Primitive, Text | ≥80% **world AABB area** |
-| Connector | ≥80% **warped `V` length** |
+| Connector | ≥80% **warped `V` length** removes the connector (decoration goes with it) |
+| Connector endpoint `styleInk` stroke | ≥80% **arc length** inside → drop that stroke; connector stays |
 | Frame | Never |
 
 Connector remove (this section **or** area fully-inside): unbind attachments; reparent to connector’s parent; last derived world pose; adjacent paint order; undo rebinds. **0** convert-to-Ink.

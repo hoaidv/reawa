@@ -1,11 +1,13 @@
 #pragma once
 /**
- * Closure-first recognizer dispatch at pen-up. Exactly one verdict.
+ * Closure-gated recognizer dispatch at pen-up. Exactly one verdict.
  * @implements [SRS-EP-10] ADR-0022 dispatch table
+ * @implements [SRS-EP-35] endpoint-ink first
  *
- * Connector commit is STORY-EP-030 — open + recog.connector → create_connector.
+ * Order: endpoint-ink → draw-into membership → enclose → connector → ink.
  */
 
+#include "endpoint_ink.hpp"
 #include "ingest_stroke.hpp"
 #include "membership.hpp"
 #include "recognize_connector.hpp"
@@ -32,6 +34,7 @@ struct RecogLatch {
 enum class RecogOutcome {
     Enclose,
     Membership,
+    EndpointInk,
     Connector,
     Ink,
 };
@@ -43,6 +46,7 @@ struct RecogDispatchResult {
     std::string encloseWhy;
     EncloseResult enclose;
     MembershipResult membership;
+    EndpointInkResult endpointInk;
     ConnectorResult connector;
     ApplyResult apply;
     std::int64_t ns = 0;
@@ -54,6 +58,8 @@ struct RecogDispatchResult {
             return "enclose";
         case RecogOutcome::Membership:
             return "membership";
+        case RecogOutcome::EndpointInk:
+            return "endpoint_ink";
         case RecogOutcome::Connector:
             return "connector";
         case RecogOutcome::Ink:
@@ -144,59 +150,98 @@ inline RecogDispatchResult dispatchPenUp(DeviceDocument &doc, EncloseStrokeInput
 
     const ClosureMeas clo = measureClosure(stroke.samples);
     const bool closed = clo.closed;
-    if (closed && latch.inkBox) {
-        stroke.armedAtPenDown = StrokeArmedTool::InkBox;
-        out.enclose = commitStrokeWithEncloseRecognition(doc, stroke);
-        if (out.enclose.kind == EncloseKind::Created) {
-            out.outcome = RecogOutcome::Enclose;
-            out.guard = "none";
-            out.apply.applied = true;
-        } else if (out.enclose.kind == EncloseKind::Skipped) {
-            out.outcome = RecogOutcome::Ink;
-            out.guard = out.enclose.reason.empty() ? "skipped" : out.enclose.reason;
-            out.apply.applied = false;
-        } else {
-            out.membership = tryDrawIntoMembership(doc, stroke.id);
-            if (out.membership.kind == MembershipKind::Joined) {
-                out.outcome = RecogOutcome::Membership;
-                out.guard = out.enclose.reason.empty() ? "enclose_failed" : out.enclose.reason;
-            } else {
-                out.outcome = RecogOutcome::Ink;
-                out.guard = out.enclose.reason.empty() ? "none" : out.enclose.reason;
-            }
-            out.apply.applied = true;
-        }
-    } else {
+    bool ingested = false;
+
+    auto stamp = [&]() {
+        const auto t1 = std::chrono::steady_clock::now();
+        out.ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        out.encloseWhy = formatEncloseWhy(stroke.id, latch, clo, out.enclose, out.outcome);
+    };
+
+    auto ensureInk = [&]() -> bool {
+        if (ingested)
+            return out.enclose.kind != EncloseKind::Skipped;
         stroke.armedAtPenDown = StrokeArmedTool::Pen;
         out.enclose = commitStrokeWithEncloseRecognition(doc, stroke);
+        ingested = true;
         out.apply.applied = out.enclose.kind != EncloseKind::Skipped;
-        if (out.apply.applied) {
+        return out.apply.applied;
+    };
+
+    // 1. endpoint style ink
+    if (latch.connector && collectEndpointSteals(doc, stroke.samples).size() == 1) {
+        if (ensureInk()) {
+            out.endpointInk = tryBindEndpointInk(doc, stroke.id);
+            if (out.endpointInk.bound) {
+                out.outcome = RecogOutcome::EndpointInk;
+                out.guard = "none";
+                stamp();
+                return out;
+            }
+        }
+    }
+
+    // 2. draw-into membership (boundary-ink polyline length)
+    if (qualifyingMembershipGroup(doc, stroke.samples)) {
+        if (ensureInk()) {
             out.membership = tryDrawIntoMembership(doc, stroke.id);
             if (out.membership.kind == MembershipKind::Joined) {
                 out.outcome = RecogOutcome::Membership;
                 out.guard = "none";
-            } else if (!closed && latch.connector) {
-                out.connector = tryRecognizeConnector(doc, stroke.id);
-                if (out.connector.kind == ConnectorKind::Created) {
-                    out.outcome = RecogOutcome::Connector;
-                    out.guard = "none";
-                } else {
-                    out.outcome = RecogOutcome::Ink;
-                    out.guard = out.connector.reason.empty() ? "none" : out.connector.reason;
-                }
-            } else {
-                out.outcome = RecogOutcome::Ink;
-                out.guard = closed ? "recog_ink_box_off" : "none";
+                stamp();
+                return out;
             }
-        } else {
-            out.outcome = RecogOutcome::Ink;
-            out.guard = out.enclose.reason.empty() ? "skipped" : out.enclose.reason;
         }
     }
 
-    const auto t1 = std::chrono::steady_clock::now();
-    out.ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-    out.encloseWhy = formatEncloseWhy(stroke.id, latch, clo, out.enclose, out.outcome);
+    // 3. ink-box enclose
+    if (!ingested && closed && latch.inkBox) {
+        stroke.armedAtPenDown = StrokeArmedTool::InkBox;
+        out.enclose = commitStrokeWithEncloseRecognition(doc, stroke);
+        ingested = true;
+        out.apply.applied = out.enclose.kind != EncloseKind::Skipped;
+        if (out.enclose.kind == EncloseKind::Created) {
+            out.outcome = RecogOutcome::Enclose;
+            out.guard = "none";
+            stamp();
+            return out;
+        }
+        if (out.enclose.kind == EncloseKind::Skipped) {
+            out.outcome = RecogOutcome::Ink;
+            out.guard = out.enclose.reason.empty() ? "skipped" : out.enclose.reason;
+            stamp();
+            return out;
+        }
+        out.outcome = RecogOutcome::Ink;
+        out.guard = out.enclose.reason.empty() ? "none" : out.enclose.reason;
+        stamp();
+        return out;
+    }
+
+    // 4. connector (open) or ordinary ink
+    if (!ingested && !ensureInk()) {
+        out.outcome = RecogOutcome::Ink;
+        out.guard = out.enclose.reason.empty() ? "skipped" : out.enclose.reason;
+        stamp();
+        return out;
+    }
+    if (latch.connector && !closed) {
+        out.connector = tryRecognizeConnector(doc, stroke.id);
+        if (out.connector.kind == ConnectorKind::Created) {
+            out.outcome = RecogOutcome::Connector;
+            out.guard = "none";
+            stamp();
+            return out;
+        }
+        out.outcome = RecogOutcome::Ink;
+        out.guard = out.connector.reason.empty() ? "none" : out.connector.reason;
+        stamp();
+        return out;
+    }
+
+    out.outcome = RecogOutcome::Ink;
+    out.guard = (closed && !latch.inkBox) ? "recog_ink_box_off" : "none";
+    stamp();
     return out;
 }
 

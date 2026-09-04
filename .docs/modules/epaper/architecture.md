@@ -161,7 +161,7 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 - [ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md) — independent cameras + exclusive one-way follow (supersedes [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md))
 - [ADR-0037](../../adr/ADR-0037-device-clipboard-singleton.md) — clipboard singleton + tap-origin paste (supersedes [ADR-0024](../../adr/ADR-0024-in-document-clipboard.md))
 - [ADR-0025](../../adr/ADR-0025-barrel-vs-eraser-nib.md) — barrel channel ≠ eraser nib
-- [ADR-0026](../../adr/ADR-0026-endpoint-ink-membership.md) — endpoint-ink vs spine vs empty
+- [ADR-0038](../../adr/ADR-0038-endpoint-ink-face-frame.md) — Path B endpoint-ink on `ConnectorAnchor` (face frame; supersedes [ADR-0026](../../adr/ADR-0026-endpoint-ink-membership.md))
 - [ADR-0027](../../adr/ADR-0027-attachment-t-rest-spine.md) — attachment `t` on rest spine
 - [ADR-0028](../../adr/ADR-0028-pen-button-map-settings-channel.md) — **superseded** by [ADR-0030](../../adr/ADR-0030-tablet-authors-pen-button-map.md); persist split **superseded** by [ADR-0031](../../adr/ADR-0031-device-settings-persist-on-epaper.md) (persist on Epaper; 0 Infini copies)
 - [ADR-0032](../../adr/ADR-0032-inverse-op-undo.md) — inverse-op undo per session (amends ADR-0014 §5)

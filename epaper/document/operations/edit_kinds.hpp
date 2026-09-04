@@ -20,6 +20,7 @@ constexpr const char kJoinSmartGroup[] = "join_smart_group";
 constexpr const char kSetSmartTransform[] = "set_smart_transform";
 constexpr const char kSetInkScaleMode[] = "set_ink_scale_mode";
 constexpr const char kSetInkSamples[] = "set_ink_samples";
+constexpr const char kSetEndpointInk[] = "set_endpoint_ink";
 constexpr const char kReparent[] = "reparent";
 constexpr const char kRemoveNode[] = "remove_node";
 constexpr const char kCompound[] = "compound";
@@ -49,7 +50,8 @@ inline bool isStructuralKind(const char *kind)
         || kindEq(kind, kSetInkScaleMode) || kindEq(kind, kReparent) || kindEq(kind, kRemoveNode)
         || kindEq(kind, kCreateFrame) || kindEq(kind, kCreateGroup) || kindEq(kind, kCreateText)
         || kindEq(kind, kCreatePrimitive) || kindEq(kind, kCreateConnector)
-        || kindEq(kind, kSetInkSamples) || kindEq(kind, kCompound);
+        || kindEq(kind, kSetInkSamples) || kindEq(kind, kSetEndpointInk)
+        || kindEq(kind, kCompound);
 }
 
 inline bool isCreateKind(const char *kind)

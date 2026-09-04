@@ -14,7 +14,7 @@ Op set: [SRS-EP-07](../device-document/srs-logic.md). Mirror: [SRS-IN-09](../../
 
 ## [SRS-EP-17] Connector recognition {#srs-ep-17-connector-recognition}
 
-Pen-up step 3 of ADR-0022, after failed-enclose→membership.
+Pen-up step 4 of ADR-0022, after endpoint-ink and draw-into membership, then failed enclose.
 
 ### Guards (all must pass)
 
@@ -91,8 +91,11 @@ Shared fixtures with Infini: same rest shape + endpoints + style → byte-compar
 ## [SRS-EP-34] Per-end endpoint styles {#srs-ep-34-end-styles}
 
 <!-- lifecycle: active -->
+<!-- campaign: not Epaper this lock — Infini / web-desktop Path A later -->
 
-**Parent:** [REQ-13](../../prd.md#connector-ends) Path A. **Decision:** [ADR-0026](../../../../adr/ADR-0026-endpoint-ink-membership.md). **Warp:** [SRS-EP-18](#srs-ep-18-connector-warp) / [ADR-0020](../../../../adr/ADR-0020-connector-ink-geometry.md). **UI:** [SRS-EP-36](./srs-ui.md#srs-ep-36-endpoint-toolbar).
+**Parent:** [REQ-13](../../prd.md#connector-ends) Path A. **Decision:** [ADR-0038](../../../../adr/ADR-0038-endpoint-ink-face-frame.md) (Epaper Path B). **Warp:** [SRS-EP-18](#srs-ep-18-connector-warp) / [ADR-0020](../../../../adr/ADR-0020-connector-ink-geometry.md). **UI:** [SRS-EP-36](./srs-ui.md#srs-ep-36-endpoint-toolbar).
+
+**Epaper this campaign: do not implement.** Closed-style chips are Infini / web-desktop.
 
 Closed style set (Designer must not invent others): `none` · `arrow` · `arrow_empty` · `star` · `one` · `many`.
 
@@ -113,17 +116,21 @@ Does not replace recognition or warp (REQ-09). Does not steal spine ink (Path B 
 
 <!-- lifecycle: active -->
 
-**Parent:** [REQ-13](../../prd.md#connector-ends) Path B. **Decision:** [ADR-0026](../../../../adr/ADR-0026-endpoint-ink-membership.md) (amends [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)).
+**Parent:** [REQ-13](../../prd.md#connector-ends) Path B. **Product:** [SRS-EP-74](./srs-product.md#srs-ep-74-endpoint-ink-product). **Decision:** [ADR-0038](../../../../adr/ADR-0038-endpoint-ink-face-frame.md) (supersedes [ADR-0026](../../../../adr/ADR-0026-endpoint-ink-membership.md); amends [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)).
 
-Pen-up order: enclose → membership → **this test** → new connector → ordinary ink.
+Pen-up order: **this test** → draw-into membership → enclose → new connector (open only) → ordinary ink. Armed only when `recog.connector` latched at pen-down. Short ticks that the closure classifier treats as closed-ish still run this test **first**.
 
 | Region | Steal? |
 |---|---|
-| ≥80% samples in **one** end of **one** existing connector | **Yes** — `bind_endpoint_ink`; 0 free Ink there; 0 second connector; decoration rides warp (0 orphaned samples on bound-node drag) |
-| Spine (`s ∈ (0.08, 0.92)`) or empty canvas | **No** — ordinary ink / membership / connector rules |
-| Mixed / two ends | **No** |
+| ≥80% of stroke **length** in a **5 mm** (world) circle at **one** end of **one** existing connector | **Yes** — `set_endpoint_ink` appends a face-frame stroke on that `ConnectorAnchor`; `remove_node` the free Ink; 0 second connector |
+| Spine, empty, mixed, two ends, two connectors | **No** |
+| Connector recognition off | **No** |
 
-Wrong bind: one undo. Rest spine **not** rebaked. Log `[recog] outcome=endpoint_ink`.
+Storage: `ConnectorAnchor.styleInk[]` polylines `{n, e}` in the live face frame. Paint as drawn. Bound-node transform keeps `{n, e}` and `drawnN` / `drawnE` / `drawnBoxX` / `drawnBoxY` unchanged. World paint rotates that face frame by **α** = signed angle from the stored leave (those drawn components, reconstructed as `WarpEnd.f`) to the **re-warped sample tangent** at that end, so decoration stays consistent with the spine. Rest spine **not** rebaked.
+
+Erase ticks (keep connector): brush/area clip `styleInk` in world; object-erase drops a stroke at ≥80% length inside the lasso. Object-erase of the connector still takes decoration with it.
+
+Wrong bind: one undo. Log `[recog] outcome=endpoint_ink end=from\|to id=<connectorId>`.
 
 ---
 

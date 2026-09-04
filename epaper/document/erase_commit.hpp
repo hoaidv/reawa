@@ -7,6 +7,7 @@
  */
 
 #include "device_document.hpp"
+#include "endpoint_ink.hpp"
 #include "erase_clip.hpp"
 #include "operations/append_ink_edit.hpp"
 #include "operations/remove_node_edit.hpp"
@@ -180,6 +181,10 @@ inline std::vector<std::unique_ptr<DocEdit>> planEraseEdits(
             afterId = nid;
         }
     }
+
+    auto styleParts = planStyleInkEraseEdits(doc, opId, region);
+    for (auto &e : styleParts)
+        parts.push_back(std::move(e));
 
     for (const auto &kv : sgInkRemain) {
         if (kv.second > 0)

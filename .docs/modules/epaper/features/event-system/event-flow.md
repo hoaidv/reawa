@@ -271,7 +271,7 @@ event filter is the **only** thing that reopens it — a drag handler cycling mi
 | Gesture | Route | C++ entry | Document effect |
 |---|---|---|---|
 | **Ink** | `penDrag` | `onPointerStart/Move/End` → `ingestMappedTablet` | `beginStroke` / `appendPoint` / `endStroke`; live ink is the untouchable path ([SRS-EP-01](../local-pen-ink/srs-logic.md)) |
-| **Recognizer** | pen-up | `endStroke` → dispatch | enclose / membership / connector / ordinary ink ([SRS-EP-10](../ink-box/srs-logic.md#srs-ep-10-device-recognition), [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)) |
+| **Recognizer** | pen-up | `endStroke` → dispatch | endpoint-ink / membership / enclose / connector / ordinary ink ([SRS-EP-10](../ink-box/srs-logic.md#srs-ep-10-device-recognition), [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)) |
 | **Select (pen)** | `penDrag` | `applyContactPress` → `beginSelectionGesture` | Marquee or lasso while a selection tool is armed ([SRS-EP-04](../tool-modes/srs-logic.md)) |
 | **Resize (pen)** | `penDrag` | `tryBeginHandleAtPanel(56 du)` | `ManipDrag` live-direct transform ([SRS-EP-11](../ink-box/srs-logic.md#srs-ep-11-device-manipulation)) |
 | **Select / deselect (finger)** | `fingerTap` | `onFingerTap` → `beginFingerTouch` + `endFingerTouch` with zero travel | Box hit selects; empty tap ≤ 178 du clears selection |

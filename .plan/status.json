@@ -1,14 +1,14 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-09-04T15:32:01+00:00",
+  "generated_at": "2026-09-04T17:39:11+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 12,
+    "draft": 9,
     "ready": 4,
     "in-progress": 0,
-    "in-review": 0,
+    "in-review": 1,
     "done": 141,
-    "blocked": 13,
+    "blocked": 15,
     "cancelled": 7
   },
   "by_module": {
@@ -20,7 +20,7 @@
     "epaper": {
       "total": 73,
       "done": 47,
-      "in_review": 0
+      "in_review": 1
     },
     "infini": {
       "total": 38,
@@ -30,7 +30,7 @@
   },
   "open_challenges": 3,
   "resolved_challenges_this_iter": 3,
-  "sync_orphans": 58,
+  "sync_orphans": 59,
   "master_plan": true,
   "tracks": [
     {

@@ -105,8 +105,8 @@ apply is a no-op and an unknown op type must not crash.
 | `set_ink_samples` | Replace an Ink node’s samples (erase clip remnant keep-id, and its inverse) |
 | `compound` | Apply several tree ops as one atomic gesture (multi-inverse undo/redo) |
 | `restore_snapshot` | Last-resort wholesale replace — **not** the undo path ([ADR-0032](../adr/ADR-0032-inverse-op-undo.md)). Tests / emergency only |
-| `set_connector_end_style` | Set `terminal[end].style` on one connector end ([ADR-0026](../adr/ADR-0026-endpoint-ink-membership.md) Path A) |
-| `bind_endpoint_ink` | Bind a stroke as `terminal[end].ink` (Path B); does not rebake rest spine |
+| `set_connector_end_style` | Set a closed Path A style on one end (Infini / later; not Epaper this campaign) |
+| `set_endpoint_ink` | Replace `ConnectorAnchor.styleInk` (list of `{n,e}` polylines) on one end (`from` \| `to`). Path B bind appends one stroke then removes the free Ink ([ADR-0038](../adr/ADR-0038-endpoint-ink-face-frame.md)). Inverse restores the previous list. Rest spine is not rebaked |
 | `bind_attachment` | Bind `nodeId` to connector rest-spine `t` ([ADR-0027](../adr/ADR-0027-attachment-t-rest-spine.md)) |
 | `duplicate_subtree` | Paste: insert already-minted node bodies ([ADR-0024](../adr/ADR-0024-in-document-clipboard.md)) |
 | `create_frame` | Insert a root `Frame` at placed bounds ([REQ-17](../modules/epaper/prd.md#manual-create) — epaper) |
@@ -119,14 +119,16 @@ and the module SRS.
 
 Shared anatomy consumed by epaper (author) and infini (mirror + SVG). Behaviour IDs stay in module SRS.
 
-### Terminal (per end)
+### ConnectorAnchor (per end)
+
+Epaper Path B home for decoration ([ADR-0038](../adr/ADR-0038-endpoint-ink-face-frame.md)). Domain `terminal[end].ink` / spine `(s, d)` from [ADR-0026](../adr/ADR-0026-endpoint-ink-membership.md) is **superseded** — do not store decoration on rest spine `S`.
 
 | Field | Shape | Notes |
 |---|---|---|
-| `style` | closed id | v1: `none` \| `arrow` \| `arrow_empty` \| `star` \| `one` \| `many` ([REQ-13](../modules/epaper/prd.md#connector-ends)) |
-| `ink` | optional polyline in end frame | Endpoint decoration; `(s, d)` against **rest** spine at bind ([ADR-0026](../adr/ADR-0026-endpoint-ink-membership.md)) |
+| `style` | closed id | Path A (Infini / later): `none` \| `arrow` \| `arrow_empty` \| `star` \| `one` \| `many` |
+| `styleInk` | ordered list of polylines `{n, e}` | Path B decoration in the **live face frame**: origin = attach; `+n` = outward face normal; `+e` = along the face CCW. Centre: `+n` = facing; `+e` = left-normal. Paint as drawn; world paint rotates by the delta between stored leave and the re-warped sample tangent. Rest spine is never rebaked |
 
-Styles ride warp with the end. They are not a second connector and not free Ink.
+Styles and `styleInk` ride warp with the end. They are not a second connector and not free Ink. Brush/area clip `styleInk` in world; object-erase may drop a stroke at ≥80% length inside the lasso without removing the connector.
 
 ### Attachments
 

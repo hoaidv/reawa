@@ -86,6 +86,24 @@ static void createSg(DeviceDocument &doc, const std::string &id, double tx, doub
         children.push_back(JsonValue::object(std::move(child)));
     }
 
+    JsonValue::Object bstyle;
+    bstyle.emplace_back("stroke", JsonValue::string("#000"));
+    bstyle.emplace_back("strokeWidth", JsonValue::number(2));
+    JsonValue::Object bchild;
+    bchild.emplace_back("id", JsonValue::string(id + "_b"));
+    bchild.emplace_back("kind", JsonValue::string("ink"));
+    bchild.emplace_back("role", JsonValue::string("boundary"));
+    auto bpoly = pts({{0, 0}, {w, 0}, {w, h}, {0, h}, {0, 0}});
+    JsonValue::Array barr;
+    for (const auto &s : bpoly)
+        barr.push_back(sampleToJson(s));
+    bchild.emplace_back("samples", JsonValue::array(std::move(barr)));
+    bchild.emplace_back("style", JsonValue::object(std::move(bstyle)));
+    JsonValue::Array kids;
+    kids.push_back(JsonValue::object(std::move(bchild)));
+    for (auto &c : children)
+        kids.push_back(std::move(c));
+
     JsonValue::Object b;
     b.emplace_back("x", JsonValue::number(0));
     b.emplace_back("y", JsonValue::number(0));
@@ -102,7 +120,7 @@ static void createSg(DeviceDocument &doc, const std::string &id, double tx, doub
     payload.emplace_back("bounds", JsonValue::object(std::move(b)));
     payload.emplace_back("transform", JsonValue::object(std::move(t)));
     payload.emplace_back("inkScaleMode", JsonValue::string("fixedInk"));
-    payload.emplace_back("children", JsonValue::array(std::move(children)));
+    payload.emplace_back("children", JsonValue::array(std::move(kids)));
         CHECK(doc.commitJson(opEnvelope("create_smart_group:" + id, "create_smart_group", JsonValue::object(std::move(payload)))).applied);
 }
 
@@ -164,9 +182,16 @@ static void test_later_sibling_wins()
     const MembershipResult r = tryDrawIntoMembership(doc, "ink");
     CHECK(r.kind == MembershipKind::Joined);
     CHECK(r.smartGroupId == "sg_b");
-    CHECK(doc.find("sg_a") && doc.find("sg_a")->children.empty());
-    CHECK(doc.find("sg_b") && doc.find("sg_b")->children.size() == 1);
-    CHECK(doc.find("sg_b")->children[0].id == "ink");
+    bool inA = false;
+    for (const auto &c : doc.find("sg_a")->children)
+        if (c.id == "ink")
+            inA = true;
+    CHECK(!inA);
+    bool inB = false;
+    for (const auto &c : doc.find("sg_b")->children)
+        if (c.id == "ink")
+            inB = true;
+    CHECK(inB);
 }
 
 static void test_no_qualifying_group()
@@ -209,6 +234,23 @@ static void test_no_reflow_existing()
         child.emplace_back("layoutOffset", JsonValue::object(std::move(lo)));
         children.push_back(JsonValue::object(std::move(child)));
     }
+    JsonValue::Object bstyle;
+    bstyle.emplace_back("stroke", JsonValue::string("#000"));
+    bstyle.emplace_back("strokeWidth", JsonValue::number(2));
+    JsonValue::Object bchild;
+    bchild.emplace_back("id", JsonValue::string("sg_1_b"));
+    bchild.emplace_back("kind", JsonValue::string("ink"));
+    bchild.emplace_back("role", JsonValue::string("boundary"));
+    auto bpoly = pts({{0, 0}, {200, 0}, {200, 200}, {0, 200}, {0, 0}});
+    JsonValue::Array barr;
+    for (const auto &s : bpoly)
+        barr.push_back(sampleToJson(s));
+    bchild.emplace_back("samples", JsonValue::array(std::move(barr)));
+    bchild.emplace_back("style", JsonValue::object(std::move(bstyle)));
+    JsonValue::Array kids;
+    kids.push_back(JsonValue::object(std::move(bchild)));
+    for (auto &c : children)
+        kids.push_back(std::move(c));
     JsonValue::Object b;
     b.emplace_back("x", JsonValue::number(0));
     b.emplace_back("y", JsonValue::number(0));
@@ -224,12 +266,14 @@ static void test_no_reflow_existing()
     payload.emplace_back("id", JsonValue::string("sg_1"));
     payload.emplace_back("bounds", JsonValue::object(std::move(b)));
     payload.emplace_back("transform", JsonValue::object(std::move(t)));
-    payload.emplace_back("children", JsonValue::array(std::move(children)));
+    payload.emplace_back("children", JsonValue::array(std::move(kids)));
         CHECK(doc2.commitJson(opEnvelope("create_smart_group:sg_1", "create_smart_group", JsonValue::object(std::move(payload)))).applied);
 
     std::vector<std::pair<double, double>> beforeUv;
     std::vector<std::pair<double, double>> beforeSample0;
     for (const auto &c : doc2.find("sg_1")->children) {
+        if (!c.layoutOffset)
+            continue;
         beforeUv.push_back(*c.layoutOffset);
         beforeSample0.push_back({c.samples[0].x, c.samples[0].y});
     }
@@ -239,7 +283,7 @@ static void test_no_reflow_existing()
 
     int i = 0;
     for (const auto &c : doc2.find("sg_1")->children) {
-        if (c.id == "new")
+        if (c.id == "new" || !c.layoutOffset)
             continue;
         CHECK(near(c.layoutOffset->first, beforeUv[static_cast<size_t>(i)].first));
         CHECK(near(c.layoutOffset->second, beforeUv[static_cast<size_t>(i)].second));
@@ -288,10 +332,14 @@ static void test_translated_group_local_samples()
     appendInk(doc, "ink", pts({{100, 100}, {110, 105}}));
     CHECK(tryDrawIntoMembership(doc, "ink").kind == MembershipKind::Joined);
     const DocNode *sg = doc.find("sg_1");
-    CHECK(sg && sg->children.size() == 1);
-    const DocNode &ink = sg->children[0];
-    CHECK(near(ink.samples[0].x, 60)); // 100 - 40
-    CHECK(near(ink.samples[0].y, 60));
+    CHECK(sg);
+    const DocNode *ink = nullptr;
+    for (const auto &c : sg->children)
+        if (c.id == "ink")
+            ink = &c;
+    CHECK(ink);
+    CHECK(near(ink->samples[0].x, 60)); // 100 - 40
+    CHECK(near(ink->samples[0].y, 60));
     CHECK(near(sg->smartBounds.width, 120));
 }
 
@@ -314,14 +362,66 @@ static void test_fixed_ink_join_ignores_parent_scale()
     appendInk(doc, "ink", pts({{80, 90}, {90, 95}}));
     CHECK(tryDrawIntoMembership(doc, "ink").kind == MembershipKind::Joined);
     const DocNode *sg = doc.find("sg_1");
-    CHECK(sg && sg->children.size() == 1);
-    const DocNode &ink = sg->children[0];
-    CHECK(near(ink.samples[0].x, 40)); // 80 - 40, not (80-40)/2
-    CHECK(near(ink.samples[0].y, 50));
-    const Vec2 world = smartLocalToWorld(ink.samples[0].x, ink.samples[0].y, *sg, "content",
-                                         ink.layoutOffset, nullptr);
+    CHECK(sg);
+    const DocNode *ink = nullptr;
+    for (const auto &c : sg->children)
+        if (c.id == "ink")
+            ink = &c;
+    CHECK(ink);
+    CHECK(near(ink->samples[0].x, 40)); // 80 - 40, not (80-40)/2
+    CHECK(near(ink->samples[0].y, 50));
+    const Vec2 world = smartLocalToWorld(ink->samples[0].x, ink->samples[0].y, *sg, "content",
+                                         ink->layoutOffset, nullptr);
     CHECK(near(world.x, 80));
     CHECK(near(world.y, 90));
+}
+
+static void test_aabb_inside_outside_boundary_does_not_join()
+{
+    DeviceDocument doc;
+    JsonValue::Object bstyle;
+    bstyle.emplace_back("stroke", JsonValue::string("#000"));
+    bstyle.emplace_back("strokeWidth", JsonValue::number(2));
+    JsonValue::Object bchild;
+    bchild.emplace_back("id", JsonValue::string("dia_b"));
+    bchild.emplace_back("kind", JsonValue::string("ink"));
+    bchild.emplace_back("role", JsonValue::string("boundary"));
+    auto diamond = pts({{100, 0}, {200, 100}, {100, 200}, {0, 100}, {100, 0}});
+    JsonValue::Array barr;
+    for (const auto &s : diamond)
+        barr.push_back(sampleToJson(s));
+    bchild.emplace_back("samples", JsonValue::array(std::move(barr)));
+    bchild.emplace_back("style", JsonValue::object(std::move(bstyle)));
+    JsonValue::Object b;
+    b.emplace_back("x", JsonValue::number(0));
+    b.emplace_back("y", JsonValue::number(0));
+    b.emplace_back("width", JsonValue::number(200));
+    b.emplace_back("height", JsonValue::number(200));
+    JsonValue::Object t;
+    t.emplace_back("x", JsonValue::number(0));
+    t.emplace_back("y", JsonValue::number(0));
+    t.emplace_back("rotation", JsonValue::number(0));
+    t.emplace_back("scaleX", JsonValue::number(1));
+    t.emplace_back("scaleY", JsonValue::number(1));
+    JsonValue::Object payload;
+    payload.emplace_back("id", JsonValue::string("dia"));
+    payload.emplace_back("bounds", JsonValue::object(std::move(b)));
+    payload.emplace_back("transform", JsonValue::object(std::move(t)));
+    payload.emplace_back("children", JsonValue::array({JsonValue::object(std::move(bchild))}));
+    CHECK(doc.commitJson(opEnvelope("create_smart_group:dia", "create_smart_group",
+                                    JsonValue::object(std::move(payload))))
+              .applied);
+
+    const auto along = pts({{10, 5}, {190, 5}});
+    CHECK(fractionSamplesInside(along, smartGroupWorldBounds(*doc.find("dia"))) >= 0.8);
+    appendInk(doc, "along_aabb", along);
+    const MembershipResult r = tryDrawIntoMembership(doc, "along_aabb");
+    CHECK(r.kind == MembershipKind::None);
+    bool onRoot = false;
+    for (const auto &n : doc.rootChildren)
+        if (n.id == "along_aabb")
+            onRoot = true;
+    CHECK(onRoot);
 }
 
 int main()
@@ -334,6 +434,7 @@ int main()
     test_failed_enclose_falls_through_membership();
     test_translated_group_local_samples();
     test_fixed_ink_join_ignores_parent_scale();
+    test_aabb_inside_outside_boundary_does_not_join();
 
     if (g_fails) {
         std::cerr << g_fails << " failure(s)\n";

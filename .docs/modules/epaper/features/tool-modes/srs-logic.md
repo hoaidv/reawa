@@ -44,7 +44,7 @@ Touch-on-chip uses MouseArea; pen-on-chip press is ignored for ink (fallback pat
 
 | Tool | Pen down on canvas | Finger / pen on ToolChip | Finger on canvas |
 |---|---|---|---|
-| `pen` | Local ink → **dispatch** at pen-up ([ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)): enclose / membership / connector / ordinary ink | Switch tool or flip a toggle | [SRS-EP-21](../ink-box/srs-logic.md#srs-ep-21-one-finger) / [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport) — not this section |
+| `pen` | Local ink → **dispatch** at pen-up ([ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)): endpoint-ink / membership / enclose / connector / ordinary ink | Switch tool or flip a toggle | [SRS-EP-21](../ink-box/srs-logic.md#srs-ep-21-one-finger) / [SRS-EP-24](../region-sync/srs-logic.md#srs-ep-24-two-finger-viewport) — not this section |
 | `sel_rect` | Rect marquee / pick / move / resize against the local document ([SRS-EP-10](../ink-box/srs-logic.md), [SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Same — finger canvas is REQ-10, not a fourth exclusive tool |
 | `sel_freeform` | Freeform lasso / pick / move / resize ([SRS-EP-10](../ink-box/srs-logic.md), [SRS-EP-11](../ink-box/srs-logic.md)) | Switch tool | Same |
 

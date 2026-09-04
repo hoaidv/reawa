@@ -17,6 +17,7 @@
 #include "join_smart_group_edit.hpp"
 #include "remove_node_edit.hpp"
 #include "reparent_edit.hpp"
+#include "set_endpoint_ink_edit.hpp"
 #include "set_ink_samples_edit.hpp"
 #include "set_ink_scale_mode_edit.hpp"
 #include "set_smart_transform_edit.hpp"
@@ -52,6 +53,8 @@ inline std::unique_ptr<DocEdit> DocEdit::fromJson(const JsonValue &j)
         return SetInkScaleModeEdit::fromPayload(j, p);
     if (kindEq(type.c_str(), edit_kind::kSetInkSamples))
         return SetInkSamplesEdit::fromPayload(j, p);
+    if (kindEq(type.c_str(), edit_kind::kSetEndpointInk))
+        return SetEndpointInkEdit::fromPayload(j, p);
     if (kindEq(type.c_str(), edit_kind::kReparent))
         return ReparentEdit::fromPayload(j, p);
     if (kindEq(type.c_str(), edit_kind::kRemoveNode))

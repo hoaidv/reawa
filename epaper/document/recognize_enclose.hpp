@@ -12,6 +12,7 @@
 #include "enclose_shape.hpp"
 #include "ingest_stroke.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <memory>
@@ -194,6 +195,153 @@ inline Vec2 smartWorldToLocal(double worldX, double worldY, const DocNode &sg,
     return {x / sx, y / sy};
 }
 
+/** World AABB of SmartGroup geometric bounds after translate + scale (v0). */
+inline SmartBounds smartGroupWorldBounds(const DocNode &sg)
+{
+    SmartBounds w;
+    const SmartBounds &b = sg.smartBounds;
+    const SmartTransform &t = sg.transform;
+    w.x = t.x + b.x * t.scaleX;
+    w.y = t.y + b.y * t.scaleY;
+    w.width = b.width * t.scaleX;
+    w.height = b.height * t.scaleY;
+    return w;
+}
+
+/** First boundary-role ink of a SmartGroup, world polyline. Empty if none. */
+inline std::vector<Vec2> smartGroupBoundaryWorld(const DocNode &sg)
+{
+    std::vector<Vec2> poly;
+    for (const auto &c : sg.children) {
+        if (c.kind != NodeKind::Ink)
+            continue;
+        const std::string role = c.role ? *c.role : std::string("content");
+        if (role != "boundary" || c.samples.size() < 2)
+            continue;
+        poly.reserve(c.samples.size());
+        for (const auto &s : c.samples) {
+            const Vec2 w = smartLocalToWorld(s.x, s.y, sg, "boundary", std::nullopt, nullptr);
+            poly.push_back(w);
+        }
+        break;
+    }
+    return poly;
+}
+
+/** Even-odd fill; closes the ring if first≠last. */
+inline bool pointInBoundary(double x, double y, const std::vector<Vec2> &poly)
+{
+    if (poly.size() < 3)
+        return false;
+    const Vec2 &f = poly.front();
+    const Vec2 &b = poly.back();
+    const bool closed = std::hypot(f.x - b.x, f.y - b.y) < 1e-6;
+    const size_t n = closed ? poly.size() - 1 : poly.size();
+    if (n < 3)
+        return false;
+    bool inside = false;
+    size_t j = n - 1;
+    for (size_t i = 0; i < n; ++i) {
+        const double yi = poly[i].y;
+        const double yj = poly[j].y;
+        const double xi = poly[i].x;
+        const double xj = poly[j].x;
+        if ((yi > y) != (yj > y)) {
+            const double xHit = (xj - xi) * (y - yi) / (yj - yi + 1e-30) + xi;
+            if (x < xHit)
+                inside = !inside;
+        }
+        j = i;
+    }
+    return inside;
+}
+
+inline bool segParamHits(Vec2 a, Vec2 b, Vec2 c, Vec2 d, double *tHit)
+{
+    const double rx = b.x - a.x;
+    const double ry = b.y - a.y;
+    const double sx = d.x - c.x;
+    const double sy = d.y - c.y;
+    const double den = rx * sy - ry * sx;
+    if (std::abs(den) < 1e-18)
+        return false;
+    const double cx = c.x - a.x;
+    const double cy = c.y - a.y;
+    const double t = (cx * sy - cy * sx) / den;
+    const double u = (cx * ry - cy * rx) / den;
+    if (t > 1e-12 && t < 1.0 - 1e-12 && u >= 0.0 && u <= 1.0) {
+        *tHit = t;
+        return true;
+    }
+    return false;
+}
+
+/** Length of segment a→b that lies in the even-odd interior of poly. */
+inline double segmentLengthInsidePoly(Vec2 a, Vec2 b, const std::vector<Vec2> &poly)
+{
+    const double len = std::hypot(b.x - a.x, b.y - a.y);
+    if (len < 1e-12 || poly.size() < 3)
+        return 0;
+    const Vec2 &f = poly.front();
+    const Vec2 &last = poly.back();
+    const bool closed = std::hypot(f.x - last.x, f.y - last.y) < 1e-6;
+    const size_t n = closed ? poly.size() - 1 : poly.size();
+    if (n < 3)
+        return 0;
+    std::vector<double> ts;
+    ts.push_back(0);
+    ts.push_back(1);
+    size_t j = n - 1;
+    for (size_t i = 0; i < n; ++i) {
+        double t = 0;
+        if (segParamHits(a, b, poly[j], poly[i], &t))
+            ts.push_back(t);
+        j = i;
+    }
+    std::sort(ts.begin(), ts.end());
+    double acc = 0;
+    for (size_t i = 1; i < ts.size(); ++i) {
+        if (ts[i] - ts[i - 1] < 1e-15)
+            continue;
+        const double mid = 0.5 * (ts[i - 1] + ts[i]);
+        const double mx = a.x + mid * (b.x - a.x);
+        const double my = a.y + mid * (b.y - a.y);
+        if (pointInBoundary(mx, my, poly))
+            acc += (ts[i] - ts[i - 1]) * len;
+    }
+    return acc;
+}
+
+/**
+ * Fraction of polyline length inside a closed boundary (even-odd).
+ * @implements [SRS-EP-10] draw-into membership length-in-boundary
+ */
+inline double fractionPolylineLengthInsidePoly(const std::vector<InkSample> &samples,
+                                               const std::vector<Vec2> &poly)
+{
+    double total = 0;
+    double inside = 0;
+    for (size_t i = 1; i < samples.size(); ++i) {
+        const Vec2 a{samples[i - 1].x, samples[i - 1].y};
+        const Vec2 b{samples[i].x, samples[i].y};
+        const double L = std::hypot(b.x - a.x, b.y - a.y);
+        total += L;
+        inside += segmentLengthInsidePoly(a, b, poly);
+    }
+    if (total < 1e-12)
+        return 0;
+    return inside / total;
+}
+
+/** 0 when the group has no boundary ink (AABB does not qualify). */
+inline double fractionStrokeInsideBoundary(const DocNode &sg, const std::vector<InkSample> &samples)
+{
+    const auto poly = smartGroupBoundaryWorld(sg);
+    if (poly.size() < 3)
+        return 0;
+    return fractionPolylineLengthInsidePoly(samples, poly);
+}
+
 /** @implements [SRS-EP-10] already-grouped ink is skipped */
 inline void walkInkCandidates(const std::vector<DocNode> &nodes, bool parentIsSmartGroup,
                               std::vector<const DocNode *> &out)
@@ -247,7 +395,7 @@ inline ApplyResult appendOrdinaryInk(DeviceDocument &doc, const EncloseStrokeInp
 
 /**
  * Commit finished stroke. Ink-box latch → enclose; Pen → ordinary ink only (no membership).
- * Draw-into membership is ADR-0022 step 2 in recognizer_dispatch.hpp.
+ * Draw-into membership is ADR-0022 step 2 in recognizer_dispatch.hpp (before enclose).
  * @implements [SRS-EP-10] stroke_end enclose path
  */
 inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
@@ -294,14 +442,7 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
         for (const auto &n : doc.rootChildren) {
             if (n.kind != NodeKind::SmartGroup)
                 continue;
-            const SmartBounds &b = n.smartBounds;
-            const SmartTransform &t = n.transform;
-            SmartBounds w;
-            w.x = t.x + b.x * t.scaleX;
-            w.y = t.y + b.y * t.scaleY;
-            w.width = b.width * t.scaleX;
-            w.height = b.height * t.scaleY;
-            if (fractionSamplesInside(stroke.samples, w) >= 0.8) {
+            if (fractionStrokeInsideBoundary(n, stroke.samples) >= 0.8) {
                 insideExisting = true;
                 break;
             }

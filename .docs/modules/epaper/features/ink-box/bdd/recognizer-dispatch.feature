@@ -2,26 +2,25 @@
 Feature: Closure-first recognizer dispatch
   As an RM2 creator with Pen and both recognizers available
   I need exactly one document verdict per pen-up
-  So that enclose, membership, connector, and ordinary ink never double-commit
+  So that endpoint-ink, membership, enclose, connector, and ordinary ink never double-commit
 
-  # STORY-EP-029 — SRS-EP-10 / ADR-0022. Do not retune shipped enclose or membership thresholds.
+  # STORY-EP-029 / STORY-EP-047 — SRS-EP-10 / ADR-0022. Membership uses boundary-ink length, not AABB sample-count.
 
   @SRS-EP-10
   Scenario: One verdict and one recog log line when both recognizers are armed
     Given exclusive tool pen is armed
     And tgl.recog.ink_box and tgl.recog.connector are armed at pen-down
     When pen-up runs dispatch
-    Then exactly one of enclose, membership, connector, or ink is committed
-    And the device writes exactly one [recog] line with outcome enclose or membership or connector or ink
+    Then exactly one of endpoint_ink, membership, enclose, connector, or ink is committed
+    And the device writes exactly one [recog] line with outcome endpoint_ink or membership or enclose or connector or ink
 
   @SRS-EP-10
-  Scenario: Failed enclose inside an existing box may fall through to membership
+  Scenario: Draw-into membership beats enclose when the stroke is inside an existing box
     Given a Smart Group already on the document
-    And a closed-ish stroke whose enclose guards fail
-    And at least 80 percent of that stroke samples lie inside the existing group world bounds
+    And a closed-ish stroke with at least 80 percent of its polyline length inside that group's boundary ink
     When pen-up runs dispatch
     Then create_smart_group is not committed for that stroke
-    And draw-into membership may reparent the stroke as role content
+    And draw-into membership reparents the stroke as role content
     And zero dual verdicts exist for that pen-up
 
   @SRS-EP-10

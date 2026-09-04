@@ -11,7 +11,7 @@ Durable ubiquitous language. Anatomy lives in `.docs/domain/`; this file is voca
 | Term | Meaning | Aliases | Related entities |
 |---|---|---|---|
 | Rest spine | Connector polyline `S` baked once at recognition, never rewritten from a warp | rest shape | [vector-document](./domain/vector-document.md) · [ADR-0020](./adr/ADR-0020-connector-ink-geometry.md) |
-| Endpoint decoration | Ink bound to a connector **end** (not spine, not empty canvas) | endpoint ink | [ADR-0026](./adr/ADR-0026-endpoint-ink-membership.md) |
+| Endpoint decoration | Ink bound to a connector **end** (not spine, not empty canvas); stored as `ConnectorAnchor.styleInk` in the live face frame | endpoint ink | [ADR-0038](./adr/ADR-0038-endpoint-ink-face-frame.md) |
 | Attachment `t` | Normalized arc-length of an attached node on the **rest** spine | hang parameter | [ADR-0027](./adr/ADR-0027-attachment-t-rest-spine.md) |
 | Clipboard slot | One process-global in-document copy buffer on the device; not the OS pasteboard; not on DeviceDocument | in-document clipboard | [ADR-0037](./adr/ADR-0037-device-clipboard-singleton.md) |
 | Node lastOpId | `opId` of the last **forward** document-semantic mutation still in effect on that node. Undo restores the captured `prevLastOpId`; redo restamps the original forward id. Mismatch vs an undo entry’s forward `opId` ⇒ skip (no undo-through). History publish ids (`undo:N` / `redo:N`) are not stored here | node revision | [vector-document](./domain/vector-document.md#node-revision) · [ADR-0032](./adr/ADR-0032-inverse-op-undo.md) |

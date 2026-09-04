@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.15.0-draft
+version: 0.16.0-draft
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -81,7 +81,7 @@ viewed at scale, and saved.
 | Viewport-follow toggle | Enabling one peer’s follow disables the other with p95 ≤300 ms; 0 dual-follow; disconnect forces off | Manual QA — REQ-19 |
 | Erase (brush / area / object) | p95 ≤50 ms after pointer-up; 1 undo restores; 0 chords; Frame never removed | Manual QA — [prd-erase.md](./prd-erase.md) |
 | Paste fidelity | Pasted subtree geometry ±1 px @ 100% zoom vs source | Manual QA — **iter-005 draft** |
-| Connector end style + warp | Style survives bound-node drag; endpoint ink stays on the end (0 orphaned ink) | Manual QA — **iter-005 draft** |
+| Connector end style + warp | Endpoint ink stays on the end through bound-node transform (0 orphaned ink); Path B only on Epaper | Manual QA — **iter-005 draft** |
 | Mid-attachment follows warp | Attachment stays on spine; 0 px jump on pen-up vs last preview | Manual QA — **iter-005 draft** |
 | Barrel button hold vs click | 0 click+hold double-fires on a 20-gesture fixture; missing buttons no-op | Manual QA — **iter-005 draft** |
 
@@ -691,19 +691,21 @@ viewed at scale, and saved.
 
 ## [REQ-13] Connector endpoint styles {#connector-ends}
 <!-- campaign: iter-005-draft — BS-0002; was explicit Non-Goal of REQ-09 -->
+<!-- 2026-09-04: Epaper ships Path B only. Path A (closed-style toolbar) is Infini / web-desktop — not this device campaign. -->
 - **Priority:** Must · **Traces:** [BRD-07]
-- Needs design: yes
+- Needs design: no
 - **Campaign:** iter-005 **draft**. Extends [REQ-09](#device-connectors); does not replace recognition or warp.
-- **Outcome:** a connection can *say* how it ends (arrow, empty arrow, star, one, many, …) and stay that way when boxes move.
-- **Path A — context toolbar** after the connector is created or selected: the creator sets **each end** independently from a closed style set. Needs design (e-ink chrome).
-- **Path B — endpoint ink:** strokes whose samples run over a connector **end** are recognized as **part of that end**, not ordinary ink / not a new connector. They are **preserved** through warp (they ride the end). Wrong recog costs one undo.
+- **Outcome:** a connection can *say* how it ends in the creator’s own ink, and that mark stays aimed at the bound node when the box moves, resizes, or rotates.
+- **Epaper (this campaign) — Path B, stylus only:** with Connector recognition armed, a stroke whose length mostly sits on an existing connector **end** becomes **part of that end** — not free Ink, not a second connector. Drawn as-is. Stored on that end’s `ConnectorAnchor` so it rides the same face frame as the connector’s leave. Further strokes on the same end **append**. Wrong bind costs one undo. No on-device style toolbar.
+- **Infini / web-desktop — Path A (later, not this campaign):** closed style chips (`none` / `arrow` / `arrow_empty` / `star` / `one` / `many`) on a selected connector. Do not paint Path A chrome on the tablet. Do not start Infini Path A this lock.
 
 **Acceptance**
-- Given a selected connector, When the creator picks an end style from the context toolbar, Then that end shows the style with p95 ≤300 ms and the other end is unchanged; one undo reverts the style.
-- Given a connector with end styles, When a bound box is dragged, Then styles remain on the correct ends and committed geometry equals last preview (0 px jump) — [REQ-09](#device-connectors) warp bar.
-- Given Connector recognition (or a dedicated endpoint-ink rule) and ink drawn over an existing connector end, When the stroke ends, Then the ink is bound as endpoint decoration of that end (0 new free Ink at that location; 0 second connector) and survives a subsequent bound-node drag (0 orphaned samples).
+- Given Connector recognition is armed and an existing connector, When the creator draws a stroke with ≥80% of its length inside a **5 mm** (world) circle at one end, Then that stroke is bound as endpoint decoration of that end (0 new free Ink there; 0 second connector), painted as drawn, and a later bound-node move/resize/rotate keeps the decoration on that end with stored leave unchanged and world paint following the re-warped leaving tangent (0 orphaned samples; 0 px jump vs last preview — [REQ-09](#device-connectors) warp bar).
+- Given a second such stroke on the **same** end, When it commits, Then it **appends** (the first decoration stays); one undo removes only the last appended stroke.
 - Given the same stroke over empty canvas or the connector **spine** (not an end), When the stroke ends, Then it is **not** stolen as endpoint style (ordinary ink / membership / connector rules apply).
-- **UI states / journeys to design:** post-create toolbar; selected connector per-end styles; endpoint-ink accepted; endpoint-ink refused; warp with decorated ends.
+- Given Connector recognition is **off**, When the creator draws over a connector end, Then the stroke stays ordinary ink (0 endpoint bind).
+- Given a wrong endpoint-ink bind, When the creator undoes once, Then the document matches pre-stroke (decoration gone; stroke as it would have been).
+- Given endpoint decoration on a connector, When the creator brush-erases (or object-erases ≥80% of) those ticks, Then the decoration is gone or clipped and the **connector remains**.
 
 ## [REQ-14] Connector mid-attachments {#connector-attachments}
 <!-- campaign: iter-005-draft — BS-0002 -->
@@ -870,6 +872,7 @@ viewed at scale, and saved.
   snaps back on release; a temp select that does nothing afterward is meaningless.
 - **Undo as a barrel Click catalogue item** — not in the closed Click list. Undo stays on the
   ToolChip ([REQ-03](#tool-modes) / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)).
+- **On-device Path A endpoint-style toolbar** (closed chips: arrow / star / one / many, …) — [REQ-13](#connector-ends) on Epaper is Path B (drawn ink on the end) only. Path A is Infini / web-desktop, later campaign. Freeze [STORY-EP-045](../../../.plan/iter-005/stories/STORY-EP-045.md) / [STORY-EP-046](../../../.plan/iter-005/stories/STORY-EP-046.md).
 - A general on-device tool palette — no brushes, colors, layers, or document browser.
   [REQ-17](#manual-create) is a **closed** insert set (frame, connector, attachment, primitive),
   not an illustration suite. ToolChip exclusives are **six** as of [prd-erase.md](./prd-erase.md) ([CHL-0028](../../../.plan/iter-005/challenges/CHL-0028-eraser-three-tools.md)).
@@ -904,6 +907,8 @@ viewed at scale, and saved.
 - Device Settings persist home — **owner:** pm — **closed 2026-08-20 (human):** saved **on the Epaper device**, not Infini, not the document. No document settings. [CHL-0025](../../../.plan/iter-005/challenges/CHL-0025-pen-map-settings-page.md) Settings page adopted; GAP-01 leading 10 mm tile adopted.
 - [REQ-10](#hand-touch) two-finger pan/zoom vs [BRD-07](../../brd.md) on-device pan/zoom deferral — **owner:** pm — **closed 2026-08-20 (human):** two-finger **local** pan is Must; always-on viewport sync is obsolete; optional mutually exclusive follow ([REQ-19](#viewport-follow)). Analyst amends BRD-07 in parallel; this PRD is the product source until BRD catches up. One-finger empty canvas is **local pan** (threshold vs palm-rest), not a no-op.
 - Exact empty-canvas pan threshold (distance / time) — **owner:** pm — **closed 2026-08-20 (human field test; supersedes STORY-EP-054 10 mm / 89 du lock):** **20 mm** Euclidean panel travel (**178 du** @ 226 dpi). ≤20 mm = palm-rest / tap (0 pan); >20 mm = local one-finger pan; box/knob/chip hit wins. **≥3** simultaneous capacitive contacts = palm (0 pan, 0 pinch). Hand-touch **toggle** (64 du 1-bit **HT** tile, trailing orientation-top row left of Debug): default **on**; off disables canvas pick/move/pan/pinch; chrome taps still work. Pen near or in contact still disables canvas hand-touch. Empty tap still deselects. Architect millimetre↔du bind stays in SRS (178 du @ 226 dpi). Debug log of touch counts is field debug, not a new REQ.
+- [REQ-13](#connector-ends) Path A vs Path B on the tablet — **owner:** pm — **closed 2026-09-04 (human):** Epaper is **Path B** (drawn endpoint ink on `ConnectorAnchor`; append; no toolbar). Path A closed-style chips are **Infini / web-desktop**, not this lock. Product depth: [SRS-EP-74](./features/connector-ink/srs-product.md#srs-ep-74-endpoint-ink-product).
+- Brush-erase (or object-erase) of endpoint decoration **without** deleting the connector — **owner:** pm — **closed 2026-09-04 (human):** **in**. The creator can erase the ticks and keep the connector. Object-erase of the **connector** still removes that end’s decoration with the connector.
 
 - Undo depth and affordance on the device — **closed 2026-08-14** ([CHL-0016](../../../.plan/iter-003/challenges/CHL-0016-undo-redo-toolbar.md)
   / [ADR-0018](../../adr/ADR-0018-undo-redo-chip-actions.md)): depth 20; on-panel Undo and Redo after

@@ -1,7 +1,8 @@
 ---
 id: ADR-0026
 title: Endpoint-ink membership (end vs spine vs empty)
-status: proposed
+status: superseded
+superseded-by: [ADR-0038]
 date: 2026-08-19
 deciders: [architect, pm]
 supersedes: null

@@ -44,7 +44,7 @@ latches them for the stroke, and dispatches at pen-up per
 
 | Armed at pen-down | Pen-up path |
 |---|---|
-| `pen` + closure-first dispatch | 1 closed-ish **and** `recog.ink_box` → enclose (below); **guards fail → fall through** · 2 draw-into membership · 3 open **and** `recog.connector` → [SRS-EP-17](../connector-ink/srs-logic.md) · 4 ordinary ink |
+| `pen` + closure-gated dispatch | 1 `recog.connector` → endpoint-ink ([SRS-EP-35](../connector-ink/srs-logic.md#srs-ep-35-endpoint-ink)) · 2 draw-into membership (boundary-ink length) · 3 closed-ish **and** `recog.ink_box` → enclose (below); **guards fail → fall through** · 4 open **and** `recog.connector` → [SRS-EP-17](../connector-ink/srs-logic.md) · 5 ordinary ink |
 | `sel_rect` / `sel_freeform` | No ink was produced; not an ingestion path at all |
 
 Latching at pen-down matters: switching tools or toggles mid-stroke must not retroactively change
@@ -60,10 +60,10 @@ what the stroke means.
 | Fitted bounds | AABB of the enclose stroke samples → `(x, y, width, height)` |
 | Guard — size (adaptive) | **With ≥1 capturable content ink:** shorter side ≥ **28** world (`kMinEncloseWithContent`). **Empty boundary:** shorter side ≥ **36** (`kMinEncloseEmpty`). PM 2026-08-15 — supersedes the single 48 from ADR-0013 §6 on device |
 | Guard — empty shape | Empty boundary must also match a near-primitive: circle, ellipse, triangle, square, rectangle, parallelogram, diamond, pentagon, hexagon, or octagon (Douglas–Peucker + circularity in `enclose_shape.hpp`). Content enclose skips this gate |
-| Guard — content | Prefer ≥1 **free top-level Ink** with **≥80%** of samples inside. **0 content is allowed** when size ≥ 36 and the empty-shape gate passes. If the stroke already qualifies as draw-into of an existing Smart Group, **do not** create — fall through to membership (D21 / [CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)) |
+| Guard — content | Prefer ≥1 **free top-level Ink** with **≥80%** of samples inside. **0 content is allowed** when size ≥ 36 and the empty-shape gate passes. Draw-into membership is **step 2** of [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) and runs **before** this step — a stroke that already qualifies as content of an existing Smart Group never reaches enclose ([CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)) |
 | Guard — already grouped | Ink whose parent is already a `SmartGroup` is **skipped**; remaining free ink still captures |
 | Commit | `create_smart_group` immediately — no proposal, no accept step. The enclose stroke becomes `role: boundary` ink; captured ink becomes `role: content` in group-local coordinates; `bounds` = fitted rect; **each content ink seeded with its own `layoutOffset` UV** |
-| Guard fails | **Fall through** to draw-into membership ([ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) step 2), then connector, then ordinary ink. No error state, no banner ([SRS-EP-12](./srs-ui.md)) |
+| Guard fails | **Fall through** to new-connector (if open) then ordinary ink ([ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) steps 4–5). No error state, no banner ([SRS-EP-12](./srs-ui.md)) |
 | Undo | One entry; one undo restores the pre-op tree exactly ([SRS-EP-07](../device-document/srs-logic.md)) |
 | Visibility | The box is on the panel **p95 ≤500 ms after pen-up**, with 0 peer messages required ([SRS-EP-14](./srs-quality.md)) |
 
@@ -95,12 +95,12 @@ Self-intersecting surrounds are accepted as-is under even-odd — no geometry cl
 ### Draw-into membership — inherited from [SRS-IN-15]
 
 Runs at pen-up as **step 2** of [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md)
-(including after a **failed** enclose). Not skipped merely because the stroke was closed-ish.
+(after endpoint-ink, **before** enclose). Not skipped merely because the stroke was closed-ish.
 
 | Step | Rule |
 |---|---|
 | Trigger | A new `Ink` node after its samples are committed in world space |
-| Candidates | Every `SmartGroup` whose **world** `bounds` contain ≥80% of the stroke's samples |
+| Candidates | Every `SmartGroup` whose **boundary ink** (even-odd interior of the world boundary polyline) contains ≥80% of the stroke’s **polyline length**. **Not** ≥80% of ink samples inside the group AABB. No boundary ink → the group does not qualify |
 | None | Leave the ink at its ordinary parent (document root) |
 | One | Reparent as `role: content` (samples → group-local); **seed that ink's `layoutOffset` UV** from its AABB centroid within the current bounds |
 | Several (incl. nested) | Highest paint/z order wins — tree sibling order, later siblings win. **No dual parent**, no z-index field |

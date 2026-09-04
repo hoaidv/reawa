@@ -127,7 +127,16 @@ static void test_d21_fall_through()
     payload.emplace_back("bounds", JsonValue::object(std::move(b)));
     payload.emplace_back("transform", JsonValue::object(std::move(t)));
     payload.emplace_back("inkScaleMode", JsonValue::string("fixedInk"));
-    payload.emplace_back("children", JsonValue::array({}));
+    JsonValue::Object bstyle;
+    bstyle.emplace_back("stroke", JsonValue::string("#1C2430"));
+    bstyle.emplace_back("strokeWidth", JsonValue::number(2));
+    JsonValue::Object bchild;
+    bchild.emplace_back("id", JsonValue::string("sg_1_b"));
+    bchild.emplace_back("kind", JsonValue::string("ink"));
+    bchild.emplace_back("role", JsonValue::string("boundary"));
+    bchild.emplace_back("samples", inkSamplesToJson(pts({{0, 0}, {120, 0}, {120, 120}, {0, 120}, {0, 0}})));
+    bchild.emplace_back("style", JsonValue::object(std::move(bstyle)));
+    payload.emplace_back("children", JsonValue::array({JsonValue::object(std::move(bchild))}));
         CHECK(doc.commitJson(opEnvelope("create_smart_group:sg_1", "create_smart_group", JsonValue::object(std::move(payload)))).applied);
 
     EncloseStrokeInput stroke;

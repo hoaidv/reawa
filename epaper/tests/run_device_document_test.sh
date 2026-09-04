@@ -37,6 +37,8 @@ c++ -std=c++17 -Wall -Wextra -O2 -I. tests/enclose_shape_test.cpp -o /tmp/enclos
 /tmp/enclose_shape_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/connector_test.cpp -o /tmp/connector_test
 /tmp/connector_test
+c++ -std=c++17 -Wall -Wextra -O2 -I. tests/endpoint_ink_test.cpp -o /tmp/endpoint_ink_test
+/tmp/endpoint_ink_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/connector_warp_test.cpp -o /tmp/connector_warp_test
 /tmp/connector_warp_test
 c++ -std=c++17 -Wall -Wextra -O2 -I. tests/recog_warp_bench.cpp -o /tmp/recog_warp_bench

@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-09-04T14:45:49+00:00
+generated_at: 2026-09-04T17:39:10+00:00
 ---
 
 # Sync Report
@@ -69,6 +69,7 @@ generated_at: 2026-09-04T14:45:49+00:00
 | [SRS-EP-58] | epaper |
 | [SRS-EP-59] | epaper |
 | [SRS-EP-73] | epaper |
+| [SRS-EP-74] | epaper |
 | [SRS-IN-05] | infini |
 | [SRS-IN-06] | infini |
 | [SRS-IN-19] | infini |
@@ -85,7 +86,7 @@ generated_at: 2026-09-04T14:45:49+00:00
 | [SRS-EP-07] | 27 | covered |
 | [SRS-EP-08] | 13 | covered |
 | [SRS-EP-09] | 14 | covered |
-| [SRS-EP-10] | 27 | covered |
+| [SRS-EP-10] | 28 | covered |
 | [SRS-EP-11] | 13 | covered |
 | [SRS-EP-12] | 10 | covered |
 | [SRS-EP-13] | 4 | covered |
@@ -106,13 +107,13 @@ generated_at: 2026-09-04T14:45:49+00:00
 | [SRS-EP-28] | 0 | missing |
 | [SRS-EP-29] | 0 | missing |
 | [SRS-EP-30] | 0 | missing |
-| [SRS-EP-31] | 11 | covered |
-| [SRS-EP-32] | 11 | covered |
-| [SRS-EP-33] | 11 | covered |
+| [SRS-EP-31] | 12 | covered |
+| [SRS-EP-32] | 12 | covered |
+| [SRS-EP-33] | 12 | covered |
 | [SRS-EP-34] | 0 | missing |
-| [SRS-EP-35] | 0 | missing |
+| [SRS-EP-35] | 8 | covered |
 | [SRS-EP-36] | 0 | missing |
-| [SRS-EP-37] | 0 | missing |
+| [SRS-EP-37] | 8 | covered |
 | [SRS-EP-38] | 0 | missing |
 | [SRS-EP-39] | 0 | missing |
 | [SRS-EP-40] | 0 | missing |
@@ -136,6 +137,7 @@ generated_at: 2026-09-04T14:45:49+00:00
 | [SRS-EP-58] | 0 | missing |
 | [SRS-EP-59] | 0 | missing |
 | [SRS-EP-73] | 0 | missing |
+| [SRS-EP-74] | 8 | covered |
 | [SRS-IN-01] | 6 | covered |
 | [SRS-IN-02] | 4 | covered |
 | [SRS-IN-03] | 3 | covered |

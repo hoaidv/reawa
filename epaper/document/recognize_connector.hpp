@@ -1,6 +1,6 @@
 #pragma once
 /**
- * Open-stroke connector recognition at pen-up (ADR-0022 step 3).
+ * Open-stroke connector recognition at pen-up (ADR-0022 step 4).
  * Snap and inside tests use the SmartGroup **boundary ink** polyline.
  * @implements [SRS-EP-17] UX1/UX2 guards, create_connector, warpStyle from S
  */
@@ -65,26 +65,6 @@ inline bool sampleInBounds(double x, double y, const SmartBounds &b)
     return distPointAabb(x, y, b) == 0;
 }
 
-/** First boundary-role ink of a SmartGroup, world polyline. Empty if none. */
-inline std::vector<Vec2> smartGroupBoundaryWorld(const DocNode &sg)
-{
-    std::vector<Vec2> poly;
-    for (const auto &c : sg.children) {
-        if (c.kind != NodeKind::Ink)
-            continue;
-        const std::string role = c.role ? *c.role : std::string("content");
-        if (role != "boundary" || c.samples.size() < 2)
-            continue;
-        poly.reserve(c.samples.size());
-        for (const auto &s : c.samples) {
-            const Vec2 w = smartLocalToWorld(s.x, s.y, sg, "boundary", std::nullopt, nullptr);
-            poly.push_back(w);
-        }
-        break;
-    }
-    return poly;
-}
-
 inline double distPointSeg(double px, double py, double ax, double ay, double bx, double by)
 {
     const double vx = bx - ax;
@@ -104,34 +84,6 @@ inline double distPointPolyline(double x, double y, const std::vector<Vec2> &pol
     for (size_t i = 1; i < poly.size(); ++i)
         best = std::min(best, distPointSeg(x, y, poly[i - 1].x, poly[i - 1].y, poly[i].x, poly[i].y));
     return best;
-}
-
-/** Even-odd fill; closes the ring if first≠last. */
-inline bool pointInBoundary(double x, double y, const std::vector<Vec2> &poly)
-{
-    if (poly.size() < 3)
-        return false;
-    const Vec2 &f = poly.front();
-    const Vec2 &b = poly.back();
-    const bool closed = std::hypot(f.x - b.x, f.y - b.y) < 1e-6;
-    const size_t n = closed ? poly.size() - 1 : poly.size();
-    if (n < 3)
-        return false;
-    bool inside = false;
-    size_t j = n - 1;
-    for (size_t i = 0; i < n; ++i) {
-        const double yi = poly[i].y;
-        const double yj = poly[j].y;
-        const double xi = poly[i].x;
-        const double xj = poly[j].x;
-        if ((yi > y) != (yj > y)) {
-            const double xHit = (xj - xi) * (y - yi) / (yj - yi + 1e-30) + xi;
-            if (x < xHit)
-                inside = !inside;
-        }
-        j = i;
-    }
-    return inside;
 }
 
 /** Snap/inside vs boundary ink. AABB only if the group has no boundary stroke. */

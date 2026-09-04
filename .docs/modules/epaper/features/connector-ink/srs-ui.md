@@ -76,12 +76,15 @@ Dash picker, width presets, routing-style names other than Ink/Curve. **Endpoint
 
 <!-- lifecycle: active -->
 <!-- needs_design: yes -->
+<!-- campaign: not Epaper this lock — Infini / web-desktop Path A later -->
 
-**Parent:** [REQ-13](../../prd.md#connector-ends). **Logic:** [SRS-EP-34](./srs-logic.md#srs-ep-34-end-styles), [SRS-EP-35](./srs-logic.md#srs-ep-35-endpoint-ink). **Quality:** [SRS-EP-37](./srs-quality.md#srs-ep-37-endpoint-quality). **Platform:** epaper-device.
+**Parent:** [REQ-13](../../prd.md#connector-ends) Path A. **Logic:** [SRS-EP-34](./srs-logic.md#srs-ep-34-end-styles). **Quality:** [SRS-EP-37](./srs-quality.md#srs-ep-37-endpoint-quality).
+
+**Epaper this campaign: do not implement.** Path B has no chrome ([SRS-EP-74](./srs-product.md#srs-ep-74-endpoint-ink-product) BR-E07). This section is Infini / web-desktop.
 
 ### Purpose
 
-Set **each end** independently after create or on selected connector. Announce endpoint-ink accept/refuse. e-ink chrome — no color.
+Set **each end** independently after create or on selected connector (desktop). Epaper Path B does not announce accept/refuse.
 
 ### Closed style set (ids — do not invent)
 

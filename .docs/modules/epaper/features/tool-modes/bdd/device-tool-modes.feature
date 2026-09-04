@@ -19,7 +19,7 @@ Feature: Epaper device tool modes
     Then local ink paints immediately
     And no intent field is placed on the wire
     When the stroke ends
-    Then enclose evaluation runs on the device as ADR-0022 step 1
+    Then enclose evaluation runs on the device as ADR-0022 step 3
 
   @SRS-EP-04
   Scenario: Pen ingests the stroke and evaluates membership

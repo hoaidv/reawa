@@ -4,8 +4,8 @@
  * @implements [SRS-EP-10] draw-into membership
  * @implements [SRS-EP-14] membership latency budget (caller times pen-up)
  *
- * Port of infini/src/document/membership.ts. After ADR-0022, also runs on a
- * failed enclose (D21 fall-through).
+ * Port of infini/src/document/membership.ts. ADR-0022 step 2: after endpoint-ink,
+ * before enclose. Qualify by polyline length inside boundary ink (not AABB samples).
  */
 
 #include "device_document.hpp"
@@ -30,19 +30,6 @@ struct MembershipResult {
     std::string inkId;
 };
 
-/** World AABB of SmartGroup geometric bounds after translate + scale (v0). */
-inline SmartBounds smartGroupWorldBounds(const DocNode &sg)
-{
-    SmartBounds w;
-    const SmartBounds &b = sg.smartBounds;
-    const SmartTransform &t = sg.transform;
-    w.x = t.x + b.x * t.scaleX;
-    w.y = t.y + b.y * t.scaleY;
-    w.width = b.width * t.scaleX;
-    w.height = b.height * t.scaleY;
-    return w;
-}
-
 /** Paint order: tree walk, later siblings last. */
 inline void smartGroupsInPaintOrder(const std::vector<DocNode> &nodes, std::vector<const DocNode *> &out)
 {
@@ -66,8 +53,25 @@ inline bool inkAlreadyMember(const std::vector<const DocNode *> &groups, const s
 }
 
 /**
+ * Highest-paint SmartGroup whose boundary ink contains ≥80% of stroke length.
+ * @implements [SRS-EP-10] draw-into membership length-in-boundary
+ */
+inline const DocNode *qualifyingMembershipGroup(const DeviceDocument &doc,
+                                                const std::vector<InkSample> &samples)
+{
+    std::vector<const DocNode *> groups;
+    smartGroupsInPaintOrder(doc.rootChildren, groups);
+    const DocNode *winner = nullptr;
+    for (const DocNode *sg : groups) {
+        if (fractionStrokeInsideBoundary(*sg, samples) >= 0.8)
+            winner = sg;
+    }
+    return winner;
+}
+
+/**
  * After ordinary ink is committed, try reparent into a Smart Group.
- * @implements [SRS-EP-10] membership on pen-up (Pen latch only)
+ * @implements [SRS-EP-10] membership on pen-up
  */
 inline MembershipResult tryDrawIntoMembership(DeviceDocument &doc, const std::string &inkId)
 {
@@ -87,16 +91,11 @@ inline MembershipResult tryDrawIntoMembership(DeviceDocument &doc, const std::st
         return out;
     }
 
-    std::vector<const DocNode *> qualifiers;
-    for (const DocNode *sg : groups) {
-        if (fractionSamplesInside(node->samples, smartGroupWorldBounds(*sg)) >= 0.8)
-            qualifiers.push_back(sg);
-    }
-    if (qualifiers.empty()) {
+    const DocNode *winner = qualifyingMembershipGroup(doc, node->samples);
+    if (!winner) {
         out.reason = "no_qualifying_group";
         return out;
     }
-    const DocNode *winner = qualifiers.back();
 
     JoinSmartGroupEdit edit(inkId, winner->id);
     edit.setId(std::string("join_smart_group:") + inkId + ":" + winner->id);

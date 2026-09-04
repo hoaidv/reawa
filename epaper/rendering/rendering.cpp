@@ -176,18 +176,31 @@ bool nodeOverlapsClip(const DocNode &n, const DocNode *smartParent, const WorldA
     if (!clip.valid())
         return true;
     if (n.kind == NodeKind::Connector) {
-        if (n.warpedSamples.empty())
-            return true;
-        double minX = n.warpedSamples[0].x;
-        double maxX = minX;
-        double minY = n.warpedSamples[0].y;
-        double maxY = minY;
-        for (const auto &s : n.warpedSamples) {
-            minX = std::min(minX, s.x);
-            maxX = std::max(maxX, s.x);
-            minY = std::min(minY, s.y);
-            maxY = std::max(maxY, s.y);
+        double minX = 0;
+        double maxX = 0;
+        double minY = 0;
+        double maxY = 0;
+        bool any = false;
+        auto acc = [&](double x, double y) {
+            if (!any) {
+                minX = maxX = x;
+                minY = maxY = y;
+                any = true;
+            } else {
+                minX = std::min(minX, x);
+                maxX = std::max(maxX, x);
+                minY = std::min(minY, y);
+                maxY = std::max(maxY, y);
+            }
+        };
+        for (const auto &s : n.warpedSamples)
+            acc(s.x, s.y);
+        for (const auto &poly : n.warpedStyleInk) {
+            for (const auto &s : poly)
+                acc(s.x, s.y);
         }
+        if (!any)
+            return true;
         return aabbOverlap(clip, minX, minY, maxX, maxY);
     }
     document::SmartBounds b;
@@ -323,24 +336,39 @@ void emitConnector(const DocNode &conn, const FrameProjector &proj, const Render
 {
     if (!shouldEmit(req, conn.id))
         return;
-    if (conn.warpedSamples.size() < 2)
-        return;
     double worldSw = conn.style.strokeWidth;
     if (worldSw <= 0.0 && !conn.children.empty())
         worldSw = conn.children.front().style.strokeWidth;
     if (worldSw <= 0.0)
         worldSw = 2.0;
     const double mul = widthMulFor(req, conn.id);
-    PanelPolyline poly;
-    poly.width = std::max(1.0, worldSw * proj.panelScale() * mul);
-    poly.pts.reserve(conn.warpedSamples.size());
-    for (const auto &s : conn.warpedSamples) {
-        double px = 0;
-        double py = 0;
-        proj.worldToPanel(s.x, s.y, &px, &py);
-        poly.pts.push_back({px, py});
+    const double lineW = std::max(1.0, worldSw * proj.panelScale() * mul);
+    if (conn.warpedSamples.size() >= 2) {
+        PanelPolyline poly;
+        poly.width = lineW;
+        poly.pts.reserve(conn.warpedSamples.size());
+        for (const auto &s : conn.warpedSamples) {
+            double px = 0;
+            double py = 0;
+            proj.worldToPanel(s.x, s.y, &px, &py);
+            poly.pts.push_back({px, py});
+        }
+        emitPolyline(sink, std::move(poly), st);
     }
-    emitPolyline(sink, std::move(poly), st);
+    for (const auto &stylePoly : conn.warpedStyleInk) {
+        if (stylePoly.size() < 2)
+            continue;
+        PanelPolyline poly;
+        poly.width = lineW;
+        poly.pts.reserve(stylePoly.size());
+        for (const auto &s : stylePoly) {
+            double px = 0;
+            double py = 0;
+            proj.worldToPanel(s.x, s.y, &px, &py);
+            poly.pts.push_back({px, py});
+        }
+        emitPolyline(sink, std::move(poly), st);
+    }
 }
 
 void walkFlat(const std::vector<DocNode> &nodes, const DocNode *smartParent,
