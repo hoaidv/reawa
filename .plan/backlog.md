@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-08-31T16:41:45+00:00
+generated_at: 2026-09-04T14:45:50+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -49,8 +49,8 @@ generated_at: 2026-08-31T16:41:45+00:00
 | [STORY-EP-040](./iter-005/stories/STORY-EP-040.md) | Design erase: nib feedback and selection-erase CTA | design | designer | epaper | [SRS-EP-29], [SRS-EP-27], [SRS-EP-28] | cancelled | iter-005 | 3 |
 | [STORY-EP-041](./iter-005/stories/STORY-EP-041.md) | Hardware eraser nib stroke-erase | implement | dev | epaper | [SRS-EP-27], [SRS-EP-30] | cancelled | iter-005 | 5 |
 | [STORY-EP-042](./iter-005/stories/STORY-EP-042.md) | Selection-erase deletes selected nodes | implement | dev | epaper | [SRS-EP-28], [SRS-EP-30] | cancelled | iter-005 | 3 |
-| [STORY-EP-043](./iter-005/stories/STORY-EP-043.md) | Design copy/cut/paste on selection overlay | design | designer | epaper | [SRS-EP-32], [SRS-EP-31] | draft | iter-005 | 3 |
-| [STORY-EP-044](./iter-005/stories/STORY-EP-044.md) | In-document copy cut paste ops | implement | dev | epaper | [SRS-EP-31], [SRS-EP-33] | draft | iter-005 | 5 |
+| [STORY-EP-043](./iter-005/stories/STORY-EP-043.md) | Design copy/cut/paste on selection overlay | design | designer | epaper | [SRS-EP-32], [SRS-EP-31] | cancelled | iter-005 | 3 |
+| [STORY-EP-044](./iter-005/stories/STORY-EP-044.md) | In-document copy cut paste and tap-origin paste | implement | dev | epaper | [SRS-EP-31], [SRS-EP-32], [SRS-EP-33], [SRS-EP-11] | in-review | iter-005 | 8 |
 | [STORY-EP-045](./iter-005/stories/STORY-EP-045.md) | Design connector endpoint style toolbar | design | designer | epaper | [SRS-EP-36], [SRS-EP-34] | draft | iter-005 | 3 |
 | [STORY-EP-046](./iter-005/stories/STORY-EP-046.md) | Apply per-end connector styles from toolbar | implement | dev | epaper | [SRS-EP-34], [SRS-EP-37] | draft | iter-005 | 5 |
 | [STORY-EP-047](./iter-005/stories/STORY-EP-047.md) | Recognize and preserve endpoint ink | implement | dev | epaper | [SRS-EP-35], [SRS-EP-37] | draft | iter-005 | 5 |

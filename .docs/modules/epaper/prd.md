@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.14.0-draft
+version: 0.15.0-draft
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -673,19 +673,21 @@ viewed at scale, and saved.
 - Given **no session**, When any of the three erasers commits, Then the local result matches the linked case.
 
 ## [REQ-12] Copy, cut, and paste on the device {#clipboard}
-<!-- campaign: iter-005-draft — BS-0002 -->
+<!-- campaign: iter-005-draft — BS-0002; product depth 2026-09-04 -->
 - **Priority:** Must · **Traces:** [BRD-07]
-- Needs design: yes
-- **Campaign:** iter-005 **draft**.
+- Needs design: no
+- **Campaign:** iter-005 **draft**. Product: [clipboard srs-product](./features/clipboard/srs-product.md).
 - **Outcome:** a cluster that is already right can be duplicated or moved as a copy **on the tablet**, without redrawing and without the desktop clipboard.
-- **Scope v1:** in-document clipboard only (copy/cut selected nodes; paste into the current document, offset so the paste is visible). One clipboard slot. Cut = copy + delete. Paste is one undoable op. Cross-app / OS paste is out.
+- **Scope v1:** one process-global in-document slot (not OS pasteboard, not a document node). Copy/cut on the Selected context toolbar in SelectionMode. Paste on that same toolbar when the slot is non-empty **and** a tap location exists (tap empty or tap a node; not after freeform/marquee). Paste union AABB top-left = tap world point. Cut = copy + delete (empty groups left). Paste is one undoable op. **No wire** this track ([REQ-07](#one-way-sync) apply of clipboard is a later track). Cross-app / OS paste is out.
 
 **Acceptance**
-- Given a non-empty selection, When the creator copies then pastes, Then a new subtree exists with new ids, geometry equal to the source translated by a documented offset (±1 px @ 100% zoom), and the source is unchanged.
-- Given a non-empty selection, When the creator cuts then pastes, Then the originals are gone after cut and the paste matches the cut content (geometry ±1 px @ 100% zoom); one undo of paste applies the counterpart (copies gone); a second undo applies the counterpart of the cut (originals back). Skip and no-op follow [REQ-04](#device-document).
+- Given a non-empty selection in SelectionMode, When the creator copies then taps a destination and pastes, Then a new subtree exists with new ids, the paste union AABB top-left equals the tap world point (±1 px @ 100% zoom), relatives are preserved, and the source is unchanged.
+- Given a tap-selected ink-box, When the creator copies then pastes, Then the copy includes the box’s children.
+- Given free ink in the slot, When the creator taps an ink-box (not a live source) and pastes, Then the copy is parented into that box.
+- Given a non-empty selection, When the creator cuts then taps a destination and pastes, Then the originals are gone after cut and the paste matches the cut content (geometry ±1 px @ 100% zoom at the tap); one undo of paste applies the counterpart (copies gone); a second undo applies the counterpart of the cut (originals back). Skip and no-op follow [REQ-04](#device-document).
 - Given an empty clipboard, When paste is invoked, Then 0 nodes change.
-- Given **no session**, When copy/cut/paste runs, Then behaviour matches the linked case; published ops still satisfy [REQ-07](#one-way-sync) when the link is up.
-- **UI states / journeys to design:** copy/cut/paste affordances on selection; empty clipboard; paste offset visible; undo stack after cut+paste.
+- Given an empty clipboard, When the creator taps empty in SelectionMode, Then selection clears and 0 paste chrome appears.
+- Given **no session**, When copy/cut/paste runs, Then local behaviour matches the linked case; cut/paste **do not** enqueue `doc_change` this track.
 
 ## [REQ-13] Connector endpoint styles {#connector-ends}
 <!-- campaign: iter-005-draft — BS-0002; was explicit Non-Goal of REQ-09 -->

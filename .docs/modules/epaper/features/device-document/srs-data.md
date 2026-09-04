@@ -48,7 +48,7 @@ field arriving on the desktop is a mirror-suspect condition, not a graceful exte
 | Selection | `{ nodeId?, handle? }` | UI state, not document state ([SRS-EP-11](../ink-box/srs-logic.md)) |
 | Tool mode | `pen \| ink_box \| selection` | Device-local, never transmitted ([ADR-0013](../../../../adr/ADR-0013-ink-box-tool-modes.md) §1) |
 | Opaque carry-through | Raw form of node kinds the device does not author | Preserved verbatim from `doc_load`, re-emitted unchanged |
-| Clipboard slot | `{ nodes: Node[] } \| empty` | Session-only; one slot; never on the wire as a node ([ADR-0024](../../../../adr/ADR-0024-in-document-clipboard.md), [SRS-EP-31](./srs-logic.md#srs-ep-31-clipboard)) |
+| Clipboard slot | `{ nodes: Node[], sourceIds: string[] } \| empty` | **Process-global singleton** — not on `DeviceDocument`, never on the wire ([ADR-0037](../../../../adr/ADR-0037-device-clipboard-singleton.md), [SRS-EP-31](./srs-logic.md#srs-ep-31-clipboard)) |
 | Pen-button map (live + durable) | Domain [pen-button-map](../../../../domain/pen-button-map.md) | **Authored and persisted on this device** ([REQ-20](../../prd.md#device-settings), [SRS-EP-53](../tool-modes/srs-logic.md#srs-ep-53-pen-map-author)); survives Epaper restart; **never** Infini app settings; **never** SVG / VectorDocument; **0** `pen_button_map` on the wire |
 | Viewport follow | `none` \| `infini_to_epaper` \| `epaper_to_infini` | [domain/viewport-follow](../../../../domain/viewport-follow.md) — session, not document. Last-writer token withdrawn |
 

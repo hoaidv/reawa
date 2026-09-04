@@ -186,6 +186,19 @@ Finger empty-canvas pan is [SRS-EP-21](#srs-ep-21-one-finger) (**20 mm** / **178
 | Press empty canvas | — | Deselect; **0** residual chrome on the next settled frame (CHL-0007) |
 | Press another pickable | — | Selection moves to that node |
 
+### Tap vs travel (SelectionMode) {#srs-ep-11-hold-still}
+
+**Parent also:** [REQ-12](../../prd.md#clipboard) / [SRS-EP-32](./srs-ui.md#srs-ep-32-clipboard-ui). **Decision:** [ADR-0037](../../../../adr/ADR-0037-device-clipboard-singleton.md). Applies in **SelectionMode** (`sel_rect` / `sel_freeform`) for Primary **and** Secondary. Does not apply in InkMode / EraserMode.
+
+A down may **lock** Move / Lasso / Marquee / Resize as today, but the locked op **must not mutate the document** until classified. **No** 500 ms hold menu ([CHL-0031](../../../../../.plan/iter-005/challenges/CHL-0031-clipboard-tap-paste.md)).
+
+| Classifier | Panel travel | Result |
+|---|---|---|
+| Travel | **> 1 mm** (Euclidean, panel px; 1 mm ≈ 8.9 du @ 226 dpi) | Begin the locked Move / lasso / marquee (or resize if a knob). This is what stops tap-nudge. |
+| Tap | **≤ 1 mm**, then lift | **Select** the hit (or clear if empty). Record paste origin. Primary (stylus) **and** Secondary (finger). Pose of the hit node is **unchanged**. |
+
+Camera pan/zoom and a real lasso/marquee clear the paste origin ([SRS-EP-32](./srs-ui.md#srs-ep-32-clipboard-ui)).
+
 **Out of scope:** rotation handles and connector attachment to a `SmartGroup`. Anchor **events** on
 the 6 selection anchors (drag-to-resize the marquee selection) — later; chrome is visual only for
 EP-018. Anchor resolution for connectors lands in [REQ-08](../../prd.md#node-manipulation).

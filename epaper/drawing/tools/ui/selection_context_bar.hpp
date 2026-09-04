@@ -3,6 +3,7 @@
 /**
  * SelectionContextBar — owns ToolActions and publishes chrome for QML.
  * @implements [SRS-EP-12] @implements [ADR-0033]
+ * @implements [SRS-EP-32] Selected strip + tap-origin paste
  */
 
 #include "action_list_model.hpp"
@@ -15,6 +16,7 @@
 #include "selection_overlay.hpp"
 
 #include <QObject>
+#include <QPointF>
 #include <QRectF>
 #include <QString>
 #include <memory>
@@ -32,6 +34,8 @@ class SelectionContextBar final : public QObject {
     Q_PROPERTY(QString refuseReason READ refuseReason NOTIFY chromeChanged)
     Q_PROPERTY(QString manipUnavailable READ manipUnavailable NOTIFY chromeChanged)
     Q_PROPERTY(QRectF manipUnavailableRect READ manipUnavailableRect NOTIFY chromeChanged)
+    Q_PROPERTY(bool tapPasteAtOrigin READ tapPasteAtOrigin NOTIFY chromeChanged)
+    Q_PROPERTY(QPointF tapOrigin READ tapOrigin NOTIFY chromeChanged)
 public:
     explicit SelectionContextBar(QObject *parent = nullptr)
         : QObject(parent)
@@ -51,6 +55,8 @@ public:
     QString refuseReason() const { return m_refuse; }
     QString manipUnavailable() const { return m_manip; }
     QRectF manipUnavailableRect() const { return m_manipRect; }
+    bool tapPasteAtOrigin() const { return m_tapOriginValid && m_bounds.width() <= 0; }
+    QPointF tapOrigin() const { return m_tapOrigin; }
 
     void refresh(HostCaps &caps, const SelectionOverlayState &chrome)
     {
@@ -61,6 +67,8 @@ public:
         m_refuse = chrome.encloseRefuseReason;
         m_manip = chrome.manipUnavailable;
         m_manipRect = chrome.manipUnavailableRect;
+        m_tapOriginValid = caps.pasteOriginValid;
+        m_tapOrigin = caps.pastePressPanel;
         m_model->rebuild(m_owned, caps);
         emit chromeChanged();
     }
@@ -95,6 +103,8 @@ private:
     QString m_refuse;
     QString m_manip;
     QRectF m_manipRect;
+    bool m_tapOriginValid = false;
+    QPointF m_tapOrigin;
 };
 
 } // namespace tools

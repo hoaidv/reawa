@@ -34,13 +34,14 @@ inherits semantics from the deprecated infini sections listed in the
   [bdd/undo-fail-safe.feature](./bdd/undo-fail-safe.feature) ·
   [bdd/undo-queue.feature](./bdd/undo-queue.feature) ·
   [bdd/one-way-sync.feature](./bdd/one-way-sync.feature) ·
-  [bdd/debug-log-ship.feature](./bdd/debug-log-ship.feature)
+  [bdd/debug-log-ship.feature](./bdd/debug-log-ship.feature) ·
+  [bdd/clipboard.feature](./bdd/clipboard.feature)
 - Shared node semantics: [domain/vector-document](../../../../domain/vector-document.md) ·
   [ADR-0010](../../../../adr/ADR-0010-tree-of-vectors.md) ·
   [ADR-0011](../../../../adr/ADR-0011-smart-group.md)
 - Decisions: [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) (ownership
   inversion) · [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) (one-way sync contract) ·
-  [ADR-0024](../../../../adr/ADR-0024-in-document-clipboard.md) (clipboard slot)
+  [ADR-0037](../../../../adr/ADR-0037-device-clipboard-singleton.md) (clipboard singleton; supersedes ADR-0024)
 - Peers: [infini/tablet-sync](../../../infini/features/tablet-sync/index.md) ·
   [infini/vector-document](../../../infini/features/vector-document/index.md) (mirror + persistence)
 - Siblings: [ink-box](../ink-box/index.md) (what edits the document) ·

@@ -1,10 +1,11 @@
 ---
 id: ADR-0024
 title: In-document clipboard ops (one slot)
-status: proposed
+status: superseded
 date: 2026-08-19
 deciders: [architect, pm]
 supersedes: null
+superseded-by: [ADR-0037]
 source: TRACK-005 / [REQ-12]
 ---
 

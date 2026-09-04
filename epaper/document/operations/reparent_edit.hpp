@@ -97,14 +97,6 @@ inline ApplyResult ReparentEdit::doApply(DeviceDocument &doc)
     return {true, {}};
 }
 
-inline std::unique_ptr<DocEdit> ReparentEdit::generateUndo(const DeviceDocument &doc) const
-{
-    auto e = makeRestoreEdit(doc, m_nodeId, m_id);
-    if (e)
-        return e;
-    return clone();
-}
-
 inline JsonValue ReparentEdit::serialize() const
 {
     JsonValue::Object p;

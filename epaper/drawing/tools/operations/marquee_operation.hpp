@@ -138,6 +138,7 @@ private:
         const auto hit = epaper::document::selectByRect(m_caps->doc->document(), rect);
         m_caps->selection->setIds(hit);
         m_caps->selection->setPhase(hit.empty() ? SelectionPhase::Idle : SelectionPhase::Selected);
+        m_caps->clearPasteOrigin();
         m_didMutate = true;
         std::string debug = hit.empty() ? "sel=0 (no nodes ≥80% inside)"
                                         : ("sel=" + std::to_string(hit.size()));

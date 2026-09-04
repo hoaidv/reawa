@@ -10,6 +10,7 @@
 #include "document/ingest_stroke.hpp"
 #include "document/connector_warp.hpp"
 #include "debug/latency_probe.hpp"
+#include "drawing/tools/clipboard.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -579,7 +580,7 @@ static void test_undo_matching_lastopid_restores_pre_op_fields()
     CHECK(doc.publishQueue().back().op.getString("type") == "set_smart_transform");
 }
 
-/** @SRS-EP-07 Viewport tool selection clipboard-slot and copy do not push undo */
+/** @SRS-EP-07 Viewport tool selection do not push undo; copy lives on the process slot */
 static void test_undo_viewport_tool_selection_copy_do_not_push()
 {
     DeviceDocument doc;
@@ -589,10 +590,11 @@ static void test_undo_viewport_tool_selection_copy_do_not_push()
     doc.applyViewportPan(40, 0);
     doc.applyToolSwitch("selection");
     doc.applySelectionChange("");
-    doc.copyToClipboard({"I1"});
+    epaper::tools::clipboard().reset();
+    epaper::tools::clipops::copyToSlot(doc, {"I1"}, epaper::tools::clipboard());
     CHECK(doc.undoDepth() == 0);
-    CHECK(doc.clipboardSlot().size() == 1);
-    CHECK(doc.clipboardSlot()[0].id == "I1");
+    CHECK(epaper::tools::clipboard().nodes.size() == 1);
+    CHECK(epaper::tools::clipboard().nodes[0].id == "I1");
     CHECK(doc.viewportPanX() == 40);
     CHECK(doc.uiTool() == "selection");
 

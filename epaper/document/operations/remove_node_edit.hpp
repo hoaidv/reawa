@@ -78,5 +78,16 @@ inline std::unique_ptr<RemoveNodeEdit> RemoveNodeEdit::fromPayload(const JsonVal
     return e;
 }
 
+inline std::unique_ptr<DocEdit> ReparentEdit::generateUndo(const DeviceDocument &doc) const
+{
+    auto e = makeRestoreEdit(doc, m_nodeId, m_id);
+    if (e)
+        return e;
+    /** Insert-via-restore (clipboard paste): inverse is remove. @implements [SRS-EP-31] */
+    if (m_hasBody)
+        return makeRemoveEdit(m_id, m_nodeId);
+    return clone();
+}
+
 } // namespace document
 } // namespace epaper

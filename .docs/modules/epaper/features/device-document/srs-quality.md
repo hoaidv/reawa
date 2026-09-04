@@ -157,14 +157,20 @@ logs cannot fit under those ceilings, the shipper changes — not the ink budget
 
 <!-- lifecycle: active -->
 
-**Parent:** [REQ-12](../../prd.md#clipboard). **Constrains:** [SRS-EP-31](./srs-logic.md#srs-ep-31-clipboard). Does **not** steal [SRS-EP-13](#srs-ep-13-device-document-quality) parents (REQ-04/07).
+**Parent:** [REQ-12](../../prd.md#clipboard). **Constrains:** [SRS-EP-31](./srs-logic.md#srs-ep-31-clipboard) · [SRS-EP-32](../ink-box/srs-ui.md#srs-ep-32-clipboard-ui). Does **not** steal [SRS-EP-13](#srs-ep-13-device-document-quality) parents (REQ-04/07).
 
 | Scenario | Target |
 |---|---|
-| Copy then paste | New subtree, new ids; geometry = source + **(24 u, 24 u)** ±1 px @ 100% zoom; source unchanged |
-| Cut then paste | Originals gone after cut; paste matches cut content ±1 px; undo paste removes copies; second undo restores originals |
-| Empty slot paste | **0** nodes change |
-| No session | Same local result; published ops satisfy REQ-07 when linked |
+| Copy then paste | New subtree, new ids; union AABB top-left = tap world ±1 px @ 100% zoom; relatives preserved; source unchanged |
+| Cut then paste | Originals gone after cut; paste matches at the tap ±1 px; undo paste removes copies; second undo restores originals |
+| Empty slot paste / empty tap | **0** nodes change; empty tap → 0 paste chrome |
+| Paste onto live originals | **0** nodes change; refuse visible; slot kept |
+| Copy of a tap-selected ink-box | Slot includes the SmartGroup **and its children** |
+| Paste free ink onto an ink-box | Copy is a child of that SmartGroup |
+| Copy | **0** undo; **0** full-panel invalidation; not on the ink path |
+| Cut / paste visible | p95 ≤300 ms after the action (chrome bar) |
+| Tap vs travel | Travel ≤1 mm then lift on a node → select, **0** world-pose change (no nudge) |
+| No session | Same local result; **0** `doc_change` this track |
 
 ---
 

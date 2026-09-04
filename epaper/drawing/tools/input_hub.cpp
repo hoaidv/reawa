@@ -1,5 +1,7 @@
 #include "input_hub.hpp"
 #include "contexts/selection_context.hpp"
+#include "contexts/tool_context.hpp"
+#include "hold_still.hpp"
 
 #include <climits>
 
@@ -7,6 +9,18 @@ namespace epaper {
 namespace tools {
 
 void inputHubLinkAnchor() {}
+
+bool InputHub::selectionTravelDefer() const
+{
+    return m_activeMode && m_activeMode->id() == ModeId::Selection && m_lockedOp;
+}
+
+void InputHub::tapSelect(const PointerSample &s)
+{
+    Operation *sel = opFor(OperationKind::Select);
+    if (auto *tap = dynamic_cast<TapSink *>(sel))
+        tap->onTap(s);
+}
 
 bool InputHub::stampRole(PointerSample *s) const
 {
@@ -205,6 +219,11 @@ bool InputHub::dispatchPointerDown(const PointerSample &in)
     if (!winner)
         return false;
     m_lockedOp = winner;
+    if (selectionTravelDefer()) {
+        m_travelDeferred = true;
+        m_downSample = s;
+        return true;
+    }
     feedRawDown(m_lockedOp, s);
     return true;
 }
@@ -215,16 +234,34 @@ bool InputHub::dispatchPointerMove(const PointerSample &in)
         return false;
     PointerSample s = in;
     stampRole(&s);
+    if (m_travelDeferred) {
+        const double dx = s.panel.x() - m_downSample.panel.x();
+        const double dy = s.panel.y() - m_downSample.panel.y();
+        if (!holdTravelExceeded(dx, dy))
+            return true;
+        m_travelDeferred = false;
+        feedRawDown(m_lockedOp, m_downSample);
+        feedRawMove(m_lockedOp, s);
+        return true;
+    }
     feedRawMove(m_lockedOp, s);
     return true;
 }
 
 bool InputHub::dispatchPointerUp(const PointerSample &in)
 {
-    if (!m_lockedOp)
-        return false;
     PointerSample s = in;
     stampRole(&s);
+    if (m_travelDeferred) {
+        m_travelDeferred = false;
+        m_lockedOp = nullptr;
+        tapSelect(s);
+        if (s.role == PointerRole::Secondary)
+            runSecondaryCommit();
+        return true;
+    }
+    if (!m_lockedOp)
+        return false;
     feedRawUp(m_lockedOp, s);
     if (s.role == PointerRole::Secondary)
         runSecondaryCommit();
@@ -240,6 +277,7 @@ void InputHub::dispatchPointerCancel()
 void InputHub::cancelAll()
 {
     endHover();
+    m_travelDeferred = false;
     if (!m_lockedOp)
         return;
     feedRawCancel(m_lockedOp);
@@ -274,6 +312,7 @@ bool InputHub::dispatchPinchBegin(qreal x, qreal y, qreal scale)
     if (!m_secondary.armed())
         return false;
     endHover();
+    m_caps.clearPasteOrigin();
     if (m_lockedOp)
         cancelAll();
 

@@ -4,6 +4,7 @@
  * InputHub — Interaction Router demux (ADR-0033).
  * Unified pointer/pinch dispatch; Operations own gesture bodies.
  * @implements [SRS-EP-04] @implements [SRS-EP-21]
+ * @implements [SRS-EP-11] SelectionMode tap vs travel
  */
 
 #include "host_caps.hpp"
@@ -23,13 +24,18 @@ namespace tools {
 
 class InputHub {
 public:
+    InputHub() = default;
+    ~InputHub() = default;
+    InputHub(const InputHub &) = delete;
+    InputHub &operator=(const InputHub &) = delete;
+
     void setHostCaps(HostCaps caps) { m_caps = caps; }
     HostCaps &hostCaps() { return m_caps; }
     const HostCaps &hostCaps() const { return m_caps; }
 
     DeviceMap &deviceMap() { return m_devices; }
     const DeviceMap &deviceMap() const { return m_devices; }
-    void setDeviceMap(DeviceMap map) { m_devices = map; }
+    void setDeviceMap(DeviceMap map) { m_devices = std::move(map); }
 
     SecondaryDeviceModifier &secondary() { return m_secondary; }
     const SecondaryDeviceModifier &secondary() const { return m_secondary; }
@@ -83,6 +89,8 @@ private:
     void feedRawUp(Operation *op, const PointerSample &s);
     void feedRawCancel(Operation *op);
     void runSecondaryCommit();
+    bool selectionTravelDefer() const;
+    void tapSelect(const PointerSample &s);
 
     HostCaps m_caps;
     DeviceMap m_devices;
@@ -93,6 +101,8 @@ private:
     std::unordered_map<int, std::unique_ptr<Operation>> m_ops;
     std::vector<HitRegion> m_hits;
     std::vector<Intervention> m_interventions;
+    bool m_travelDeferred = false;
+    PointerSample m_downSample;
 };
 
 } // namespace tools

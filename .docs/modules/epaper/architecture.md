@@ -159,7 +159,7 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 - [ADR-0036](../../adr/ADR-0036-toolcanvas-live-overlay.md) — ToolCanvas live overlay: append-only dashed raster, blit on paint, 80% off UI; connector UX2 is not DFS
 - **Implementation view:** [tool-system/](./tool-system/index.md) — current `epaper/drawing/tools/` catalog, routing, how to add tools
 - [ADR-0029](../../adr/ADR-0029-independent-cameras-viewport-follow.md) — independent cameras + exclusive one-way follow (supersedes [ADR-0023](../../adr/ADR-0023-viewport-last-writer.md))
-- [ADR-0024](../../adr/ADR-0024-in-document-clipboard.md) — in-document clipboard (one slot)
+- [ADR-0037](../../adr/ADR-0037-device-clipboard-singleton.md) — clipboard singleton + tap-origin paste (supersedes [ADR-0024](../../adr/ADR-0024-in-document-clipboard.md))
 - [ADR-0025](../../adr/ADR-0025-barrel-vs-eraser-nib.md) — barrel channel ≠ eraser nib
 - [ADR-0026](../../adr/ADR-0026-endpoint-ink-membership.md) — endpoint-ink vs spine vs empty
 - [ADR-0027](../../adr/ADR-0027-attachment-t-rest-spine.md) — attachment `t` on rest spine

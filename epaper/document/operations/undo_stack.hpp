@@ -24,6 +24,8 @@ struct UndoRingEntry {
     std::vector<std::unique_ptr<DocEdit>> inverses;
     std::vector<UndoTarget> targets;
     std::vector<std::unique_ptr<DocEdit>> counterparts;
+    /** @implements [SRS-EP-31] clipboard cut/paste skip doc_change */
+    bool skipPublish = false;
 };
 
 class UndoStack {

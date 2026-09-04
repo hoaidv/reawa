@@ -2,6 +2,7 @@ import QtQuick
 
 // Selection overlay: action strip + visual-only resize knobs (HitTarget lives on the hub).
 // @implements [SRS-EP-12]
+// @implements [SRS-EP-32] Selected + tap-origin paste strips
 Item {
     id: root
     property var bar
@@ -119,10 +120,77 @@ Item {
         }
     }
 
+    Row {
+        id: tapStrip
+        readonly property real tile: 64
+        visible: bar && bar.tapPasteAtOrigin && bar.actions.count > 0
+        x: {
+            if (!bar)
+                return 0
+            return Math.min(Math.max(0, bar.tapOrigin.x), Math.max(0, root.width - width))
+        }
+        y: {
+            if (!bar)
+                return 0
+            return Math.min(Math.max(0, bar.tapOrigin.y), Math.max(0, root.height - height))
+        }
+        spacing: 0
+        z: 24
+
+        Repeater {
+            model: bar && bar.tapPasteAtOrigin ? bar.actions : null
+            delegate: Rectangle {
+                width: tapStrip.tile
+                height: tapStrip.tile
+                color: "white"
+                border.color: "black"
+                border.width: model.enabled ? 2 : 1
+
+                Image {
+                    anchors.centerIn: parent
+                    width: parent.width * 0.62
+                    height: parent.height * 0.62
+                    fillMode: Image.PreserveAspectFit
+                    smooth: false
+                    visible: model.icon.length > 0
+                    source: model.icon
+                }
+                Text {
+                    anchors.fill: parent
+                    anchors.margins: 4
+                    visible: model.icon.length === 0
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 12
+                    color: "black"
+                    text: model.label
+                }
+                TapHandler {
+                    acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+                    acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                    grabPermissions: PointerHandler.CanTakeOverFromItems
+                                     | PointerHandler.ApprovesCancellation
+                    enabled: model.enabled
+                    onTapped: bar.trigger(model.actionId)
+                }
+            }
+        }
+    }
+
     Text {
         visible: bar && bar.refuseReason.length > 0
-        x: strip.visible ? strip.x : 24
-        y: strip.visible ? strip.y + strip.height + 6 : 80
+        x: {
+            if (tapStrip.visible)
+                return tapStrip.x
+            return strip.visible ? strip.x : 24
+        }
+        y: {
+            if (tapStrip.visible)
+                return tapStrip.y + tapStrip.height + 6
+            return strip.visible ? strip.y + strip.height + 6 : 80
+        }
         font.pixelSize: 16
         color: "black"
         text: bar ? bar.refuseReason : ""

@@ -24,7 +24,7 @@ Semantics inherited from the deprecated infini sections [SRS-IN-10], [SRS-IN-11]
   [SRS-EP-11] selection, hit-test, live manipulation ·
   [SRS-EP-21] one-finger pick/move ([REQ-10](../../prd.md#hand-touch))
 - UI: [srs-ui.md](./srs-ui.md) — [SRS-EP-12] selection overlay ·
-  [SRS-EP-22] hand-touch chrome · [SRS-EP-32] clipboard affordances
+  [SRS-EP-22] hand-touch chrome · [SRS-EP-32] clipboard affordances (needs_design: no)
 - Quality: [srs-quality.md](./srs-quality.md) — [SRS-EP-14] create/manipulate bars ·
   [SRS-EP-25] one-finger hand-touch bars
 - BDD: [bdd/](./bdd/) — inherited from the deprecated infini features and re-tagged

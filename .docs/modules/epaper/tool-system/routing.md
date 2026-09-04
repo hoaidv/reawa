@@ -45,6 +45,10 @@ flowchart TD
 Down match tries **HitTarget** then **RawPointer** (resize knobs beat body move beat canvas
 lasso/ink).
 
+### Tap vs travel (SelectionMode)
+
+[SRS-EP-11](../features/ink-box/srs-logic.md#srs-ep-11-hold-still) / [ADR-0037](../../adr/ADR-0037-device-clipboard-singleton.md): lock may occur on down, but Move / Lasso / Marquee / Resize **must not mutate** until panel travel **> 1 mm**. Lift with travel ≤ 1 mm: tap-select (Primary and Secondary) and record paste origin. **No** 500 ms hold menu. 1 mm ≈ 8.9 du @ 226 dpi.
+
 ## Match order (hub)
 
 Fixed scan in `input_hub.cpp` (priority still decides among those that match):

@@ -271,34 +271,50 @@ No pan-mode tool, no “hand tool” tile. Resize knobs are the existing overlay
 ## [SRS-EP-32] Clipboard affordances {#srs-ep-32-clipboard-ui}
 
 <!-- lifecycle: active -->
-<!-- needs_design: yes -->
+<!-- needs_design: no -->
 
-**Parent:** [REQ-12](../../prd.md#clipboard). **Logic:** [SRS-EP-31](../device-document/srs-logic.md#srs-ep-31-clipboard). **Quality:** [SRS-EP-33](../device-document/srs-quality.md#srs-ep-33-clipboard-quality). **Platform:** epaper-device.
+**Parent:** [REQ-12](../../prd.md#clipboard). **Product:** [SRS-EP-73](../clipboard/srs-product.md#srs-ep-73-clipboard-product). **Logic:** [SRS-EP-31](../device-document/srs-logic.md#srs-ep-31-clipboard). **Quality:** [SRS-EP-33](../device-document/srs-quality.md#srs-ep-33-clipboard-quality). **Hold routing:** [SRS-EP-11](./srs-logic.md#srs-ep-11-hold-still) tap vs travel (no 500 ms menu). **Platform:** epaper-device. Chrome **frozen** — no design story.
 
 ### Purpose
 
-Copy / cut / paste the **current selection** on-device. Not OS paste, not a second clipboard UI on Infini.
+Copy / cut the **current selection** from the Selected strip. Paste from the **same** toolbar when the slot is non-empty **and** a tap location exists. Not OS paste, not ToolChip, not Infini chrome, not long-press.
 
 ### Closed control inventory
 
-| id | Kind | Enabled when |
-|---|---|---|
-| `cta.copy` | action | Selection non-empty |
-| `cta.cut` | action | Selection non-empty |
-| `cta.paste` | action | Slot non-empty |
-| `ind.clipboard_empty` | indicator | Paste invoked or shown while slot empty — no-op; **0** banners required |
+| id | Kind | Surface | Visible / enabled when |
+|---|---|---|---|
+| `cta.copy` | action | Selected context toolbar | SelectionMode + `SelectionPhase::Selected` + non-empty ids |
+| `cta.cut` | action | Selected context toolbar | same as copy |
+| `cta.paste` | action | Same toolbar (or paste-only strip on empty tap) | Slot non-empty **and** a tap location exists |
+| `ind.paste_onto_originals` | refuse | Same toolbar | Paste refused because tap/parent is a live source — enclose-style string; slot kept |
 
-Placement: selection overlay **or** chip cluster — Designer; must stay ≥64 du if finger-eligible. Offset **(24 u, 24 u)** is logic — do not invent a drag-to-place paste in v1.
+Tiles ≥64 du. **No** ToolChip row. **No** hold / long-press strip.
+
+### Two entry points (SelectionMode only: `sel_rect` and `sel_freeform`)
+
+| Entry | When | Actions | Placement |
+|---|---|---|---|
+| Selected (tap a node) | `SelectionPhase::Selected` **and** tap location | copy, cut, paste (paste if slot non-empty) | Existing selection AABB strip |
+| Empty tap | Selection empty **and** tap location **and** slot non-empty | paste only | Toolbar at the tap panel point, then **clamped**. Clamp does not move paste origin. |
+| Freeform / marquee | Real gesture (not a tap) | copy, cut if selected; **no paste** | Selection AABB; tap location cleared |
+
+### Dismiss / clear tap location
+
+Freeform / marquee gesture · pan · mode switch · camera pan/zoom · successful paste. A new tap replaces the location. No extra timeout.
 
 ### States
 
-`clip.idle` · `clip.copied` · `clip.cut` · `clip.pasted` · `clip.empty_paste_noop` · `clip.undo_after_cut_paste`
+`clip.idle` · `clip.copied` · `clip.cut` · `clip.tap_toolbar` · `clip.pasted` · `clip.empty_tap_noop` · `clip.refuse_live_original` · `clip.undo_after_cut_paste`
 
 ### Anti-patterns
 
 - macOS pasteboard affordance
 - Multi-slot clipboard
-- Inventing paste offset in the Spec
+- Long-press / hold-toolbar paste
+- ToolChip / barrel paste
+- Paste after freeform / marquee (no tap location)
+- Moving paste origin when clamping the toolbar
+- Inventing +24 world offset
 
 ---
 

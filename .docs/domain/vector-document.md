@@ -140,7 +140,7 @@ The connector remains **not** a spatial parent. Attachment world pose is derived
 
 ## Device clipboard (not a document node)
 
-The in-document clipboard slot is **session state on Epaper**, not a tree kind and not SVG ([ADR-0024](../adr/ADR-0024-in-document-clipboard.md)). Infini never authors it; it only applies the `duplicate_subtree` / `remove` ops that paste and cut publish. The **session undo stack** is also device-local (one document-epoch LIFO pair, depth 20); Infini has none ([SRS-IN-12](../modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) stays deprecated).
+The in-document clipboard slot is a **process-global singleton on Epaper**, not a tree kind, not SVG, and not a field of `DeviceDocument` ([ADR-0037](../adr/ADR-0037-device-clipboard-singleton.md)). Infini does not author it. Cut/paste **do not publish** this track; Infini apply of the resulting tree edits is a later track. The **session undo stack** is also device-local (one document-epoch LIFO pair, depth 20); Infini has none ([SRS-IN-12](../modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) stays deprecated).
 
 ## Ownership and authority
 

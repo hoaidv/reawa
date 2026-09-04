@@ -31,7 +31,7 @@ public:
     std::vector<OperationKind> primaryOps() const override
     {
         return {OperationKind::Resize, OperationKind::Move, OperationKind::Lasso,
-                OperationKind::Marquee};
+                OperationKind::Marquee, OperationKind::Select};
     }
 
     std::vector<OperationKind> secondaryOps() const override

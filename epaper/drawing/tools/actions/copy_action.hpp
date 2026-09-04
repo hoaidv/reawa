@@ -1,13 +1,17 @@
 #pragma once
 
 /**
- * Copy — visible on non-empty selection; clipboard not wired yet.
- * @implements [SRS-EP-12]
+ * Copy — clone selection roots into the process-global slot.
+ * @implements [SRS-EP-31] clipboard copy
+ * @implements [SRS-EP-32] cta.copy
  */
 
 #include "action.hpp"
+#include "../clipboard.hpp"
 #include "../host_caps.hpp"
 #include "../contexts/selection_context.hpp"
+#include "../contexts/doc_context.hpp"
+#include "../contexts/tool_context.hpp"
 
 namespace epaper {
 namespace tools {
@@ -22,8 +26,15 @@ public:
         return caps.selection && caps.selection->phase() == SelectionPhase::Selected
             && !caps.selection->ids().empty();
     }
-    bool enabled(const HostCaps &) const override { return false; }
-    void trigger(HostCaps &) override {}
+    bool enabled(const HostCaps &caps) const override { return visible(caps); }
+    void trigger(HostCaps &caps) override
+    {
+        if (!visible(caps) || !caps.doc)
+            return;
+        clipops::copyToSlot(caps.doc->document(), caps.selection->ids(), clipboard());
+        if (caps.toolUi)
+            caps.toolUi->refreshChrome();
+    }
 };
 
 } // namespace tools

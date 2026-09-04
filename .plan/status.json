@@ -1,15 +1,15 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-08-31T16:41:45+00:00",
+  "generated_at": "2026-09-04T14:45:50+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 13,
+    "draft": 11,
     "ready": 4,
     "in-progress": 0,
-    "in-review": 0,
+    "in-review": 1,
     "done": 140,
     "blocked": 13,
-    "cancelled": 6
+    "cancelled": 7
   },
   "by_module": {
     "reawa": {
@@ -20,7 +20,7 @@
     "epaper": {
       "total": 72,
       "done": 46,
-      "in_review": 0
+      "in_review": 1
     },
     "infini": {
       "total": 38,
@@ -30,7 +30,7 @@
   },
   "open_challenges": 3,
   "resolved_challenges_this_iter": 3,
-  "sync_orphans": 57,
+  "sync_orphans": 58,
   "master_plan": true,
   "tracks": [
     {

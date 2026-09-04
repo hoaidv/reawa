@@ -36,17 +36,19 @@ public:
     std::string status = "open";
 
     ApplyResult apply(DocEdit &edit);
-    ApplyResult commitEdit(DocEdit &edit);
+    ApplyResult commitEdit(DocEdit &edit, bool enqueue = true);
     ApplyResult applyJson(const JsonValue &j);
     ApplyResult commitJson(const JsonValue &j);
 
     /**
      * One gesture, N edits, one undo entry, one doc_change (compound if N>1).
      * @implements [SRS-EP-08] compound publish of a multi-inverse gesture
+     * @implements [SRS-EP-31] enqueue=false keeps cut/paste off the wire
      */
-    ApplyResult commitGesture(const std::string &opId, std::vector<std::unique_ptr<DocEdit>> parts)
+    ApplyResult commitGesture(const std::string &opId, std::vector<std::unique_ptr<DocEdit>> parts,
+                              bool enqueue = true)
     {
-        return commitParts(opId, std::move(parts));
+        return commitParts(opId, std::move(parts), enqueue);
     }
 
     /**
@@ -156,21 +158,6 @@ public:
     double viewportPanX() const { return m_panX; }
     double viewportPanY() const { return m_panY; }
     const std::string &uiTool() const { return m_tool; }
-
-    /**
-     * Copy clones into the session slot. 0 ring entries.
-     * @implements [SRS-EP-07] copy does not push undo
-     */
-    void copyToClipboard(const std::vector<std::string> &ids)
-    {
-        m_clipboard.clear();
-        for (const auto &id : ids) {
-            const DocNode *n = find(id);
-            if (n)
-                m_clipboard.push_back(*n);
-        }
-    }
-    const std::vector<DocNode> &clipboardSlot() const { return m_clipboard; }
 
     /**
      * Last-live-pose cache when an endpoint is missing. Does not bump lastOpId.
@@ -295,7 +282,6 @@ private:
     double m_panY = 0;
     std::string m_tool = "pen";
     std::string m_selectionId;
-    std::vector<DocNode> m_clipboard;
 
     void enqueueChange(JsonValue envelope)
     {
@@ -346,7 +332,8 @@ private:
         return n;
     }
 
-    ApplyResult commitParts(const std::string &opId, std::vector<std::unique_ptr<DocEdit>> parts);
+    ApplyResult commitParts(const std::string &opId, std::vector<std::unique_ptr<DocEdit>> parts,
+                            bool enqueue = true);
 
     static bool findPlaceIn(const std::vector<DocNode> &nodes, const std::string &id,
                             const std::string &parentId, NodePlace *out)
@@ -1038,14 +1025,16 @@ inline UndoResult DeviceDocument::applyHistoryEntry(UndoRingEntry e, bool isUndo
             compound.addPart(std::move(a));
         pub = compound.serialize();
     }
-    enqueueChange(std::move(pub));
+    if (!e.skipPublish)
+        enqueueChange(std::move(pub));
 
     UndoRingEntry other;
     other.forwardOpId = e.forwardOpId;
-    other.seq = m_lastSeq;
+    other.seq = e.skipPublish ? e.seq : m_lastSeq;
     other.inverses = std::move(e.counterparts);
     other.counterparts = std::move(e.inverses);
     other.targets = std::move(e.targets);
+    other.skipPublish = e.skipPublish;
     m_history.pushOther(isUndo, std::move(other));
     return {true, false, false, false};
 }
@@ -1111,7 +1100,7 @@ inline void flattenInverses(std::unique_ptr<DocEdit> inv, std::vector<std::uniqu
     out->push_back(std::move(inv));
 }
 
-inline ApplyResult DeviceDocument::commitEdit(DocEdit &edit)
+inline ApplyResult DeviceDocument::commitEdit(DocEdit &edit, bool enqueue)
 {
     if (kindEq(edit.kind(), edit_kind::kCompound)) {
         auto *c = dynamic_cast<CompoundEdit *>(&edit);
@@ -1122,7 +1111,7 @@ inline ApplyResult DeviceDocument::commitEdit(DocEdit &edit)
             if (p)
                 parts.push_back(p->clone());
         }
-        return commitParts(edit.id(), std::move(parts));
+        return commitParts(edit.id(), std::move(parts), enqueue);
     }
     if (edit.id().empty())
         return {false, "missing_opId"};
@@ -1133,6 +1122,7 @@ inline ApplyResult DeviceDocument::commitEdit(DocEdit &edit)
         pending.counterparts.push_back(edit.clone());
         flattenInverses(edit.generateUndo(*this), &pending.inverses);
         pending.targets = captureTargets(edit.targets());
+        pending.skipPublish = !enqueue;
         m_history.popOldestIfFull();
         m_history.pushUndo(std::move(pending));
     }
@@ -1151,8 +1141,10 @@ inline ApplyResult DeviceDocument::commitEdit(DocEdit &edit)
     status = "dirty";
     if (structural) {
         stampLastOpId(m_history.undoBack().targets, edit.id());
-        enqueueChange(edit.serialize());
-        m_history.undoBack().seq = m_lastSeq;
+        if (enqueue) {
+            enqueueChange(edit.serialize());
+            m_history.undoBack().seq = m_lastSeq;
+        }
         m_history.clearRedo();
     }
     m_intermediateFrames = 0;
@@ -1162,7 +1154,8 @@ inline ApplyResult DeviceDocument::commitEdit(DocEdit &edit)
 }
 
 inline ApplyResult DeviceDocument::commitParts(const std::string &opId,
-                                               std::vector<std::unique_ptr<DocEdit>> parts)
+                                               std::vector<std::unique_ptr<DocEdit>> parts,
+                                               bool enqueue)
 {
     if (parts.empty())
         return {false, "empty_gesture"};
@@ -1175,6 +1168,7 @@ inline ApplyResult DeviceDocument::commitParts(const std::string &opId,
 
     UndoRingEntry pending;
     pending.forwardOpId = opId;
+    pending.skipPublish = !enqueue;
     std::vector<std::vector<std::unique_ptr<DocEdit>>> invParts;
     invParts.reserve(parts.size());
     for (auto &part : parts) {
@@ -1228,8 +1222,10 @@ inline ApplyResult DeviceDocument::commitParts(const std::string &opId,
             compound.addPart(std::move(p));
         pub = compound.serialize();
     }
-    enqueueChange(std::move(pub));
-    m_history.undoBack().seq = m_lastSeq;
+    if (enqueue) {
+        enqueueChange(std::move(pub));
+        m_history.undoBack().seq = m_lastSeq;
+    }
     m_history.clearRedo();
     m_intermediateFrames = 0;
     m_gestureInFlight = false;

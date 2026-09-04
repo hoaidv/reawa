@@ -61,7 +61,7 @@ Umbrella: `modifiers/tool_modifier.hpp` (`armed()`).
 ## Actions (selection strip)
 
 [`actions/action.hpp`](../../../epaper/drawing/tools/actions/action.hpp) — Enclose, InkScale, Cut,
-Copy, Paste. Cut/Copy/Paste chrome exists; clipboard wiring may still be incomplete. Host:
+Copy, Paste. Copy/cut on the Selected strip; paste on the same toolbar when the slot is non-empty and a tap location exists ([ADR-0037](../../adr/ADR-0037-device-clipboard-singleton.md)). Host:
 `ui/selection_context_bar.*` + `ui/SelectionContextToolbar.qml`.
 
 ## Contexts

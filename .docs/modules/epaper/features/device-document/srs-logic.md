@@ -487,25 +487,37 @@ Example (informative):
 
 <!-- lifecycle: active -->
 
-**Parent:** [REQ-12](../../prd.md#clipboard). **Decision:** [ADR-0024](../../../../adr/ADR-0024-in-document-clipboard.md). Slot shape: [SRS-EP-09](./srs-data.md) (device-local).
+**Parent:** [REQ-12](../../prd.md#clipboard). **Product:** [SRS-EP-73](../clipboard/srs-product.md#srs-ep-73-clipboard-product). **Decision:** [ADR-0037](../../../../adr/ADR-0037-device-clipboard-singleton.md) (supersedes [ADR-0024](../../../../adr/ADR-0024-in-document-clipboard.md)). Slot is a **process-global singleton**, not on `DeviceDocument` and not in [SRS-EP-09](./srs-data.md) as document-local state. Orchestration lives on `CopyAction` / `CutAction` / `PasteAction`; they may call low-level `DocContext` edits (`applyEdit` / `commitEdit`, dirty, history). **Do not** add `copySelection` / `cutSelection` / `pasteClipboard` to `DocContext`. **0** `doc_change` this track.
 
-| Op | Precondition | Document | Slot | Undo |
-|---|---|---|---|---|
-| Copy | Non-empty selection | Unchanged | Replaced with clone (old ids in slot) | **0** entries |
-| Cut | Non-empty selection | Selection removed (`remove_node`) | Replaced with clone | **1** — inverse restores stored originals at stored `{parentId, index}` |
-| Paste | Slot non-empty | Insert clones with **new ids**, AABB min += **(24 u, 24 u)**; clamp into `drawingRegion` if needed | Unchanged | **1** — removes copies |
-| Paste | Slot empty | **0** nodes change | Unchanged | **0** |
-| Copy/cut | Empty selection | No-op | Unchanged | **0** |
+| Op | Precondition | Document | Slot | Undo | Wire |
+|---|---|---|---|---|---|
+| Copy | SelectionMode + non-empty selection | Unchanged | Replaced with clone (source ids kept in slot) | **0** | **0** |
+| Cut | SelectionMode + non-empty selection | Selected **roots** removed (`remove_node` / `compound`); empty groups/SmartGroups **left** | Replaced with clone | **1** — inverse restores stored originals at stored `{parentId, index}` | **0** |
+| Paste | Slot non-empty; Paste on tap toolbar | Insert clones with **new ids**; union AABB **min** = tap world point; tap-hit legal parent or 20% ancestor walk; SmartGroup insert via `insertAt` (not `insertUnder`); free ink into a SmartGroup uses join-style local samples | Unchanged | **1** — removes copies (one entry even if parents differ) | **0** |
+| Paste | Slot empty | **0** nodes change | Unchanged | **0** | **0** |
+| Copy/cut | Empty selection | No-op | Unchanged | **0** | **0** |
+| Paste onto live originals | Tap hit **or** assigned parent is in the live copied source subtree | **0** nodes change; refuse on the toolbar | Unchanged | **0** | **0** |
 
-Cut then paste: undo paste `remove_node`s each pasted id (originals still gone, slot still full); second undo restores originals (inverse of cut’s `remove_node`). Geometry ±1 px @ 100% zoom vs source translated by the offset. Copy = **0** entries. No session: same local behaviour; cut/paste still satisfy [REQ-07](../../prd.md#one-way-sync) when linked (`duplicate_subtree` / `remove_node`; undo publishes counterpart / `compound`, never `restore_snapshot`). OS / cross-app paste **out**.
+### Clone grain
+
+Slot roots = selected ids that are **not** descendants of another selected id. If a root is selected and **no descendant is in the selection**, clone the **full subtree** (tap-select of a SmartGroup copies the box and its ink). If some descendants are also selected, keep only the selected-descendant spine (unselected siblings dropped). Children of a slot root are **not** extra paste roots. New ids are minted **only at paste** via `generateNodeId`. Opaque round-trip kinds copy as-is. Connectors: endpoint ids inside the slot remap; endpoints outside stay on live originals. Translating a SmartGroup moves **transform** only — children stay group-local.
+
+### Paste place and parent
+
+1. Translate the clone cluster as a rigid body so the **union AABB top-left** equals the **tap** world point. Toolbar clamp does not move this point. A SmartGroup translates via `transform` only.
+2. Hit-test at that world point with the same picker as tap-select. If the hit is **SmartGroup / Frame / Group**, that is the parent (tap on an ink-box parents into it). Else candidate parents = that node’s ancestors, same legal kinds, **20% overlap** vs natural boundary. Document root is **not** a 20% candidate — it is the fallback.
+3. Insert with `insertAt` (SmartGroup is not an `insertUnder` container). Free ink whose parent is a SmartGroup is converted to group-local samples + `layoutOffset` like draw-into membership.
+4. First match becomes that root’s parent; if none match, parent = document root. One paste may assign **different** parents; still one undo entry.
+
+Cut then paste: undo paste removes each pasted id (originals still gone, slot still full); second undo restores originals. Geometry ±1 px @ 100% zoom vs the translated cluster at the press. Copy = **0** entries. OS / cross-app paste **out**.
 
 ### UI-driving fields
 
 | Field | Drives |
 |---|---|
-| `selection.empty` | Enable copy/cut |
-| `clipboard.empty` | Enable paste |
-| `clipboard.offset` | **24, 24** world — Designer must not invent a different default |
+| `selection.empty` | Enable copy/cut on the **Selected** strip |
+| `clipboard.empty` | Enable paste on the tap toolbar |
+| `clipboard.tapWorld` | Paste union AABB top-left — logic, not Designer |
 
 ---
 
