@@ -61,6 +61,10 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-EP-044](./stories/STORY-EP-044.md) — 8 — clipboard ops — **done** (human-verified 2026-09-04)
 - [STORY-EP-046](./stories/STORY-EP-046.md) — 5 — Path A end styles · depends EP-045 — **blocked**
 - [STORY-EP-047](./stories/STORY-EP-047.md) — 5 — Path B endpoint ink — **done** (human-verified 2026-09-05)
+- [STORY-EP-074](./stories/STORY-EP-074.md) — 8 — nested ink-box render + tap — **in-review**
+- [STORY-EP-075](./stories/STORY-EP-075.md) — 5 — nested enclose + flatten — **in-review**
+- [STORY-EP-076](./stories/STORY-EP-076.md) — 5 — move-commit reparent — **in-review**
+- [STORY-EP-077](./stories/STORY-EP-077.md) — 3 — clip nested content to natural AABB — **in-review**
 - [STORY-EP-049](./stories/STORY-EP-049.md) — 5 — attachments warp · depends EP-048
 - [STORY-EP-051](./stories/STORY-EP-051.md) — 8 — manual insert · depends EP-050
 - [STORY-EP-052](./stories/STORY-EP-052.md) — 5 — barrel dispatch · depends EP-056

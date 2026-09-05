@@ -28,7 +28,12 @@ Logic: [SRS-EP-10 / SRS-EP-11](./srs-logic.md). Document budgets:
 | Membership side effects | Existing content inks moved | **0** |
 | Nested candidates | Dual-parented ink | **0**; highest paint order wins every time |
 | Selection-create refusal | Boxes created without a qualifying surround | **0**, reason visible |
-| Consecutive encloses (10 in sequence) | Correct boxes | 10 / 10 — **0** desync, **0** lost boxes (**CHL-0007 regression**) |
+| Nested tap after camera change | Child selectable / movable / resizable | **100%** of a 5-nest fixture; 0 “visible but dead” ([CHL-0032](../../../../../.plan/iter-005/challenges/CHL-0032-nested-ink-box.md)) |
+| Empty-child flatten | Empty wrappers remaining after enclose/paste-into-box | **0**; letter ink is parent `content` |
+| Marquee over nested cluster | Nested children independently selected | **0** |
+| Move-commit reparent | Parent after ≥80% natural area inside another box | That highest-paint container; else document root |
+| Nested paint vs ancestor move | Child world pose vs composed outcome | ±1 world unit @ 100% zoom |
+| Content outside parent natural AABB | Painted polylines / tap hits on overflow | **0** (AABB clip, not boundary-ink even-odd) |
 
 ### Manipulation
 

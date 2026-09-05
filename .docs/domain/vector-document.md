@@ -2,7 +2,7 @@
 title: Vector document — shared domain model
 lifecycle: active
 owner: architect
-source: [ADR-0010, ADR-0011, ADR-0014, ADR-0032]
+source: [ADR-0010, ADR-0011, ADR-0014, ADR-0032, ADR-0039]
 implemented_by:
   - epaper — device-side working document (C++/Qt)
   - infini — mirror + persistence (TypeScript)
@@ -31,7 +31,7 @@ Authority: [ADR-0010](../adr/ADR-0010-tree-of-vectors.md) (structure) ·
 | `Group` | Children, nestable anywhere | World-space children in v0 (no local transform) |
 | `Frame` | Children, **root only** | Artboard / work-area metaphor |
 | `Connector` | References two node ids; rest spine; warp style; per-end terminal; optional attachments | Endpoints attach to a node's **boundary**. Terminal + attachments: below |
-| `SmartGroup` | Ink children tagged `role: content \| boundary` | The ink-box — see below |
+| `SmartGroup` | Ink (`role: content \| boundary`) **and nested SmartGroup** children | The ink-box — see below. [ADR-0039](../adr/ADR-0039-nested-ink-box-rendering.md) |
 
 ### Invariants
 
@@ -60,14 +60,15 @@ children until a later ADR.
 
 | Aspect | Rule |
 |---|---|
-| Children | `Ink` only in v0, each tagged `role: content` or `role: boundary` |
-| `bounds` | Axis-aligned `(x, y, width, height)` in local space; recognized once at creation, updated on transform. Drives handles, hit-testing, connector ports |
-| Boundary ink | The creator's own enclose / surround stroke, preserved. **Always** transforms with the frame, never gated by `inkScaleMode`, never replaced by a synthetic rectangle. Brush/area may **clip** this ink ([ADR-0034](../adr/ADR-0034-erase-clip-remnants.md)); a broken surround is allowed |
+| Children | `Ink` tagged `role: content` or `role: boundary`, **and nested `SmartGroup`**. **Empty** = only boundary-role Ink (no content-role children, no nested groups). Empty children flatten into the parent as free content ink ([ADR-0039](../adr/ADR-0039-nested-ink-box-rendering.md)) |
+| `bounds` | Axis-aligned `(x, y, width, height)` in **this group’s** local space; recognized once at creation, updated on transform. Drives handles, hit-testing, connector ports |
+| Boundary ink | The creator's own enclose / surround stroke, preserved. **Always** transforms with the frame (`outcome` affine), never gated by `inkScaleMode`, never replaced by a synthetic rectangle. Brush/area may **clip** this ink ([ADR-0034](../adr/ADR-0034-erase-clip-remnants.md)); a broken surround is allowed |
 | Boundary polyline | Invisible closed polyline seeded at create from the enclose stroke. Transforms/resizes **with** boundary ink. **Persisted.** Never clipped by erase. Object-erase 80% uses this polygon’s **area** |
-| Transform | `{ translate, rotation, scaleX, scaleY }`; children authored in group-local coordinates. World draw = `groupTransform ∘ localSample` |
-| `inkScaleMode` | `withBounds` (default) — content scales with the group · `fixedInk` — content keeps sample size and tracks the box by its own UV |
+| Transform | `{ translate, rotation, scaleX, scaleY }` — the node’s **own-transform**. Children authored in group-local coordinates. World paint = `RenderingContext.transform ∘ own` ([ADR-0039](../adr/ADR-0039-nested-ink-box-rendering.md)). Ordinary `Group` / `Frame` remain world-space-children |
+| `inkScaleMode` | `withBounds` (default) — content (and nested children’s context) scales with the group · `fixedInk` — content keeps sample size; nested context omits this group’s S |
 | `layoutOffset: {u, v}` | Per **content** ink. `u = (cx − bounds.x)/width`, `v = (cy − bounds.y)/height` of that ink's AABB centroid in group-local space, seeded at create / membership / selection-create |
 | Connector target | Anchors use the geometric `bounds`, not the wiggly ink path |
+| Natural area | Area of local `bounds` (SmartGroup) or sample AABB (Ink), after the node’s full world outcome. Used for enclose capture of boxes and for move-commit reparent (80%) |
 
 **`fixedInk` placement rule.** On a bounds or scale change: do **not** scale content samples; place
 each content ink so its centroid sits at `(bounds.x + u·width, bounds.y + v·height)`, then apply
@@ -78,16 +79,24 @@ siblings. No reflow, no alignment, no OCR.
 
 | Path | Rule |
 |---|---|
-| **Enclose** (tool-armed) | A roughly rectangular stroke, evaluated at pen-up. Guards: fitted rect ≥ **48 world units** on the shorter side **and** contains ≥1 ink with ≥80% of its samples inside. Enclose stroke → `boundary`; contained ink → `content`; `bounds` = fitted rect |
-| **Selection** (explicit) | One selected stroke must contain ≥80% of each other selected stroke's samples. It may be **open** — build an artificial closed path for the containment test only, never mutating stored samples. That stroke → `boundary`; the rest → `content`. **No qualifying surround stroke → refuse**; there is no AABB-only SmartGroup |
+| **Enclose** (tool-armed) | A roughly rectangular stroke, evaluated at pen-up. Guards: fitted rect ≥ minimum on the shorter side **and** contains ≥1 capturable (free ink ≥80% samples **or** SmartGroup ≥80% natural area). Enclose stroke → `boundary`; contained free ink → `content`; non-empty Smart Groups nest; **empty** Smart Groups flatten to their boundary ink as content; `bounds` = fitted rect |
+| **Selection** (explicit) | One selected **free** stroke must contain ≥80% of each other selected free ink's samples. It may be **open** — build an artificial closed path for the containment test only. That stroke → `boundary`; remaining free ink → `content`; selected non-empty Smart Groups nest; empty ones flatten. **No qualifying surround stroke → refuse**; there is no AABB-only SmartGroup. Nesting is **not** a refuse reason |
 | **Never unprompted** | A rectangle drawn with the plain pen tool is ordinary ink, always |
 
 ### Draw-into membership
 
-At `stroke_end` for ordinary ink: candidate SmartGroups are those whose **world** `bounds` contain
-≥80% of the new stroke's samples. None → the ink stays where it is. One or more → reparent as
+At `stroke_end` for ordinary ink: candidate SmartGroups are those whose **world** boundary ink contains
+≥80% of the new stroke's polyline length. None → the ink stays where it is. One or more → reparent as
 `content` under the candidate with the highest paint order (later sibling wins; nested boxes resolve
 the same way). Membership never shifts, realigns, or reflows existing content.
+
+### RenderingContext (nested paint)
+
+World `ctx.transform = identity`. Each SmartGroup: `outcome = ctx.transform ∘ own-transform`.
+Boundary uses `outcome`. Content / nested children receive `content-outcome` (`withBounds` = `outcome`;
+`fixedInk` = ancestor linear **without** this group’s scale). Content is **clipped** to the group’s
+natural world AABB (axis-aligned hull of local `bounds` after outcome); overflow is not painted.
+See [ADR-0039](../adr/ADR-0039-nested-ink-box-rendering.md).
 
 ## Operations
 

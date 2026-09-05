@@ -5,7 +5,7 @@ status: accepted
 date: 2026-08-11
 deciders: [architect, pm]
 supersedes: null
-amended_by: ADR-0013
+amended_by: [ADR-0013, ADR-0039]
 ---
 
 # ADR-0011 — Smart Group (ink-box) pilot

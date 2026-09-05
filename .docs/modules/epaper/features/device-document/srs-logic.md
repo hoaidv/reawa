@@ -507,7 +507,7 @@ Slot roots = selected ids that are **not** descendants of another selected id. I
 
 1. Translate the clone cluster as a rigid body so the **union AABB top-left** equals the **tap** world point. Toolbar clamp does not move this point. A SmartGroup translates via `transform` only.
 2. Hit-test at that world point with the same picker as tap-select. If the hit is **SmartGroup / Frame / Group**, that is the parent (tap on an ink-box parents into it). Else candidate parents = that node’s ancestors, same legal kinds, **20% overlap** vs natural boundary. Document root is **not** a 20% candidate — it is the fallback.
-3. Insert with `insertAt` (SmartGroup is not an `insertUnder` container). Free ink whose parent is a SmartGroup is converted to group-local samples + `layoutOffset` like draw-into membership.
+3. Insert with `insertAt` (SmartGroup is not an `insertUnder` container). Free ink whose parent is a SmartGroup is converted to group-local samples + `layoutOffset` like draw-into membership. A pasted **empty** SmartGroup **flattens** ([SRS-EP-75](../ink-box/srs-logic.md#srs-ep-75-nested-membership)); a non-empty pasted SmartGroup stays nested and must be tap-selectable ([SRS-EP-77](../ink-box/srs-logic.md#srs-ep-77-nested-hit-reparent)).
 4. First match becomes that root’s parent; if none match, parent = document root. One paste may assign **different** parents; still one undo entry.
 
 Cut then paste: undo paste removes each pasted id (originals still gone, slot still full); second undo restores originals. Geometry ±1 px @ 100% zoom vs the translated cluster at the press. Copy = **0** entries. OS / cross-app paste **out**.

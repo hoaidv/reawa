@@ -10,6 +10,8 @@
 
 #include "device_document.hpp"
 #include "enclose_shape.hpp"
+#include "affine.hpp"
+#include "nested_flatten.hpp"
 #include "ingest_stroke.hpp"
 
 #include <algorithm>
@@ -141,30 +143,23 @@ inline std::pair<double, double> seedLayoutOffset(const std::vector<InkSample> &
  */
 inline Vec2 smartLocalToWorld(double localX, double localY, const DocNode &sg, const std::string &role,
                               const std::optional<std::pair<double, double>> &layoutOffset,
+                              const Vec2 *contentMin, const Affine &ctx)
+{
+    Affine used = (role == "content" && sg.inkScaleMode == "fixedInk")
+        ? affineCompose(ctx, affineTR(sg.transform))
+        : affineCompose(ctx, affineOwn(sg.transform));
+    (void)layoutOffset;
+    (void)contentMin;
+    Vec2 w;
+    used.apply(localX, localY, &w.x, &w.y);
+    return w;
+}
+
+inline Vec2 smartLocalToWorld(double localX, double localY, const DocNode &sg, const std::string &role,
+                              const std::optional<std::pair<double, double>> &layoutOffset,
                               const Vec2 *contentMin)
 {
-    const SmartTransform &t = sg.transform;
-    double x = localX;
-    double y = localY;
-    if (role == "content" && sg.inkScaleMode == "fixedInk") {
-        (void)layoutOffset;
-        (void)contentMin;
-        // Keep-size: unscaled, stay at local (x,y) in the parent — do not pin to (0,0).
-        return {localX + t.x, localY + t.y};
-    }
-    if (role == "boundary" || sg.inkScaleMode == "withBounds") {
-        x *= t.scaleX != 0 ? t.scaleX : 1.0;
-        y *= t.scaleY != 0 ? t.scaleY : 1.0;
-    }
-    if (t.rotation != 0) {
-        const double csn = std::cos(t.rotation);
-        const double sn = std::sin(t.rotation);
-        const double rx = x * csn - y * sn;
-        const double ry = x * sn + y * csn;
-        x = rx;
-        y = ry;
-    }
-    return {x + t.x, y + t.y};
+    return smartLocalToWorld(localX, localY, sg, role, layoutOffset, contentMin, affineIdentity());
 }
 
 /**
@@ -195,23 +190,48 @@ inline Vec2 smartWorldToLocal(double worldX, double worldY, const DocNode &sg,
     return {x / sx, y / sy};
 }
 
-/** World AABB of SmartGroup geometric bounds after translate + scale (v0). */
-inline SmartBounds smartGroupWorldBounds(const DocNode &sg)
+/** World AABB of SmartGroup geometric bounds after compose. */
+inline SmartBounds smartGroupWorldBounds(const DocNode &sg, const Affine &ctx)
 {
     SmartBounds w;
     const SmartBounds &b = sg.smartBounds;
-    const SmartTransform &t = sg.transform;
-    w.x = t.x + b.x * t.scaleX;
-    w.y = t.y + b.y * t.scaleY;
-    w.width = b.width * t.scaleX;
-    w.height = b.height * t.scaleY;
+    const Affine o = outcomeAffine(ctx, sg);
+    const double xs[2] = {b.x, b.x + b.width};
+    const double ys[2] = {b.y, b.y + b.height};
+    double minX = std::numeric_limits<double>::infinity();
+    double minY = std::numeric_limits<double>::infinity();
+    double maxX = -std::numeric_limits<double>::infinity();
+    double maxY = -std::numeric_limits<double>::infinity();
+    for (double x : xs) {
+        for (double y : ys) {
+            double wx = 0;
+            double wy = 0;
+            o.apply(x, y, &wx, &wy);
+            minX = std::min(minX, wx);
+            minY = std::min(minY, wy);
+            maxX = std::max(maxX, wx);
+            maxY = std::max(maxY, wy);
+        }
+    }
+    if (!std::isfinite(minX))
+        return {};
+    w.x = minX;
+    w.y = minY;
+    w.width = std::max(0.0, maxX - minX);
+    w.height = std::max(0.0, maxY - minY);
     return w;
 }
 
+inline SmartBounds smartGroupWorldBounds(const DocNode &sg)
+{
+    return smartGroupWorldBounds(sg, affineIdentity());
+}
+
 /** First boundary-role ink of a SmartGroup, world polyline. Empty if none. */
-inline std::vector<Vec2> smartGroupBoundaryWorld(const DocNode &sg)
+inline std::vector<Vec2> smartGroupBoundaryWorld(const DocNode &sg, const Affine &ctx)
 {
     std::vector<Vec2> poly;
+    const Affine outcome = outcomeAffine(ctx, sg);
     for (const auto &c : sg.children) {
         if (c.kind != NodeKind::Ink)
             continue;
@@ -220,12 +240,18 @@ inline std::vector<Vec2> smartGroupBoundaryWorld(const DocNode &sg)
             continue;
         poly.reserve(c.samples.size());
         for (const auto &s : c.samples) {
-            const Vec2 w = smartLocalToWorld(s.x, s.y, sg, "boundary", std::nullopt, nullptr);
+            Vec2 w;
+            outcome.apply(s.x, s.y, &w.x, &w.y);
             poly.push_back(w);
         }
         break;
     }
     return poly;
+}
+
+inline std::vector<Vec2> smartGroupBoundaryWorld(const DocNode &sg)
+{
+    return smartGroupBoundaryWorld(sg, affineIdentity());
 }
 
 /** Even-odd fill; closes the ring if first≠last. */
@@ -393,10 +419,39 @@ inline ApplyResult appendOrdinaryInk(DeviceDocument &doc, const EncloseStrokeInp
     return doc.commitEdit(edit);
 }
 
+inline void collectTopLevelSmartGroups(const std::vector<DocNode> &nodes,
+                                       std::vector<const DocNode *> &out)
+{
+    for (const auto &n : nodes) {
+        if (n.kind == NodeKind::SmartGroup) {
+            out.push_back(&n);
+            continue;
+        }
+        if (n.kind == NodeKind::Frame || n.kind == NodeKind::Group)
+            collectTopLevelSmartGroups(n.children, out);
+    }
+}
+
+inline double fractionNaturalAreaInsideAabb(const DocNode &sg, const SmartBounds &fitted)
+{
+    const SmartBounds nat = smartGroupWorldBounds(sg);
+    const double area = std::max(0.0, nat.width) * std::max(0.0, nat.height);
+    if (area <= 1e-12)
+        return 0;
+    const double x0 = std::max(nat.x, fitted.x);
+    const double y0 = std::max(nat.y, fitted.y);
+    const double x1 = std::min(nat.x + nat.width, fitted.x + fitted.width);
+    const double y1 = std::min(nat.y + nat.height, fitted.y + fitted.height);
+    if (x1 <= x0 || y1 <= y0)
+        return 0;
+    return ((x1 - x0) * (y1 - y0)) / area;
+}
+
 /**
  * Commit finished stroke. Ink-box latch → enclose; Pen → ordinary ink only (no membership).
  * Draw-into membership is ADR-0022 step 2 in recognizer_dispatch.hpp (before enclose).
  * @implements [SRS-EP-10] stroke_end enclose path
+ * @implements [SRS-EP-75] nested SmartGroup capture + flatten
  */
 inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
                                                         const EncloseStrokeInput &stroke)
@@ -437,7 +492,14 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
         if (fractionSamplesInside(ink->samples, out.fittedWorldBounds) >= 0.8)
             capturable.push_back({ink->id, ink->samples, ink->style});
     }
-    if (capturable.empty()) {
+    std::vector<const DocNode *> sgCands;
+    collectTopLevelSmartGroups(doc.rootChildren, sgCands);
+    std::vector<const DocNode *> capturedSgs;
+    for (const DocNode *sg : sgCands) {
+        if (sg && fractionNaturalAreaInsideAabb(*sg, out.fittedWorldBounds) >= 0.8)
+            capturedSgs.push_back(sg);
+    }
+    if (capturable.empty() && capturedSgs.empty()) {
         bool insideExisting = false;
         for (const auto &n : doc.rootChildren) {
             if (n.kind != NodeKind::SmartGroup)
@@ -509,6 +571,12 @@ inline EncloseResult commitStrokeWithEncloseRecognition(DeviceDocument &doc,
         children.push_back(makeInkChild(cap.id, "content", cap.samples, cap.style, uv));
         captureIds.push_back(cap.id);
         childIdsForLog.push_back(cap.id);
+    }
+    for (const DocNode *sg : capturedSgs) {
+        if (!sg)
+            continue;
+        captureSmartGroupInto(*sg, world.x, world.y, bounds, &children, &captureIds);
+        childIdsForLog.push_back(sg->id);
     }
 
     const std::string smartGroupId = std::string("sg_enclose_") + stroke.id;

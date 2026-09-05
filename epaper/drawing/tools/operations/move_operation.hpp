@@ -10,6 +10,7 @@
 #include "transform_gesture.hpp"
 #include "document/capability.hpp"
 #include "document/manipulate.hpp"
+#include "document/nested_inkbox.hpp"
 #include "../ui/selection_overlay.hpp"
 
 namespace epaper {
@@ -55,7 +56,7 @@ public:
         epaper::document::CapabilityDescriptor cap = epaper::document::descriptorFor(hit->kind);
         bool lodOk = true;
         epaper::document::SmartBounds wb;
-        if (epaper::document::boundsOf(*hit, wb))
+        if (epaper::document::composedBoundsOf(m_caps->doc->document(), *hit, wb))
             lodOk = m_caps->toolUi->lodOkPanel(wb);
         const epaper::document::GestureKind kind =
             epaper::document::resolvePress(cap, lodOk, false, false, true);

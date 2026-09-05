@@ -109,6 +109,30 @@ somewhere else, or ink that settles somewhere other than where the hand released
 | 4 | Taps **Enclose** | `tool.selection.create_pending` | Explicit CTA — no silent invent |
 | 5 | Surround stroke becomes the frame; the rest becomes content | `sel.selected` | ±1 px bounds fidelity |
 
+### Journey: `journey.device_nested_tap` — Pick the inner box
+
+- **Realizes:** [REQ-06](../../prd.md#device-manipulation); BR-B23
+- **Success end-state:** the inner box is selected; chrome and toolbar are the child’s; parent pose unchanged
+
+| Step | Beat | In-scene state | Notes |
+|---|---|---|---|
+| 1 | An ink-box sits inside another (paste or enclose) | `sel.none` | Child paints correctly after camera change, **inside** the parent AABB |
+| 2 | Taps the inner box | `sel.selected` (child) | Child wins hit-test where AABBs overlap; overflow is not hittable |
+| 3 | Drags or resizes | `sel.moving` / `sel.resizing.*` | Own-transform only |
+| 4 | Releases; if ≥80% of natural area is in a new container, parent changes | `sel.selected` | Rule 5 at commit, not during drag |
+
+### Journey: `journey.device_enclose_flatten` — Letter that became a box joins the paragraph
+
+- **Realizes:** [REQ-05](../../prd.md#device-ink-box); BR-B21
+- **Success end-state:** the letter ink is content of the new box; no empty wrapper left behind
+
+| Step | Beat | In-scene state | Notes |
+|---|---|---|---|
+| 1 | A letter (O, D, …) was recognized as an empty ink-box | `tool.pen` | Boundary only |
+| 2 | Creator encloses the paragraph (Creation A or Enclose CTA) | enclose commit | Captures the empty box |
+| 3 | The letter is ordinary content ink of the new box | `tool.pen` | Flatten; 0 leftover empty layer |
+| 4 | Moving the paragraph takes the letter with it | `sel.moving` | The original defect is gone |
+
 ---
 
 ## Critical alternate journeys

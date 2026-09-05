@@ -188,11 +188,17 @@ int main()
         payload.emplace_back("transform", JsonValue::object(std::move(t)));
         payload.emplace_back("children", JsonValue::array({}));
                 CHECK(doc.commitJson(opEnvelope("create_smart_group:sg_existing", "create_smart_group", JsonValue::object(std::move(payload)))).applied);
-        const std::string before = doc.snapshotString();
         const auto r = createSmartGroupFromSelection(doc, {"outer", "inner", "sg_existing"});
-        CHECK(!r.created);
-        CHECK(r.reason == "smartgroup_in_selection");
-        CHECK(doc.snapshotString() == before);
+        CHECK(r.created);
+        const DocNode *sg = doc.find(r.smartGroupId);
+        CHECK(sg);
+        bool nested = false;
+        for (const auto &c : sg->children) {
+            if (c.id == "sg_existing" && c.kind == NodeKind::SmartGroup)
+                nested = true;
+        }
+        CHECK(nested);
+        CHECK(doc.find("sg_existing"));
     }
     {
         DeviceDocument doc;

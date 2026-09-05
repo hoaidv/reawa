@@ -9,6 +9,8 @@
 
 #include "document/device_document.hpp"
 #include "document/doc_model.hpp"
+#include "document/nested_flatten.hpp"
+#include "document/nested_inkbox.hpp"
 #include "document/surround_create.hpp"
 
 #include <algorithm>
@@ -493,16 +495,43 @@ inline PasteOutcome commitPaste(epaper::document::DeviceDocument &doc, Clipboard
     }
     std::vector<std::unique_ptr<epaper::document::DocEdit>> parts;
     for (size_t i = 0; i < clones.size(); ++i) {
+        std::vector<epaper::document::DocNode> insert;
         if (!parents[i].empty()) {
             const epaper::document::DocNode *p = doc.find(parents[i]);
-            if (p && p->kind == epaper::document::NodeKind::SmartGroup
-                && clones[i].kind == epaper::document::NodeKind::Ink)
-                localizeInkIntoSmartGroup(clones[i], *p);
+            if (p && p->kind == epaper::document::NodeKind::SmartGroup) {
+                if (clones[i].kind == epaper::document::NodeKind::Ink) {
+                    localizeInkIntoSmartGroup(clones[i], *p);
+                    insert.push_back(std::move(clones[i]));
+                } else if (clones[i].kind == epaper::document::NodeKind::SmartGroup) {
+                    const epaper::document::Affine pctx =
+                        epaper::document::parentContentContext(doc, parents[i]);
+                    if (epaper::document::isEmptySmartGroup(clones[i])) {
+                        double ox = 0;
+                        double oy = 0;
+                        pctx.apply(0, 0, &ox, &oy);
+                        epaper::document::flattenEmptyToContentInks(clones[i], ox, oy, p->smartBounds,
+                                                                   &insert);
+                    } else {
+                        epaper::document::remapOwnIntoParentCtx(clones[i],
+                                                               epaper::document::affineIdentity(),
+                                                               pctx);
+                        insert.push_back(std::move(clones[i]));
+                    }
+                } else {
+                    insert.push_back(std::move(clones[i]));
+                }
+            } else {
+                insert.push_back(std::move(clones[i]));
+            }
+        } else {
+            insert.push_back(std::move(clones[i]));
         }
-        auto e = std::make_unique<epaper::document::ReparentEdit>(
-            epaper::document::ReparentEdit::restore(clones[i].id, parents[i],
-                                                    std::numeric_limits<int>::max(), clones[i]));
-        parts.push_back(std::move(e));
+        for (auto &n : insert) {
+            auto e = std::make_unique<epaper::document::ReparentEdit>(
+                epaper::document::ReparentEdit::restore(n.id, parents[i],
+                                                        std::numeric_limits<int>::max(), n));
+            parts.push_back(std::move(e));
+        }
     }
     const epaper::document::ApplyResult r =
         doc.commitGesture(slot.nextOpId(), std::move(parts), enqueue);

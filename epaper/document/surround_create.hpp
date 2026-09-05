@@ -8,6 +8,7 @@
 #include "device_document.hpp"
 #include "membership.hpp"
 #include "recognize_enclose.hpp"
+#include "nested_flatten.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -290,18 +291,17 @@ inline void listFreeInkPaintOrder(const std::vector<DocNode> &nodes, std::vector
 
 /**
  * Create Smart Group from selected node ids, or refuse (no tree mutation).
- * SmartGroup in selection → refuse (CHL-0011).
+ * Selected Smart Groups nest or flatten ([SRS-EP-75]); surround stays free ink.
  */
 inline SelectionCreateResult createSmartGroupFromSelection(DeviceDocument &doc,
                                                            const std::vector<std::string> &selectedIds)
 {
     SelectionCreateResult out;
+    std::vector<const DocNode *> selectedSgs;
     for (const auto &id : selectedIds) {
         const DocNode *n = doc.find(id);
-        if (n && n->kind == NodeKind::SmartGroup) {
-            out.reason = "smartgroup_in_selection";
-            return out;
-        }
+        if (n && n->kind == NodeKind::SmartGroup)
+            selectedSgs.push_back(n);
     }
 
     std::vector<std::string> paint;
@@ -314,8 +314,8 @@ inline SelectionCreateResult createSmartGroupFromSelection(DeviceDocument &doc,
         if (n && n->kind == NodeKind::Ink)
             orderedInks.push_back(n);
     }
-    if (orderedInks.size() < 2) {
-        out.reason = "need_at_least_two";
+    if (orderedInks.empty() || (orderedInks.size() < 2 && selectedSgs.empty())) {
+        out.reason = orderedInks.empty() ? "no_surround" : "need_at_least_two";
         return out;
     }
 
@@ -364,11 +364,18 @@ inline SelectionCreateResult createSmartGroupFromSelection(DeviceDocument &doc,
         const auto uv = seedLayoutOffset(local, bounds);
         children.push_back(makeInkChild(ink->id, "content", local, ink->style, uv));
     }
+    for (const DocNode *sg : selectedSgs) {
+        if (!sg)
+            continue;
+        captureSmartGroupInto(*sg, world.x, world.y, bounds, &children, &captureIds);
+    }
 
     std::vector<std::string> capturedIds;
-    capturedIds.reserve(orderedInks.size());
+    capturedIds.reserve(orderedInks.size() + selectedSgs.size());
     for (const DocNode *ink : orderedInks)
         capturedIds.push_back(ink->id);
+    for (const DocNode *sg : selectedSgs)
+        capturedIds.push_back(sg->id);
 
     const std::string smartGroupId = doc.generateNodeId();
     CreateSmartGroupEdit edit;

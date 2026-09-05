@@ -96,14 +96,15 @@ exclusive `ink_box` tool.
 
 | Control | Action | Result | Feedback |
 |---|---|---|---|
-| Box bounds | Pen press, no drag | Select SmartGroup | Bounds + handles appear ≤100 ms |
+| Box bounds | Pen press, no drag | Select **deepest** SmartGroup ([SRS-EP-77](./srs-logic.md#srs-ep-77-nested-hit-reparent)) | Bounds + handles appear ≤100 ms; toolbar is that child’s |
+| Nested child bounds | Pen press, no drag | Select the child (not the ancestor) | Same chrome inventory; `ovl.selection_bounds` on the child |
 | Box bounds | Pen press + drag | Move | **The ink moves.** Bounds track the ink at ≥5 Hz |
 | Canvas (`tool.sel_rect`) | Pen-down + move | Rect marquee | `ovl.marquee` AABB follows tip; pen-up → nodes with ≥80% inside the rect; then `ovl.nodes_bounds` + 6 anchors + `cta.enclose` |
 | Canvas (`tool.sel_freeform`) | Pen-down + move | Lasso | `ovl.lasso` polyline follows tip; pen-up closes path, hit-test ≥80% **inside polyline**; chrome → `ovl.nodes_bounds` (tight AABB) + 6 anchors + `cta.enclose` — **not** a dotted polyline |
 | `tool.sel_rect` / `tool.sel_freeform` | Finger tap on ToolChip | Arm that selection tool | Exclusive invert on primary bar ([ADR-0021](../../../../adr/ADR-0021-connector-toolchip.md)); recognizer toggles dim |
 | `ovl.resize_handles` | Pen drag on a handle | Resize | Real ink resizes per mode; bounds follow the handle |
 | `tgl.ink_scale_mode` | Pen tap | Swap mode | `ind.mode_current` updates; effect visible on the next resize |
-| `cta.enclose` | Pen or finger tap | Selection-create | Box created, or `sel.create_refused` |
+| `cta.enclose` | Pen or finger tap | Selection-create | Box created (nested/flatten per [SRS-EP-75](./srs-logic.md#srs-ep-75-nested-membership)), or `sel.create_refused` (no surround only) |
 | Empty canvas | Pen press in either selection tool (no drag) | Deselect | Overlay gone; **0** residual pixels on the next settled frame |
 | Another box | Pen press | Move selection | Previous overlay fully cleared before the new one draws |
 | Any | Pen press below the LOD cutoff | Nothing | `ind.manipulation_unavailable` states why |
@@ -136,7 +137,8 @@ No hover, no focus, no cursor on this platform — do not design them.
 | `sel.marquee` | Document | `ovl.marquee` AABB follows tip; `tool.sel_rect` armed | Partial |
 | `sel.lasso` | Document | `ovl.lasso` polyline follows tip; `tool.sel_freeform` armed | Partial |
 | `sel.nodes_selected` | Document | `ovl.nodes_bounds` + 6 anchors + `cta.enclose` (polyline gone) | Partial |
-| `sel.selected` | Document | bounds + handles + mode toggle (SmartGroup) | Partial |
+| `sel.selected` | Document | bounds + handles + mode toggle (SmartGroup, **including nested**) | Partial |
+| `sel.nested_child` | Document | same as `sel.selected` on the child; parent unselected | Partial |
 | `sel.moving` | **Ink following the pen** | bounds tracking the ink | Partial only, ≥5 Hz |
 | `sel.resizing.with_bounds` | **Content scaling with the box** | bounds + active handle | Partial only, ≥5 Hz |
 | `sel.resizing.fixed_ink` | **Content keeping its size, tracking its UV** | bounds + active handle | Partial only, ≥5 Hz |
@@ -167,8 +169,8 @@ a creator unable to tell which mode they were resizing in until after they relea
   the whole rework removes ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md)).
   **Exception:** `ovl.marquee` / `ovl.nodes_bounds` are selection chrome, not a stand-in for ink
   motion ([CHL-0013](../../../../../.plan/iter-003/challenges/CHL-0013-selection-create-feedback-enclose-cta.md)).
-- A rotation handle — the geometry does not support it yet
-  ([SRS-EP-11](./srs-logic.md#srs-ep-11-device-manipulation)).
+- Treating a nested ink-box as unhittable chrome — tap-select must reach any depth ([CHL-0032](../../../../../.plan/iter-005/challenges/CHL-0032-nested-ink-box.md)).
+- Refusing Enclose because a Smart Group is in the selection — nesting is in; refuse remains **no surround** only.
 - A properties panel, or a mode toggle parked on the ToolChip instead of on the selection.
 - Full-panel refresh to show selection, deselection, or drag feedback.
 - Handles sized for a mouse. The pen's pointing error, not a desktop's 8 px, sets the tolerance.

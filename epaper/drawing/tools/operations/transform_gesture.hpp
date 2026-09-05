@@ -9,6 +9,9 @@
 #include "transform_session.hpp"
 #include "debug/ui_stall.hpp"
 #include "document/manipulate.hpp"
+#include "document/nested_inkbox.hpp"
+#include "document/operations/compound_edit.hpp"
+#include "document/operations/reparent_edit.hpp"
 #include "document/operations/set_smart_transform_edit.hpp"
 #include "../host_caps.hpp"
 #include "../contexts/doc_context.hpp"
@@ -18,6 +21,7 @@
 
 #include <QElapsedTimer>
 #include <QRectF>
+#include <limits>
 #include <string>
 
 namespace epaper {
@@ -38,11 +42,15 @@ public:
             return;
         caps->selection->setIds({subject->id});
         caps->selection->setPhase(SelectionPhase::Transforming);
-        m_live.begin(subject->id, handle, world, subject->transform, subject->smartBounds);
+        double lx = world.x;
+        double ly = world.y;
+        epaper::document::worldToAncestorContent(caps->doc->document(), subject->id, world.x, world.y,
+                                                 &lx, &ly);
+        m_live.begin(subject->id, handle, {lx, ly}, subject->transform, subject->smartBounds);
         m_ghost.invalidate();
         if (caps->overlay) {
             epaper::document::SmartBounds originWorld;
-            if (epaper::document::boundsOf(*subject, originWorld)) {
+            if (epaper::document::composedBoundsOf(caps->doc->document(), *subject, originWorld)) {
                 m_originPanel =
                     caps->toolUi->worldBoundsToPanel(originWorld).adjusted(-8, -8, 8, 8);
                 caps->overlay->setOriginPanelRect(m_originPanel);
@@ -77,7 +85,11 @@ public:
         const bool previewDue = !m_ghost.isValid() || m_ghost.elapsed() >= kGhostMinIntervalMs;
         const epaper::document::DocNode *n = caps->doc->document().find(m_live.nodeId);
         const std::string mode = n ? n->inkScaleMode : std::string("withBounds");
-        m_live.apply(world, mode);
+        double lx = world.x;
+        double ly = world.y;
+        epaper::document::worldToAncestorContent(caps->doc->document(), m_live.nodeId, world.x, world.y,
+                                                 &lx, &ly);
+        m_live.apply({lx, ly}, mode);
         caps->doc->applyLiveSmartGeometry(m_live.nodeId, m_live.liveT, m_live.liveB);
         caps->doc->refreshConnectorsBoundTo(m_live.nodeId);
         caps->doc->previewManipulationFrame();
@@ -102,13 +114,14 @@ public:
         const std::string id = m_live.nodeId;
         const epaper::document::SmartTransform originT = m_live.originT;
         const epaper::document::SmartBounds originB = m_live.originB;
+        const bool wasResize = m_live.resizing();
         const TransformResult r = m_live.commit();
         caps->selection->setPhase(SelectionPhase::Selected);
         caps->selection->setIds({id});
         QRectF live;
         if (const epaper::document::DocNode *n = caps->doc->document().find(id)) {
             epaper::document::SmartBounds b;
-            if (epaper::document::boundsOf(*n, b))
+            if (epaper::document::composedBoundsOf(caps->doc->document(), *n, b))
                 live = caps->toolUi->worldBoundsToPanel(b).adjusted(-8, -8, 8, 8);
         }
         const QRectF liveConn = caps->doc->boundConnectorsPanelUnion(id);
@@ -136,9 +149,40 @@ public:
             static int seq = 0;
             const std::string opId = std::string("sst-") + std::to_string(++seq);
             const epaper::document::SmartBounds liveB = m_live.liveB;
-            epaper::document::SetSmartTransformEdit edit(
-                opId, id, originT, originB, m_live.liveT, liveB, true);
-            caps->doc->applyEdit(edit);
+            epaper::document::SmartTransform toT = m_live.liveT;
+            std::string newParent;
+            bool reparent = false;
+            if (!wasResize) {
+                newParent = epaper::document::chooseMoveParentId(caps->doc->document(), id);
+                epaper::document::DeviceDocument::NodePlace pl;
+                if (caps->doc->document().findPlace(id, &pl) && newParent != pl.parentId) {
+                    reparent = true;
+                    epaper::document::DocNode tmp;
+                    if (const epaper::document::DocNode *cur = caps->doc->document().find(id))
+                        tmp = *cur;
+                    tmp.transform = toT;
+                    epaper::document::remapOwnIntoParentCtx(
+                        tmp, epaper::document::ancestorContentContext(caps->doc->document(), id),
+                        epaper::document::parentContentContext(caps->doc->document(), newParent));
+                    toT = tmp.transform;
+                }
+            }
+            epaper::document::SetSmartTransformEdit sst(opId, id, originT, originB, toT, liveB,
+                                                        true);
+            if (reparent) {
+                epaper::document::CompoundEdit compound;
+                compound.setId(opId);
+                compound.addPart(sst.clone());
+                auto rp = std::make_unique<epaper::document::ReparentEdit>();
+                rp->setId(opId);
+                rp->setNodeId(id);
+                rp->setNewParentId(newParent);
+                rp->setIndex(std::numeric_limits<int>::max());
+                compound.addPart(std::move(rp));
+                caps->doc->applyEdit(compound);
+            } else {
+                caps->doc->applyEdit(sst);
+            }
             if (caps->overlay)
                 caps->overlay->clearOriginPanelRect();
             caps->doc->clearLiveManipSuppressIds();
@@ -174,7 +218,7 @@ public:
             QRectF live;
             if (const epaper::document::DocNode *n = caps->doc->document().find(id)) {
                 epaper::document::SmartBounds b;
-                if (epaper::document::boundsOf(*n, b))
+                if (epaper::document::composedBoundsOf(caps->doc->document(), *n, b))
                     live = caps->toolUi->worldBoundsToPanel(b).adjusted(-8, -8, 8, 8);
             }
             const QRectF liveConn = caps->doc->boundConnectorsPanelUnion(id);

@@ -31,6 +31,7 @@ struct RecordingSink : IPixelSink {
     int clearFullCount = 0;
     int clearRectCount = 0;
     std::vector<double> widths;
+    std::vector<std::pair<double, double>> pts;
 
     void begin(bool) override {}
     void clearFull() override { ++clearFullCount; }
@@ -41,6 +42,8 @@ struct RecordingSink : IPixelSink {
             return;
         ++polylineCount;
         widths.push_back(poly.width);
+        for (const auto &p : poly.pts)
+            pts.push_back(p);
     }
     void end() override {}
 };
@@ -206,6 +209,57 @@ static void test_suppress_skips_subtree()
 
     CHECK(flatSink.polylineCount == 1);
     CHECK(cullSink.polylineCount == 1);
+}
+
+static void test_nested_sg_composes_parent()
+{
+    DeviceDocument doc;
+    DocNode childInk;
+    childInk.id = "nested_c";
+    childInk.kind = NodeKind::Ink;
+    childInk.role = std::string("content");
+    childInk.style.strokeWidth = 2;
+    childInk.samples.push_back(sample(0, 0));
+    childInk.samples.push_back(sample(10, 0));
+
+    DocNode child;
+    child.id = "nested";
+    child.kind = NodeKind::SmartGroup;
+    child.smartBounds = {0, 0, 20, 20};
+    child.transform = {10, 10, 0, 1, 1};
+    child.inkScaleMode = "fixedInk";
+    child.children.push_back(std::move(childInk));
+
+    DocNode parent;
+    parent.id = "outer";
+    parent.kind = NodeKind::SmartGroup;
+    parent.smartBounds = {0, 0, 100, 100};
+    parent.transform = {5000, 5000, 0, 1, 1};
+    parent.inkScaleMode = "fixedInk";
+    parent.children.push_back(std::move(child));
+    doc.rootChildren.push_back(std::move(parent));
+
+    CanvasFrame frame;
+    frame.setPanelSize(1404, 1872);
+    // Viewport over composed world ~(5010, 5010), not child-local (10,10).
+    frame.applyDrawingRegion({5000, 5000, 200, 200}, true);
+    FrameProjector proj;
+    proj.frame = &frame;
+    RenderRequest req;
+    req.worldClip = proj.drawingWorldClip();
+    req.sharp = true;
+
+    RecordingSink flatSink;
+    FlatWalkAlgorithm flat;
+    flat.paint(doc, proj, req, flatSink);
+    CHECK(flatSink.polylineCount == 1);
+
+    frame.applyDrawingRegion({0, 0, 200, 200}, true);
+    req.worldClip = proj.drawingWorldClip();
+    RecordingSink miss;
+    HierarchyCullAlgorithm cull;
+    cull.paint(doc, proj, req, miss);
+    CHECK(miss.polylineCount == 0);
 }
 
 static DocNode makeSgWithConnector()
@@ -380,11 +434,136 @@ static void test_inplace_dirty_clearRect_and_tight_clip()
     CHECK(sink.polylineCount == 1);
 }
 
+static DocNode makeInkRole(const std::string &id, double x0, double y0, double x1, double y1,
+                           const std::string &role)
+{
+    DocNode n = makeFreeInk(id, x0, y0, x1, y1);
+    n.role = role;
+    return n;
+}
+
+static void test_nested_overflow_not_painted()
+{
+    DeviceDocument doc;
+    DocNode child;
+    child.id = "inner";
+    child.kind = NodeKind::SmartGroup;
+    child.smartBounds = {0, 0, 20, 20};
+    child.transform = {80, 80, 0, 1, 1};
+    child.inkScaleMode = "fixedInk";
+    child.children.push_back(makeInkRole("inner_c", 0, 0, 10, 10, "content"));
+
+    DocNode parent;
+    parent.id = "outer";
+    parent.kind = NodeKind::SmartGroup;
+    parent.smartBounds = {0, 0, 50, 50};
+    parent.transform = {0, 0, 0, 1, 1};
+    parent.inkScaleMode = "fixedInk";
+    parent.children.push_back(makeInkRole("outer_b", 0, 0, 50, 0, "boundary"));
+    parent.children.push_back(std::move(child));
+    doc.rootChildren.push_back(std::move(parent));
+
+    CanvasFrame frame;
+    frame.setPanelSize(200, 200);
+    frame.applyDrawingRegion({0, 0, 200, 200}, true);
+    FrameProjector proj;
+    proj.frame = &frame;
+    RenderRequest req;
+    req.worldClip = proj.drawingWorldClip();
+    req.sharp = true;
+
+    RecordingSink flatSink;
+    FlatWalkAlgorithm flat;
+    flat.paint(doc, proj, req, flatSink);
+    CHECK(flatSink.polylineCount == 1); // parent boundary only
+
+    RecordingSink cullSink;
+    HierarchyCullAlgorithm cull;
+    cull.paint(doc, proj, req, cullSink);
+    CHECK(cullSink.polylineCount == 1);
+
+    DocumentRenderer renderer;
+    RecordingSink overlay;
+    renderer.renderSubtree(doc, proj, req, "outer", overlay);
+    CHECK(overlay.polylineCount == 1);
+
+    doc.onAcceptedDocLoad(doc.toJSON());
+    RecordingSink innerOverlay;
+    renderer.renderSubtree(doc, proj, req, "inner", innerOverlay);
+    CHECK(innerOverlay.polylineCount == 0);
+}
+
+static void test_content_clipped_to_parent_aabb()
+{
+    DeviceDocument doc;
+    DocNode parent;
+    parent.id = "box";
+    parent.kind = NodeKind::SmartGroup;
+    parent.smartBounds = {0, 0, 100, 100};
+    parent.transform = {0, 0, 0, 1, 1};
+    parent.inkScaleMode = "fixedInk";
+    parent.children.push_back(makeInkRole("straddle", 50, 50, 200, 50, "content"));
+    doc.rootChildren.push_back(std::move(parent));
+
+    CanvasFrame frame;
+    frame.setPanelSize(200, 200);
+    frame.applyDrawingRegion({0, 0, 200, 200}, true);
+    FrameProjector proj;
+    proj.frame = &frame;
+    RenderRequest req;
+    req.worldClip = proj.drawingWorldClip();
+    req.sharp = true;
+
+    RecordingSink sink;
+    FlatWalkAlgorithm flat;
+    flat.paint(doc, proj, req, sink);
+    CHECK(sink.polylineCount == 1);
+    CHECK(!sink.pts.empty());
+    for (const auto &p : sink.pts)
+        CHECK(p.first <= 100.0 + 1e-6);
+}
+
+static void test_nested_inside_still_painted()
+{
+    DeviceDocument doc;
+    DocNode child;
+    child.id = "inner";
+    child.kind = NodeKind::SmartGroup;
+    child.smartBounds = {0, 0, 20, 20};
+    child.transform = {10, 10, 0, 1, 1};
+    child.inkScaleMode = "fixedInk";
+    child.children.push_back(makeInkRole("inner_c", 0, 0, 10, 0, "content"));
+
+    DocNode parent;
+    parent.id = "outer";
+    parent.kind = NodeKind::SmartGroup;
+    parent.smartBounds = {0, 0, 100, 100};
+    parent.transform = {0, 0, 0, 1, 1};
+    parent.inkScaleMode = "fixedInk";
+    parent.children.push_back(std::move(child));
+    doc.rootChildren.push_back(std::move(parent));
+
+    CanvasFrame frame;
+    frame.setPanelSize(200, 200);
+    frame.applyDrawingRegion({0, 0, 200, 200}, true);
+    FrameProjector proj;
+    proj.frame = &frame;
+    RenderRequest req;
+    req.worldClip = proj.drawingWorldClip();
+    req.sharp = true;
+
+    RecordingSink sink;
+    FlatWalkAlgorithm flat;
+    flat.paint(doc, proj, req, sink);
+    CHECK(sink.polylineCount == 1);
+}
+
 int main()
 {
     test_full_clip_same_polylines();
     test_hierarchy_cull_skips_far_sg();
     test_sg_child_visible_when_panned_into_view();
+    test_nested_sg_composes_parent();
     test_suppress_skips_subtree();
     test_renderSubtree_sg_and_connector();
     test_collectManipSuppressIds();
@@ -392,6 +571,9 @@ int main()
     test_includeIds_skips_neighbors();
     test_cancel_aborts_walk();
     test_inplace_dirty_clearRect_and_tight_clip();
+    test_nested_overflow_not_painted();
+    test_content_clipped_to_parent_aabb();
+    test_nested_inside_still_painted();
     if (g_fails) {
         std::cerr << "rendering_test: " << g_fails << " failure(s)\n";
         return 1;

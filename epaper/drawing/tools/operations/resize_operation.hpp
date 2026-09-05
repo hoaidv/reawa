@@ -11,6 +11,7 @@
 #include "transform_gesture.hpp"
 #include "document/capability.hpp"
 #include "document/manipulate.hpp"
+#include "document/nested_inkbox.hpp"
 #include "../ui/selection_overlay.hpp"
 
 #include <cstdint>
@@ -60,7 +61,7 @@ public:
         if (!selected || !epaper::document::descriptorFor(selected->kind).has(epaper::document::Verb::Resize))
             return;
         epaper::document::SmartBounds wb;
-        if (!epaper::document::boundsOf(*selected, wb))
+        if (!epaper::document::composedBoundsOf(m_caps->doc->document(), *selected, wb))
             return;
         if (!m_caps->toolUi->lodOkPanel(wb)) {
             if (m_caps->overlay)

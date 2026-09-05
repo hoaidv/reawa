@@ -3,6 +3,7 @@
 #include "../contexts/session_doc_context.hpp"
 #include "../contexts/tool_context.hpp"
 #include "document/manipulate.hpp"
+#include "document/nested_inkbox.hpp"
 #include "rendering/rendering.hpp"
 #include "rendering/rendering_qt.hpp"
 
@@ -33,7 +34,7 @@ QRectF NodeEmphasis::panelBound(HostCaps &caps, const std::string &id) const
     if (!n)
         return {};
     epaper::document::SmartBounds b;
-    if (!epaper::document::boundsOf(*n, b))
+    if (!epaper::document::composedBoundsOf(sess->document(), *n, b))
         return {};
     const qreal pad = std::max(16.0, 8.0 * caps.toolUi->panelScale());
     return caps.toolUi->worldBoundsToPanel(b).adjusted(-pad, -pad, pad, pad);

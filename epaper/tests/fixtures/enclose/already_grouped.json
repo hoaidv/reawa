@@ -53,7 +53,7 @@
   "expected": {
     "verdict": "created",
     "fittedBounds": { "x": 0, "y": 0, "width": 120, "height": 120 },
-    "capturedIds": ["free"],
+        "capturedIds": ["free", "sg_old"],
     "skippedIds": ["already"],
     "boundaryId": "enclose_mix"
   }

@@ -21,6 +21,7 @@
 #include "document/capability.hpp"
 #include "document/connector_warp.hpp"
 #include "document/manipulate.hpp"
+#include "document/nested_inkbox.hpp"
 #include "document/surround_create.hpp"
 #include "rendering/rendering.hpp"
 
@@ -336,14 +337,18 @@ inline void SessionDocContext::worldThroughPanOrigin(const epaper::canvasframe::
 inline const epaper::document::DocNode *SessionDocContext::hitMoveTarget(double wx, double wy) const
 {
     using namespace epaper::document;
+    if (const DocNode *sg = hitTapSmartGroup(document(), wx, wy)) {
+        if (descriptorFor(sg->kind).has(Verb::Move))
+            return sg;
+    }
     std::vector<const DocNode *> pick;
     collectPickable(document().rootChildren, pick);
     for (int i = int(pick.size()) - 1; i >= 0; --i) {
         const DocNode *n = pick[size_t(i)];
-        if (!n || !descriptorFor(n->kind).has(Verb::Move))
+        if (!n || n->kind == NodeKind::SmartGroup || !descriptorFor(n->kind).has(Verb::Move))
             continue;
         SmartBounds b;
-        if (!boundsOf(*n, b))
+        if (!composedBoundsOf(document(), *n, b))
             continue;
         if (wx >= b.x && wx <= b.x + b.width && wy >= b.y && wy <= b.y + b.height)
             return n;
@@ -357,7 +362,7 @@ inline bool SessionDocContext::fingerHitsBox(double wx, double wy) const
     if (!hit)
         return false;
     epaper::document::SmartBounds b;
-    if (!epaper::document::boundsOf(*hit, b))
+    if (!epaper::document::composedBoundsOf(document(), *hit, b))
         return false;
     return lodOkPanel(b);
 }
@@ -365,14 +370,18 @@ inline bool SessionDocContext::fingerHitsBox(double wx, double wy) const
 inline std::string SessionDocContext::hitSelectTarget(double wx, double wy) const
 {
     using namespace epaper::document;
+    if (const DocNode *sg = hitTapSmartGroup(document(), wx, wy)) {
+        if (descriptorFor(sg->kind).has(Verb::Select))
+            return sg->id;
+    }
     std::vector<const DocNode *> pick;
     collectPickable(document().rootChildren, pick);
     for (int i = int(pick.size()) - 1; i >= 0; --i) {
         const DocNode *n = pick[size_t(i)];
-        if (!n || !descriptorFor(n->kind).has(Verb::Select))
+        if (!n || n->kind == NodeKind::SmartGroup || !descriptorFor(n->kind).has(Verb::Select))
             continue;
         SmartBounds b;
-        if (!boundsOf(*n, b))
+        if (!composedBoundsOf(document(), *n, b))
             continue;
         if (wx >= b.x && wx <= b.x + b.width && wy >= b.y && wy <= b.y + b.height)
             return n->id;
@@ -383,18 +392,8 @@ inline std::string SessionDocContext::hitSelectTarget(double wx, double wy) cons
 inline QString SessionDocContext::hitLocalSmartGroup(double wx, double wy) const
 {
     using namespace epaper::document;
-    std::vector<const DocNode *> pick;
-    collectPickable(document().rootChildren, pick);
-    for (int i = int(pick.size()) - 1; i >= 0; --i) {
-        const DocNode *n = pick[size_t(i)];
-        if (!n || n->kind != NodeKind::SmartGroup)
-            continue;
-        SmartBounds b;
-        if (!nodeWorldAabb(*n, b))
-            continue;
-        if (wx >= b.x && wx <= b.x + b.width && wy >= b.y && wy <= b.y + b.height)
-            return QString::fromStdString(n->id);
-    }
+    if (const DocNode *sg = hitTapSmartGroup(document(), wx, wy))
+        return QString::fromStdString(sg->id);
     return {};
 }
 
@@ -404,9 +403,7 @@ inline bool SessionDocContext::encloseSelection(const std::vector<std::string> &
     const SelectionCreateResult r = createSmartGroupFromSelection(document(), ids);
     if (!r.created) {
         if (refuseReason) {
-            *refuseReason = r.reason == "smartgroup_in_selection"
-                ? QStringLiteral("Cannot enclose a Smart Group")
-                : QStringLiteral("No surrounding stroke");
+            *refuseReason = QStringLiteral("No surrounding stroke");
         }
         const std::string line =
             epaper::debuglog::formatEncloseLog("OrdinaryInk", r.reason, "", {});
@@ -423,7 +420,7 @@ inline bool SessionDocContext::encloseSelection(const std::vector<std::string> &
     QRectF dirty;
     if (const DocNode *sg = document().find(r.smartGroupId)) {
         SmartBounds b;
-        if (boundsOf(*sg, b) && m_surface)
+        if (composedBoundsOf(document(), *sg, b) && m_surface)
             dirty = worldBoundsToPanel(b);
     }
     if (dirty.isEmpty())
@@ -450,7 +447,7 @@ inline void SessionDocContext::toggleInkScaleMode(const std::string &nodeId)
     QRectF dirty;
     if (const DocNode *n = document().find(nodeId)) {
         SmartBounds b;
-        if (boundsOf(*n, b) && m_surface)
+        if (composedBoundsOf(document(), *n, b) && m_surface)
             dirty = worldBoundsToPanel(b);
     }
     if (dirty.isEmpty())

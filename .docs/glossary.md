@@ -25,7 +25,9 @@ Durable ubiquitous language. Anatomy lives in `.docs/domain/`; this file is voca
 | Boundary polyline | Invisible closed SmartGroup polygon for object-erase area; not visible ink | — | [vector-document](./domain/vector-document.md) · [ADR-0034](./adr/ADR-0034-erase-clip-remnants.md) |
 | Last-used eraser | Last armed of `erase_brush` \| `erase_area` \| `erase_object`; barrel Click/Hold target | — | [prd-erase.md](./modules/epaper/prd-erase.md) |
 | Finger-eligible | Hit target ≥ **primary ToolChip tile** (64 du / CHL-0019). Resize knobs must meet this floor so finger can resize ([CHL-0024](../.plan/iter-005/challenges/CHL-0024-finger-resize-knobs.md)) | 64 du rule | [CHL-0019](../.plan/iter-004/challenges/CHL-0019-toolchip-tile-size.md) |
-| InteractionMode | Exclusive chip tool as an object with Primary/Secondary Operation allow-lists | Mode | [tool-system](./modules/epaper/tool-system/concepts.md) · [ADR-0033](./adr/ADR-0033-tool-abstraction.md) |
+| Natural area | Area of a node’s own frame (SmartGroup local `bounds`, or Ink sample AABB) after its full world outcome; used for 80% capture / reparent | — | [vector-document](./domain/vector-document.md) · [ADR-0039](./adr/ADR-0039-nested-ink-box-rendering.md) |
+| RenderingContext | Affine passed down while painting or world-hitting a subtree; world starts at identity | compose context | [ADR-0039](./adr/ADR-0039-nested-ink-box-rendering.md) |
+| Own-transform | A SmartGroup’s stored `{ translate, rotation, scaleX, scaleY }`; nested move/resize mutates this only | group transform | [ADR-0011](./adr/ADR-0011-smart-group.md) · [ADR-0039](./adr/ADR-0039-nested-ink-box-rendering.md) |
 | Operation | One locked pointer gesture (not a chip tile) | Op | [tool-system](./modules/epaper/tool-system/concepts.md) |
 | PointerRole | Routing axis Primary/Secondary from DeviceMap; not physical Pen vs Finger | role | [tool-system](./modules/epaper/tool-system/routing.md) |
 | ToolModifier | Orthogonal chip toggle; never exclusive | Modifier | [tool-system](./modules/epaper/tool-system/concepts.md) |

@@ -1,7 +1,7 @@
 ---
 feature: ink-box
 parent_req: [REQ-05, REQ-06]
-version: 0.1.0
+version: 0.2.0
 lifecycle: active
 ---
 
@@ -60,8 +60,8 @@ what the stroke means.
 | Fitted bounds | AABB of the enclose stroke samples → `(x, y, width, height)` |
 | Guard — size (adaptive) | **With ≥1 capturable content ink:** shorter side ≥ **28** world (`kMinEncloseWithContent`). **Empty boundary:** shorter side ≥ **36** (`kMinEncloseEmpty`). PM 2026-08-15 — supersedes the single 48 from ADR-0013 §6 on device |
 | Guard — empty shape | Empty boundary must also match a near-primitive: circle, ellipse, triangle, square, rectangle, parallelogram, diamond, pentagon, hexagon, or octagon (Douglas–Peucker + circularity in `enclose_shape.hpp`). Content enclose skips this gate |
-| Guard — content | Prefer ≥1 **free top-level Ink** with **≥80%** of samples inside. **0 content is allowed** when size ≥ 36 and the empty-shape gate passes. Draw-into membership is **step 2** of [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) and runs **before** this step — a stroke that already qualifies as content of an existing Smart Group never reaches enclose ([CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)) |
-| Guard — already grouped | Ink whose parent is already a `SmartGroup` is **skipped**; remaining free ink still captures |
+| Guard — content | Prefer ≥1 capturable: **free Ink** with ≥80% of samples inside **or** a **SmartGroup** with ≥80% of **natural area** inside. **0 content is allowed** when size ≥ 36 and the empty-shape gate passes. Nested capture + flatten: [SRS-EP-75](#srs-ep-75-nested-membership). Draw-into membership is **step 2** of [ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) and runs **before** this step — a stroke that already qualifies as content of an existing Smart Group never reaches enclose |
+| Guard — already grouped | Ink whose parent is already a `SmartGroup` is **skipped as free capture**; the **parent box** may be captured if ≥80% of its natural area is inside ([SRS-EP-75](#srs-ep-75-nested-membership)) |
 | Commit | `create_smart_group` immediately — no proposal, no accept step. The enclose stroke becomes `role: boundary` ink; captured ink becomes `role: content` in group-local coordinates; `bounds` = fitted rect; **each content ink seeded with its own `layoutOffset` UV** |
 | Guard fails | **Fall through** to new-connector (if open) then ordinary ink ([ADR-0022](../../../../adr/ADR-0022-recognizer-dispatch.md) steps 4–5). No error state, no banner ([SRS-EP-12](./srs-ui.md)) |
 | Undo | One entry; one undo restores the pre-op tree exactly ([SRS-EP-07](../device-document/srs-logic.md)) |
@@ -82,11 +82,11 @@ activates `cta.enclose` on SelectionOverlay — never from pen-up alone.
 | Select (rect) | `sel_rect` armed. Pen-down + move draws a thin dotted **axis-aligned rectangle** (rubber-band from down to tip). On pen-up: Ink if **≥80% of samples** lie inside the rectangle; other pickables if **≥80% of their world AABB area** lies inside. A grazing AABB intersect is **not** enough. |
 | Select (freeform) | `sel_freeform` armed. Pen-down + move appends samples to a thin dotted **polyline**. On pen-up the polyline **closes** (edge last→first for the test; stored samples stay as drawn). Membership: Ink — ≥80% of samples inside the closed polyline (even-odd); other nodes — ≥80% of a 5×5 grid on the world AABB inside. **Not** AABB-intersect of the gesture. Settled chrome is **not** the polyline — see next row. |
 | Select (feedback, settled) | After **either** gesture: thin dotted **selection rect** = **tight** union AABB of selected nodes (**0** extra padding); **6 square anchors** (visual only this campaign). The freeform polyline is **gone** once settled. |
-| Input for create | Free top-level `Ink` nodes in the selection (≥2), or ≥1 content-role ink + 1 candidate surround ink. **SmartGroup in selection → refuse** (no nesting — [CHL-0011](../../../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)). Non-ink non-SG selected nodes are ignored by the surround algorithm (not captured). |
-| Surround candidate | For each selected free ink `S`, build an **artificial closed path** if `S` is open (append edge first→last **for the test only** — never mutate stored samples). Point-in-polygon uses the **even-odd** fill rule. A candidate qualifies when ≥80% of the samples of **every other** selected free ink lie inside |
+| Input for create | Free `Ink` in the selection (≥2, or ≥1 content-role ink + 1 candidate surround), **plus** selected Smart Groups. Nested boxes are **in** ([SRS-EP-75](#srs-ep-75-nested-membership)). Non-ink non-SG selected nodes are ignored by the surround algorithm (not captured). |
+| Surround candidate | For each selected **free** ink `S`, build an **artificial closed path** if `S` is open (append edge first→last **for the test only** — never mutate stored samples). Point-in-polygon uses the **even-odd** fill rule. A candidate qualifies when ≥80% of the samples of **every other** selected free ink lie inside |
 | Winner | The qualifying candidate; if several qualify, the highest paint/z order (later sibling) |
-| Commit | Winner → `role: boundary`; others → `role: content` in group-local coords; `bounds` = fitted AABB of the winner; each content ink seeded with its `layoutOffset` UV |
-| Refuse | No qualifying surround, or SmartGroup in selection → **do not create**; selection unchanged; reason visible ([SRS-EP-12](./srs-ui.md) refuse state) |
+| Commit | Winner → `role: boundary`; other free ink → `role: content` in group-local coords; selected **non-empty** Smart Groups reparent as nested children (own-transform remapped into the new group’s local space); selected **empty** Smart Groups flatten ([SRS-EP-75](#srs-ep-75-nested-membership)); `bounds` = fitted AABB of the winner; each content ink seeded with its `layoutOffset` UV |
+| Refuse | No qualifying surround → **do not create**; selection unchanged; reason visible ([SRS-EP-12](./srs-ui.md) refuse state). **SmartGroup in selection is not a refuse reason** |
 | Undo | One entry |
 
 There is no AABB-only Smart Group from a selection: a box always has boundary ink the creator drew.
@@ -154,10 +154,10 @@ real ink; `set_smart_transform` publishes at pen-up as a consequence
 
 | Rule | Value |
 |---|---|
-| Pickable set (single press) | `SmartGroup` nodes, resolved against world `bounds` after transform |
-| Pickable set (rect marquee) | Same node types. Hit = **≥80% inside** the rubber-band: Ink by sample count; other nodes by AABB-area overlap. Grazing AABB intersect does **not** select. **Not** ToolChip chrome. Child ink of a SmartGroup is **not** independently selected (parent SmartGroup may be) |
-| Pickable set (freeform) | Same node types. Hit = **≥80% inside** the closed polyline (even-odd): Ink by samples; other nodes by 5×5 AABB grid. Gesture AABB is **not** the hit-test. Child ink of a SmartGroup is **not** independently selected |
-| Resolution order | Topmost first — later siblings paint above, so they pick first |
+| Pickable set (single press) | `SmartGroup` at **any nesting level**, resolved against world `bounds` after the composed outcome ([SRS-EP-76](#srs-ep-76-nested-render) / [SRS-EP-77](#srs-ep-77-nested-hit-reparent)) |
+| Pickable set (rect marquee) | **Top-level** nodes only ([SRS-EP-77](#srs-ep-77-nested-hit-reparent) Rule 4). Hit = **≥80% inside** the rubber-band: Ink by sample count; other nodes by AABB-area overlap. Grazing AABB intersect does **not** select. **Not** ToolChip chrome. Nested SmartGroup children are **not** independently marquee-selected |
+| Pickable set (freeform) | **Top-level** nodes only. Hit = **≥80% inside** the closed polyline (even-odd): Ink by samples; other nodes by 5×5 AABB grid. Gesture AABB is **not** the hit-test |
+| Resolution order (tap) | **Children before ancestors.** Among siblings, later paint first. Deepest qualifying SmartGroup wins |
 | Hit region | Inside `bounds`, plus a handle tolerance band when selected: visual **28 du**, hit **56 du** (14 du pad beyond visual). 1 du = 1 panel pixel @ 226 dpi. **Not** 8 CSS px |
 | Source | The **local document** — never a peer-supplied list |
 | LOD cutoff | Applies **only when the viewport is zoomed out** (min panel/world scale **< 1.0**). Then picking is disabled if the box's **smaller on-panel axis < 96 du** (world→panel AABB). At scale **≥ 1.0** (identity map / 100% zoom), every SmartGroup is manipulable — enclose min-axis is 48 world, which is a legal box. **Not** `TILE_LOD_SCALE = 0.35` |
@@ -182,7 +182,7 @@ Finger empty-canvas pan is [SRS-EP-21](#srs-ep-21-one-finger) (**20 mm** / **178
 | Pen-down + move (marquee) | `selection` tool; press not on a SmartGroup handle / not claiming a move | **Rubber-band** — thin dotted AABB follows pen tip; on pen-up, select intersecting document nodes; show selection rect + **6** anchors |
 | Drag a handle | SmartGroup selected (manipulation chrome) | **Resize** — bounds follow the handle; `withBounds` scales content, `fixedInk` preserves each content ink's UV (draw rule above) |
 | Toggle `inkScaleMode` | SmartGroup selected | `set_ink_scale_mode` |
-| Tap `cta.enclose` | Selection non-empty | Run selection-create ([SRS-EP-10](./srs-logic.md#srs-ep-10-device-recognition)); refuse path if no surround / SmartGroup in set |
+| Tap `cta.enclose` | Selection non-empty | Run selection-create ([SRS-EP-10](./srs-logic.md#srs-ep-10-device-recognition)); refuse path if no surround (**not** if a SmartGroup is in the set) |
 | Press empty canvas | — | Deselect; **0** residual chrome on the next settled frame (CHL-0007) |
 | Press another pickable | — | Selection moves to that node |
 
@@ -309,6 +309,144 @@ Does **not** overload SRS-EP-11. Pen pick/move stays there. This section is **fi
 ### Out of scope
 
 Finger rotation, connector re-anchor ([REQ-08](../../prd.md#node-manipulation)). Two-finger pan. REQ-15 tables.
+
+---
+
+## [SRS-EP-75] Nested membership, flatten, enclose capture {#srs-ep-75-nested-membership}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-05](../../prd.md#device-ink-box). **Product:** [BR-B20, BR-B21](./srs-product.md). **Decision:** [ADR-0039](../../../../adr/ADR-0039-nested-ink-box-rendering.md). **Quality:** [SRS-EP-14](./srs-quality.md).
+
+Applies to **Creation A** (recognizer) and **Creation B** (`cta.enclose`). Clipboard paste-into-box uses the same flatten rule.
+
+### Empty
+
+A SmartGroup is **empty** iff every child is `Ink` with `role: boundary` (no `role: content` Ink, no nested SmartGroup).
+
+### Flatten (Rule 1)
+
+When an empty SmartGroup would become a child of another SmartGroup (enclose capture, Enclose CTA, or paste parent):
+
+1. Let `own` be that child’s own-transform affine ([SRS-EP-76](#srs-ep-76-nested-render)).
+2. Apply `own` to its boundary-ink samples (and boundary polyline). If the box was resized/rotated, that bake **is** the transform — do not keep a wrapper.
+3. Insert the resulting Ink as `role: content` of the **parent**, seed `layoutOffset` from the baked AABB centroid vs parent bounds.
+4. Remove the empty SmartGroup in the **same** gesture (one undo).
+
+Do **not** flatten a non-empty box. Do **not** flatten a top-level empty box that is not being captured (letter-as-box stays a box until enclose/paste-into-parent).
+
+### Capture set (Creation A)
+
+Walk **top-level** siblings of the enclose stroke (same as today for free ink). Candidates:
+
+| Kind | Capturable when |
+|---|---|
+| Free `Ink` (parent is not SmartGroup) | ≥80% of **samples** inside the enclose fitted AABB (unchanged) |
+| Top-level `SmartGroup` | ≥80% of **natural area** inside the enclose fitted AABB (or inside the enclose stroke’s even-odd region — same region as the ink test; AABB is the fitted rect for Creation A) |
+
+Ink already inside a SmartGroup is **not** free-captured; capturing the parent box takes the subtree.
+
+Captured non-empty SmartGroup: `detachAny`, remap its **own-transform translate** into the new group’s local space (`tx' = tx − newWorldX`, same for y; scale/rotation unchanged), append as a child. Captured empty SmartGroup: flatten into the new group.
+
+### Capture set (Creation B)
+
+Surround test stays **free ink only**. Selected Smart Groups are additional capture (not surround candidates). Same flatten / remap as Creation A. `smartgroup_in_selection` is **retired**.
+
+### CreateSmartGroupEdit
+
+`captureIds` may name Ink **or** SmartGroup. Apply uses `detachAny`. Children array may include nested SmartGroup nodes. `insertUnder` still rejects SmartGroup as the **new group’s** parent (new groups stay document-root unless a later reparent). Nested **content** is in `children`, not via `insertUnder`.
+
+---
+
+## [SRS-EP-76] Nested rendering (RenderingContext) {#srs-ep-76-nested-render}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-06](../../prd.md#device-manipulation). **Product:** [BR-B22](./srs-product.md). **Decision:** [ADR-0039](../../../../adr/ADR-0039-nested-ink-box-rendering.md).
+
+### Affine
+
+`Affine { a, b, c, d, e, f }` maps `(x,y) → (a x + c y + e, b x + d y + f)`. `compose(P, Q)` applies **Q then P**. Identity `(1,0, 0,1, 0,0)`.
+
+`own` of a SmartGroup, local origin = bounds origin (0,0) as shipped:
+
+1. Scale `(scaleX, scaleY)`
+2. Rotate `rotation` (radians; usually 0 this campaign)
+3. Translate `(transform.x, transform.y)`
+
+### Walk
+
+```
+paint(node, ctx):
+  if SmartGroup:
+    outcome = compose(ctx.transform, own(node))
+    emit each boundary-role Ink with outcome
+    contentCtx = inkScaleMode == withBounds ? outcome
+                : compose(ctx.transform, TR_without_S(node))
+    for child in children (paint order):
+      paint(child, { transform: contentCtx })
+  else if Ink / Primitive:
+    emit with ctx.transform (and fixedInk UV on content Ink as [SRS-EP-10])
+  else:
+    emit world as today; recurse Frame/Group with identity (they stay world-space)
+```
+
+World call: `paint(rootChildren, { identity })`.
+
+`smartLocalToWorld` for a **top-level** group is `paint` with identity ctx (bit-compatible). Nested groups **must** receive the parent’s `contentCtx` — passing only the immediate node (status quo `walkFlat(..., &node)`) is a defect ([CHL-0032](../../../../../.plan/iter-005/challenges/CHL-0032-nested-ink-box.md)).
+
+Camera / viewport mapping is **after** world: composed world points × panel projector. Nested children stay correct when the camera changes **and** when an ancestor moves.
+
+### Content clip (natural world AABB)
+
+Entering a SmartGroup, **content** (content-role Ink / Primitive, nested SmartGroups, and their descendants) is clipped to the intersection of:
+
+1. ancestor content clips, and
+2. this group’s **natural world AABB** — axis-aligned hull of the four local `bounds` corners after `outcome` (`smartGroupWorldBounds`).
+
+This is **not** even-odd of boundary ink. Boundary-role ink of **this** group is clipped only by ancestor clips (not by its own AABB). Live overlay uses the same clip, including ancestor AABBs when painting a nested subtree.
+
+Overflow past that AABB is **not painted**. Dirty punch and hierarchy cull stay on the natural AABB; do **not** union descendant ink AABBs.
+
+Live overlay (ToolCanvasLayer) uses the same compose for the selected node’s subtree.
+
+---
+
+## [SRS-EP-77] Nested tap-hit and move reparent {#srs-ep-77-nested-hit-reparent}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-06](../../prd.md#device-manipulation) (finger: [REQ-10](../../prd.md#hand-touch) uses the same tap walk). **Product:** [BR-B23, BR-B24, BR-B25](./srs-product.md). **Decision:** [ADR-0039](../../../../adr/ADR-0039-nested-ink-box-rendering.md). **Chrome:** [SRS-EP-12](./srs-ui.md) — no new inventory.
+
+### Tap (Rule 3)
+
+Walk SmartGroups **depth-first**. At each level, test later siblings first. If the press is **outside** a group’s natural world AABB, **skip that subtree** (overflow is not hittable — same clip as paint, [SRS-EP-76](#srs-ep-76-nested-render)). If the press is inside, a child’s world `bounds` (composed outcome, LOD as [SRS-EP-11](#srs-ep-11-device-manipulation)) that contains the press **wins over** its ancestors. Child ink of a SmartGroup is still **not** independently selected — the containing SmartGroup at that level is.
+
+Hit-test of nested bounds uses the same affine as paint ([SRS-EP-76](#srs-ep-76-nested-render)).
+
+Selected node’s move/resize writes **that node’s own-transform / bounds only**. Context toolbar (`cta.copy` / `cta.cut` / `cta.paste` / `cta.enclose` / `tgl.ink_scale_mode`) is for **that** id.
+
+### Marquee / freeform (Rule 4)
+
+`collectPickable` stays **top-level** (do not recurse into SmartGroup). Nested boxes are tap-only. Child ink under a SmartGroup remains not independently lassoed.
+
+### Reparent at move commit (Rule 5)
+
+After a **move** (not resize) commits:
+
+1. Compute the moving node’s **natural area** in world (SmartGroup: area of local `bounds` after full outcome — hull of the four corners; Ink: sample AABB area).
+2. Candidates = SmartGroup / Frame / Group **excluding** the moving node and its descendants.
+3. A candidate qualifies if ≥**80%** of that natural area lies in:
+   - SmartGroup: even-odd interior of **world** boundary ink (same as draw-into)
+   - Frame / Group: world AABB
+4. Winner = highest **paint order** (later sibling among the deepest-vs-later walk: prefer the qualifying node that paints above). Else parent = document root (`parentId` empty).
+5. If winner ≠ current parent: `reparent` + remap own-transform into the new parent’s **content** local space (inverse of that parent’s content-outcome). One undo with the move.
+
+Not during the drag. Not on resize. Nested finger-move uses the same commit hook.
+
+### Finger
+
+[SRS-EP-21](#srs-ep-21-one-finger) “finger-down inside a hittable SmartGroup” uses this tap walk (deepest box), not top-level `collectPickable`.
 
 ---
 

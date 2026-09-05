@@ -8,6 +8,8 @@ status: resolved
 resolution: adopted-future
 resolved_by: pm
 resolved: 2026-08-13
+scheduled_by: [CHL-0032]
+scheduled: 2026-09-05
 opened: 2026-08-13
 iter: iter-003
 expedite: false
@@ -53,6 +55,11 @@ Out of TRACK-003 current waves. Architect thickens when PM opens a later campaig
   SRS-EP-10 states the current capture set explicitly so Dev does not invent nesting mid-W10.
 - No expedite. No interrupt. SM continues W10 membership ([STORY-EP-017](../stories/STORY-EP-017.md))
   without nesting scope.
+
+**Scheduled this campaign — 2026-09-05.** Human adopted nested ink-boxes under
+[CHL-0032](../../iter-005/challenges/CHL-0032-nested-ink-box.md) with five rules (flatten empty
+children, RenderingContext, tap-select any level, marquee top-level only, reparent at end of
+move). Implement against CHL-0032, not this file’s “TBD containment.”
 
 ## Product doc updates
 

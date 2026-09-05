@@ -270,13 +270,28 @@ static void test_already_grouped_skipped()
     std::vector<std::string> ids;
     for (const auto &c : sg->children)
         ids.push_back(c.id);
-    CHECK(ids.size() == 2);
-    CHECK((ids[0] == "enclose_mix" && ids[1] == "free") || (ids[0] == "free" && ids[1] == "enclose_mix"));
-    bool hasAlready = false;
-    for (const auto &id : ids)
-        if (id == "already")
-            hasAlready = true;
-    CHECK(!hasAlready);
+    CHECK(ids.size() == 3);
+    bool hasFree = false;
+    bool hasBoundary = false;
+    bool hasOld = false;
+    for (const auto &id : ids) {
+        if (id == "free")
+            hasFree = true;
+        if (id == "enclose_mix")
+            hasBoundary = true;
+        if (id == "sg_old")
+            hasOld = true;
+        CHECK(id != "already");
+    }
+    CHECK(hasFree && hasBoundary && hasOld);
+    const DocNode *old = doc.find("sg_old");
+    CHECK(old && old->kind == NodeKind::SmartGroup);
+    bool alreadyNested = false;
+    for (const auto &c : old->children) {
+        if (c.id == "already")
+            alreadyNested = true;
+    }
+    CHECK(alreadyNested);
 }
 
 /** @SRS-EP-10 Enclose works with the session down */

@@ -5,6 +5,7 @@
 #include "document/capability.hpp"
 #include "document/hand_touch.hpp"
 #include "document/manipulate.hpp"
+#include "document/nested_inkbox.hpp"
 #include "rendering/rendering.hpp"
 #include "rendering/rendering_qt.hpp"
 #include "selection_context_bar.hpp"
@@ -33,7 +34,7 @@ void SelectionOverlay::refresh(SelectionContext &selection, SessionDocContext &d
     SmartBounds unionB;
     const std::vector<std::string> &ids = selection.ids();
     QRectF bounds;
-    if (!ids.empty() && unionAabbOfIds(doc.document(), ids, unionB)) {
+    if (!ids.empty() && unionComposedAabbOfIds(doc.document(), ids, unionB)) {
         const QPointF tl = doc.worldToPanel(unionB.x, unionB.y);
         const QPointF br =
             doc.worldToPanel(unionB.x + unionB.width, unionB.y + unionB.height);
@@ -93,7 +94,7 @@ void SelectionOverlay::paintLiveManip(QPainter *painter, SelectionContext &selec
         renderer.renderSubtree(doc.document(), proj, req, id, sink);
 
         SmartBounds wb;
-        if (boundsOf(*n, wb)) {
+        if (composedBoundsOf(doc.document(), *n, wb)) {
             const QRectF r =
                 QRectF(doc.worldToPanel(wb.x, wb.y),
                        doc.worldToPanel(wb.x + wb.width, wb.y + wb.height))
@@ -132,7 +133,7 @@ void SelectionOverlay::paintSettled(QPainter *painter, SelectionContext &selecti
 
     SmartBounds unionB;
     QRectF r;
-    if (unionAabbOfIds(doc.document(), ids, unionB)) {
+    if (unionComposedAabbOfIds(doc.document(), ids, unionB)) {
         const QPointF tl = doc.worldToPanel(unionB.x, unionB.y);
         const QPointF br =
             doc.worldToPanel(unionB.x + unionB.width, unionB.y + unionB.height);
@@ -158,7 +159,7 @@ void SelectionOverlay::redrawLiveManip(SelectionContext &selection, SessionDocCo
     const DocNode *n = doc.document().find(selection.pickableId());
     QRectF liveBounds;
     QRectF next;
-    if (n && boundsOf(*n, wb)) {
+    if (n && composedBoundsOf(doc.document(), *n, wb)) {
         liveBounds = doc.worldBoundsToPanel(wb);
         next = liveBounds.adjusted(-12, -12, 12, 48);
     }

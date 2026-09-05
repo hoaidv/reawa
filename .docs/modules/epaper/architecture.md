@@ -170,7 +170,8 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 - [ADR-0014](../../adr/ADR-0014-document-ownership-inversion.md) — the device owns the working document
 - [ADR-0015](../../adr/ADR-0015-one-way-sync-contract.md) — one-way sync contract v1
 - [ADR-0013](../../adr/ADR-0013-ink-box-tool-modes.md) — §1 device-local tool state and §6 world-unit enclose guard survive; §2–§5 superseded
-- [ADR-0011](../../adr/ADR-0011-smart-group.md) — Smart Group semantics (host moved, meaning unchanged)
+- [ADR-0011](../../adr/ADR-0011-smart-group.md) — Smart Group semantics (host moved; nesting compose [ADR-0039](../../adr/ADR-0039-nested-ink-box-rendering.md))
+- [ADR-0039](../../adr/ADR-0039-nested-ink-box-rendering.md) — nested ink-box RenderingContext + own-transform (amends ADR-0011)
 - [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md) — tree-of-vectors document
 - [ADR-0012](../../adr/ADR-0012-world-stroke-viewport-parity.md) — world stroke width + viewport paint parity
 - `ADR-0016` (deferred) — node manipulation model, constrained by the capability descriptor in

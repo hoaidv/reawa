@@ -8,6 +8,7 @@
 #include "action.hpp"
 #include "document/capability.hpp"
 #include "document/manipulate.hpp"
+#include "document/nested_inkbox.hpp"
 #include "../contexts/doc_context.hpp"
 #include "../host_caps.hpp"
 #include "../contexts/selection_context.hpp"
@@ -48,7 +49,7 @@ public:
         if (!n)
             return;
         epaper::document::SmartBounds wb;
-        if (epaper::document::boundsOf(*n, wb) && !caps.toolUi->lodOkPanel(wb)) {
+        if (epaper::document::composedBoundsOf(caps.doc->document(), *n, wb) && !caps.toolUi->lodOkPanel(wb)) {
             if (caps.overlay)
                 caps.overlay->showManipUnavailable(caps, wb);
             return;

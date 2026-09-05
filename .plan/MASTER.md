@@ -50,7 +50,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | 2026-08-16 | Table recognition REQ-15 | backlog — human excluded from TRACK-005 |
 | 2026-08-16 | REQ-16 as separate id | retired → REQ-10 |
 | 2026-08-13 | Generic any-node manipulation | REQ-08 parked |
-| 2026-08-14 | Nested enclose / FREE_FORM | CHL-0011 / CHL-0012 backlog |
+| 2026-08-14 | Nested enclose / FREE_FORM | CHL-0011 **scheduled** 2026-09-05 via [CHL-0032](./iter-005/challenges/CHL-0032-nested-ink-box.md) (this lock, `epaper/ink-box`). CHL-0012 FREE_FORM still backlog |
 | 2026-08-27 | DeviceMap invert user interface; Mouse DragHandler; further tool-system polish | backlog — TRACK-006 closed; do not continue unless a TRACK-005 story needs it |
 | 2026-08-27 | Infini apply undo (`compound` / `set_ink_samples`); whole tablet→desktop undo sync | backlog — [STORY-IN-038](./iter-005/stories/STORY-IN-038.md) cancelled; waits independent sync algorithm |
 
@@ -82,7 +82,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Open challenges / blocked
 
-- CHL-0011 / CHL-0012 / REQ-08 **not this lock**.
+- CHL-0012 / REQ-08 **not this lock**. [CHL-0011](../iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md) **scheduled** via [CHL-0032](./iter-005/challenges/CHL-0032-nested-ink-box.md).
 - [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md) (Shipped “no device pan / no arrowheads” prose vs TRACK-005) — open; implement against new ids until Product Manager adopts.
 - [CHL-0026](./iter-005/challenges/CHL-0026-inverse-op-undo.md) (Inverse-op undo, not whole-tree snapshots) — **adopted** 2026-08-27; ADR-0032 accepted; EP-059…061 **done** and **human-verified**; IN-038 **cancelled**.
 - [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) (Three exclusive erasers replace Path A / Path B) — **adopted** 2026-08-29; [prd-erase.md](../.docs/modules/epaper/prd-erase.md); [ADR-0034](../.docs/adr/ADR-0034-erase-clip-remnants.md); [ADR-0036](../.docs/adr/ADR-0036-toolcanvas-live-overlay.md); erase EP-062…068 **done** (human-verified 2026-08-31).
@@ -114,5 +114,5 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 - Inverse-op undo (device): [ADR-0032](../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. [STORY-EP-059](./iter-005/stories/STORY-EP-059.md), [STORY-EP-060](./iter-005/stories/STORY-EP-060.md), and [STORY-EP-061](./iter-005/stories/STORY-EP-061.md) **done** and **human-verified** 2026-08-27. [STORY-IN-038](./iter-005/stories/STORY-IN-038.md) **cancelled** (tablet→desktop undo apply deferred until an independent sync algorithm).
 - After remaining follow field test: still outstanding (does not block erase story review).
 - Erase: [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](./iter-005/stories/STORY-EP-068.md) **done**. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Field latency: [STORY-EP-070](./iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](./iter-005/stories/STORY-EP-072.md) **ready**. Clipboard product [STORY-EP-044](./iter-005/stories/STORY-EP-044.md) **done**. Path B endpoint ink [STORY-EP-047](./iter-005/stories/STORY-EP-047.md) **done**. Do **not** start [STORY-EP-073](./iter-005/stories/STORY-EP-073.md) or Device Settings unless the human says so.
-- Parked: REQ-15, REQ-08, CHL-0011, CHL-0012, EP-035 measure, DeviceMap invert user interface, Mouse DragHandler, Infini undo apply (IN-038). Do **not** reopen TRACK-006.
+- Parked: REQ-15, REQ-08, CHL-0012, EP-035 measure, DeviceMap invert user interface, Mouse DragHandler, Infini undo apply (IN-038). Nested enclose **unparked** ([CHL-0032](./iter-005/challenges/CHL-0032-nested-ink-box.md)). Do **not** reopen TRACK-006.
 - Backlog: [backlog.md](./backlog.md)

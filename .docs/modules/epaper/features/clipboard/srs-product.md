@@ -71,7 +71,7 @@ canvas or a node), because the device has no right-click.
 | Empty selection copy/cut | No-op; slot unchanged; 0 undo |
 | Empty slot paste / tap empty | 0 nodes; 0 undo; **no** paste chrome |
 | Copy then tap empty | First tap deselects only (0 paste chrome). A second tap while idle sets paste origin; copies become document-root if the tap is not a legal parent |
-| Copy then tap an ink-box (not a live source) | Paste parents into that SmartGroup |
+| Copy then tap an ink-box (not a live source) | Paste parents into that SmartGroup; a pasted **non-empty** SmartGroup stays nested and **tap-selectable** ([CHL-0032](../../../../../.plan/iter-005/challenges/CHL-0032-nested-ink-box.md) BR-B23); an **empty** pasted SmartGroup flattens (BR-B21) |
 | Copy then tap a live source node | Error; slot kept; originals unchanged |
 | Cut then tap empty and paste | Sources gone → BR-C14 does not fire |
 | Tap-select an ink-box then copy | Slot holds the box **and its children** |
@@ -90,6 +90,7 @@ canvas or a node), because the device has no right-click.
 - Given a non-empty selection in SelectionMode, When the creator cuts, Then the selected roots are gone, the slot is non-empty, and one undo restores the roots (empty parent groups still present if they were empty after the cut).
 - Given a non-empty slot, When the creator taps empty or a node and taps Paste, Then new ids exist, the paste union AABB top-left equals the **tap** world point (±1 px @ 100% zoom), relatives are preserved, and the slot is unchanged.
 - Given free ink in the slot, When the creator taps an ink-box that is not a live source and pastes, Then the copy is a child of that SmartGroup.
+- Given a non-empty ink-box in the slot, When the creator taps another ink-box (not a live source) and pastes, Then the copy is a nested child of that SmartGroup and is tap-selectable (move/resize change its own-transform).
 - Given a non-empty slot after copy, When the creator taps a live source node and taps Paste, Then 0 nodes change, an error is shown, and the slot is unchanged.
 - Given an empty slot, When the creator taps empty, Then selection clears and **0** paste chrome appears.
 - Given a non-empty selection, When the creator taps empty canvas, Then selection clears and **0** paste chrome appears (a further idle tap may set paste origin).

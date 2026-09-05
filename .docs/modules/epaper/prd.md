@@ -1,7 +1,7 @@
 ---
 title: PRD — Epaper
 module: epaper
-version: 0.16.0-draft
+version: 0.17.0-draft
 lifecycle: active
 parent_brd: [BRD-06, BRD-07]
 owner: pm
@@ -81,6 +81,8 @@ viewed at scale, and saved.
 | Viewport-follow toggle | Enabling one peer’s follow disables the other with p95 ≤300 ms; 0 dual-follow; disconnect forces off | Manual QA — REQ-19 |
 | Erase (brush / area / object) | p95 ≤50 ms after pointer-up; 1 undo restores; 0 chords; Frame never removed | Manual QA — [prd-erase.md](./prd-erase.md) |
 | Paste fidelity | Pasted subtree geometry ±1 px @ 100% zoom vs source | Manual QA — **iter-005 draft** |
+| Nested ink-box tap-select | After paste or enclose of a box into a box, the child is selectable / movable / resizable at any nesting level (children win hit-test); 0 “visible but dead” children | Manual QA — [CHL-0032](../../../.plan/iter-005/challenges/CHL-0032-nested-ink-box.md) |
+| Empty-box flatten | A letter recognized as an empty ink-box is flattened to free-ink when captured by a parent; 0 leftover empty layers; surrounding enclose includes that letter | Manual QA — CHL-0032 Rule 1 |
 | Connector end style + warp | Endpoint ink stays on the end through bound-node transform (0 orphaned ink); Path B only on Epaper | Manual QA — **iter-005 draft** |
 | Mid-attachment follows warp | Attachment stays on spine; 0 px jump on pen-up vs last preview | Manual QA — **iter-005 draft** |
 | Barrel button hold vs click | 0 click+hold double-fires on a 20-gesture fixture; missing buttons no-op | Manual QA — **iter-005 draft** |
@@ -233,10 +235,13 @@ viewed at scale, and saved.
   object** — and it happens **where they drew it**, immediately, with no round trip and no OCR.
 - **Creation A — enclose.** With `Pen` and **Ink-box recognition** armed, the creator draws a shape around ink.
   The **device** recognizes a roughly rectangular stroke (recognize, do **not** convert to a
-  Primitive), captures every ink whose samples are ≥80% inside, and creates a Smart Group: the
-  enclose stroke is kept as `role: boundary` ink, contained ink is reparented as `role: content`,
-  and `bounds` is the fitted rect. Guards: the fitted rect must be ≥ a fixed minimum size **and**
-  contain ≥1 ink — otherwise the stroke stays ordinary ink. Enclosure is **rectangle-only**.
+  Primitive), captures every **free ink** whose samples are ≥80% inside **and** every **Smart Group**
+  whose natural area is ≥80% inside, and creates a Smart Group: the enclose stroke is kept as
+  `role: boundary` ink, captured ink is reparented as `role: content`, captured non-empty Smart
+  Groups become nested children, **empty** captured Smart Groups are flattened (boundary-ink
+  becomes direct `role: content` of the parent), and `bounds` is the fitted rect. Guards: the
+  fitted rect must be ≥ a fixed minimum size **and** contain ≥1 capturable (ink or flattenable /
+  nestable box) — otherwise the stroke stays ordinary ink. Enclosure is **rectangle-only**.
 - **Creation B — selection (explicit).** The creator arms **Selection rect** or **Selection
   freeform** on the primary ToolChip ([ADR-0017](../../adr/ADR-0017-four-tool-chip.md)):
   - **Rect:** one straight drag. Thin dotted **rectangle** while dragging. Membership = ink with
@@ -252,16 +257,20 @@ viewed at scale, and saved.
   surrounds almost all of the other selected free ink (≥80% of each other stroke's samples inside
   that surround stroke's region). The surround stroke may be **open**; the device builds an
   **artificial closed path** from it for the containment test only. **If no such surround stroke
-  exists, creation is refused** with a visible reason — no AABB-only Smart Group. If the selection
-  includes a Smart Group, Enclose is refused this campaign (no nesting —
-  [CHL-0011](../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)).
+  exists, creation is refused** with a visible reason — no AABB-only Smart Group. **Nested
+  ink-boxes are in** ([CHL-0032](../../../.plan/iter-005/challenges/CHL-0032-nested-ink-box.md)):
+  enclose (Creation A **and** this Enclose CTA) captures free ink **and** existing Smart Groups
+  whose natural area is ≥80% inside the surround. An **empty** captured child (boundary-ink only)
+  is **flattened** to that boundary stroke as direct content of the parent — no redundant empty
+  layer. A non-empty captured child stays a nested ink-box.
 - **Appearance.** A Smart Group always has boundary ink after a successful create. The creator's
   surround stroke is the visual frame — never a synthetic ink rectangle.
 - **Draw into an existing box.** When the creator draws with `Pen` and ≥80% of the new stroke's
   samples fall inside one or more Smart Groups' world bounds, the device parents that stroke as
   `role: content` of the matching box. If several boxes qualify, pick the one with the **highest
   paint / z order** (later siblings paint above). Adding ink never reflows, realigns, or shifts
-  existing content — freehand placement as drawn.
+  existing content — freehand placement as drawn. Nested boxes are legal parents; membership
+  still picks the highest paint-order qualifier (never dual-parent).
 - Recognition is **best-effort plus undo**: a wrong box costs one undo, never a stuck document.
 
 **Acceptance**
@@ -282,8 +291,15 @@ viewed at scale, and saved.
 - Given selected ink with **no** surround stroke at the ≥80% bar, When the creator taps **Enclose**,
   Then no Smart Group is created (0 creations on the negative fixture set), the selection is
   unchanged, and the UI states the reason.
-- Given a selection that includes a Smart Group, When the creator taps **Enclose**, Then creation is
-  refused (0 nested boxes this campaign) and the reason is visible.
+- Given a selection that includes a non-empty Smart Group **and** a qualifying surround stroke,
+  When the creator taps **Enclose**, Then the Smart Group is reparented as a nested child of the
+  new box (0 refuse for nesting). Given the captured child is **empty** (boundary-ink only), When
+  Enclose commits, Then that child is flattened: the parent holds the child’s boundary stroke as
+  `role: content` and the empty Smart Group is gone.
+- Given **Ink-box recognition** armed and an existing empty ink-box (a letter-like loop) plus
+  surrounding free ink, When the creator draws a qualifying enclose around the cluster, Then the
+  letter’s ink is **inside** the new box as content (flattened) and is **not** left behind on
+  move/resize of that box.
 - Given the `Pen` tool and an existing Smart Group, When the creator draws a stroke with ≥80% of
   samples inside that box's world bounds, Then the stroke becomes `role: content` of that box within
   300 ms and no other content ink is translated or reflowed.
@@ -299,7 +315,8 @@ viewed at scale, and saved.
   [CHL-0007](../../../.plan/iter-003/challenges/CHL-0007-selection-move-enclose-sync.md).
 - **UI states / journeys to design:** `Ink-box` armed; enclose accepted; enclose rejected (too small
   / no ink inside); `Selection` → Smart Group with surround stroke; create refused (no surround);
-  draw-into an existing box; nested membership; undo of a create.
+  nested enclose (box-in-box); empty-child flatten; draw-into an existing box; nested membership;
+  undo of a create. Nested tap-select chrome is [REQ-06](#device-manipulation) (no new inventory).
 
 ## [REQ-06] On-device ink-box manipulation {#device-manipulation}
 - **Priority:** Must · **Traces:** [BRD-07]
@@ -307,12 +324,19 @@ viewed at scale, and saved.
 - **Outcome:** manipulating a box on the tablet feels like moving paper, not like filing a request.
   What the creator sees under the pen **is** the document — no advisory ghost, no peer correction,
   no snap-back.
-- **Pilot scope (pen).** Select by pressing a Smart Group with the **pen**; move by dragging inside
+-   **Pilot scope (pen).** Select by pressing a Smart Group with the **pen**; move by dragging inside
   the bounds (no prior selection needed); resize via the **6 square anchors** after explicit
   selection; toggle `inkScaleMode` (`withBounds` | `fixedInk`); deselect by pressing empty canvas.
+  **Nested tap-select** ([CHL-0032](../../../.plan/iter-005/challenges/CHL-0032-nested-ink-box.md)):
+  a press hits the **deepest** ink-box (children above ancestors). Transform of that selected child
+  changes **its own-transform only**; the context toolbar is for that child. **Freeform / marquee**
+  still pick **top-level** ink-boxes only (nested pick is tap). After a **move** commits, the
+  device reparents: new parent = highest paint-order node that contains ≥80% of the moving node’s
+  **natural area**; else the document root.
   **Rotation is out of scope this iter** — it arrives with [REQ-08](#node-manipulation).
   **Connector attachment** is [REQ-09](#device-connectors). **Finger** select/move of a box is
-  [REQ-10](#hand-touch) — not a second resize grammar.
+  [REQ-10](#hand-touch) — not a second resize grammar. Nested finger tap uses the same deepest-hit
+  rule as pen.
 - **`inkScaleMode` feel.** `withBounds`: content scales with the box. `fixedInk`: each content ink
   keeps its sample size fixed and tracks the box via **its own** relative offset / UV inside the box,
   so a newly drawn stroke never moves older content. Boundary ink always transforms with the frame.
@@ -361,6 +385,16 @@ viewed at scale, and saved.
 - Given a selected Smart Group, When the creator presses empty canvas, Then selection clears and the
   next settled frame shows 0 residual selection pixels — regression bar from
   [CHL-0007](../../../.plan/iter-003/challenges/CHL-0007-selection-move-enclose-sync.md).
+- Given an ink-box nested inside another (paste or enclose), When the creator **taps the child**,
+  Then the child is selected (handles + context toolbar are the child’s) and a subsequent move or
+  resize changes **only** the child’s own-transform (parent pose unchanged except via Rule 5
+  reparent). The child remains hittable after a camera change.
+- Given `sel_rect` or `sel_freeform` over a nested cluster, When the gesture commits, Then only
+  **top-level** ink-boxes (and free ink) enter the selection — nested children are not independently
+  marquee-picked.
+- Given a nested child moved so ≥80% of its natural area lies inside a different box, When the move
+  commits, Then its parent is that highest paint-order container. Given <80% inside every container,
+  When the move commits, Then its parent is the document root.
 - Given a viewport scale below the LOD cutoff, When the creator presses a Smart Group, Then no
   manipulation starts (0 accidental transforms) and the UI shows manipulation is unavailable.
 - Given **no session**, When the creator performs any manipulation above, Then the result is
@@ -368,9 +402,10 @@ viewed at scale, and saved.
 - Given the [REQ-08](#node-manipulation) capability descriptor, When SmartGroup is registered under
   it, Then its declared verbs are exactly `{select, move, resize, set-ink-scale-mode}` and the
   transform op validates against the shared envelope with `rotation` unset (0 bespoke op shapes).
-- **UI states / journeys to design:** `Selection` idle; Smart Group selected with handles; move in
-  progress; resize in progress (both ink-scale modes); `inkScaleMode` toggle; deselect; manipulation
-  unavailable below LOD; undo of a manipulation.
+- **UI states / journeys to design:** `Selection` idle; Smart Group selected with handles; nested
+  child selected (same chrome, child’s toolbar); move in progress (reparent at commit);
+  resize in progress (both ink-scale modes); `inkScaleMode` toggle; deselect; marquee/freeform
+  top-level only; manipulation unavailable below LOD; undo of a manipulation.
 
 ## [REQ-07] One-way document sync {#one-way-sync}
 <!-- revised: 2026-08-13 — CHL-0008. Downward traffic narrowed; document changes flow up. -->
@@ -848,11 +883,11 @@ viewed at scale, and saved.
 - **OCR / handwriting-to-Text** — the ink-box captures **any** ink inside the enclosure; there is no
   "is this text?" gate.
 - Non-rectangular enclosure shapes (ellipse, lasso) — `bounds` is axis-aligned.
-- **Nested enclose (Smart Groups capturing other Smart Groups)** — this campaign's enclose captures
-  **free top-level ink only**. Capturing whole ink-boxes as content (nested ink-boxes) is adopted
-  product intent for a **later campaign** —
-  [CHL-0011](../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md). Draw-into
-  membership into an existing box (flat parent) remains in [REQ-05](#device-ink-box) now.
+- **Marquee / freeform pick of nested children** — Won't this slice. Nested pick is **tap**
+  ([REQ-06](#device-manipulation) Rule 3 / Rule 4). Nested **enclose** (Smart Groups capturing
+  other Smart Groups) is **in** —
+  [CHL-0032](../../../.plan/iter-005/challenges/CHL-0032-nested-ink-box.md) (was parked as
+  [CHL-0011](../../../.plan/iter-003/challenges/CHL-0011-nested-smartgroup-enclose.md)).
 - **Ink-box sizing `FREE_FORM` / `WRAP_CONTENT` and `align-content`** — adopted product intent for a
   **later campaign** ([CHL-0012](../../../.plan/iter-003/challenges/CHL-0012-inkbox-sizing-align.md)):
   - `FREE_FORM`: w/h required (first create from boundary-ink); optional `align-content`

@@ -2,6 +2,7 @@
 /**
  * @implements [SRS-EP-07] create_smart_group
  * @implements [SRS-EP-10] reparent capture into Smart Group
+ * @implements [SRS-EP-75] captureIds may name Ink or SmartGroup
  */
 
 #include "compound_edit.hpp"
@@ -59,7 +60,7 @@ inline ApplyResult CreateSmartGroupEdit::doApply(DeviceDocument &doc)
     doc.requireUnique(m_nodeId);
     for (const auto &cid : m_captureIds) {
         DocNode discarded;
-        if (!doc.detachInk(cid, &discarded))
+        if (!doc.detachAny(cid, &discarded))
             throw std::runtime_error(std::string("capture_missing:") + cid);
     }
     DocNode n;
