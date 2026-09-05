@@ -29,7 +29,7 @@ plus object-erase **cull only**. Index owned by [STORY-EP-078](./STORY-EP-078.md
 
 Product 80% bars unchanged. Approximating 80% from AABB overlap is a challenge, not this story.
 
-**Queued.** Depends on the index and move-reparent [STORY-EP-076](./STORY-EP-076.md).
+**Queued.** Move-reparent [STORY-EP-076](./STORY-EP-076.md) is **done**. Still waits on the index.
 Do not start while field-latency is the Lock cursor unless the human picks this wave.
 
 ## Kind

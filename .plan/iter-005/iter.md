@@ -10,14 +10,16 @@ status: active
 
 # Iter 005 — Hand-on-paper
 
-Track: [TRACK-005](../tracks/TRACK-005-hand-on-paper.md) ·
-Board: [execution-board](./execution-board.md)
+Track: [TRACK-007](../tracks/TRACK-007-follow-through.md) (active) ·
+closed [TRACK-005](../tracks/TRACK-005-hand-on-paper.md) ·
+Board: [execution-board-follow-through](./execution-board-follow-through.md) ·
+archive [execution-board](./execution-board.md)
 
 Lock: **vertical · verified · wip 2**.
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 
-W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). 2026-08-27: [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. Inverse-undo local EP-059…061 **done** and **human-verified**. IN-038 **cancelled**. 2026-08-29: [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; brush [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-064](./stories/STORY-EP-064.md) **done** (human-verified). 2026-08-31: [STORY-EP-067](./stories/STORY-EP-067.md)/[STORY-EP-068](./stories/STORY-EP-068.md)/[STORY-EP-065](./stories/STORY-EP-065.md)/[STORY-EP-066](./stories/STORY-EP-066.md) **done**; [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified). Field follow-ups [STORY-EP-070](./stories/STORY-EP-070.md)…[STORY-EP-072](./stories/STORY-EP-072.md) **ready**. 2026-09-04: clipboard [STORY-EP-044](./stories/STORY-EP-044.md) **done** (human-verified); [STORY-EP-073](./stories/STORY-EP-073.md) later. 2026-09-05: Path B endpoint ink [STORY-EP-047](./stories/STORY-EP-047.md) **done** (human-verified); Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md) frozen. Nested [STORY-EP-074](./stories/STORY-EP-074.md)…[STORY-EP-077](./stories/STORY-EP-077.md) **in-review**. Logarithmic hit-test [STORY-EP-078](./stories/STORY-EP-078.md)…[STORY-EP-080](./stories/STORY-EP-080.md) **draft** (queued; [ADR-0040](../../.docs/adr/ADR-0040-logarithmic-hit-test.md) proposed). Follow field test still outstanding. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **closed**.
+W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). 2026-08-27: [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. Inverse-undo local EP-059…061 **done** and **human-verified**. IN-038 **cancelled**. 2026-08-29: [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; brush [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-064](./stories/STORY-EP-064.md) **done** (human-verified). 2026-08-31: [STORY-EP-067](./stories/STORY-EP-067.md)/[STORY-EP-068](./stories/STORY-EP-068.md)/[STORY-EP-065](./stories/STORY-EP-065.md)/[STORY-EP-066](./stories/STORY-EP-066.md) **done**; [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified). 2026-09-04: clipboard [STORY-EP-044](./stories/STORY-EP-044.md) **done** (human-verified). 2026-09-05: Path B endpoint ink [STORY-EP-047](./stories/STORY-EP-047.md) **done** (human-verified); Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md) frozen leftover. Nested [STORY-EP-074](./stories/STORY-EP-074.md)…[STORY-EP-077](./stories/STORY-EP-077.md) **done** (human-verified). Human closed [TRACK-005](../tracks/TRACK-005-hand-on-paper.md) (too large) and opened [TRACK-007](../tracks/TRACK-007-follow-through.md) for the remainder (follow field test, barrel/Device Settings, attachments, manual create, field latency EP-070…072 **ready**, logarithmic hit-test EP-078…080 **draft**, clipops EP-073 later). Cursor: **WAIT** human pick. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **closed**. Do **not** open iter-006 until Product Manager retro-gate.
 
 ## Committed
 
@@ -61,10 +63,10 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-EP-044](./stories/STORY-EP-044.md) — 8 — clipboard ops — **done** (human-verified 2026-09-04)
 - [STORY-EP-046](./stories/STORY-EP-046.md) — 5 — Path A end styles · depends EP-045 — **blocked**
 - [STORY-EP-047](./stories/STORY-EP-047.md) — 5 — Path B endpoint ink — **done** (human-verified 2026-09-05)
-- [STORY-EP-074](./stories/STORY-EP-074.md) — 8 — nested ink-box render + tap — **in-review**
-- [STORY-EP-075](./stories/STORY-EP-075.md) — 5 — nested enclose + flatten — **in-review**
-- [STORY-EP-076](./stories/STORY-EP-076.md) — 5 — move-commit reparent — **in-review**
-- [STORY-EP-077](./stories/STORY-EP-077.md) — 3 — clip nested content to natural AABB — **in-review**
+- [STORY-EP-074](./stories/STORY-EP-074.md) — 8 — nested ink-box render + tap — **done** (human-verified 2026-09-05)
+- [STORY-EP-075](./stories/STORY-EP-075.md) — 5 — nested enclose + flatten — **done** (human-verified 2026-09-05)
+- [STORY-EP-076](./stories/STORY-EP-076.md) — 5 — move-commit reparent — **done** (human-verified 2026-09-05)
+- [STORY-EP-077](./stories/STORY-EP-077.md) — 3 — clip nested content to natural AABB — **done** (human-verified 2026-09-05)
 - [STORY-EP-078](./stories/STORY-EP-078.md) — 8 — spatial R-tree + named geometry queries — **draft** · depends EP-074
 - [STORY-EP-079](./stories/STORY-EP-079.md) — 5 — migrate point-query callers — **draft** · depends EP-078, EP-074
 - [STORY-EP-080](./stories/STORY-EP-080.md) — 8 — migrate range 80% callers — **draft** · depends EP-078, EP-076
@@ -92,7 +94,7 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - PM `srs-product` BR-D08 still always-on viewport (architect flagged)
 - [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**; EP-059…061 **done** and **human-verified**; IN-038 cancelled
 - [CHL-0027](./challenges/CHL-0027-palm-travel-not-contact-count.md) palm rest by travel — open; Product Manager triage
-- Vertical work-in-progress 2: no implement story in flight; field follow-ups EP-070…072 **ready**; nested EP-074…077 **in-review**; logarithmic hit-test EP-078…080 **draft** (queued); erase EP-062…068 **done**; [STORY-EP-069](./stories/STORY-EP-069.md) **done**; clipboard [STORY-EP-044](./stories/STORY-EP-044.md) **done**; Path B endpoint ink [STORY-EP-047](./stories/STORY-EP-047.md) **done**; Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md) frozen; [STORY-EP-073](./stories/STORY-EP-073.md) later; Device Settings still frozen; TRACK-006 closed
+- Vertical work-in-progress 2: no implement story in flight; TRACK-007 WAIT human pick; field follow-ups EP-070…072 **ready** (not NOW); logarithmic hit-test EP-078…080 **draft**; TRACK-005 closed 2026-09-05; TRACK-006 closed
 - Agent host has no RM2 panel / no live TCP `:9877`; remaining follow field test is still outstanding
 
 ## Links

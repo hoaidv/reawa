@@ -4,7 +4,7 @@ title: Nested enclose capture and empty-child flatten
 kind: implement
 parent_srs: [SRS-EP-75, SRS-EP-10]
 parent_req: [REQ-05]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 5
@@ -26,6 +26,7 @@ wireframe: ""
 
 TRACK-005. [CHL-0032](../challenges/CHL-0032-nested-ink-box.md) Rule 1 + capture.
 [SRS-EP-75](../../../.docs/modules/epaper/features/ink-box/srs-logic.md#srs-ep-75-nested-membership).
+**Human-verified on device 2026-09-05.**
 
 ## Kind
 

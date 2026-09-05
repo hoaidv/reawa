@@ -29,7 +29,7 @@ Callers of **point** hit. Index owned by [STORY-EP-078](./STORY-EP-078.md). Prod
 (children before ancestors) and [SRS-EP-11](../../../.docs/modules/epaper/features/ink-box/srs-logic.md#srs-ep-11-device-manipulation)
 unchanged.
 
-**Queued.** Depends on the index and nested tap. Do not start while field-latency
+**Queued.** Nested tap is **done**. Still waits on the index. Do not start while field-latency
 [STORY-EP-070](./STORY-EP-070.md)…[STORY-EP-072](./STORY-EP-072.md) are the Lock cursor
 unless the human picks this wave.
 

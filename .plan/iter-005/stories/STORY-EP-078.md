@@ -33,9 +33,10 @@ Product hit rules stay in [SRS-EP-11](../../../.docs/modules/epaper/features/ink
 / [SRS-EP-77](../../../.docs/modules/epaper/features/ink-box/srs-logic.md#srs-ep-77-nested-hit-reparent)
 — this story does **not** change them. Exact 80% stays on the candidate set k.
 
-**Queued** behind nested tap [STORY-EP-074](./STORY-EP-074.md) (in-review). Do not implement
-against the old top-level-only walk. Do not start until the human picks this wave versus
-field-latency [STORY-EP-070](./STORY-EP-070.md)…[STORY-EP-072](./STORY-EP-072.md).
+Nested tap [STORY-EP-074](./STORY-EP-074.md) is **done** (human-verified 2026-09-05) — `depends_on`
+unblocked. Lives on [TRACK-007](../../tracks/TRACK-007-follow-through.md). Still **queued**:
+do not start until the human picks this wave. [ADR-0040](../../../.docs/adr/ADR-0040-logarithmic-hit-test.md)
+is still `proposed`.
 No design package. No new chrome.
 
 ## Kind

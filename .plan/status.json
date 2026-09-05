@@ -1,13 +1,13 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-09-05T07:45:14+00:00",
+  "generated_at": "2026-09-05T15:24:46+00:00",
   "current_iter": "iter-005",
   "by_status": {
     "draft": 12,
     "ready": 4,
     "in-progress": 0,
-    "in-review": 4,
-    "done": 142,
+    "in-review": 0,
+    "done": 146,
     "blocked": 15,
     "cancelled": 7
   },
@@ -19,8 +19,8 @@
     },
     "epaper": {
       "total": 80,
-      "done": 48,
-      "in_review": 4
+      "done": 52,
+      "in_review": 0
     },
     "infini": {
       "total": 38,
@@ -64,8 +64,8 @@
     {
       "id": "TRACK-005",
       "kind": "planned",
-      "status": "active",
-      "cursor": "Field follow-ups EP-070\u2026072 ready (ink lag, selection settle probe, camera stress). Nested EP-074\u2026077 in-review. Logarithmic hit-test EP-078\u2026080 draft (queued; ADR-0040 proposed). Clipboard EP-044 done (human-verified 2026-09-04). Path B endpoint ink EP-047 done (human-verified 2026-09-05). Path A EP-045/046 frozen. STORY-EP-073 later. STORY-EP-069 done.",
+      "status": "done",
+      "cursor": "done \u2014 closed 2026-09-05 because the stream was too large. Remainder \u2192 TRACK-007. Leftover: Path A EP-045/046 frozen; CHL-0027 Product Manager triage.",
       "iter": "iter-005"
     },
     {
@@ -73,6 +73,13 @@
       "kind": "expedite",
       "status": "done",
       "cursor": "done \u2014 human closed 2026-08-27; leftover DeviceMap UI / Mouse handler parked",
+      "iter": "iter-005"
+    },
+    {
+      "id": "TRACK-007",
+      "kind": "planned",
+      "status": "active",
+      "cursor": "WAIT human pick first wave. Closed TRACK-005 was too large; nothing is NOW until the human names a wave.",
       "iter": "iter-005"
     }
   ]

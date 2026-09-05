@@ -4,7 +4,7 @@ title: Nested ink-box RenderingContext and tap-select
 kind: implement
 parent_srs: [SRS-EP-76, SRS-EP-77, SRS-EP-11]
 parent_req: [REQ-06]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 8
@@ -29,7 +29,7 @@ TRACK-005. [CHL-0032](../challenges/CHL-0032-nested-ink-box.md). Logic
 [SRS-EP-77](../../../.docs/modules/epaper/features/ink-box/srs-logic.md#srs-ep-77-nested-hit-reparent).
 Decision [ADR-0039](../../../.docs/adr/ADR-0039-nested-ink-box-rendering.md). **No** design `depends_on`.
 
-Fixes paste-into-box “visible but dead” children.
+Fixes paste-into-box “visible but dead” children. **Human-verified on device 2026-09-05.**
 
 ## Kind
 

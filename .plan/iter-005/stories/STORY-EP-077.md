@@ -4,7 +4,7 @@ title: Clip nested ink-box content to natural world AABB
 kind: implement
 parent_srs: [SRS-EP-76, SRS-EP-77]
 parent_req: [REQ-06]
-status: in-review
+status: done
 priority: P0
 iter: iter-005
 estimate: 3
@@ -30,7 +30,7 @@ content clip / [SRS-EP-77](../../../.docs/modules/epaper/features/ink-box/srs-lo
 overflow not hittable. [ADR-0039](../../../.docs/adr/ADR-0039-nested-ink-box-rendering.md) §6.
 
 Fixes stale dirty-rect paint when `fixedInk` then `withBounds` leaves a child outside the parent AABB.
-Does **not** walk descendant handwriting for a visual AABB.
+Does **not** walk descendant handwriting for a visual AABB. **Human-verified on device 2026-09-05.**
 
 ## Kind
 
