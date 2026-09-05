@@ -6,12 +6,12 @@ owner: sm
 date: 2026-09-05
 lock: vertical · verified · wip 2
 wave: W-field-latency
-verdict: "STORY-EP-069 done. Field follow-ups EP-070…072 ready. Clipboard STORY-EP-044 done (human-verified 2026-09-04). Path B endpoint ink STORY-EP-047 done (human-verified 2026-09-05). Path A EP-045/046 frozen. STORY-EP-073 later."
+verdict: "STORY-EP-069 done. Field follow-ups EP-070…072 ready. Nested EP-074…077 in-review. Logarithmic hit-test EP-078…080 draft (queued; ADR-0040 proposed). Clipboard STORY-EP-044 done (human-verified 2026-09-04). Path B endpoint ink STORY-EP-047 done (human-verified 2026-09-05). Path A EP-045/046 frozen. STORY-EP-073 later."
 ---
 
 # Execution board — hand-on-paper
 
-**Canonical board** for [TRACK-005](../tracks/TRACK-005-hand-on-paper.md). Track **active**. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **done** 2026-08-27. Inverse-undo implement **done**. Erase product bound 2026-08-29. Erase implement **human-verified** 2026-08-31. [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Camera LatestJob field: **better**. Field follow-ups [STORY-EP-070](./stories/STORY-EP-070.md)…[STORY-EP-072](./stories/STORY-EP-072.md) **ready**. Clipboard [STORY-EP-044](./stories/STORY-EP-044.md) **done** (human-verified 2026-09-04). Path B endpoint ink [STORY-EP-047](./stories/STORY-EP-047.md) **done** (human-verified 2026-09-05). Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md) **blocked**. [STORY-EP-073](./stories/STORY-EP-073.md) later.
+**Canonical board** for [TRACK-005](../tracks/TRACK-005-hand-on-paper.md). Track **active**. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **done** 2026-08-27. Inverse-undo implement **done**. Erase product bound 2026-08-29. Erase implement **human-verified** 2026-08-31. [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Camera LatestJob field: **better**. Field follow-ups [STORY-EP-070](./stories/STORY-EP-070.md)…[STORY-EP-072](./stories/STORY-EP-072.md) **ready**. Nested [STORY-EP-074](./stories/STORY-EP-074.md)…[STORY-EP-077](./stories/STORY-EP-077.md) **in-review**. Logarithmic hit-test [STORY-EP-078](./stories/STORY-EP-078.md)…[STORY-EP-080](./stories/STORY-EP-080.md) **draft** (queued; [ADR-0040](../../.docs/adr/ADR-0040-logarithmic-hit-test.md) proposed). Clipboard [STORY-EP-044](./stories/STORY-EP-044.md) **done** (human-verified 2026-09-04). Path B endpoint ink [STORY-EP-047](./stories/STORY-EP-047.md) **done** (human-verified 2026-09-05). Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md) **blocked**. [STORY-EP-073](./stories/STORY-EP-073.md) later.
 
 ---
 
@@ -21,8 +21,9 @@ verdict: "STORY-EP-069 done. Field follow-ups EP-070…072 ready. Clipboard STOR
 |---|---|---|
 | Design **done** | 5 current | [UI-EP-06](../../.docs/design/index.md) hand-touch (EP-054; field-test delta 20 mm + HT) · [UI-EP-07](../../.docs/design/index.md) follow Epaper · [UI-IN-04](../../.docs/design/index.md) follow Infini · [UI-EP-08](../../.docs/design/index.md) Device Settings · Pen buttons |
 | Wave **NOW** | 3 ready | [STORY-EP-070](./stories/STORY-EP-070.md)…[STORY-EP-072](./stories/STORY-EP-072.md) field latency / probes. Not in-progress. |
+| Nested | 4 in-review | [STORY-EP-074](./stories/STORY-EP-074.md)…[STORY-EP-077](./stories/STORY-EP-077.md). Unblocks log-hit-test `depends_on`. |
 | Closed interrupt | TRACK-006 | Tablet/Tool split + [ADR-0033](../../.docs/adr/ADR-0033-tool-abstraction.md) + pointer roles. Do **not** continue. |
-| Queued | — | [STORY-EP-073](./stories/STORY-EP-073.md) clipboard clipops split later. Device Settings still wait. Follow hardware score still outstanding. Infini undo apply parked (IN-038 cancelled). Path A connector toolbar frozen (EP-045/046). Attachments EP-048/049 still queued. |
+| Queued | — | Logarithmic hit-test [STORY-EP-078](./stories/STORY-EP-078.md)…[STORY-EP-080](./stories/STORY-EP-080.md) **draft** ([ADR-0040](../../.docs/adr/ADR-0040-logarithmic-hit-test.md) proposed). [STORY-EP-073](./stories/STORY-EP-073.md) clipboard clipops split later. Device Settings still wait. Follow hardware score still outstanding. Infini undo apply parked (IN-038 cancelled). Path A connector toolbar frozen (EP-045/046). Attachments EP-048/049 still queued. |
 
 Cameras independent by default. [ADR-0029](../../.docs/adr/ADR-0029-independent-cameras-viewport-follow.md) accepted. [ADR-0023](../../.docs/adr/ADR-0023-viewport-last-writer.md) superseded.
 
@@ -44,8 +45,8 @@ modules: epaper, infini
 features: epaper/ink-box; epaper/tool-modes; epaper/connector-ink; epaper/region-sync; epaper/local-pen-ink; epaper/device-document; epaper/erase; infini/infinity-canvas; infini/tablet-sync; infini/vector-document
 personas: developer, human
 forbidden: REQ-15 tables; REQ-08; CHL-0011; CHL-0012; EP-032; AI; last-writer ADR-0023; TRACK-006 reopen; DeviceMap invert UI; Mouse DragHandler; STORY-IN-038; infini undo apply; tablet-to-desktop undo sync
-NOW: field follow-ups EP-070…072 ready; clipboard product done (EP-044); Path B endpoint ink done (EP-047); Path A EP-045/046 frozen; do not start EP-073
-cursor: pick EP-070 or EP-071 or EP-072 (WIP 2); do not continue TRACK-006; IN-038 cancelled; do not start Path A toolbar
+NOW: field follow-ups EP-070…072 ready; nested EP-074…077 in-review; log-hit-test EP-078…080 draft (queued); clipboard product done (EP-044); Path B endpoint ink done (EP-047); Path A EP-045/046 frozen; do not start EP-073
+cursor: pick EP-070 or EP-071 or EP-072 (WIP 2); do not start EP-078…080 until nested tap is done and the human picks this wave; do not continue TRACK-006; IN-038 cancelled; do not start Path A toolbar
 ```
 
 ---
@@ -73,6 +74,8 @@ cursor: pick EP-070 or EP-071 or EP-072 (WIP 2); do not continue TRACK-006; IN-0
 | **W-undo-local** | **done** 2026-08-27 | serial (one Quality Assurance Engineer then one Developer; both stories) | [STORY-EP-060](./stories/STORY-EP-060.md) + [STORY-EP-061](./stories/STORY-EP-061.md) **done**. Human verified device undo/redo 2026-08-27. No `infini/` |
 | **W3** | **done** 2026-08-31 | | erase EP-062…068 **done**; [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified) |
 | **W-field-latency** | **NOW** (ready, not started) | **∥** (different write sets; WIP 2) | [STORY-EP-070](./stories/STORY-EP-070.md) residual ink lag · [STORY-EP-071](./stories/STORY-EP-071.md) selection settle probe · [STORY-EP-072](./stories/STORY-EP-072.md) camera stress probe |
+| **W-nested** | **in-review** | serial (already implemented) | [STORY-EP-074](./stories/STORY-EP-074.md)…[STORY-EP-077](./stories/STORY-EP-077.md) nested ink-box. Wait human / Quality Assurance Engineer. |
+| **W-log-hit-test** | queued (draft) | serial then ∥ migrates | [STORY-EP-078](./stories/STORY-EP-078.md) R-tree · [STORY-EP-079](./stories/STORY-EP-079.md) point callers · [STORY-EP-080](./stories/STORY-EP-080.md) range 80% callers. **Not NOW.** Depends on nested tap/reparent. [ADR-0040](../../.docs/adr/ADR-0040-logarithmic-hit-test.md) proposed. |
 | **W-clipboard** | **done** 2026-09-04 | | [STORY-EP-044](./stories/STORY-EP-044.md) in-document copy/cut/paste. [STORY-EP-043](./stories/STORY-EP-043.md) cancelled. |
 | **W-clipboard-refactor** | later (draft) | | [STORY-EP-073](./stories/STORY-EP-073.md) split clipops — not NOW |
 | **W-endpoint-ink** | **done** 2026-09-05 | | Path B [STORY-EP-047](./stories/STORY-EP-047.md) Recognize and preserve endpoint ink. Human-verified on device. |
@@ -127,6 +130,13 @@ Work-in-progress 2 = campaign capacity. Start at most two of A/B/C; **do not** r
 | STORY-EP-070 | Residual pen-to-ink lag on moderately dense pages | P0 | SRS-EP-01 / EP-03 | — | **ready** | W-field-latency | developer | A | Human 2026-08-31: ~4 sentences + ink-boxes; small random pen-to-ink gaps. Stroke op fine. Do not FullClear ink ([CHL-0029](./challenges/CHL-0029-settle-is-not-fullclear-on-ink.md)). |
 | STORY-EP-071 | Instrument sel_rect and sel_freeform settle to knobs | P0 | SRS-EP-12 / EP-04 | — | **ready** | W-field-latency | developer | B | Human: Selecting overlay smooth; pointer-up → settled rect + knobs slow. Instrument first. |
 | STORY-EP-072 | Camera-change stress probe on a full handwriting page | P0 | SRS-EP-03 / EP-24 | — | **ready** | W-field-latency | developer | C | Human: LatestJob camera **better**; need stress log on a full handwriting + ink-box page. Conflicts with EP-070 on `tabletcanvasitem.cpp`. |
+| STORY-EP-074 | Nested ink-box RenderingContext and tap-select | P0 | SRS-EP-76 / EP-77 / EP-11; [ADR-0039](../../.docs/adr/ADR-0039-nested-ink-box-rendering.md) | none | **in-review** | W-nested | human / Quality Assurance Engineer | — | Unblocks log-hit-test. Child wins tap; marquee stays top-level. |
+| STORY-EP-075 | Nested enclose capture and empty-child flatten | P0 | SRS-EP-75 / EP-10 | — | **in-review** | W-nested | human / Quality Assurance Engineer | — | Depends on EP-074. |
+| STORY-EP-076 | Reparent nested ink-box at end of move | P1 | SRS-EP-77 | — | **in-review** | W-nested | human / Quality Assurance Engineer | — | 80% natural area; highest paint. Unblocks EP-080. |
+| STORY-EP-077 | Clip nested ink-box content to natural world AABB | P0 | SRS-EP-76 / EP-77 | — | **in-review** | W-nested | human / Quality Assurance Engineer | — | Depends on EP-074. Overflow not hittable. |
+| STORY-EP-078 | Spatial R-tree and named geometry queries | P0 | SRS-EP-79 / EP-78; [ADR-0040](../../.docs/adr/ADR-0040-logarithmic-hit-test.md) proposed | none | **draft** queued | W-log-hit-test | developer (when human picks) | — | Owns the index. Depends on nested tap EP-074. Do not start while field-latency is NOW unless the human picks this wave. |
+| STORY-EP-079 | Migrate point-query callers to geometry index | P0 | SRS-EP-79 / EP-77 / EP-11 / EP-21 | — | **draft** queued | W-log-hit-test | developer (after EP-078) | — | Tap / move / select / finger / paste-tap. Depends on EP-078 + EP-074. |
+| STORY-EP-080 | Migrate range 80-percent callers to geometry index | P0 | SRS-EP-79 / EP-11 / EP-10 / EP-75 / EP-58 | — | **draft** queued | W-log-hit-test | developer (after EP-078) | — | Marquee, freeform, enclose, draw-into, move-reparent; object-erase cull only. Depends on EP-078 + EP-076. |
 | STORY-EP-044 | In-document copy cut paste and tap-origin paste | P0 | SRS-EP-31 / EP-32 / EP-33 / EP-11 | EP-043 **cancelled** | **done** | W-clipboard | — | — | Human-verified 2026-09-04. Slot is process-global singleton. Paste on normal toolbar; no long-press. |
 | STORY-EP-047 | Recognize and preserve endpoint ink | P1 | SRS-EP-74 / EP-35 / EP-37 / EP-10; [ADR-0038](../../.docs/adr/ADR-0038-endpoint-ink-face-frame.md) | none (Path B, no design story) | **done** | W-endpoint-ink | — | — | Human-verified on device 2026-09-05. Face-frame `{n,e}` on ConnectorAnchor. Steal ≥80% length in 5 mm circle at one end. Path A not this story. |
 | STORY-EP-045 | Design connector endpoint style toolbar | P1 | SRS-EP-36 / EP-34 | — | **blocked** | W4 | — | — | Frozen 2026-09-04. Path A toolbar is Infini / web-desktop, not Epaper this campaign. |
@@ -142,14 +152,15 @@ Work-in-progress 2 = campaign capacity. Start at most two of A/B/C; **do not** r
 | B | Developer | [STORY-EP-071](./stories/STORY-EP-071.md) | SelectionOverlay settle | Pointer-up → knobs stages + ms in a tail-able log |
 | C | Developer | [STORY-EP-072](./stories/STORY-EP-072.md) | camera job / raster probe | Stress recipe + log on a full handwriting page |
 
-Wait: do **not** start A and C together (same `tabletcanvasitem.cpp`). Do **not** start [STORY-EP-073](./stories/STORY-EP-073.md) until the human picks it. Do **not** start Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md). Do **not** implement IN-038. Do **not** reopen TRACK-006.
+Wait: do **not** start A and C together (same `tabletcanvasitem.cpp`). Do **not** start [STORY-EP-078](./stories/STORY-EP-078.md)…[STORY-EP-080](./stories/STORY-EP-080.md) until nested tap is done **and** the human picks this wave. Do **not** start [STORY-EP-073](./stories/STORY-EP-073.md) until the human picks it. Do **not** start Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md). Do **not** implement IN-038. Do **not** reopen TRACK-006.
 
 ### Backlog sink
 
 | Item | Why |
 |---|---|
 | REQ-15 tables | human excluded |
-| REQ-08 / CHL-0011 / CHL-0012 | parked |
+| REQ-08 / CHL-0012 | parked |
+| CHL-0011 TBD containment | **scheduled** via [CHL-0032](./challenges/CHL-0032-nested-ink-box.md) — do not reopen the old challenge |
 | EP-032 chrome SM | parked iter-004 |
 | Infini→Infini follow | forward, not Must |
 | Last-writer ADR-0023 | **superseded** — do not implement |
@@ -163,4 +174,4 @@ Wait: do **not** start A and C together (same `tabletcanvasitem.cpp`). Do **not*
 
 ## Verdict
 
-[STORY-EP-059](./stories/STORY-EP-059.md)…[STORY-EP-061](./stories/STORY-EP-061.md) **done** (human-verified 2026-08-27). [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Field follow-ups [STORY-EP-070](./stories/STORY-EP-070.md)…[STORY-EP-072](./stories/STORY-EP-072.md) **ready**. Clipboard [STORY-EP-044](./stories/STORY-EP-044.md) **done** (human-verified 2026-09-04). Path B endpoint ink [STORY-EP-047](./stories/STORY-EP-047.md) **done** (human-verified 2026-09-05). Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md) **blocked**. [STORY-EP-073](./stories/STORY-EP-073.md) later. [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**. [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**. [ADR-0035](../../.docs/adr/ADR-0035-tool-context-is-host-ports.md) **accepted**. [ADR-0036](../../.docs/adr/ADR-0036-toolcanvas-live-overlay.md) **accepted**. [ADR-0037](../../.docs/adr/ADR-0037-device-clipboard-singleton.md) **accepted**. [ADR-0038](../../.docs/adr/ADR-0038-endpoint-ink-face-frame.md) **accepted**.
+[STORY-EP-059](./stories/STORY-EP-059.md)…[STORY-EP-061](./stories/STORY-EP-061.md) **done** (human-verified 2026-08-27). [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Field follow-ups [STORY-EP-070](./stories/STORY-EP-070.md)…[STORY-EP-072](./stories/STORY-EP-072.md) **ready**. Nested [STORY-EP-074](./stories/STORY-EP-074.md)…[STORY-EP-077](./stories/STORY-EP-077.md) **in-review**. Logarithmic hit-test [STORY-EP-078](./stories/STORY-EP-078.md)…[STORY-EP-080](./stories/STORY-EP-080.md) **draft** (queued; [ADR-0040](../../.docs/adr/ADR-0040-logarithmic-hit-test.md) proposed). Clipboard [STORY-EP-044](./stories/STORY-EP-044.md) **done** (human-verified 2026-09-04). Path B endpoint ink [STORY-EP-047](./stories/STORY-EP-047.md) **done** (human-verified 2026-09-05). Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md) **blocked**. [STORY-EP-073](./stories/STORY-EP-073.md) later. [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**. [ADR-0034](../../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**. [ADR-0035](../../.docs/adr/ADR-0035-tool-context-is-host-ports.md) **accepted**. [ADR-0036](../../.docs/adr/ADR-0036-toolcanvas-live-overlay.md) **accepted**. [ADR-0037](../../.docs/adr/ADR-0037-device-clipboard-singleton.md) **accepted**. [ADR-0038](../../.docs/adr/ADR-0038-endpoint-ink-face-frame.md) **accepted**.

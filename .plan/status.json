@@ -1,12 +1,12 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-09-05T05:11:53+00:00",
+  "generated_at": "2026-09-05T07:45:14+00:00",
   "current_iter": "iter-005",
   "by_status": {
-    "draft": 9,
+    "draft": 12,
     "ready": 4,
     "in-progress": 0,
-    "in-review": 3,
+    "in-review": 4,
     "done": 142,
     "blocked": 15,
     "cancelled": 7
@@ -18,9 +18,9 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 76,
+      "total": 80,
       "done": 48,
-      "in_review": 3
+      "in_review": 4
     },
     "infini": {
       "total": 38,
@@ -30,7 +30,7 @@
   },
   "open_challenges": 3,
   "resolved_challenges_this_iter": 3,
-  "sync_orphans": 62,
+  "sync_orphans": 64,
   "master_plan": true,
   "tracks": [
     {
@@ -65,7 +65,7 @@
       "id": "TRACK-005",
       "kind": "planned",
       "status": "active",
-      "cursor": "Field follow-ups EP-070\u2026072 ready (ink lag, selection settle probe, camera stress). Clipboard EP-044 done (human-verified 2026-09-04). Path B endpoint ink EP-047 done (human-verified 2026-09-05). Path A EP-045/046 frozen. STORY-EP-073 later. STORY-EP-069 done.",
+      "cursor": "Field follow-ups EP-070\u2026072 ready (ink lag, selection settle probe, camera stress). Nested EP-074\u2026077 in-review. Logarithmic hit-test EP-078\u2026080 draft (queued; ADR-0040 proposed). Clipboard EP-044 done (human-verified 2026-09-04). Path B endpoint ink EP-047 done (human-verified 2026-09-05). Path A EP-045/046 frozen. STORY-EP-073 later. STORY-EP-069 done.",
       "iter": "iter-005"
     },
     {
