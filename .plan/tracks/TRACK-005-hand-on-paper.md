@@ -60,7 +60,14 @@ stories:
   - STORY-EP-071
   - STORY-EP-072
   - STORY-EP-073
-cursor: "Field follow-ups EP-070…072 ready (ink lag, selection settle probe, camera stress). Clipboard EP-044 done (human-verified 2026-09-04). Path B endpoint ink EP-047 done (human-verified 2026-09-05). Path A EP-045/046 frozen. STORY-EP-073 later. STORY-EP-069 done."
+  - STORY-EP-074
+  - STORY-EP-075
+  - STORY-EP-076
+  - STORY-EP-077
+  - STORY-EP-078
+  - STORY-EP-079
+  - STORY-EP-080
+cursor: "Field follow-ups EP-070…072 ready (ink lag, selection settle probe, camera stress). Nested EP-074…077 in-review. Logarithmic hit-test EP-078…080 draft (queued; ADR-0040 proposed). Clipboard EP-044 done (human-verified 2026-09-04). Path B endpoint ink EP-047 done (human-verified 2026-09-05). Path A EP-045/046 frozen. STORY-EP-073 later. STORY-EP-069 done."
 paused_reason: ""
 interrupts: []
 ---
@@ -125,20 +132,27 @@ PRD: epaper 0.8.0-draft · infini 0.5.0-draft · [BS-0002](../iter-004/brainstor
 | [EP-071](../iter-005/stories/STORY-EP-071.md) | implement | P0 | Instrument sel_rect / sel_freeform settle to knobs — **ready** |
 | [EP-072](../iter-005/stories/STORY-EP-072.md) | implement | P0 | Camera-change stress probe on a full handwriting page — **ready** |
 | [EP-073](../iter-005/stories/STORY-EP-073.md) | implement | P2 | Split clipboard clipops — **draft** later · depends EP-044 |
+| [EP-074](../iter-005/stories/STORY-EP-074.md) | implement | P0 | Nested render + tap — **in-review** |
+| [EP-075](../iter-005/stories/STORY-EP-075.md) | implement | P0 | Nested enclose + flatten — **in-review** · depends EP-074 |
+| [EP-076](../iter-005/stories/STORY-EP-076.md) | implement | P1 | Move-commit reparent — **in-review** · depends EP-074 |
+| [EP-077](../iter-005/stories/STORY-EP-077.md) | implement | P0 | Clip nested content AABB — **in-review** · depends EP-074 |
+| [EP-078](../iter-005/stories/STORY-EP-078.md) | implement | P0 | Spatial R-tree + named queries — **draft** · depends EP-074 |
+| [EP-079](../iter-005/stories/STORY-EP-079.md) | implement | P0 | Migrate point-query callers — **draft** · depends EP-078, EP-074 |
+| [EP-080](../iter-005/stories/STORY-EP-080.md) | implement | P0 | Migrate range 80% callers — **draft** · depends EP-078, EP-076 |
 
 W0 bind **done** 2026-08-19 (`[SRS-EP-21]`…`[SRS-EP-48]`, `[SRS-IN-20]`…`[SRS-IN-25]`). Hand-touch and follow implement stories that shipped are **done**. Other committed stories stay **draft** until their wave. [STORY-IN-033](../iter-005/stories/STORY-IN-033.md) **done** 2026-08-20.
 
 ## Cursor
 
-**NOW:** Field follow-ups [STORY-EP-070](../iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](../iter-005/stories/STORY-EP-072.md) **ready** (human 2026-08-31 after LatestJob camera felt better). [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl host ports / SelectionOverlay **done**. Erase [STORY-EP-062](../iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](../iter-005/stories/STORY-EP-068.md) **done**. Clipboard [STORY-EP-044](../iter-005/stories/STORY-EP-044.md) **done**. Path B endpoint ink [STORY-EP-047](../iter-005/stories/STORY-EP-047.md) **done**. Path A [STORY-EP-045](../iter-005/stories/STORY-EP-045.md) / [STORY-EP-046](../iter-005/stories/STORY-EP-046.md) frozen. [STORY-EP-073](../iter-005/stories/STORY-EP-073.md) later. Device Settings stay queued. Remaining Infini follow field test still outstanding.
+**NOW:** Field follow-ups [STORY-EP-070](../iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](../iter-005/stories/STORY-EP-072.md) **ready** (human 2026-08-31 after LatestJob camera felt better). Nested [STORY-EP-074](../iter-005/stories/STORY-EP-074.md)…[STORY-EP-077](../iter-005/stories/STORY-EP-077.md) **in-review**. Logarithmic hit-test [STORY-EP-078](../iter-005/stories/STORY-EP-078.md)…[STORY-EP-080](../iter-005/stories/STORY-EP-080.md) **draft** (queued; [ADR-0040](../../../.docs/adr/ADR-0040-logarithmic-hit-test.md) proposed). [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl host ports / SelectionOverlay **done**. Erase [STORY-EP-062](../iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](../iter-005/stories/STORY-EP-068.md) **done**. Clipboard [STORY-EP-044](../iter-005/stories/STORY-EP-044.md) **done**. Path B endpoint ink [STORY-EP-047](../iter-005/stories/STORY-EP-047.md) **done**. Path A [STORY-EP-045](../iter-005/stories/STORY-EP-045.md) / [STORY-EP-046](../iter-005/stories/STORY-EP-046.md) frozen. [STORY-EP-073](../iter-005/stories/STORY-EP-073.md) later. Device Settings stay queued. Remaining Infini follow field test still outstanding.
 
 Tool-system interrupt [TRACK-006](./TRACK-006-tool-system-refactor.md) is **done** (2026-08-27). Default pointer map is Primary=Pen, Secondary=Finger under [ADR-0033](../../../.docs/adr/ADR-0033-tool-abstraction.md).
 
-## Freeze note (Path B endpoint ink done; Path A frozen; EP-073 later; field latency ready)
+## Freeze note (Path B endpoint ink done; Path A frozen; EP-073 later; field latency ready; log hit-test queued)
 
-- In flight: none. Field follow-ups EP-070…072 **ready** (not started). [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **done**, human verified 2026-08-31. Erase EP-062…068 **done**. EP-059…061 **done**, human verified undo/redo. Clipboard [STORY-EP-044](../iter-005/stories/STORY-EP-044.md) **done**, human verified 2026-09-04. Path B endpoint ink [STORY-EP-047](../iter-005/stories/STORY-EP-047.md) **done**, human verified 2026-09-05. Path A [STORY-EP-045](../iter-005/stories/STORY-EP-045.md) / [STORY-EP-046](../iter-005/stories/STORY-EP-046.md) **blocked**. [STORY-EP-073](../iter-005/stories/STORY-EP-073.md) later. IN-038 **cancelled**.
-- Open files / risks: [CHL-0027](../iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md) still open; no RM2 panel / no live TCP `:9877`; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open. Leftover snapshot wording in deprecated Infini [SRS-IN-12](../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) — do not implement.
-- Resume: Human named ink lag / selection settle / camera stress for NOW. Clipboard product is done; Path B connector ends are done. Do **not** start EP-073 or Path A toolbar until the human picks them. Follow field-test notes still wanted. Do **not** reopen TRACK-006.
+- In flight: none. Field follow-ups EP-070…072 **ready** (not started). Nested EP-074…077 **in-review**. Logarithmic hit-test EP-078…080 **draft** (queued). [STORY-EP-069](../iter-005/stories/STORY-EP-069.md) ToolContextImpl/SelectionOverlay **done**, human verified 2026-08-31. Erase EP-062…068 **done**. EP-059…061 **done**, human verified undo/redo. Clipboard [STORY-EP-044](../iter-005/stories/STORY-EP-044.md) **done**, human verified 2026-09-04. Path B endpoint ink [STORY-EP-047](../iter-005/stories/STORY-EP-047.md) **done**, human verified 2026-09-05. Path A [STORY-EP-045](../iter-005/stories/STORY-EP-045.md) / [STORY-EP-046](../iter-005/stories/STORY-EP-046.md) **blocked**. [STORY-EP-073](../iter-005/stories/STORY-EP-073.md) later. IN-038 **cancelled**.
+- Open files / risks: [CHL-0027](../iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md) still open; no RM2 panel / no live TCP `:9877`; [CHL-0022](../iter-005/challenges/CHL-0022-shipped-no-device-pan.md) still open. Leftover snapshot wording in deprecated Infini [SRS-IN-12](../../.docs/modules/infini/features/vector-document/srs-logic.md#srs-in-12-undo-history) — do not implement. [ADR-0040](../../../.docs/adr/ADR-0040-logarithmic-hit-test.md) still `proposed`.
+- Resume: Human named ink lag / selection settle / camera stress for NOW. Nested ink-box in-review. Logarithmic hit-test sliced but **not** NOW until the human picks it. Clipboard product is done; Path B connector ends are done. Do **not** start EP-073 or Path A toolbar until the human picks them. Follow field-test notes still wanted. Do **not** reopen TRACK-006.
 
 ## Execution board
 
@@ -171,3 +185,4 @@ Tool-system interrupt [TRACK-006](./TRACK-006-tool-system-refactor.md) is **done
 | 2026-08-31 | Human: LatestJob camera **better**. Filed [STORY-EP-070](../iter-005/stories/STORY-EP-070.md) residual pen-to-ink, [STORY-EP-071](../iter-005/stories/STORY-EP-071.md) selection settle probe, [STORY-EP-072](../iter-005/stories/STORY-EP-072.md) camera stress. Clipboard still frozen. |
 | 2026-09-04 | Human **verified** [STORY-EP-044](../iter-005/stories/STORY-EP-044.md) clipboard complete. Filed [STORY-EP-073](../iter-005/stories/STORY-EP-073.md) clipops split — later, not NOW. |
 | 2026-09-05 | Human **verified** Path B connector endpoint styles. [STORY-EP-047](../iter-005/stories/STORY-EP-047.md) **done**. Path A [STORY-EP-045](../iter-005/stories/STORY-EP-045.md) / [STORY-EP-046](../iter-005/stories/STORY-EP-046.md) stay frozen. |
+| 2026-09-05 | Human: more performance — logarithmic hit-test. Architect bound [SRS-EP-78](../../.docs/modules/epaper/features/device-document/srs-quality.md#srs-ep-78-log-hit-test) / [SRS-EP-79](../../.docs/modules/epaper/features/device-document/srs-logic.md#srs-ep-79-geometry-queries) / [ADR-0040](../../../.docs/adr/ADR-0040-logarithmic-hit-test.md) (`proposed`). Sliced [STORY-EP-078](../iter-005/stories/STORY-EP-078.md)…[STORY-EP-080](../iter-005/stories/STORY-EP-080.md) **draft**, queued behind nested + field-latency cursor. |

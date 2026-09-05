@@ -26,6 +26,7 @@
 #include "rendering/rendering.hpp"
 
 #include <QDebug>
+#include <cmath>
 #include <unordered_set>
 
 
@@ -376,9 +377,20 @@ inline std::string SessionDocContext::hitSelectTarget(double wx, double wy) cons
     }
     std::vector<const DocNode *> pick;
     collectPickable(document().rootChildren, pick);
+    const QPointF panel = worldToPanel(wx, wy);
+    const auto wPad = panelToWorld(panel.x() + 12.0, panel.y());
+    const double strokeTol = std::max(8.0, std::hypot(wPad.x - wx, wPad.y - wy));
     for (int i = int(pick.size()) - 1; i >= 0; --i) {
         const DocNode *n = pick[size_t(i)];
-        if (!n || n->kind == NodeKind::SmartGroup || !descriptorFor(n->kind).has(Verb::Select))
+        if (!n || n->kind != NodeKind::Connector)
+            continue;
+        if (connectorStrokeHits(*n, wx, wy, strokeTol))
+            return n->id;
+    }
+    for (int i = int(pick.size()) - 1; i >= 0; --i) {
+        const DocNode *n = pick[size_t(i)];
+        if (!n || n->kind == NodeKind::SmartGroup || n->kind == NodeKind::Connector
+            || !descriptorFor(n->kind).has(Verb::Select))
             continue;
         SmartBounds b;
         if (!composedBoundsOf(document(), *n, b))

@@ -7,6 +7,8 @@
  */
 
 #include "document/device_document.hpp"
+#include "document/connector_warp.hpp"
+#include "document/surround_create.hpp"
 #include "drawing/tools/clipboard.hpp"
 #include "drawing/tools/contexts/selection_context.hpp"
 #include "drawing/tools/hold_still.hpp"
@@ -426,6 +428,102 @@ static void test_paste_chrome_hidden_while_transforming()
     CHECK(!sel.pasteChromeVisible(true));
 }
 
+static JsonValue createConnectorOp(const std::string &id, const std::string &fromId,
+                                   const std::string &toId, double x0, double y0, double x1,
+                                   double y1)
+{
+    JsonValue::Object from;
+    from.emplace_back("nodeId", JsonValue::string(fromId));
+    JsonValue::Object to;
+    to.emplace_back("nodeId", JsonValue::string(toId));
+    JsonValue::Array spine;
+    auto pt = [](double x, double y) {
+        JsonValue::Object o;
+        o.emplace_back("x", JsonValue::number(x));
+        o.emplace_back("y", JsonValue::number(y));
+        return JsonValue::object(std::move(o));
+    };
+    spine.push_back(pt(x0, y0));
+    spine.push_back(pt((x0 + x1) / 2.0, (y0 + y1) / 2.0));
+    spine.push_back(pt(x1, y1));
+    JsonValue::Object rest;
+    rest.emplace_back("spine", JsonValue::array(std::move(spine)));
+    rest.emplace_back("offsets", JsonValue::array({}));
+    JsonValue::Object payload;
+    payload.emplace_back("id", JsonValue::string(id));
+    payload.emplace_back("from", JsonValue::object(std::move(from)));
+    payload.emplace_back("to", JsonValue::object(std::move(to)));
+    payload.emplace_back("warpStyle", JsonValue::string("morph"));
+    payload.emplace_back("restShape", JsonValue::object(std::move(rest)));
+    return opEnvelope("create_connector:" + id, "create_connector",
+                      JsonValue::object(std::move(payload)));
+}
+
+static void test_copy_paste_connector_with_both_boxes()
+{
+    clipboard().reset();
+    DeviceDocument doc;
+    JsonValue::Array kidsA;
+    kidsA.push_back(inkChild("Ca", 0, 0, 40, 30));
+    CHECK(doc.commitJson(createSmartGroupOp("A", 0, 0, 80, 60, JsonValue::array(std::move(kidsA))))
+              .applied);
+    JsonValue::Array kidsB;
+    kidsB.push_back(inkChild("Cb", 0, 0, 40, 30));
+    CHECK(doc.commitJson(createSmartGroupOp("B", 200, 0, 80, 60, JsonValue::array(std::move(kidsB))))
+              .applied);
+    CHECK(doc.commitJson(createConnectorOp("Conn", "A", "B", 80, 30, 200, 30)).applied);
+    refreshAllConnectorWarps(doc);
+
+    const auto ids = selectByFreeform(doc, [] {
+        std::vector<InkSample> s;
+        auto add = [](std::vector<InkSample> *o, double x, double y) {
+            InkSample p;
+            p.x = x;
+            p.y = y;
+            o->push_back(p);
+        };
+        add(&s, -10, -10);
+        add(&s, 300, -10);
+        add(&s, 300, 90);
+        add(&s, -10, 90);
+        add(&s, -10, -10);
+        return s;
+    }());
+    CHECK(std::find(ids.begin(), ids.end(), "A") != ids.end());
+    CHECK(std::find(ids.begin(), ids.end(), "B") != ids.end());
+    CHECK(std::find(ids.begin(), ids.end(), "Conn") != ids.end());
+
+    copyToSlot(doc, ids, clipboard());
+    int slotConn = 0;
+    for (const auto &n : clipboard().nodes) {
+        if (n.kind == NodeKind::Connector)
+            ++slotConn;
+    }
+    CHECK(slotConn == 1);
+    CHECK(clipboard().nodes.size() == 3);
+
+    const auto out = commitPaste(doc, clipboard(), 0, 200, "", false);
+    CHECK(out.result.applied);
+    CHECK(out.refuse == PasteRefuse::None);
+    int liveConn = 0;
+    std::string pastedConn;
+    doc.forEachPaintNode([&](const DocNode &n) {
+        if (n.kind == NodeKind::Connector) {
+            ++liveConn;
+            if (n.id != "Conn")
+                pastedConn = n.id;
+        }
+    });
+    CHECK(liveConn == 2);
+    CHECK(!pastedConn.empty());
+    const DocNode *pc = doc.find(pastedConn);
+    CHECK(pc);
+    CHECK(pc->fromNodeId != "A");
+    CHECK(pc->toNodeId != "B");
+    CHECK(doc.find(pc->fromNodeId) && doc.find(pc->fromNodeId)->kind == NodeKind::SmartGroup);
+    CHECK(doc.find(pc->toNodeId) && doc.find(pc->toNodeId)->kind == NodeKind::SmartGroup);
+}
+
 int main()
 {
     test_copy_does_not_push_undo();
@@ -441,6 +539,7 @@ int main()
     test_paste_copied_ink_box_onto_canvas();
     test_hold_still_travel_threshold();
     test_paste_chrome_hidden_while_transforming();
+    test_copy_paste_connector_with_both_boxes();
     if (g_fails) {
         std::cerr << g_fails << " failed\n";
         return 1;

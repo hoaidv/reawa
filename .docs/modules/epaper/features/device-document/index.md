@@ -23,12 +23,13 @@ inherits semantics from the deprecated infini sections listed in the
   [SRS-EP-15](./srs-logic.md#srs-ep-15-debug-log-ship) debug-log ship TCP `:9878` (not a document channel) ·
   [SRS-EP-28](./srs-logic.md#srs-ep-28-selection-erase) **retired** (Path B; see [erase](../erase/index.md)) ·
   [SRS-EP-31](./srs-logic.md#srs-ep-31-clipboard) clipboard ·
-  [SRS-EP-45](./srs-logic.md#srs-ep-45-manual-insert) manual Frame/Primitive
+  [SRS-EP-45](./srs-logic.md#srs-ep-45-manual-insert) manual Frame/Primitive ·
+  [SRS-EP-79](./srs-logic.md#srs-ep-79-geometry-queries) document geometry queries (spatial index)
 - Data: [srs-data.md](./srs-data.md) — [SRS-EP-09] device structures + wire binding; the grammar
   itself stays canonical in [infini SRS-IN-09](../../../infini/features/vector-document/srs-data.md)
 - Quality: [srs-quality.md](./srs-quality.md) — [SRS-EP-13] ingestion budget, publish latency,
   offline parity, round-trip fidelity · [SRS-EP-16] debug-log ink-path isolation ·
-  [SRS-EP-33] clipboard fidelity
+  [SRS-EP-33] clipboard fidelity · [SRS-EP-78] logarithmic hit-test complexity
 - BDD: [bdd/ingest-stroke.feature](./bdd/ingest-stroke.feature) ·
   [bdd/undo-ring.feature](./bdd/undo-ring.feature) ·
   [bdd/undo-fail-safe.feature](./bdd/undo-fail-safe.feature) ·
@@ -41,7 +42,8 @@ inherits semantics from the deprecated infini sections listed in the
   [ADR-0011](../../../../adr/ADR-0011-smart-group.md)
 - Decisions: [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) (ownership
   inversion) · [ADR-0015](../../../../adr/ADR-0015-one-way-sync-contract.md) (one-way sync contract) ·
-  [ADR-0037](../../../../adr/ADR-0037-device-clipboard-singleton.md) (clipboard singleton; supersedes ADR-0024)
+  [ADR-0037](../../../../adr/ADR-0037-device-clipboard-singleton.md) (clipboard singleton; supersedes ADR-0024) ·
+  [ADR-0040](../../../../adr/ADR-0040-logarithmic-hit-test.md) (device hit-test R-tree)
 - Peers: [infini/tablet-sync](../../../infini/features/tablet-sync/index.md) ·
   [infini/vector-document](../../../infini/features/vector-document/index.md) (mirror + persistence)
 - Siblings: [ink-box](../ink-box/index.md) (what edits the document) ·

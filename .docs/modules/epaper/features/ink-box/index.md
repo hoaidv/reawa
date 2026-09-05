@@ -25,16 +25,19 @@ Semantics inherited from the deprecated infini sections [SRS-IN-10], [SRS-IN-11]
   [SRS-EP-21] one-finger pick/move ([REQ-10](../../prd.md#hand-touch)) ·
   [SRS-EP-75] nested capture + flatten ·
   [SRS-EP-76] RenderingContext + content AABB clip ·
-  [SRS-EP-77] nested tap + move reparent
+  [SRS-EP-77] nested tap + move reparent ·
+  queries: [SRS-EP-79](../device-document/srs-logic.md#srs-ep-79-geometry-queries)
 - UI: [srs-ui.md](./srs-ui.md) — [SRS-EP-12] selection overlay ·
   [SRS-EP-22] hand-touch chrome · [SRS-EP-32] clipboard affordances (needs_design: no)
 - Quality: [srs-quality.md](./srs-quality.md) — [SRS-EP-14] create/manipulate bars ·
-  [SRS-EP-25] one-finger hand-touch bars
+  [SRS-EP-25] one-finger hand-touch bars · complexity of hit-test:
+  [SRS-EP-78](../device-document/srs-quality.md#srs-ep-78-log-hit-test)
 - BDD: [bdd/](./bdd/) — inherited from the deprecated infini features and re-tagged
 - Decisions: [ADR-0011](../../../../adr/ADR-0011-smart-group.md) (semantics survive) ·
   [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) (where they run) ·
   [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md) (empty pan is local; publish only if Infini following) ·
-  [ADR-0039](../../../../adr/ADR-0039-nested-ink-box-rendering.md) (nested compose + own-transform)
+  [ADR-0039](../../../../adr/ADR-0039-nested-ink-box-rendering.md) (nested compose + own-transform) ·
+  [ADR-0040](../../../../adr/ADR-0040-logarithmic-hit-test.md) (device R-tree; exact 80% on k)
 - Forward constraint: must conform to [node-manipulation](../node-manipulation/srs-product.md)
   ([REQ-08](../../prd.md#node-manipulation))
 - Architect view (lasso/move/resize routing): [tool-system](../../tool-system/index.md) ·

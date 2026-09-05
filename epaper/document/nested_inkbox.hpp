@@ -11,6 +11,7 @@
 
 #include "nested_flatten.hpp"
 #include "recognize_enclose.hpp"
+#include "surround_create.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -123,6 +124,8 @@ inline bool composedBoundsOf(const DeviceDocument &doc, const DocNode &n, SmartB
         out.height = n.gh;
         return true;
     }
+    if (n.kind == NodeKind::Connector)
+        return nodeWorldAabb(n, out);
     return false;
 }
 

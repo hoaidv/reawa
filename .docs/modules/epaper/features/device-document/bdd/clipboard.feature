@@ -107,6 +107,15 @@ Feature: In-document clipboard on the device
     And a second undo restores the originals
     And 0 restore_snapshot ops run
 
+  @SRS-EP-31 @SRS-EP-11
+  Scenario: Copy of two boxes and their connector pastes the connector
+    Given recognized connector Conn between SmartGroups A and B
+    And sel_freeform or sel_rect selected A, B, and Conn (at least 80 percent of Conn path samples inside)
+    When copy then paste to a new tap location
+    Then the copies include A, B, and a connector
+    And the pasted connector endpoints remap to the pasted boxes
+    And the originals remain
+
   @SRS-EP-33 @SRS-EP-11
   Scenario: Tap does not nudge
     Given SelectionMode and a node at world origin (40, 60)

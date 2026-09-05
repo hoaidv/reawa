@@ -3,6 +3,7 @@
  * Selection-create: surround stroke required. Invoked only from cta.enclose.
  * @implements [SRS-EP-10] selection create surround
  * @implements [SRS-EP-11] rect / freeform pickable sets
+ * @implements [SRS-EP-18] history-restore dirty includes bound connector spines
  */
 
 #include "device_document.hpp"
@@ -131,6 +132,71 @@ inline double fractionAabbInsidePolygon(const SmartBounds &b, const std::vector<
     return n == 0 ? 0 : static_cast<double>(hit) / static_cast<double>(n);
 }
 
+/** Visible connector path: warped samples, else rest spine. @implements [SRS-EP-11] BR-C11 */
+inline std::vector<InkSample> connectorWorldPath(const DocNode &c)
+{
+    std::vector<InkSample> out;
+    if (!c.warpedSamples.empty()) {
+        for (const auto &p : c.warpedSamples) {
+            InkSample s;
+            s.x = p.x;
+            s.y = p.y;
+            out.push_back(s);
+        }
+        return out;
+    }
+    for (const auto &p : c.restSpine) {
+        InkSample s;
+        s.x = p.x;
+        s.y = p.y;
+        out.push_back(s);
+    }
+    return out;
+}
+
+inline double distPointToSeg(double px, double py, double x0, double y0, double x1, double y1)
+{
+    const double dx = x1 - x0;
+    const double dy = y1 - y0;
+    const double len2 = dx * dx + dy * dy;
+    double t = len2 < 1e-18 ? 0.0 : ((px - x0) * dx + (py - y0) * dy) / len2;
+    t = std::max(0.0, std::min(1.0, t));
+    return std::hypot(px - (x0 + t * dx), py - (y0 + t * dy));
+}
+
+/** Stroke hit — AABB press must not select. @implements [SRS-EP-11] BR-C11 */
+inline bool connectorStrokeHits(const DocNode &n, double wx, double wy, double worldTol)
+{
+    const auto path = connectorWorldPath(n);
+    if (path.size() < 2)
+        return false;
+    const double tol = std::max(0.0, worldTol);
+    for (size_t i = 1; i < path.size(); ++i) {
+        if (distPointToSeg(wx, wy, path[i - 1].x, path[i - 1].y, path[i].x, path[i].y) <= tol)
+            return true;
+    }
+    return false;
+}
+
+inline void includeAabb(SmartBounds &acc, bool *any, const SmartBounds &b)
+{
+    if (!any)
+        return;
+    if (!*any) {
+        acc = b;
+        *any = true;
+        return;
+    }
+    const double minX = std::min(acc.x, b.x);
+    const double minY = std::min(acc.y, b.y);
+    const double maxX = std::max(acc.x + acc.width, b.x + b.width);
+    const double maxY = std::max(acc.y + acc.height, b.y + b.height);
+    acc.x = minX;
+    acc.y = minY;
+    acc.width = maxX - minX;
+    acc.height = maxY - minY;
+}
+
 inline bool nodeWorldAabb(const DocNode &n, SmartBounds &out)
 {
     if (n.kind == NodeKind::Ink) {
@@ -164,6 +230,13 @@ inline bool nodeWorldAabb(const DocNode &n, SmartBounds &out)
         out.height = n.bounds.maxY - n.bounds.minY;
         return true;
     }
+    if (n.kind == NodeKind::Connector) {
+        const auto path = connectorWorldPath(n);
+        if (path.empty())
+            return false;
+        out = samplesAabb(path);
+        return true;
+    }
     return false;
 }
 
@@ -186,6 +259,51 @@ inline bool nodeInvalidateAabb(const DeviceDocument &doc, const std::string &id,
     return nodeWorldAabb(*n, out);
 }
 
+/**
+ * World AABB of connectors bound to nodeId. Warp is derived — undo targets are
+ * the box only; InPlaceDirty must still punch the spine.
+ * @implements [SRS-EP-18] undo/redo of bound-node drag dirty includes spines
+ */
+inline bool boundConnectorsWorldAabb(const DeviceDocument &doc, const std::string &nodeId,
+                                     SmartBounds &out)
+{
+    if (nodeId.empty())
+        return false;
+    bool any = false;
+    std::vector<const DocNode *> stack;
+    for (const auto &n : doc.rootChildren)
+        stack.push_back(&n);
+    while (!stack.empty()) {
+        const DocNode *n = stack.back();
+        stack.pop_back();
+        if (n->kind == NodeKind::Connector
+            && (n->fromNodeId == nodeId || n->toNodeId == nodeId)) {
+            SmartBounds b;
+            if (nodeWorldAabb(*n, b))
+                includeAabb(out, &any, b);
+        }
+        for (const auto &c : n->children)
+            stack.push_back(&c);
+    }
+    return any;
+}
+
+/** Box (or node) AABB ∪ bound connector spines — history restore dirty. */
+inline bool unionHistoryRestoreAabb(const DeviceDocument &doc, const std::vector<std::string> &ids,
+                                    SmartBounds &out)
+{
+    bool any = false;
+    for (const auto &id : ids) {
+        SmartBounds b;
+        if (nodeInvalidateAabb(doc, id, b))
+            includeAabb(out, &any, b);
+        SmartBounds c;
+        if (boundConnectorsWorldAabb(doc, id, c))
+            includeAabb(out, &any, c);
+    }
+    return any;
+}
+
 /** Top-level pickable nodes (not ToolChip; not children of SmartGroup). */
 inline void collectPickable(const std::vector<DocNode> &nodes, std::vector<const DocNode *> &out)
 {
@@ -195,12 +313,28 @@ inline void collectPickable(const std::vector<DocNode> &nodes, std::vector<const
             continue;
         }
         if (n.kind == NodeKind::Ink || n.kind == NodeKind::Text || n.kind == NodeKind::Primitive
-            || n.kind == NodeKind::Frame) {
+            || n.kind == NodeKind::Frame || n.kind == NodeKind::Connector) {
             out.push_back(&n);
         }
         if (n.kind == NodeKind::Group)
             collectPickable(n.children, out);
     }
+}
+
+inline bool selectedByPathSamples(const DocNode &n, const SmartBounds *rect,
+                                  const std::vector<InkSample> *poly)
+{
+    const std::vector<InkSample> *samples = &n.samples;
+    std::vector<InkSample> path;
+    if (n.kind == NodeKind::Connector) {
+        path = connectorWorldPath(n);
+        samples = &path;
+    }
+    if (rect)
+        return fractionInsideRect(*samples, *rect) >= 0.8;
+    if (poly)
+        return fractionInsidePolygon(*samples, *poly) >= 0.8;
+    return false;
 }
 
 inline std::vector<std::string> selectByRect(const DeviceDocument &doc, const SmartBounds &rect)
@@ -209,8 +343,8 @@ inline std::vector<std::string> selectByRect(const DeviceDocument &doc, const Sm
     collectPickable(doc.rootChildren, pick);
     std::vector<std::string> ids;
     for (const DocNode *n : pick) {
-        if (n->kind == NodeKind::Ink) {
-            if (fractionInsideRect(n->samples, rect) >= 0.8)
+        if (n->kind == NodeKind::Ink || n->kind == NodeKind::Connector) {
+            if (selectedByPathSamples(*n, &rect, nullptr))
                 ids.push_back(n->id);
             continue;
         }
@@ -231,8 +365,8 @@ inline std::vector<std::string> selectByFreeform(const DeviceDocument &doc,
     collectPickable(doc.rootChildren, pick);
     std::vector<std::string> ids;
     for (const DocNode *n : pick) {
-        if (n->kind == NodeKind::Ink) {
-            if (fractionInsidePolygon(n->samples, poly) >= 0.8)
+        if (n->kind == NodeKind::Ink || n->kind == NodeKind::Connector) {
+            if (selectedByPathSamples(*n, nullptr, &poly))
                 ids.push_back(n->id);
             continue;
         }

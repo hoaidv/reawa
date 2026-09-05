@@ -500,23 +500,24 @@ void TabletCanvasItem::applyHistoryRestore(bool isUndo)
         for (const auto &t : peek->targets)
             ids.push_back(t.nodeId);
     }
+    auto accDirty = [&]() {
+        SmartBounds world;
+        if (!unionHistoryRestoreAabb(m_session.document, ids, world))
+            return;
+        const QRectF r = worldBoundsToPanel(world).adjusted(-16, -16, 16, 16);
+        dirty = dirty.isEmpty() ? r : dirty.united(r);
+    };
     // @fix [CHL-0031] child ink of a SmartGroup is group-local; dirty the parent box
-    for (const auto &id : ids) {
-        const QRectF b = panelBoundOfNodeId(id);
-        if (!b.isEmpty())
-            dirty = dirty.isEmpty() ? b : dirty.united(b);
-    }
+    // @fix [SRS-EP-18] bound connector spines are derived — punch pre ∪ post pose
+    accDirty();
 
     const UndoResult r = isUndo ? m_session.document.undo() : m_session.document.redo();
     (void)r;
+    refreshAllConnectorWarps(m_session.document);
     emitRecogChrome(0, {});
     notifyHistory();
 
-    for (const auto &id : ids) {
-        const QRectF b = panelBoundOfNodeId(id);
-        if (!b.isEmpty())
-            dirty = dirty.isEmpty() ? b : dirty.united(b);
-    }
+    accDirty();
     // [D09] disappeared node with no before/after AABB → FullClear (no hole).
     if (dirty.isEmpty())
         m_session.noteDocumentMutated();
@@ -1651,13 +1652,19 @@ bool TabletCanvasItem::lodOkWorld(const epaper::document::SmartBounds &wb) const
 QRectF TabletCanvasItem::boundConnectorsPanelUnion(const std::string &sgId) const
 {
     QRectF u;
-    for (const auto &node : m_session.document.rootChildren) {
-        if (node.kind != epaper::document::NodeKind::Connector)
-            continue;
-        if (node.fromNodeId != sgId && node.toNodeId != sgId)
-            continue;
-        const QRectF r = warpedConnectorPanelRect(node);
-        u = u.isEmpty() ? r : u.united(r);
+    std::vector<const epaper::document::DocNode *> stack;
+    for (const auto &node : m_session.document.rootChildren)
+        stack.push_back(&node);
+    while (!stack.empty()) {
+        const epaper::document::DocNode *node = stack.back();
+        stack.pop_back();
+        if (node->kind == epaper::document::NodeKind::Connector
+            && (node->fromNodeId == sgId || node->toNodeId == sgId)) {
+            const QRectF r = warpedConnectorPanelRect(*node);
+            u = u.isEmpty() ? r : u.united(r);
+        }
+        for (const auto &c : node->children)
+            stack.push_back(&c);
     }
     return u;
 }

@@ -55,27 +55,6 @@ inline bool samplesFullyInsidePolygon(const std::vector<InkSample> &s,
     return true;
 }
 
-inline std::vector<InkSample> connectorWorldPath(const DocNode &c)
-{
-    std::vector<InkSample> out;
-    if (!c.warpedSamples.empty()) {
-        for (const auto &p : c.warpedSamples) {
-            InkSample s;
-            s.x = p.x;
-            s.y = p.y;
-            out.push_back(s);
-        }
-        return out;
-    }
-    for (const auto &p : c.restSpine) {
-        InkSample s;
-        s.x = p.x;
-        s.y = p.y;
-        out.push_back(s);
-    }
-    return out;
-}
-
 /**
  * Connector remove. REQ-14 attachments are not in the tree yet; body children
  * go with the connector. Undo is RemoveNodeEdit's inverse.

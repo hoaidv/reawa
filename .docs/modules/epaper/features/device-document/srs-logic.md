@@ -1,7 +1,7 @@
 ---
 feature: device-document
 parent_req: [REQ-04, REQ-07]
-version: 0.3.0
+version: 0.4.0
 lifecycle: active
 ---
 
@@ -17,6 +17,8 @@ Device-local shapes: [SRS-EP-09](./srs-data.md). Budgets: [SRS-EP-13](./srs-qual
 Desktop peer: [SRS-IN-07](../../../infini/features/tablet-sync/srs-logic.md).
 Siblings that **write** this tree: [SRS-EP-10 / SRS-EP-11](../ink-box/srs-logic.md).
 Viewport map / paint: [SRS-EP-02](../region-sync/srs-logic.md).
+Geometry queries (spatial index): [SRS-EP-79](#srs-ep-79-geometry-queries) /
+[ADR-0040](../../../../adr/ADR-0040-logarithmic-hit-test.md).
 Product rules: [srs-product](./srs-product.md) BR-D01…BR-D12.
 
 Wire grammar is canonical in [infini SRS-IN-09](../../../infini/features/vector-document/srs-data.md).
@@ -47,6 +49,7 @@ and paint; they are not authored here.
 | Rule | Value |
 |---|---|
 | Lifetime | Session memory only. App restart discards the tree; the next accepted load restores what the desktop had published |
+| Geometry index | One spatial index over composed world AABBs; queries in [SRS-EP-79](#srs-ep-79-geometry-queries). Not persisted, not on the wire |
 | Writers | This device, via the undo-aware apply path below. The only peer mutation is an accepted `doc_load` ([SRS-EP-08](#srs-ep-08-one-way-sync)) |
 | Paint | The panel rasterizes **this** tree ([SRS-EP-02](../region-sync/srs-logic.md)). **0** inbound pictures are a paint source ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §2) |
 | Geometry agreement | Shared fixtures in [SRS-EP-09](./srs-data.md); divergence is a `CHL-*`, not a local tweak |
@@ -219,6 +222,65 @@ A `doc_load` offered during the gesture is deferred by [SRS-EP-08](#srs-ep-08-on
 | Undo, all targets match | Counterpart applied; pre-op fields restored |
 | Link down during ingest / undo | Completes locally; an **applied** counterpart joins the publish queue; skip/no-op enqueue nothing |
 | App restart | Unpublished tree is gone — accepted ([srs-product](./srs-product.md) BR-D07) |
+
+---
+
+## [SRS-EP-79] Document geometry queries (spatial index) {#srs-ep-79-geometry-queries}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-04](../../prd.md#device-document). **Serves (does not steal parents):**
+[REQ-05](../../prd.md#device-ink-box) / [REQ-06](../../prd.md#device-manipulation) hit rules in
+[SRS-EP-11](../ink-box/srs-logic.md#srs-ep-11-device-manipulation) and
+[SRS-EP-77](../ink-box/srs-logic.md#srs-ep-77-nested-hit-reparent);
+[REQ-11](../../prd.md#erase) cull only ([SRS-EP-58](../erase/srs-logic.md#srs-ep-58-object));
+[REQ-12](../../prd.md#clipboard) tap half of paste-parent ([BR-C13](../clipboard/srs-product.md)).
+**Decision:** [ADR-0040](../../../../adr/ADR-0040-logarithmic-hit-test.md).
+**Quality:** [SRS-EP-78](./srs-quality.md#srs-ep-78-log-hit-test).
+
+This section names the **query API**. It does **not** change product hit rules (children before
+ancestors; marquee / freeform stay **top-level**; 80% bars stay exact). A new linear walk of
+`rootChildren` for geometry is a defect.
+
+### Index
+
+One R-tree of **composed, ancestor-clipped world AABBs** (not local bounds). Rebuild on op
+commit, accepted `doc_load`, and applied undo — **never** during a live move/resize preview and
+**never** on the ink/paint thread. Payload includes paint-rank / depth assigned by the same
+later-first DFS as [SRS-EP-77](../ink-box/srs-logic.md#srs-ep-77-nested-hit-reparent).
+
+The index **culls**. Exact 80% / even-odd / LOD tests run on the candidate set (size k) and
+must match today’s fixtures.
+
+### Named queries
+
+| Query | Input | Product rule (unchanged) | Index role |
+|---|---|---|---|
+| Point | world `(x, y)` | Nested tap: deepest SmartGroup whose **clipped** natural AABB contains the press; later siblings first; then other pickables with `select` / `move` as the caller asks. LOD as [SRS-EP-11](../ink-box/srs-logic.md#srs-ep-11-device-manipulation). Overflow past ancestor clip is **not** a hit. **Connector** ([BR-C11](../connector-ink/srs-product.md)): pen-down **on the stroke** (cull by path AABB, exact on-path); AABB press does **not** select | AABB-contains → winner among candidates by paint-rank / depth, **not** AABB-max |
+| Rect ≥80% | world AABB | [SRS-EP-11](../ink-box/srs-logic.md#srs-ep-11-device-manipulation) marquee: **top-level** pickables only. Ink **and Connector**: ≥80% of **path samples** inside ([BR-C11](../connector-ink/srs-product.md)). Other nodes: ≥80% of **AABB area**. Grazing intersect is not enough | AABB-overlap cull; exact 80% on k |
+| Polygon ≥80% | closed polyline (even-odd) | [SRS-EP-11](../ink-box/srs-logic.md#srs-ep-11-device-manipulation) freeform: **top-level**. Ink **and Connector**: ≥80% path samples. Other nodes: ≥80% of 5×5 grid on world AABB | Probe = polygon AABB; exact 80% on k |
+| Highest-paint container ≥80% | moving node’s **natural world** rect | [SRS-EP-77](../ink-box/srs-logic.md#srs-ep-77-nested-hit-reparent) Rule 5: exclude self + descendants; SmartGroup = even-odd **world boundary**; Frame/Group = world AABB; later-paint wins; else document root. Commit only, not during drag | AABB-overlap cull; exact 80% + paint-rank on k |
+| Draw-into membership | new stroke samples | [SRS-EP-10](../ink-box/srs-logic.md#srs-ep-10-device-recognition): every SmartGroup ( **including nested** ) whose boundary contains ≥80% of **polyline length**; highest paint wins | Cull groups whose AABB overlaps the stroke AABB; exact length test on k |
+| Enclose capture | enclose fitted region | [SRS-EP-75](../ink-box/srs-logic.md#srs-ep-75-nested-membership): **top-level** free ink (≥80% samples) and **top-level** SmartGroups (≥80% natural area) | Cull overlap with fitted AABB; exact 80% on k |
+| AABB overlap cull | query AABB | Shared probe for callers that have their **own** exact test | Returns k; does not apply 80% |
+
+### Out of this API (explicit)
+
+| Caller | Why |
+|---|---|
+| Clipboard paste **20% ancestor overlap** ([BR-C13](../clipboard/srs-product.md)) | After the **point** query, walk **ancestors only** (O(depth)). Do not range-scan |
+| Object erase 80% table ([SRS-EP-58](../erase/srs-logic.md#srs-ep-58-object)) | **Different** 80% (arc length / boundary-polygon area / warped connector length). May use **AABB overlap cull**; exact table stays in erase. Overlay 80% stays off the pointer path |
+| Area erase clip ([SRS-EP-57](../erase/srs-logic.md#srs-ep-57-area)) | Geometric clip / fully-inside, not a hit-test 80%. Optional cull later |
+| Endpoint-ink connector scan ([SRS-EP-35](../connector-ink/srs-logic.md#srs-ep-35-endpoint-ink)) | Near-disk of ends; connector n is small. Optional cull later |
+| Infini desktop pick | Device-only index ([ADR-0040](../../../../adr/ADR-0040-logarithmic-hit-test.md) §8) |
+
+### Errors / partial failure
+
+| Case | Behavior |
+|---|---|
+| Query during a live gesture | Use the **committed** index; do not rebuild for the preview pose |
+| Rebuild exceeds its commit budget | Finish the rebuild — a late index is acceptable, a stale index that disagrees with the committed tree is not ([SRS-EP-78](./srs-quality.md#srs-ep-78-log-hit-test)) |
+| Candidate exact test disagrees with the pre-index fixture | Defect in the cull or in paint-rank — **not** a reason to loosen 80% |
 
 ---
 

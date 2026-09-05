@@ -59,6 +59,8 @@ static void test_descriptor()
     CHECK(smartGroupVerbsExact(descriptorFor(NodeKind::SmartGroup)));
     CHECK(descriptorFor(NodeKind::Ink).has(Verb::Select));
     CHECK(!descriptorFor(NodeKind::Ink).has(Verb::Move));
+    CHECK(descriptorFor(NodeKind::Connector).has(Verb::Select));
+    CHECK(!descriptorFor(NodeKind::Connector).has(Verb::Move));
 }
 
 static void test_router_no_kind_branch()

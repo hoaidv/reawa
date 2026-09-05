@@ -79,8 +79,8 @@ activates `cta.enclose` on SelectionOverlay — never from pen-up alone.
 | Step | Rule |
 |---|---|
 | Select (arm) | Exclusive ToolChip: `sel_rect` or `sel_freeform` ([ADR-0021](../../../../adr/ADR-0021-connector-toolchip.md)). Switching mid-gesture is ignored until pen-up. |
-| Select (rect) | `sel_rect` armed. Pen-down + move draws a thin dotted **axis-aligned rectangle** (rubber-band from down to tip). On pen-up: Ink if **≥80% of samples** lie inside the rectangle; other pickables if **≥80% of their world AABB area** lies inside. A grazing AABB intersect is **not** enough. |
-| Select (freeform) | `sel_freeform` armed. Pen-down + move appends samples to a thin dotted **polyline**. On pen-up the polyline **closes** (edge last→first for the test; stored samples stay as drawn). Membership: Ink — ≥80% of samples inside the closed polyline (even-odd); other nodes — ≥80% of a 5×5 grid on the world AABB inside. **Not** AABB-intersect of the gesture. Settled chrome is **not** the polyline — see next row. |
+| Select (rect) | `sel_rect` armed. Pen-down + move draws a thin dotted **axis-aligned rectangle** (rubber-band from down to tip). On pen-up: Ink **and Connector** if **≥80% of path samples** lie inside the rectangle ([BR-C11](../connector-ink/srs-product.md) / [REQ-09](../../prd.md#device-connectors)); other pickables if **≥80% of their world AABB area** lies inside. A grazing AABB intersect is **not** enough. |
+| Select (freeform) | `sel_freeform` armed. Pen-down + move appends samples to a thin dotted **polyline**. On pen-up the polyline **closes** (edge last→first for the test; stored samples stay as drawn). Membership: Ink **and Connector** — ≥80% of path samples inside the closed polyline (even-odd); other nodes — ≥80% of a 5×5 grid on the world AABB inside. **Not** AABB-intersect of the gesture. Settled chrome is **not** the polyline — see next row. |
 | Select (feedback, settled) | After **either** gesture: thin dotted **selection rect** = **tight** union AABB of selected nodes (**0** extra padding); **6 square anchors** (visual only this campaign). The freeform polyline is **gone** once settled. |
 | Input for create | Free `Ink` in the selection (≥2, or ≥1 content-role ink + 1 candidate surround), **plus** selected Smart Groups. Nested boxes are **in** ([SRS-EP-75](#srs-ep-75-nested-membership)). Non-ink non-SG selected nodes are ignored by the surround algorithm (not captured). |
 | Surround candidate | For each selected **free** ink `S`, build an **artificial closed path** if `S` is open (append edge first→last **for the test only** — never mutate stored samples). Point-in-polygon uses the **even-odd** fill rule. A candidate qualifies when ≥80% of the samples of **every other** selected free ink lie inside |
@@ -103,7 +103,7 @@ Runs at pen-up as **step 2** of [ADR-0022](../../../../adr/ADR-0022-recognizer-d
 | Candidates | Every `SmartGroup` whose **boundary ink** (even-odd interior of the world boundary polyline) contains ≥80% of the stroke’s **polyline length**. **Not** ≥80% of ink samples inside the group AABB. No boundary ink → the group does not qualify |
 | None | Leave the ink at its ordinary parent (document root) |
 | One | Reparent as `role: content` (samples → group-local); **seed that ink's `layoutOffset` UV** from its AABB centroid within the current bounds |
-| Several (incl. nested) | Highest paint/z order wins — tree sibling order, later siblings win. **No dual parent**, no z-index field |
+| Several (incl. nested) | Highest paint/z order wins — tree sibling order, later siblings win. **No dual parent**, no z-index field. Resolve via [SRS-EP-79](../device-document/srs-logic.md#srs-ep-79-geometry-queries) (nested SmartGroups are candidates; do not copy a top-level-only walk) |
 | Layout | Do **not** translate, scale, or reflow any existing content ink; new ink stays as drawn |
 | Bounds | `SmartGroup` bounds are **not** expanded by membership (**this campaign**). Auto-expand on draw-into is **future** under sizing `WRAP_CONTENT` only — [CHL-0012](../../../../../.plan/iter-003/challenges/CHL-0012-inkbox-sizing-align.md) |
 | Undo | One entry |
@@ -155,11 +155,12 @@ real ink; `set_smart_transform` publishes at pen-up as a consequence
 | Rule | Value |
 |---|---|
 | Pickable set (single press) | `SmartGroup` at **any nesting level**, resolved against world `bounds` after the composed outcome ([SRS-EP-76](#srs-ep-76-nested-render) / [SRS-EP-77](#srs-ep-77-nested-hit-reparent)) |
-| Pickable set (rect marquee) | **Top-level** nodes only ([SRS-EP-77](#srs-ep-77-nested-hit-reparent) Rule 4). Hit = **≥80% inside** the rubber-band: Ink by sample count; other nodes by AABB-area overlap. Grazing AABB intersect does **not** select. **Not** ToolChip chrome. Nested SmartGroup children are **not** independently marquee-selected |
-| Pickable set (freeform) | **Top-level** nodes only. Hit = **≥80% inside** the closed polyline (even-odd): Ink by samples; other nodes by 5×5 AABB grid. Gesture AABB is **not** the hit-test |
+| Pickable set (rect marquee) | **Top-level** nodes only ([SRS-EP-77](#srs-ep-77-nested-hit-reparent) Rule 4). Hit = **≥80% inside** the rubber-band: Ink **and Connector** by **path samples** ([BR-C11](../connector-ink/srs-product.md)); other nodes by AABB-area overlap. Grazing AABB intersect does **not** select. **Not** ToolChip chrome. Nested SmartGroup children are **not** independently marquee-selected |
+| Pickable set (freeform) | **Top-level** nodes only. Hit = **≥80% inside** the closed polyline (even-odd): Ink **and Connector** by path samples; other nodes by 5×5 AABB grid. Gesture AABB is **not** the hit-test. Connector AABB-only overlap does **not** select |
 | Resolution order (tap) | **Children before ancestors.** Among siblings, later paint first. Deepest qualifying SmartGroup wins |
 | Hit region | Inside `bounds`, plus a handle tolerance band when selected: visual **28 du**, hit **56 du** (14 du pad beyond visual). 1 du = 1 panel pixel @ 226 dpi. **Not** 8 CSS px |
 | Source | The **local document** — never a peer-supplied list |
+| Query implementation | Named API in [SRS-EP-79](../device-document/srs-logic.md#srs-ep-79-geometry-queries) ([ADR-0040](../../../../adr/ADR-0040-logarithmic-hit-test.md)). Product rules in this table **unchanged** |
 | LOD cutoff | Applies **only when the viewport is zoomed out** (min panel/world scale **< 1.0**). Then picking is disabled if the box's **smaller on-panel axis < 96 du** (world→panel AABB). At scale **≥ 1.0** (identity map / 100% zoom), every SmartGroup is manipulable — enclose min-axis is 48 world, which is a legal box. **Not** `TILE_LOD_SCALE = 0.35` |
 | Below cutoff | The press does nothing to the document, and the UI states that manipulation is unavailable ([SRS-EP-12](./srs-ui.md)) |
 
@@ -214,7 +215,7 @@ EP-018. Anchor resolution for connectors lands in [REQ-08](../../prd.md#node-man
 | Refresh | Partial refresh only during the gesture; **0** full-panel invalidations ([SRS-EP-02](../region-sync/srs-logic.md)) |
 | Feedback rate | ≥5 Hz; no stall >200 ms. Slow is acceptable, wrong is not (CHL-0006) |
 | Interruption | An inbound `doc_load` never interrupts a gesture — it defers ([SRS-EP-08](../device-document/srs-logic.md)) |
-| Undo | One entry per gesture |
+| Undo | One entry per gesture. Undo/redo of a bound-node drag **re-warps** attached connectors (derived; not an undo target) and InPlaceDirty **pre ∪ post box ∪ both spines**. Box-only dirty leaves the post-move spine and misses the restored spine |
 
 "Committed equals previewed" is the single assertion that closes CHL-0005, CHL-0006, and CHL-0007.
 It is only implementable because the preview *is* the document — which is the whole point of
@@ -423,12 +424,14 @@ Live overlay (ToolCanvasLayer) uses the same compose for the selected node’s s
 Walk SmartGroups **depth-first**. At each level, test later siblings first. If the press is **outside** a group’s natural world AABB, **skip that subtree** (overflow is not hittable — same clip as paint, [SRS-EP-76](#srs-ep-76-nested-render)). If the press is inside, a child’s world `bounds` (composed outcome, LOD as [SRS-EP-11](#srs-ep-11-device-manipulation)) that contains the press **wins over** its ancestors. Child ink of a SmartGroup is still **not** independently selected — the containing SmartGroup at that level is.
 
 Hit-test of nested bounds uses the same affine as paint ([SRS-EP-76](#srs-ep-76-nested-render)).
+Resolve through [SRS-EP-79](../device-document/srs-logic.md#srs-ep-79-geometry-queries) (index
+cull + paint-rank among candidates). Children-before-ancestors is **not** AABB-max.
 
 Selected node’s move/resize writes **that node’s own-transform / bounds only**. Context toolbar (`cta.copy` / `cta.cut` / `cta.paste` / `cta.enclose` / `tgl.ink_scale_mode`) is for **that** id.
 
 ### Marquee / freeform (Rule 4)
 
-`collectPickable` stays **top-level** (do not recurse into SmartGroup). Nested boxes are tap-only. Child ink under a SmartGroup remains not independently lassoed.
+`collectPickable` stays **top-level** (do not recurse into SmartGroup). Nested boxes are tap-only. Child ink under a SmartGroup remains not independently lassoed. **Connector** is a top-level pickable: marquee/freeform uses ≥80% **path samples**, not AABB ([BR-C11](../connector-ink/srs-product.md)); pen-down selects on the **stroke** (AABB press does not).
 
 ### Reparent at move commit (Rule 5)
 
@@ -443,6 +446,8 @@ After a **move** (not resize) commits:
 5. If winner ≠ current parent: `reparent` + remap own-transform into the new parent’s **content** local space (inverse of that parent’s content-outcome). One undo with the move.
 
 Not during the drag. Not on resize. Nested finger-move uses the same commit hook.
+Resolve through [SRS-EP-79](../device-document/srs-logic.md#srs-ep-79-geometry-queries)
+highest-paint-container query; exact ≥80% on the candidate set.
 
 ### Finger
 

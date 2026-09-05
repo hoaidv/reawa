@@ -33,7 +33,7 @@ inline CapabilityDescriptor descriptorFor(NodeKind kind)
         return d;
     }
     if (kind == NodeKind::Ink || kind == NodeKind::Text || kind == NodeKind::Primitive
-        || kind == NodeKind::Frame) {
+        || kind == NodeKind::Frame || kind == NodeKind::Connector) {
         d.verbs = static_cast<std::uint8_t>(Verb::Select);
         return d;
     }

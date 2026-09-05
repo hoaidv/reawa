@@ -4,6 +4,7 @@
 #include "document/connector_warp.hpp"
 #include "document/device_document.hpp"
 #include "document/recognizer_dispatch.hpp"
+#include "document/surround_create.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -296,6 +297,56 @@ static void test_centre_keeps_pen_point()
                      conn->fromPose.y - conn->restSpine.front().y) < 0.5);
 }
 
+static JsonValue makeSetTransformOp(const std::string &opId, const std::string &id, double x, double y)
+{
+    JsonValue::Object t;
+    t.emplace_back("x", JsonValue::number(x));
+    t.emplace_back("y", JsonValue::number(y));
+    t.emplace_back("rotation", JsonValue::number(0));
+    t.emplace_back("scaleX", JsonValue::number(1));
+    t.emplace_back("scaleY", JsonValue::number(1));
+    JsonValue::Object payload;
+    payload.emplace_back("id", JsonValue::string(id));
+    payload.emplace_back("transform", JsonValue::object(std::move(t)));
+    return opEnvelope(opId, "set_smart_transform", JsonValue::object(std::move(payload)));
+}
+
+static void test_undo_move_restores_connector_pose()
+{
+    DeviceDocument doc;
+    addSg(doc, "A", 0, 0, 80, 80);
+    addSg(doc, "C", 300, 0, 80, 80);
+    const RecogDispatchResult d = penUp(doc, "ink_ac", lineXY(78, 40, 302, 40, 24));
+    CHECK(d.outcome == RecogOutcome::Connector);
+    refreshAllConnectorWarps(doc);
+    const DocNode *conn0 = doc.find(d.connector.connectorId);
+    CHECK(conn0 && !conn0->warpedSamples.empty());
+    const double x0 = conn0->warpedSamples.front().x;
+    const double y0 = conn0->warpedSamples.front().y;
+    const DocNode *a = doc.find("A");
+    CHECK(a);
+    CHECK(doc.commitJson(makeSetTransformOp("sst-a", "A", a->transform.x + 80, a->transform.y))
+              .applied);
+    refreshAllConnectorWarps(doc);
+    const DocNode *moved = doc.find(d.connector.connectorId);
+    CHECK(moved && !moved->warpedSamples.empty());
+    CHECK(std::abs(moved->warpedSamples.front().x - x0) > 1.0);
+    SmartBounds boxOnly;
+    CHECK(nodeInvalidateAabb(doc, "A", boxOnly));
+    SmartBounds hist;
+    CHECK(unionHistoryRestoreAabb(doc, {"A"}, hist));
+    const double spineEnd = moved->warpedSamples.back().x;
+    CHECK(hist.x + hist.width + 1.0 >= spineEnd);
+    CHECK(boxOnly.x + boxOnly.width + 1.0 < spineEnd || boxOnly.x > moved->warpedSamples.front().x);
+
+    CHECK(doc.undo().restored);
+    refreshAllConnectorWarps(doc);
+    const DocNode *restored = doc.find(d.connector.connectorId);
+    CHECK(restored && !restored->warpedSamples.empty());
+    CHECK(std::abs(restored->warpedSamples.front().x - x0) < 1.0);
+    CHECK(std::abs(restored->warpedSamples.front().y - y0) < 1.0);
+}
+
 int main()
 {
     test_i3_morph_identity();
@@ -305,6 +356,7 @@ int main()
     test_live_move_rewarp();
     test_attach_stays_on_pen_not_aabb();
     test_centre_keeps_pen_point();
+    test_undo_move_restores_connector_pose();
     if (g_fails) {
         std::cerr << "connector_warp_test: " << g_fails << " failed\n";
         return 1;

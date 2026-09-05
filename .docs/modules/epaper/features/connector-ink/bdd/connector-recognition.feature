@@ -62,3 +62,11 @@ Feature: On-device connector recognition
     And Ink and Curve labels are absent during the blink
     And ToolChip exclusive tools remain three with no connector tool
     And only a partial region refreshes
+
+  @SRS-EP-11
+  Scenario: Marquee or freeform selects a connector by path samples
+    Given a recognized connector
+    When sel_rect or sel_freeform contains at least 80 percent of the connector's path samples
+    Then the connector is in the selection
+    And a gesture that only overlaps the connector AABB with fewer than 80 percent of samples does not select it
+    And AABB-only press of the connector bounding box does not select it

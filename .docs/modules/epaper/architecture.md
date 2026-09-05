@@ -29,7 +29,7 @@ which is the largest single increase in device scope so far.
    ([SRS-EP-03](./features/region-sync/srs-quality.md)).
 5. **Document fidelity** — a document authored here round-trips through desktop save/open unchanged
    (±1 world unit @ 100% zoom).
-6. **Hand-on-paper bars (TRACK-005)** — tool switch p95 ≤300 ms; live-direct 0 px / ≥5 Hz; two-finger map apply p95 ≤100 ms; erase p95 ≤50 ms ([SRS-EP-25](./features/ink-box/srs-quality.md), [SRS-EP-26](./features/region-sync/srs-quality.md), [SRS-EP-59](./features/erase/srs-logic.md#srs-ep-59-erase-quality)).
+6. **Hand-on-paper bars (TRACK-005)** — tool switch p95 ≤300 ms; live-direct 0 px / ≥5 Hz; two-finger map apply p95 ≤100 ms; erase p95 ≤50 ms ([SRS-EP-25](./features/ink-box/srs-quality.md), [SRS-EP-26](./features/region-sync/srs-quality.md), [SRS-EP-59](./features/erase/srs-logic.md#srs-ep-59-erase-quality)). Hit-test **complexity** (probes vs n, not the ≤100 ms feel bar) is [SRS-EP-78](./features/device-document/srs-quality.md#srs-ep-78-log-hit-test) / [ADR-0040](../../adr/ADR-0040-logarithmic-hit-test.md).
 
 ## Constraints
 
@@ -107,7 +107,7 @@ flowchart TB
     tools["Tool system — SRS-EP-04 / ADR-0033"]
     doc["DeviceDocument + undo ring — SRS-EP-07"]
     recog["Recognition + membership — SRS-EP-10"]
-    manip["Hit-test + transforms — SRS-EP-11"]
+    manip["Hit-test + transforms — SRS-EP-11 / SRS-EP-79"]
     paint["CanvasLayer document raster — SRS-EP-02"]
     overlay["ToolCanvasLayer + ToolLayer chrome — SRS-EP-12 / ADR-0019"]
     sync["Session: queue, publisher, load handshake — SRS-EP-08"]
@@ -173,6 +173,7 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 - [ADR-0011](../../adr/ADR-0011-smart-group.md) — Smart Group semantics (host moved; nesting compose [ADR-0039](../../adr/ADR-0039-nested-ink-box-rendering.md))
 - [ADR-0039](../../adr/ADR-0039-nested-ink-box-rendering.md) — nested ink-box RenderingContext + own-transform (amends ADR-0011)
 - [ADR-0010](../../adr/ADR-0010-tree-of-vectors.md) — tree-of-vectors document
+- [ADR-0040](../../adr/ADR-0040-logarithmic-hit-test.md) — device hit-test R-tree (proposed; exact 80% on k; not Infini’s paint quadtree)
 - [ADR-0012](../../adr/ADR-0012-world-stroke-viewport-parity.md) — world stroke width + viewport paint parity
 - `ADR-0016` (deferred) — node manipulation model, constrained by the capability descriptor in
   [node-manipulation srs-product](./features/node-manipulation/srs-product.md)
@@ -181,7 +182,7 @@ The single arrow worth staring at is `doc --> paint`. In the pilot that arrow ca
 
 | Risk | Threatens | Likelihood × impact | Mitigation / accepted |
 |---|---|---|---|
-| Document + hit-test cannot fit under the ≤30 ms ink budget | Quality goal 1 — **invalidates the rework** | M×H | Measure before the first REQ-04 story; a miss is a `CHL-*`, not a design workaround |
+| Document + hit-test cannot fit under the ≤30 ms ink budget | Quality goal 1 — **invalidates the rework** | M×H | Measure before the first REQ-04 story; a miss is a `CHL-*`, not a design workaround. Hit-test **complexity** is now [SRS-EP-78](./features/device-document/srs-quality.md#srs-ep-78-log-hit-test) / [ADR-0040](../../adr/ADR-0040-logarithmic-hit-test.md): one R-tree, commit-only rebuild, exact 80% on k. Linear walks remaining after the migrate stories are defects |
 | C++/TS geometry divergence | Document fidelity | M×H | Shared fixtures (`ops/`, `enclose/`, `fixed-ink/`, `round-trip/`) + the domain doc |
 | Undo ring memory (20 inverse entries, not 20 whole trees) | Ink latency | L×M | Measured in [SRS-EP-13](./features/device-document/srs-quality.md); shrink depth before slowing ink. Bodies of huge removes still sit on the ring |
 | Live manipulation exceeds the partial-refresh budget | Gesture feel | M×M | ≥5 Hz / 0 full-panel bar; CHL-0006 established that slow is acceptable |

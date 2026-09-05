@@ -256,6 +256,56 @@ int main()
             {}));
         CHECK(stored.size() == open.size());
     }
+    {
+        DeviceDocument doc;
+        DocNode a;
+        a.id = "A";
+        a.kind = NodeKind::SmartGroup;
+        a.smartBounds = {0, 0, 80, 80};
+        a.transform = {0, 0, 0, 1, 1};
+        DocNode b;
+        b.id = "B";
+        b.kind = NodeKind::SmartGroup;
+        b.smartBounds = {0, 0, 80, 80};
+        b.transform = {300, 0, 0, 1, 1};
+        DocNode conn;
+        conn.id = "C";
+        conn.kind = NodeKind::Connector;
+        conn.fromNodeId = "A";
+        conn.toNodeId = "B";
+        for (int i = 0; i < 20; ++i) {
+            ConnectorRestPt p;
+            p.x = 80.0 + double(i) * 11.5;
+            p.y = 40.0;
+            conn.warpedSamples.push_back(p);
+        }
+        doc.rootChildren.push_back(std::move(a));
+        doc.rootChildren.push_back(std::move(b));
+        doc.rootChildren.push_back(std::move(conn));
+
+        const auto ids = selectByFreeform(doc, box(0, 0, 400, 120));
+        CHECK(std::find(ids.begin(), ids.end(), "A") != ids.end());
+        CHECK(std::find(ids.begin(), ids.end(), "B") != ids.end());
+        CHECK(std::find(ids.begin(), ids.end(), "C") != ids.end());
+
+        SmartBounds graze;
+        graze.x = 90;
+        graze.y = 30;
+        graze.width = 20;
+        graze.height = 20;
+        const auto grazeIds = selectByRect(doc, graze);
+        CHECK(std::find(grazeIds.begin(), grazeIds.end(), "C") == grazeIds.end());
+
+        SmartBounds boxOnly;
+        CHECK(nodeInvalidateAabb(doc, "A", boxOnly));
+        SmartBounds hist;
+        CHECK(unionHistoryRestoreAabb(doc, {"A"}, hist));
+        CHECK(hist.x + hist.width >= 80.0 + 19.0 * 11.5 - 1.0);
+        CHECK(boxOnly.x + boxOnly.width < 80.0 + 19.0 * 11.5 - 1.0);
+
+        CHECK(connectorStrokeHits(*doc.find("C"), 80.0 + 10 * 11.5, 40.0, 4.0));
+        CHECK(!connectorStrokeHits(*doc.find("C"), 180.0, 120.0, 4.0));
+    }
 
     if (g_fails) {
         std::cerr << g_fails << " failure(s)\n";

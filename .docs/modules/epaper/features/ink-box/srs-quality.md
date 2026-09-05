@@ -9,7 +9,8 @@ lifecycle: active
 
 Parent REQs: [REQ-05](../../prd.md#device-ink-box), [REQ-06](../../prd.md#device-manipulation).
 Logic: [SRS-EP-10 / SRS-EP-11](./srs-logic.md). Document budgets:
-[SRS-EP-13](../device-document/srs-quality.md).
+[SRS-EP-13](../device-document/srs-quality.md). Hit-test complexity:
+[SRS-EP-78](../device-document/srs-quality.md#srs-ep-78-log-hit-test).
 
 ## [SRS-EP-14] Recognition, manipulation, and CHL regression bars {#srs-ep-14-ink-box-quality}
 
@@ -40,6 +41,7 @@ Logic: [SRS-EP-10 / SRS-EP-11](./srs-logic.md). Document budgets:
 | Scenario | Metric | Target |
 |---|---|---|
 | Selection feel | p95 pen-down → selection affordance | ≤100 ms |
+| Hit-test complexity | Probe count vs n; 500- and 5000-node fixtures | [SRS-EP-78](../device-document/srs-quality.md#srs-ep-78-log-hit-test) — **not** the same as this ≤100 ms row |
 | Commit fidelity | Committed geometry vs last previewed geometry, 20 scripted gestures | **0 px jump, 0 snap-backs** (**CHL-0006 / CHL-0007 regression**) |
 | Ghost artifacts | Advisory outlines that move independently of the ink | **0** — the model no longer has one |
 | Live node during move/resize | Where the moving pixels are painted | **ToolCanvasLayer** ([CHL-0018](../../../../../.plan/iter-003/challenges/CHL-0018-live-node-tool-canvas.md)); CanvasLayer origin hole = box **and bound connector spines** — not origin∪trail |
@@ -100,6 +102,9 @@ its whole premise.
   device-side optimization, not a faster link.
 - Slow is acceptable; wrong is not. Every "0" in the manipulation table is a correctness bar, and
   every latency row is a comfort bar. When they conflict, correctness wins.
+- Hit-test **complexity** (probes vs n) lives in
+  [SRS-EP-78](../device-document/srs-quality.md#srs-ep-78-log-hit-test). Do not treat the ≤100 ms
+  selection-feel row as a substitute for logarithmic cost.
 
 ---
 

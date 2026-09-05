@@ -1,14 +1,14 @@
 ---
 feature: device-document
 parent_req: [REQ-04, REQ-07]
-version: 0.3.0
+version: 0.4.0
 lifecycle: active
 ---
 
 # SRS — On-device working document (Quality)
 
 Parent REQs: [REQ-04](../../prd.md#device-document), [REQ-07](../../prd.md#one-way-sync).
-Logic: [SRS-EP-07 / SRS-EP-08](./srs-logic.md). Desktop counterpart:
+Logic: [SRS-EP-07 / SRS-EP-08 / SRS-EP-79](./srs-logic.md). Desktop counterpart:
 [SRS-IN-08](../../../infini/features/tablet-sync/srs-quality.md).
 
 ## [SRS-EP-13] Document, ingestion, undo, and sync budgets {#srs-ep-13-device-document-quality}
@@ -31,7 +31,7 @@ This is also the top risk in
 | Stroke → node | p95 after pen-up | ≤50 ms |
 | Ingestion vs ink contention | Samples dropped or delayed by ingestion | **0** |
 | Repaint source | Repaints from an inbound peer picture | **0** ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §2) |
-| Document scale | 500 ink nodes / 50k samples resident | Ink budget still met; hit-test still ≤100 ms |
+| Document scale | 500 ink nodes / 50k samples resident | Ink budget still met; hit-test **latency** still ≤100 ms. **Complexity** (probes vs n) is [SRS-EP-78](#srs-ep-78-log-hit-test), not this row |
 | Sample fidelity | Channels reported by the digitizer that survive into the node | **100%** |
 | Carry-through | Node kinds the device does not author, preserved across a load → republish | **100%**, byte-identical |
 
@@ -174,6 +174,63 @@ logs cannot fit under those ceilings, the shipper changes — not the ink budget
 
 ---
 
+## [SRS-EP-78] Logarithmic document-geometry query {#srs-ep-78-log-hit-test}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-04](../../prd.md#device-document). **Constrains:**
+[SRS-EP-79](./srs-logic.md#srs-ep-79-geometry-queries) (named API),
+[SRS-EP-11](../ink-box/srs-logic.md#srs-ep-11-device-manipulation) /
+[SRS-EP-77](../ink-box/srs-logic.md#srs-ep-77-nested-hit-reparent) (product hit rules, unchanged).
+**Decision:** [ADR-0040](../../../../adr/ADR-0040-logarithmic-hit-test.md).
+**Does not steal:** [SRS-EP-13](#srs-ep-13-device-document-quality) 500-node **latency** row
+(hit-test ≤100 ms) or [SRS-EP-14](../ink-box/srs-quality.md) selection-feel ≤100 ms.
+Those remain comfort bars. This section is **complexity vs n**.
+
+Subordinate to [SRS-EP-01](../local-pen-ink/srs-logic.md) **p95 ≤30 ms**. Index rebuild and
+query must not run on the ink/paint thread. If they cannot fit, the index changes — not the
+ink budget.
+
+### Quality-attribute scenarios
+
+| Field | Value |
+|---|---|
+| Source | Creator pointer (tap, marquee, freeform) or commit-time reparent / membership / enclose |
+| Stimulus | A named [SRS-EP-79](./srs-logic.md#srs-ep-79-geometry-queries) query |
+| Artifact | DeviceDocument spatial index + exact 80% on the candidate set |
+| Environment | Normal: 500 ink nodes / 50k samples (product fixture). Stress: **5000** ink nodes (complexity proof only — **not** a new product scale) |
+| Response | Same hit ids / winner as the nested linear walk on that fixture |
+| Response measure | See table |
+
+Prioritised drivers for this section: (1) ink-path isolation, (2) query probes vs n,
+(3) exact 80% unchanged. Maintainability (one API) is a consequence, not a measured bar.
+
+| Scenario | Metric | Target |
+|---|---|---|
+| Point / rect / polygon query, n = 500 | p95 wall clock | ≤**100 ms** (existing comfort bar; must not regress) |
+| Point query, n = 5000 | p95 wall clock | ≤**100 ms** |
+| Point query probes vs n | R-tree nodes visited | **O(log n + k)** — ≤ **64·⌈log₂(n)⌉ + k** where k = overlapping AABBs at the point (not n). A probe count that tracks n linearly **fails** even if wall clock is under 100 ms |
+| Rect / polygon cull | Probe count | **O(log n + k)**; k = AABB-overlapping candidates. Exact ≥80% then runs on k only |
+| Exact 80% / even-odd / length | Work after cull | **O(k)** on the candidate set. **0** AABB-only substitutes for sample-count, grid, length, or boundary-area tests |
+| Product agreement | Hit ids vs nested tap, marquee, freeform, enclose, membership, move-reparent fixtures | **100%** — 0 rule changes |
+| Rebuild after op commit, n = 500 | p95 | ≤**5 ms**; **0** rebuilds on ink/paint thread |
+| Rebuild after op commit, n = 5000 | p95 | ≤**50 ms**; still off the ink thread |
+| Live move / resize preview | Index writes | **0** |
+| Ink budget with index resident | p95 pen-down → pixel, 500-node fixture | **≤30 ms** — equal to baseline within measurement error |
+| Selection feel (tap) | p95 pen-down → affordance | ≤**100 ms** ([SRS-EP-14](../ink-box/srs-quality.md)) — latency bar, not a substitute for the probe-count row |
+
+The 5000-node fixture exists to make **O(n) vs O(log n + k)** distinguishable. It is not a
+promise that the product ships 5000 resident ink nodes ([SRS-EP-13](#srs-ep-13-device-document-quality)
+product scale stays 500 / 50k).
+
+### Notes
+
+- Slow exact tests on a huge k (pathological full-page overlap) are a measured miss → `CHL-*`.
+  Do not loosen 80% to clear the probe row.
+- Instrumentation for probe counts belongs on the query helper, not in the paint loop.
+
+---
+
 ## Superseded
 
 SRS-EP-13: new section. Replaces, for the device, the round-trip-shaped budgets formerly in
@@ -182,3 +239,4 @@ SRS-EP-13: new section. Replaces, for the device, the round-trip-shaped budgets 
 
 SRS-EP-16: additive — debug sidecar isolation; does not supersede SRS-EP-13.
 SRS-EP-33: additive — clipboard; does not supersede SRS-EP-13.
+SRS-EP-78: additive — hit-test **complexity**; does not replace the ≤100 ms **latency** row of SRS-EP-13.

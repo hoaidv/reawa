@@ -17,6 +17,16 @@ Feature: Ink and Curve warp on bound-node drag
     And region ConnSelect stays hidden unless the connector is selected
 
   @SRS-EP-18
+  Scenario: Undo of a bound box move restores the connector pose
+    Given a connector bound to Smart Group A and Smart Group C
+    And A has been moved so the connector re-warped
+    When the creator undoes that move
+    Then A's transform is the pre-move pose
+    And the connector spine is the pre-move warp (±1 px at 100 percent zoom)
+    And CanvasLayer InPlaceDirty covers the post-move spine and the restored spine
+    And a box-only dirty rect is not enough
+
+  @SRS-EP-18
   Scenario: Morph at rest is bitwise the rest-shape reconstruction
     Given a connector with warpStyle morph
     And neither bound node has turned since rest
