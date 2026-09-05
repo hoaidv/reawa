@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-09-04T17:39:10+00:00
+generated_at: 2026-09-05T03:35:44+00:00
 ---
 
 # Sync Report
@@ -107,9 +107,9 @@ generated_at: 2026-09-04T17:39:10+00:00
 | [SRS-EP-28] | 0 | missing |
 | [SRS-EP-29] | 0 | missing |
 | [SRS-EP-30] | 0 | missing |
-| [SRS-EP-31] | 12 | covered |
-| [SRS-EP-32] | 12 | covered |
-| [SRS-EP-33] | 12 | covered |
+| [SRS-EP-31] | 14 | covered |
+| [SRS-EP-32] | 14 | covered |
+| [SRS-EP-33] | 14 | covered |
 | [SRS-EP-34] | 0 | missing |
 | [SRS-EP-35] | 8 | covered |
 | [SRS-EP-36] | 0 | missing |

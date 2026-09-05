@@ -76,6 +76,21 @@ Feature: In-document clipboard on the device
     And a freeform selection with no tap location
     Then paste is not on the toolbar
 
+  @SRS-EP-32
+  Scenario: Paste chrome is hidden during a move from a selected node
+    Given a non-empty clipboard slot
+    And a selected node with a tap location
+    When a move drag is in progress
+    Then paste is not on the toolbar
+
+  @SRS-EP-32
+  Scenario: Paste chrome is hidden during a move from empty-tap origin
+    Given a non-empty clipboard slot
+    And an empty-canvas tap location
+    And no selection
+    When a move drag of a node is in progress
+    Then paste is not on the toolbar
+
   @SRS-EP-31
   Scenario: Paste onto live originals is refused
     Given a copy of node S still in the tree

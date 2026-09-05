@@ -68,7 +68,8 @@ public:
         m_refuse = chrome.encloseRefuseReason;
         m_manip = chrome.manipUnavailable;
         m_manipRect = chrome.manipUnavailableRect;
-        m_tapOriginValid = caps.selection && caps.selection->pasteOriginValid();
+        m_tapOriginValid = caps.selection && caps.selection->phase() == SelectionPhase::Idle
+            && caps.selection->ids().empty() && caps.selection->pasteOriginValid();
         if (m_tapOriginValid) {
             const PasteOrigin &o = caps.selection->pasteOrigin();
             m_tapOrigin = QPointF(o.panelX, o.panelY);

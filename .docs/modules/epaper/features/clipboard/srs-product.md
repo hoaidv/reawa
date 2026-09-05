@@ -51,7 +51,7 @@ canvas or a node), because the device has no right-click.
 | BR-C03 | **Cut = copy then delete.** Slot ← clone; selected roots removed; **one** undo restores them. Empty groups/SmartGroups are **left in the tree**. | Diverges from erase empty-group cleanup |
 | BR-C04 | **Paste is one undoable gesture.** New ids; union AABB **top-left** lands on the **tap** world point; items keep relative layout. One undo removes the copies. Slot unchanged. Empty slot → 0 nodes, 0 undo, **0 banners**. | |
 | BR-C05 | **Copy/cut chrome** only when SelectionMode (`sel_rect` or `sel_freeform`) and `SelectionPhase::Selected` with a non-empty selection. Tiles live on the **normal** context toolbar (selection AABB). | `cta.copy` / `cta.cut` |
-| BR-C06 | **Paste chrome** when the slot is non-empty **and** a tap location exists (tap empty canvas, or tap a node). Same toolbar as copy/cut when a node is selected; paste-only strip at the tap point when the canvas is empty. **Not** after freeform / marquee (no tap location). Not on the ToolChip. | `cta.paste` |
+| BR-C06 | **Paste chrome** when the slot is non-empty **and** a tap location exists (tap empty canvas, or tap a node) **and** the selection is settled (`Selected`, or Idle empty-tap). Same toolbar as copy/cut when a node is selected; paste-only strip at the tap point when the canvas is empty. **Not** after freeform / marquee (no tap location). **Not** while a move / resize / lasso / marquee is in flight. Not on the ToolChip. | `cta.paste` |
 | BR-C07 | **Tap vs travel.** Panel travel ≤ **1 mm** then lift is a tap. Node tap: select and record paste origin. Empty tap while selected: **deselect only** (no paste origin, no chrome). Empty tap while already idle: record paste origin. Travel > 1 mm begins Move / lasso / marquee as today. **No** 500 ms hold menu. | Stylus tap equals finger tap |
 | BR-C08 | **Tap empty while idle** with a non-empty slot: paste origin = tap; paste-only chrome at the tap panel point (clamped). Empty slot → **0** paste chrome. **Tap empty while selected:** clear selection, **0** paste origin, **0** chrome (CHL-0007). | |
 | BR-C09 | Toolbar clamp (empty-canvas paste strip) does **not** move the paste origin. | Chrome ≠ geometry |
@@ -79,6 +79,7 @@ canvas or a node), because the device has no right-click.
 | One paste, many parents | Allowed; still **one** undo entry |
 | Cut last child of a SmartGroup | Child gone; **empty group remains** |
 | Freeform / marquee selection | Copy/cut if non-empty; **no** paste button (no tap location) |
+| Finger-down then drag (move / resize) with a tap location | Paste chrome **hidden** for the gesture; tap location kept; chrome may return when `Selected` or Idle again |
 | `doc_load` / new epoch | Slot **kept** (ids reminted at paste) |
 | Link up or down | Same local result; **0** publish |
 

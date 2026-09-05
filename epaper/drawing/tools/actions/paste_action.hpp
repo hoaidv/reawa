@@ -5,6 +5,7 @@
  * @implements [SRS-EP-31] clipboard paste
  * @implements [SRS-EP-32] cta.paste
  * @fix [CHL-0031] tap-origin paste
+ * @fix paste chrome hidden during Transforming
  */
 
 #include "action.hpp"
@@ -30,7 +31,7 @@ public:
     QString label(const HostCaps &) const override { return QStringLiteral("Paste"); }
     bool visible(const HostCaps &caps) const override
     {
-        return !clipboard().empty() && caps.selection && caps.selection->pasteOriginValid();
+        return caps.selection && caps.selection->pasteChromeVisible(!clipboard().empty());
     }
     bool enabled(const HostCaps &caps) const override { return visible(caps); }
     void trigger(HostCaps &caps) override

@@ -1,12 +1,14 @@
 /**
  * Host tests for STORY-EP-044 / [SRS-EP-31] [SRS-EP-33] [SRS-EP-11] tap vs travel.
  * Maps clipboard.feature. No Qt — InputHub travel defer is exercised on device.
+ * @implements [SRS-EP-32] paste chrome hidden while Transforming
  *
  * Build: ./tests/run_device_document_test.sh
  */
 
 #include "document/device_document.hpp"
 #include "drawing/tools/clipboard.hpp"
+#include "drawing/tools/contexts/selection_context.hpp"
 #include "drawing/tools/hold_still.hpp"
 
 #include <algorithm>
@@ -24,6 +26,8 @@ using epaper::tools::clipops::PasteRefuse;
 using epaper::tools::clipops::slotRoots;
 using epaper::tools::clipops::unionAabb;
 using epaper::tools::holdTravelExceeded;
+using epaper::tools::SelectionContext;
+using epaper::tools::SelectionPhase;
 
 static int g_fails = 0;
 
@@ -392,6 +396,36 @@ static void test_hold_still_travel_threshold()
     CHECK(holdTravelExceeded(10.0, 0));
 }
 
+static void test_paste_chrome_hidden_while_transforming()
+{
+    SelectionContext sel;
+    sel.setPasteOrigin(10, 20, 100, 200);
+    CHECK(sel.pasteChromeVisible(true));
+
+    sel.setIds({"N1"});
+    CHECK(sel.phase() == SelectionPhase::Selected);
+    CHECK(sel.pasteChromeVisible(true));
+
+    sel.setPhase(SelectionPhase::Transforming);
+    CHECK(!sel.pasteChromeVisible(true));
+
+    sel.setPhase(SelectionPhase::Selecting);
+    CHECK(!sel.pasteChromeVisible(true));
+
+    sel.setPhase(SelectionPhase::Selected);
+    CHECK(sel.pasteChromeVisible(true));
+    CHECK(!sel.pasteChromeVisible(false));
+
+    sel.clear();
+    sel.setPasteOrigin(10, 20, 100, 200);
+    CHECK(sel.phase() == SelectionPhase::Idle);
+    CHECK(sel.pasteChromeVisible(true));
+
+    sel.setIds({"N1"});
+    sel.setPhase(SelectionPhase::Transforming);
+    CHECK(!sel.pasteChromeVisible(true));
+}
+
 int main()
 {
     test_copy_does_not_push_undo();
@@ -406,6 +440,7 @@ int main()
     test_paste_free_ink_into_ink_box();
     test_paste_copied_ink_box_onto_canvas();
     test_hold_still_travel_threshold();
+    test_paste_chrome_hidden_while_transforming();
     if (g_fails) {
         std::cerr << g_fails << " failed\n";
         return 1;

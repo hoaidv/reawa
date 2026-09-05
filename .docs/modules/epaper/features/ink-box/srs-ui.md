@@ -285,7 +285,7 @@ Copy / cut the **current selection** from the Selected strip. Paste from the **s
 |---|---|---|---|
 | `cta.copy` | action | Selected context toolbar | SelectionMode + `SelectionPhase::Selected` + non-empty ids |
 | `cta.cut` | action | Selected context toolbar | same as copy |
-| `cta.paste` | action | Same toolbar (or paste-only strip on empty tap) | Slot non-empty **and** a tap location exists |
+| `cta.paste` | action | Same toolbar (or paste-only strip on empty tap) | Slot non-empty **and** a tap location exists **and** settled (`Selected`, or Idle empty-tap). **Hidden** during `Transforming` / `Selecting` |
 | `ind.paste_onto_originals` | refuse | Same toolbar | Paste refused because tap/parent is a live source — enclose-style string; slot kept |
 
 Tiles ≥64 du. **No** ToolChip row. **No** hold / long-press strip.
@@ -298,6 +298,7 @@ Tiles ≥64 du. **No** ToolChip row. **No** hold / long-press strip.
 | Empty tap | Selection **already** empty **and** tap location **and** slot non-empty | paste only | Toolbar at the tap panel point, then **clamped**. Clamp does not move paste origin. |
 | Empty tap while selected | Selection non-empty | — | Deselect only; **do not** record a tap location; **0** chrome |
 | Freeform / marquee | Real gesture (not a tap) | copy, cut if selected; **no paste** | Selection AABB; tap location cleared |
+| Move / resize in flight | `SelectionPhase::Transforming` | — | **0** paste chrome (copy/cut already hidden). Tap location kept until a dismiss event |
 
 ### Dismiss / clear tap location
 
@@ -314,6 +315,7 @@ Freeform / marquee gesture · empty tap while selected · pan · mode switch · 
 - Long-press / hold-toolbar paste
 - ToolChip / barrel paste
 - Paste after freeform / marquee (no tap location)
+- Paste chrome during live move / resize (`Transforming`)
 - Moving paste origin when clamping the toolbar
 - Inventing +24 world offset
 

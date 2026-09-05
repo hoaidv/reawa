@@ -40,6 +40,17 @@ public:
     const PasteOrigin &pasteOrigin() const { return m_pasteOrigin; }
     bool pasteOriginValid() const { return m_pasteOrigin.valid; }
 
+    // @implements [SRS-EP-32] paste chrome only on Selected or idle empty-tap
+    // @fix paste strip during live move — hidden while Transforming / Selecting
+    bool pasteChromeVisible(bool slotNonEmpty) const
+    {
+        if (!slotNonEmpty || !m_pasteOrigin.valid)
+            return false;
+        if (m_phase == SelectionPhase::Selected)
+            return true;
+        return m_phase == SelectionPhase::Idle && m_ids.empty();
+    }
+
     void clear()
     {
         m_ids.clear();

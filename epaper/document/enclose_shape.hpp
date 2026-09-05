@@ -14,8 +14,8 @@
 namespace epaper {
 namespace document {
 
-constexpr double kMinEncloseWithContent = 28;
-constexpr double kMinEncloseEmpty = 36;
+constexpr double kMinEncloseWithContent = 36;
+constexpr double kMinEncloseEmpty = 42;
 /** Backward alias: content-path floor (human 2026-08-15). */
 constexpr double kMinEncloseWorld = kMinEncloseWithContent;
 
