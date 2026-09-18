@@ -2,6 +2,7 @@
 .agent/
 .cursor/
 .sandbox/
+.vscode/
 
 # epaper: local CMake/clangd artifacts
 epaper/build-clangd/
@@ -9,6 +10,8 @@ epaper/build-warn/
 epaper/.cache/
 epaper/compile_commands.json
 epaper/cmake-build-debug
+epaper/.idea
+epaper/.qmlls.ini
 
 # IPython Notebooks
 .ipynb_checkpoints/
