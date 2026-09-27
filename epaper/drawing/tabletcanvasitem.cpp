@@ -258,14 +258,14 @@ QSGNode *TabletCanvasItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData
  * Canvas frame — orientation, camera region, transforms
  *
  * All panel↔world math goes through m_session.frame. applyFrameIntent is the only place
- * FrameIntent becomes ToolChip re-layout (and related Qt effects).
+ * FrameIntent becomes ToolChip re-layout (and related Qt effects). syncFramePanelSize
+ * runs at layout / camera bootstrap / rasterize entry — not on every transform.
  * =================================================================================================
  */
 
 /** Panel pixel → document world through the current camera. */
 TabletCanvasItem::WorldPt TabletCanvasItem::panelToWorld(const PanelPt &panel) const
 {
-    syncFramePanelSize();
     return m_session.frame.panelToWorld({panel.x(), panel.y()});
 }
 
@@ -278,7 +278,7 @@ qreal TabletCanvasItem::ingestPanelHeight() const
     return qMax<qreal>(1.0, h);
 }
 
-/** Push QQuickItem size into CanvasFrame before transforms. */
+/** Push QQuickItem size into CanvasFrame (layout / bootstrap / rasterize entry). */
 void TabletCanvasItem::syncFramePanelSize() const
 {
     qreal w = width();
@@ -302,59 +302,26 @@ void TabletCanvasItem::applyFrameIntent(epaper::canvasframe::FrameIntent intent)
         m_session.noteCameraChanged();
 }
 
-/** Panel → normalized UV inside the sync frame. */
-TabletCanvasItem::FrameUv TabletCanvasItem::panelToFrameUv(const PanelPt &panel) const
-{
-    syncFramePanelSize();
-    return m_session.frame.panelToFrameUv({panel.x(), panel.y()});
-}
-
-/** UV → panel (follow / two-finger helpers). */
-TabletCanvasItem::PanelPt TabletCanvasItem::frameUvToPanel(FrameUv uv) const
-{
-    syncFramePanelSize();
-    const auto p = m_session.frame.frameUvToPanel(uv);
-    return PanelPt(p.x, p.y);
-}
-
 /** Document world → panel pixel. */
 TabletCanvasItem::PanelPt TabletCanvasItem::worldToPanel(double wx, double wy) const
 {
-    syncFramePanelSize();
     const auto p = m_session.frame.worldToPanel(wx, wy);
     return PanelPt(p.x, p.y);
 }
 
-/** World units per panel pixel (stroke width, LOD). */
+/** World units per panel pixel (stroke width, dirty pad). */
 double TabletCanvasItem::panelScale() const
 {
-    syncFramePanelSize();
     return m_session.frame.panelScale();
 }
 
 /** SmartBounds AABB → panel QRectF. */
 QRectF TabletCanvasItem::worldBoundsToPanel(const epaper::document::SmartBounds &wb) const
 {
-    syncFramePanelSize();
     epaper::canvasframe::PanelPt tl;
     epaper::canvasframe::PanelPt br;
     m_session.frame.worldBoundsToPanel(wb.x, wb.y, wb.width, wb.height, &tl, &br);
     return QRectF(QPointF(tl.x, tl.y), QPointF(br.x, br.y)).normalized();
-}
-
-/** True when LOD may refuse manip. */
-bool TabletCanvasItem::viewportZoomedOut() const
-{
-    syncFramePanelSize();
-    return m_session.frame.viewportZoomedOut();
-}
-
-/** Whether a world AABB is large enough on panel for manip. */
-bool TabletCanvasItem::lodOkPanel(const epaper::document::SmartBounds &wb) const
-{
-    // @implements [SRS-EP-11] LOD only when zoomed out; scale ≥ 1.0 always manipulable
-    syncFramePanelSize();
-    return m_session.frame.lodOkPanel(wb.x, wb.y, wb.width, wb.height);
 }
 
 
@@ -1640,12 +1607,6 @@ void TabletCanvasItem::setInteractionDebug(const QString &info)
 {
     m_debugInfo = info;
     emit debugChanged();
-}
-
-/** Surface name for lodOkPanel. */
-bool TabletCanvasItem::lodOkWorld(const epaper::document::SmartBounds &wb) const
-{
-    return lodOkPanel(wb);
 }
 
 /** Panel union of connectors bound to a SmartGroup. */

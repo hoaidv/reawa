@@ -74,13 +74,13 @@ public:
      *
      * Panel is Qt's own space (canvas item pixels), so it stays a plain QPointF and
      * drops straight into QPainter, QRectF and QLineF; the alias is documentation
-     * only and enforces nothing on its own. World / frame-uv live in CanvasFrame
-     * (double PODs). Raw is distinct here. Neither World nor Raw converts to
-     * QPointF implicitly, so a bare QPointF is panel by construction.
+     * only and enforces nothing on its own. World lives in CanvasFrame (double POD).
+     * Frame-uv stays on CanvasFrame / SessionDocContext. Raw is distinct here.
+     * Neither World nor Raw converts to QPointF implicitly, so a bare QPointF is
+     * panel by construction.
      */
     using PanelPt = QPointF;
     using WorldPt = epaper::canvasframe::WorldPt;
-    using FrameUv = epaper::canvasframe::FrameUv;
     using WorldAabb = epaper::canvasframe::WorldAabb;
 
     /** Digitizer position, before mapPanel() rotates it into panel space. */
@@ -143,6 +143,12 @@ public:
  *
  * Uses m_session.frame. Mutators return FrameIntent; applyFrameIntent() is the only place
  * that turns those into Qt effects.
+ *
+ * Panel size is observed from the Qt item into frame.panelW/H via syncFramePanelSize —
+ * at layout (geometryChange / componentComplete), before camera bootstrap
+ * (ensureLocalDrawingRegion), and at rasterize/camera-sharp entry. Transform helpers
+ * assume that cache is current; Tool reads frame() directly the same way.
+ * UV / LOD live on CanvasFrame (and SessionDocContext), not as Tablet relays.
  * =================================================================================================
  */
 
@@ -156,17 +162,10 @@ private:
     void syncFramePanelSize() const;
     void applyFrameIntent(epaper::canvasframe::FrameIntent intent);
 
-    bool orientationLandscape() const { return m_session.frame.landscape(); }
-    bool orientationInvertX() const { return m_session.frame.invertX(); }
-    bool orientationInvertY() const { return m_session.frame.invertY(); }
-    FrameUv panelToFrameUv(const PanelPt &panel) const;
-    PanelPt frameUvToPanel(FrameUv uv) const;
     PanelPt worldToPanel(double wx, double wy) const;
     PanelPt worldToPanel(WorldPt w) const { return worldToPanel(w.x, w.y); }
     double panelScale() const;
     QRectF worldBoundsToPanel(const epaper::document::SmartBounds &wb) const;
-    bool viewportZoomedOut() const;
-    bool lodOkPanel(const epaper::document::SmartBounds &wb) const;
 
     CanvasSession m_session;
 
@@ -413,7 +412,6 @@ public:
     void maybePublishLocalViewport(bool settle);
     void ensureLocalDrawingRegion();
     void setInteractionDebug(const QString &info);
-    bool lodOkWorld(const epaper::document::SmartBounds &wb) const;
     QRectF boundConnectorsPanelUnion(const std::string &sgId) const;
     qreal connectorPanelStrokeWidth(const epaper::document::DocNode &conn) const;
     QRectF warpedConnectorPanelRect(const epaper::document::DocNode &conn) const;

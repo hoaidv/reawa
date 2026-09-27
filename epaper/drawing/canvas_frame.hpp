@@ -35,7 +35,10 @@ struct FrameUv {
     double v = 0;
 };
 
-/** Camera region in world space, plus "has the camera been established yet". */
+/**
+ * Axis-aligned bounding box. 
+ * Camera region in world space, plus "has the camera been established yet".
+ */
 struct WorldAabb {
     double minX = 0;
     double minY = 0;
