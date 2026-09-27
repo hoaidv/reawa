@@ -232,11 +232,11 @@ TabletWindow {
                         delegate: Rectangle {
                             width: 64
                             height: 64
-                            color: drawCanvas.toolMode === modelData.id ? "black" : "white"
+                            color: drawCanvas.session.exclusiveTool === modelData.id ? "black" : "white"
                             border.color: "black"
                             border.width: 1
 
-                            readonly property bool armed: drawCanvas.toolMode === modelData.id
+                            readonly property bool armed: drawCanvas.session.exclusiveTool === modelData.id
 
                             Image {
                                 anchors.centerIn: parent
@@ -255,7 +255,7 @@ TabletWindow {
                                 gesturePolicy: TapHandler.ReleaseWithinBounds
                                 grabPermissions: PointerHandler.CanTakeOverFromItems
                                                  | PointerHandler.ApprovesCancellation
-                                onTapped: drawCanvas.armTool(modelData.id)
+                                onTapped: drawCanvas.session.setExclusiveTool(modelData.id)
                             }
                         }
                     }
@@ -364,11 +364,11 @@ TabletWindow {
                         delegate: Rectangle {
                             width: 64
                             height: 64
-                            color: drawCanvas.toolMode === modelData.id ? "black" : "white"
+                            color: drawCanvas.session.exclusiveTool === modelData.id ? "black" : "white"
                             border.color: "black"
                             border.width: 1
 
-                            readonly property bool armed: drawCanvas.toolMode === modelData.id
+                            readonly property bool armed: drawCanvas.session.exclusiveTool === modelData.id
 
                             Image {
                                 anchors.centerIn: parent
@@ -387,7 +387,7 @@ TabletWindow {
                                 gesturePolicy: TapHandler.ReleaseWithinBounds
                                 grabPermissions: PointerHandler.CanTakeOverFromItems
                                                  | PointerHandler.ApprovesCancellation
-                                onTapped: drawCanvas.armTool(modelData.id)
+                                onTapped: drawCanvas.session.setExclusiveTool(modelData.id)
                             }
                         }
                     }

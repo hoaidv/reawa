@@ -324,59 +324,36 @@ private:
 
     QElapsedTimer m_refreshClock;
     static constexpr qint64 kRefreshMinIntervalMs = 250;
-    
-/**
- * =================================================================================================
- * Connector ink rendering
- * =================================================================================================
- */
-
-/**
- * =================================================================================================
- * Recognizer feedback
- *
- * Recognizer feedback is ToolCanvas NodeEmphasis (CHL-0030). Tablet only emits ids.
- * =================================================================================================
- */
 
 /**
  * =================================================================================================
  * Tool modes / ToolChip
+ *
+ * Exclusive tool lives on CanvasSession (QML: session.setExclusiveTool / exclusiveTool).
+ * Tablet only exposes recog toggles + latch for chip chrome.
  * =================================================================================================
  */
 
 public:
-
-
-    QString toolMode() const { return m_session.exclusiveTool(); }
-    void setToolMode(const QString &mode);
-    Q_INVOKABLE void armTool(const QString &mode);
-    Q_INVOKABLE bool togglePenEraser();
-    Q_INVOKABLE bool beginTempErase();
-    Q_INVOKABLE bool endTempErase();  
-    
     bool recogInkBoxArmed() const { return m_session.chip.recogInkBox; }
     bool recogConnectorArmed() const { return m_session.chip.recogConnector; }
     bool recogTogglesDimmed() const { return m_session.chip.recogDimmed(); }
-    
+
     Q_INVOKABLE void toggleRecogInkBox();
     Q_INVOKABLE void toggleRecogConnector();
-   
+
     QString lastStrokeLatch() const { return m_lastStrokeLatch; }
 
-signals: 
-    void toolModeChanged();
+signals:
     void recogChanged();
     void lastStrokeLatchChanged();
 
-private: 
-
+private:
     QString m_lastStrokeLatch;
-    
-    Q_PROPERTY(QString toolMode READ toolMode WRITE setToolMode NOTIFY toolModeChanged)
+
     Q_PROPERTY(bool recogInkBoxArmed READ recogInkBoxArmed NOTIFY recogChanged)
     Q_PROPERTY(bool recogConnectorArmed READ recogConnectorArmed NOTIFY recogChanged)
-    Q_PROPERTY(bool recogTogglesDimmed READ recogTogglesDimmed NOTIFY toolModeChanged)
+    Q_PROPERTY(bool recogTogglesDimmed READ recogTogglesDimmed NOTIFY recogChanged)
     Q_PROPERTY(QString lastStrokeLatch READ lastStrokeLatch NOTIFY lastStrokeLatchChanged)
     
     

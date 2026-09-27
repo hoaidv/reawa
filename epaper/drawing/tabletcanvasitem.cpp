@@ -188,8 +188,9 @@ TabletCanvasItem::TabletCanvasItem(QQuickItem *parent)
         scheduleVectorRasterize(true);
     });
     connect(&m_session, &CanvasSession::exclusiveToolChanged, this, [this]() {
-        emit toolModeChanged();
-        m_debugInfo = QStringLiteral("tool=%1").arg(toolMode());
+        // recogTogglesDimmed tracks exclusive tool (pen vs sel/erase).
+        emit recogChanged();
+        m_debugInfo = QStringLiteral("tool=%1").arg(m_session.exclusiveTool());
         emit debugChanged();
     });
     connect(&m_session, &CanvasSession::followChanged, this, &TabletCanvasItem::followChanged);
@@ -1410,37 +1411,9 @@ void TabletCanvasItem::collectSmartGroupInkIds(const epaper::document::DocNode &
  * =================================================================================================
  * Tool modes / ToolChip
  *
- * QML ToolChip calls armTool / recog toggles. setToolMode updates ChipModel on the session
- * and refreshes Tool selection chrome when leaving sel_*.
+ * Exclusive tool: CanvasSession.setExclusiveTool (QML + Tool). Recog toggles stay here for chip.
  * =================================================================================================
  */
-
-/** Exclusive tool change on session chip (exclusiveToolChanged does the rest). */
-void TabletCanvasItem::setToolMode(const QString &mode)
-{
-    (void)m_session.setExclusiveTool(mode);
-}
-
-/** ToolChip tap → setToolMode. */
-void TabletCanvasItem::armTool(const QString &mode)
-{
-    setToolMode(mode);
-}
-
-bool TabletCanvasItem::togglePenEraser()
-{
-    return m_session.togglePenEraser();
-}
-
-bool TabletCanvasItem::beginTempErase()
-{
-    return m_session.beginTempErase();
-}
-
-bool TabletCanvasItem::endTempErase()
-{
-    return m_session.endTempErase();
-}
 
 /** Flip ink-box recog arm on session chip. */
 void TabletCanvasItem::toggleRecogInkBox()
@@ -1694,7 +1667,7 @@ void TabletCanvasItem::stashTabletSample(const QPointF &raw, const IngestChannel
 void TabletCanvasItem::tapFollowToggle()
 {
     m_session.follow.connected = m_sync && m_sync->isConnected();
-    m_session.follow.exclusiveTool = toolMode().toStdString();
+    m_session.follow.exclusiveTool = m_session.exclusiveTool().toStdString();
     const auto r = m_session.follow.tapToggle();
     m_session.setFollowDirection(QString::fromLatin1(epaper::handtouch::followId(m_session.follow.direction)));
     emit followChanged();

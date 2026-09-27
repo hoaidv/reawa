@@ -167,8 +167,8 @@ void ToolCanvasItem::syncToolHost()
     caps.emphasis = &m_emphasis;
     caps.emitChromeChanged = [this]() { emit selectionChromeChanged(); };
     caps.setExclusiveTool = [this](const QString &id) {
-        if (m_surface)
-            m_surface->setToolMode(id);
+        if (m_session)
+            m_session->setExclusiveTool(id);
     };
     m_hub.setHostCaps(caps);
     registerOperations();

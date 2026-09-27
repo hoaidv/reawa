@@ -41,7 +41,7 @@ public:
     QString followDirection() const { return m_followDirection; }
 
     /** Update exclusive tool; emits exclusiveToolChanged when changed. */
-    bool setExclusiveTool(const QString &mode);
+    Q_INVOKABLE bool setExclusiveTool(const QString &mode);
     bool flipRecogInkBox();
     bool flipRecogConnector();
     bool togglePenEraser();
