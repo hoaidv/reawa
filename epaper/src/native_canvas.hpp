@@ -21,7 +21,7 @@ class NativeCanvas : public QQuickPaintedItem {
 public:
     // Panel refresh used for this item's damage. ScreenMode leaves the panel
     // on its ordinary waveform. Further EPScreenMode values can join this list.
-    enum Waveform { PenMode, MonoMode, ScreenMode };
+    enum Waveform { PenMode, MonoMode };
     Q_ENUM(Waveform)
 
     // QML assigns the properties above before componentComplete().
@@ -133,7 +133,7 @@ inline void NativeCanvas::applyWaveform()
     case MonoMode:
         bridge->attachMonoModeRegion(this);
         break;
-    case ScreenMode:
+    default:
         break;
     }
 }

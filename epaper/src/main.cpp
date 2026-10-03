@@ -43,9 +43,7 @@ int main(int argc, char *argv[])
 
     // QQmlApplicationEngine compiles QML and instantiates the root object.
     // CMake `qt_add_qml_module(... NO_RESOURCE_TARGET_PATH)` embeds files at
-    // their source paths, so Main.qml is qrc:/qml/Main.qml — not the default
-    // qrc:/qt/qml/QtLearn/... layout. engine.load() is what actually creates
-    // the ApplicationWindow.
+    // their source paths, so Main.qml is qrc:/src/qml/Main.qml
     App logic;
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("app"), &logic);
@@ -64,7 +62,7 @@ int main(int argc, char *argv[])
         },
         Qt::QueuedConnection);
 
-    // Instantiate a Window in the qml.
+    // Instantiate a ApplicationWindow in the qml.
     engine.load(url);
 
     // Block here dispatching input, timers, and scene-graph frames until the

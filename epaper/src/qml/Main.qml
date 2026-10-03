@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtLearn 1.0
 
-Window {
+NativeWindow {
     id: root
     width: Screen.width
     height: Screen.height
@@ -21,7 +21,7 @@ Window {
         penWidth: 4
 
         PointHandler {
-            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
+            acceptedDevices: PointerDevice.TouchScreen | PointerDevice.Mouse
             target: null
             onActiveChanged: {
                 if (active)
@@ -30,11 +30,18 @@ Window {
                     canvas.endStroke()
             }
             onPointChanged: {
-                if (active) {
-                    canvas.extendStroke(point.position.x,point.position.y)
-                }
+                if (active)
+                    canvas.extendStroke(point.position.x, point.position.y)
             }
         }
+    }
+
+  
+
+    StylusHandler {
+        onStylusPress: (x, y) => canvas.beginStroke(x, y)
+        onStylusMove: (x, y) => canvas.extendStroke(x, y)
+        onStylusRelease: canvas.endStroke()
     }
 }
 

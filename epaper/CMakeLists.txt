@@ -21,10 +21,14 @@ qt_add_qml_module(epaper_bin
         src/qml/Main.qml
     SOURCES
         src/native_canvas.hpp
+        src/window/native_window.hpp
+        src/window/native_window.cpp
+        src/window/stylus_handler.hpp
+        src/window/stylus_handler.cpp
     NO_RESOURCE_TARGET_PATH
 )
 
-target_include_directories(epaper_bin PRIVATE src)
+target_include_directories(epaper_bin PRIVATE src src/window)
 
 target_link_libraries(epaper_bin PRIVATE 
     Qt6::Core
