@@ -33,6 +33,9 @@ SSH_OPTS=(
   -o ConnectTimeout=8
 )
 
+echo "Stopping remote epaper (if any) ..."
+ssh "${SSH_OPTS[@]}" "$HOST" 'killall epaper 2>/dev/null || true; sleep 0.3'
+
 echo "Deploying $(basename "$BIN") to $HOST:$REMOTE ..."
 scp "${SSH_OPTS[@]}" "$BIN" "$HOST:$REMOTE"
 
