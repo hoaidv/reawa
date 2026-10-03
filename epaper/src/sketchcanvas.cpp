@@ -1,8 +1,28 @@
 #include "sketchcanvas.hpp"
+#include "bridge/epaperbridge.h"
 
 SketchCanvas::SketchCanvas(QQuickItem * parent): QQuickPaintedItem(parent) {
-    setRenderTarget(QQuickPaintedItem::Image),
+    // Opaque white RGB. Pen mode is 1-bit; gray or alpha pixels show up dashed.
     setAntialiasing(false);
+    setRenderTarget(QQuickPaintedItem::Image);
+    setOpaquePainting(true);
+    setFillColor(Qt::white);
+}
+
+void SketchCanvas::componentComplete()
+{
+    QQuickPaintedItem::componentComplete();
+    // Same object QML calls as EpaperBridgeInstance. A 0x0 region tags nothing,
+    // and onCompleted can run before layout, so geometryChange attaches again.
+    EpaperBridge::instance()->attachPenModeRegion(this);
+}
+
+void SketchCanvas::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
+{
+    QQuickPaintedItem::geometryChange(newGeometry, oldGeometry);
+    if (newGeometry.width() > 1.0 && newGeometry.height() > 1.0
+        && newGeometry.size() != oldGeometry.size())
+        EpaperBridge::instance()->attachPenModeRegion(this);
 }
 
 void SketchCanvas::ensureImage() {
@@ -12,8 +32,9 @@ void SketchCanvas::ensureImage() {
     if (w < 1 || h < 1) return;
     if (m_image.size() == QSize(w, h)) return;
 
-    m_image = QImage(w, h, QImage::Format_ARGB32_Premultiplied);
+    m_image = QImage(w, h, QImage::Format_RGB32);
     m_image.fill(Qt::white);
+    setTextureSize(m_image.size());
 }
 
 
@@ -27,11 +48,22 @@ QRect SketchCanvas::dirtyFor(const QPointF &a, const QPointF &b, const QRect &bo
 
 void SketchCanvas::beginStroke(qreal x, qreal y) {
 
-    m_strokes.append(QVector<QPointF>{QPointF(x, y)});
+    ensureImage();
+    
+    const QPointF next(x, y);
+    // drawing
+    QPainter p(&m_image);
+    p.setPen(QPen(Qt::black, kPenWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    p.drawPoint(next);
 
-    QRect dirtyRect = dirtyFor(QPointF(x, y), QPointF(x, y), m_image.rect());
+    // Flushing logic
+    m_pendingFlush = QRect();
+    m_pendingFlushTimer.start();
 
-    update(dirtyRect);
+    noteDirty(dirtyFor(next, next, m_image.rect()));
+
+    // update state
+    m_strokes.append(QVector<QPointF>{next});    
 }
 
 void SketchCanvas::extendStroke(qreal x, qreal y){
@@ -63,7 +95,12 @@ void SketchCanvas::extendStroke(qreal x, qreal y){
 
     // Mark the dirty region. Though this might not be the final repaint region.
     // Final repaint region is decided by Qt
-    update(dirtyFor(prev, next, m_image.rect()));
+    noteDirty(dirtyFor(prev, next, m_image.rect()));
+}
+
+void SketchCanvas::endStroke()
+{
+    flush();
 }
 
 void SketchCanvas::clear()
@@ -72,22 +109,8 @@ void SketchCanvas::clear()
     update();
 }
 
-/**
- * Final repaint region, decided by Qt, base on our dirty rect
- * They differs in 3 cases
- *
- * 1/ first paint, resize or update with no rectangle -> paints whole item 
- * 2/ several update(dirtyRect) land on one paint(), clip = bounding box of all dirtyRect
- * 3/ qt aligns region to pixels, so the clip can be a pixel wider than the rect you passed.
- */
-
 void SketchCanvas::paint(QPainter *painter) {
-    
-    // A. Whole buffer
-    painter->drawImage(QPoint(0, 0), m_image);
-
-    // B. Partial buffer
-    // const QRect dirtyRect = painter->clipBoundingRect().toAlignedRect()
-    //     .intersected(m_image.rect());
-    // painter->drawImage(dirtyRect, m_image, dirtyRect);
+    // The scene graph already clips this painter to the rect passed to update().
+    // Drawing the whole buffer at item origin copies only that clipped piece.
+    painter->drawImage(0, 0, m_image);
 }

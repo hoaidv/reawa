@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import QtLearn 1.0
+import epaper 1.0 // URI from qmlRegisterSingletonInstance; exposes EpaperBridgeInstance
 
 Window {
     id: root
@@ -22,7 +23,9 @@ Window {
             target: null
             onActiveChanged: {
                 if (active)
-                    canvas.beginStroke(point.position.x,point.position.y)
+                    canvas.beginStroke(point.position.x, point.position.y)
+                else
+                    canvas.endStroke()
             }
             onPointChanged: {
                 if (active) {
@@ -32,6 +35,8 @@ Window {
         }
     }
 
-    Component.onCompleted: EpaperBridge.attachPenModeRegion(canvas)
+    // Tags this canvas so update() uses the pen waveform.
+    // Without the region, the panel's default refresh draws the stroke dashed.
+    Component.onCompleted: EpaperBridgeInstance.attachPenModeRegion(canvas)
 }
 

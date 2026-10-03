@@ -129,7 +129,7 @@ private:
 };
 
 /**
- * Singleton accessor registered into QML as "EpaperBridge".
+ * Singleton accessor registered into QML as "EpaperBridgeInstance".
  * @implements [SRS-EP-01]
  */
 EpaperBridge *epaperBridge();

@@ -23,10 +23,12 @@ int main(int argc, char *argv[])
     // object that owns the event loop we enter at the bottom.
     QGuiApplication app(argc, argv);
 
-    // Register native bridge with libqsgepaper.so
-
+    // QML name of this one C++ object: import epaper 1.0, then EpaperBridgeInstance.
+    // The type name must start with an uppercase letter; Qt rejects anything else.
+    // Keep the URI "epaper". Registering into "QtLearn" replaces that module and
+    // SketchCanvas is no longer a QML type.
     EpaperBridge *bridge = EpaperBridge::instance();
-    qmlRegisterSingletonInstance("const char *uri", 1, 0, "libqsgepaper.so", bridge);
+    qmlRegisterSingletonInstance("epaper", 1, 0, "EpaperBridgeInstance", bridge);
 
     // Process identity for QSettings, QStandardPaths, and D-Bus names.
     // On Linux this lands under ~/.config/epaper/epaper.conf and similar
