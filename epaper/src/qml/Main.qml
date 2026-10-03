@@ -10,12 +10,15 @@ Window {
     visible: true
 
 
-    SketchCanvas {
+    NativeCanvas {
         id: canvas
         x: 0
         y: 0
         width: root.width
         height: root.height
+        waveform: NativeCanvas.PenMode
+        batchWindowMs: 8
+        penWidth: 4
 
         PointHandler {
             acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse

@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     // QML name of this one C++ object: import epaper 1.0, then EpaperBridgeInstance.
     // The type name must start with an uppercase letter; Qt rejects anything else.
     // Keep the URI "epaper". Registering into "QtLearn" replaces that module and
-    // SketchCanvas is no longer a QML type.
+    // NativeCanvas is no longer a QML type.
     EpaperBridge *bridge = EpaperBridge::instance();
     qmlRegisterSingletonInstance("epaper", 1, 0, "EpaperBridgeInstance", bridge);
 

@@ -20,8 +20,7 @@ qt_add_qml_module(epaper_bin
     QML_FILES
         src/qml/Main.qml
     SOURCES
-        src/sketchcanvas.hpp
-        src/sketchcanvas.cpp
+        src/native_canvas.hpp
     NO_RESOURCE_TARGET_PATH
 )
 
