@@ -1,5 +1,6 @@
 #include "sketchcanvas.hpp"
 #include "bridge/epaperbridge.h"
+#include <QDebug>
 
 SketchCanvas::SketchCanvas(QQuickItem * parent): QQuickPaintedItem(parent) {
     // Opaque white RGB. Pen mode is 1-bit; gray or alpha pixels show up dashed.
@@ -47,9 +48,26 @@ QRect SketchCanvas::dirtyFor(const QPointF &a, const QPointF &b, const QRect &bo
 
 void SketchCanvas::noteDirty(const QRect &r) {
     m_pendingFlush = m_pendingFlush.isNull() ? r : m_pendingFlush.united(r);
-    if (m_pendingFlushTimer.isValid() && m_pendingFlushTimer.elapsed() >= kFlushMs) {
+
+    // First sample of the process has no clock yet. Start it and wait for 8 ms.
+    // A later stroke whose clock is already past 8 ms flushes this rect now.
+
+    if (!m_pendingFlushTimer.isValid()) {
+        m_pendingFlushTimer.start();
+    } else if (m_pendingFlushTimer.elapsed() >= kFlushMs) {
         flush();
     }
+}
+
+void SketchCanvas::flush()
+{
+    if (m_pendingFlush.isNull())
+        return;
+    
+    const QRect r = m_pendingFlush;
+    m_pendingFlush = QRect();
+    m_pendingFlushTimer.restart();
+    update(r);
 }
 
 void SketchCanvas::beginStroke(qreal x, qreal y) {
@@ -61,10 +79,6 @@ void SketchCanvas::beginStroke(qreal x, qreal y) {
     QPainter p(&m_image);
     p.setPen(QPen(Qt::black, kPenWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     p.drawPoint(next);
-
-    // Flushing logic
-    m_pendingFlush = QRect();
-    m_pendingFlushTimer.start();
 
     noteDirty(dirtyFor(next, next, m_image.rect()));
 

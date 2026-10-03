@@ -37,14 +37,7 @@ private:
 
     // Coalesce ~8 ms of samples, then damage only that rect.
     // The pen-mode region selects the waveform; this path does not call swapPen.
-    void flush() {
-        if (m_pendingFlush.isNull())
-            return;
-        const QRect r = m_pendingFlush;
-        m_pendingFlush = QRect();
-        m_pendingFlushTimer.restart();
-        update(r);
-    }
+    void flush();
 
     QVector<QVector<QPointF>> m_strokes;
     QImage m_image;
