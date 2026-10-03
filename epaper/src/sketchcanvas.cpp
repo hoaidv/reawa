@@ -3,7 +3,7 @@
 
 SketchCanvas::SketchCanvas(QQuickItem * parent): QQuickPaintedItem(parent) {
     // Opaque white RGB. Pen mode is 1-bit; gray or alpha pixels show up dashed.
-    setAntialiasing(false);
+    setAntialiasing(true);
     setRenderTarget(QQuickPaintedItem::Image);
     setOpaquePainting(true);
     setFillColor(Qt::white);
@@ -32,9 +32,8 @@ void SketchCanvas::ensureImage() {
     if (w < 1 || h < 1) return;
     if (m_image.size() == QSize(w, h)) return;
 
-    m_image = QImage(w, h, QImage::Format_RGB32);
+    m_image = QImage(w, h, QImage::Format_ARGB32_Premultiplied);
     m_image.fill(Qt::white);
-    setTextureSize(m_image.size());
 }
 
 
@@ -44,6 +43,13 @@ QRect SketchCanvas::dirtyFor(const QPointF &a, const QPointF &b, const QRect &bo
         .adjusted(-kPad, -kPad, kPad, kPad)
         .toAlignedRect()
         .intersected(bounds);
+}
+
+void SketchCanvas::noteDirty(const QRect &r) {
+    m_pendingFlush = m_pendingFlush.isNull() ? r : m_pendingFlush.united(r);
+    if (m_pendingFlushTimer.isValid() && m_pendingFlushTimer.elapsed() >= kFlushMs) {
+        flush();
+    }
 }
 
 void SketchCanvas::beginStroke(qreal x, qreal y) {
@@ -84,18 +90,17 @@ void SketchCanvas::extendStroke(qreal x, qreal y){
     const QPointF prev = m_strokes.last().last();
     const QPointF next(x, y);
     
+    // drawing on buffer
     QPainter p(&m_image);
-    // antialiasing adds gray pixels that pen mode cannot show.
-    p.setRenderHint(QPainter::Antialiasing, false);
     p.setPen(QPen(Qt::black, kPenWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
     p.drawLine(prev, next);
+    
+    // Mark the dirty region
+    noteDirty(dirtyFor(prev, next, m_image.rect()));
 
+    // ------------------------------------------------------------------
     // update state
     m_strokes.last().append(next);
-
-    // Mark the dirty region. Though this might not be the final repaint region.
-    // Final repaint region is decided by Qt
-    noteDirty(dirtyFor(prev, next, m_image.rect()));
 }
 
 void SketchCanvas::endStroke()

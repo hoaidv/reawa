@@ -33,13 +33,7 @@ private:
 
     void ensureImage();
     QRect dirtyFor(const QPointF &a, const QPointF &b, const QRect &bounds);
-
-    void noteDirty(const QRect &r) {
-        m_pendingFlush = m_pendingFlush.isNull() ? r : m_pendingFlush.united(r);
-        if (m_pendingFlushTimer.isValid() && m_pendingFlushTimer.elapsed() >= kFlushMs) {
-            flush();
-        }
-    }
+    void noteDirty(const QRect &r);
 
     // Coalesce ~8 ms of samples, then damage only that rect.
     // The pen-mode region selects the waveform; this path does not call swapPen.
