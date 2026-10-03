@@ -1,42 +1,93 @@
 #include "sketchcanvas.hpp"
 
 SketchCanvas::SketchCanvas(QQuickItem * parent): QQuickPaintedItem(parent) {
-    setRenderTarget(QQuickPaintedItem::Image);
-    setAntialiasing(true);
+    setRenderTarget(QQuickPaintedItem::Image),
+    setAntialiasing(false);
 }
 
-void SketchCanvas::paint(QPainter *painter) {
-    painter->setRenderHint(QPainter::Antialiasing);
-    painter->fillRect(boundingRect(), Qt::white);
-    QPen pen(Qt::black, 2);
+void SketchCanvas::ensureImage() {
+    const int w = qCeil(width());
+    const int h = qCeil(height());
 
-    pen.setCapStyle(Qt::RoundCap);
-    pen.setJoinStyle(Qt::RoundJoin);
-    painter->setPen(pen);
-    for(const auto &stroke: m_strokes) {
-        if (stroke.size() >= 2) {
-            painter->drawPolyline(stroke.constData(), stroke.size());
-        }
-    }
+    if (w < 1 || h < 1) return;
+    if (m_image.size() == QSize(w, h)) return;
 
+    m_image = QImage(w, h, QImage::Format_ARGB32_Premultiplied);
+    m_image.fill(Qt::white);
+}
+
+
+QRect SketchCanvas::dirtyFor(const QPointF &a, const QPointF &b, const QRect &bounds)
+{
+    return QRectF(a, b).normalized()
+        .adjusted(-kPad, -kPad, kPad, kPad)
+        .toAlignedRect()
+        .intersected(bounds);
 }
 
 void SketchCanvas::beginStroke(qreal x, qreal y) {
 
     m_strokes.append(QVector<QPointF>{QPointF(x, y)});
-    update();
+
+    QRect dirtyRect = dirtyFor(QPointF(x, y), QPointF(x, y), m_image.rect());
+
+    update(dirtyRect);
 }
 
 void SketchCanvas::extendStroke(qreal x, qreal y){
-    if (m_strokes.isEmpty()) 
-        return;
+    // Safe-guard corrupted state, with no stroke but trying to extend
+    if (m_strokes.isEmpty()) return;
 
-    m_strokes.last().append(QPointF(x, y));
-    update();
+    QVector<QPointF> lastStroke = m_strokes.last();
+    // Safe-guard currupted state, stroke with empty data
+    if (m_strokes.last().isEmpty()) { 
+        m_strokes.last().append(QPointF(x, y));
+        return;
+    }
+
+    ensureImage();
+    // Safe-guard non-existing buffer
+    if (m_image.isNull()) return;
+
+    const QPointF prev = m_strokes.last().last();
+    const QPointF next(x, y);
+    
+    QPainter p(&m_image);
+    // antialiasing adds gray pixels that pen mode cannot show.
+    p.setRenderHint(QPainter::Antialiasing, false);
+    p.setPen(QPen(Qt::black, kPenWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    p.drawLine(prev, next);
+
+    // update state
+    m_strokes.last().append(next);
+
+    // Mark the dirty region. Though this might not be the final repaint region.
+    // Final repaint region is decided by Qt
+    update(dirtyFor(prev, next, m_image.rect()));
 }
 
 void SketchCanvas::clear()
 {
     m_strokes.clear();
     update();
+}
+
+/**
+ * Final repaint region, decided by Qt, base on our dirty rect
+ * They differs in 3 cases
+ *
+ * 1/ first paint, resize or update with no rectangle -> paints whole item 
+ * 2/ several update(dirtyRect) land on one paint(), clip = bounding box of all dirtyRect
+ * 3/ qt aligns region to pixels, so the clip can be a pixel wider than the rect you passed.
+ */
+
+void SketchCanvas::paint(QPainter *painter) {
+    
+    // A. Whole buffer
+    painter->drawImage(QPoint(0, 0), m_image);
+
+    // B. Partial buffer
+    // const QRect dirtyRect = painter->clipBoundingRect().toAlignedRect()
+    //     .intersected(m_image.rect());
+    // painter->drawImage(dirtyRect, m_image, dirtyRect);
 }

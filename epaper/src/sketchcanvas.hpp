@@ -4,6 +4,9 @@
 #include <QtQml/qqmlregistration.h>
 
 
+constexpr qreal kPenWidth = 4;
+constexpr qreal kPad = kPenWidth * 0.5 + 8;
+
 class SketchCanvas: public QQuickPaintedItem {
 
     Q_OBJECT
@@ -18,8 +21,15 @@ public:
 
     Q_INVOKABLE void clear();
 
+
+
 private:
+
+    void ensureImage();
+    QRect dirtyFor(const QPointF &a, const QPointF &b, const QRect &bounds);
+
     QVector<QVector<QPointF>> m_strokes;
+    QImage m_image;
 
 };
 

@@ -5,6 +5,7 @@
 #include <QUrl>
 #include "app.hpp"
 #include <QQmlContext>
+#include "bridge/epaperbridge.h"
 
 int main(int argc, char *argv[])
 {
@@ -22,11 +23,16 @@ int main(int argc, char *argv[])
     // object that owns the event loop we enter at the bottom.
     QGuiApplication app(argc, argv);
 
+    // Register native bridge with libqsgepaper.so
+
+    EpaperBridge *bridge = EpaperBridge::instance();
+    qmlRegisterSingletonInstance("const char *uri", 1, 0, "libqsgepaper.so", bridge);
+
     // Process identity for QSettings, QStandardPaths, and D-Bus names.
-    // On Linux this lands under ~/.config/qt-learn/qt-learn.conf and similar
+    // On Linux this lands under ~/.config/epaper/epaper.conf and similar
     // app-specific dirs. Set before anything that reads those paths.
-    app.setOrganizationName("qt-learn");
-    app.setApplicationName("qt-learn");
+    app.setOrganizationName("epaper");
+    app.setApplicationName("epaper");
 
     // Qt Quick Controls 2 style — MUST be set before any Controls QML loads.
     // "Basic" is the bundled platform-neutral style. Native styles (Fusion,

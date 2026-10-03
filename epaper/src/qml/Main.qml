@@ -31,5 +31,7 @@ Window {
             }
         }
     }
+
+    Component.onCompleted: EpaperBridge.attachPenModeRegion(canvas)
 }
 

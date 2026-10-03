@@ -11,6 +11,7 @@ qt_add_executable(epaper_bin
     src/counter.hpp
     src/app.hpp
     src/app.cpp
+    src/bridge/epaperbridge.cpp
 )
 
 qt_add_qml_module(epaper_bin
@@ -32,6 +33,7 @@ target_link_libraries(epaper_bin PRIVATE
     Qt6::Qml
     Qt6::Quick
     Qt6::QuickControls2
+    ${CMAKE_DL_LIBS}
 )
 target_compile_options(epaper_bin PRIVATE -Wno-psabi)
 set_target_properties(epaper_bin PROPERTIES
