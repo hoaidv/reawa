@@ -209,8 +209,7 @@ inline void SessionDocContext::noteDocumentDirty(const QRectF &panelDirty)
 
 inline void SessionDocContext::flushWire()
 {
-    if (m_surface)
-        m_surface->flushWire();
+    // One-way wire removed from Tablet host; redesign later.
 }
 
 inline void SessionDocContext::clearLiveManipSuppressIds()
@@ -228,8 +227,10 @@ inline void SessionDocContext::publishManipPreview(const std::string &nodeId,
                                                    const epaper::document::SmartTransform &liveT,
                                                    const epaper::document::SmartBounds *liveB)
 {
-    if (m_surface)
-        m_surface->publishManipPreview(nodeId, liveT, liveB);
+    Q_UNUSED(nodeId);
+    Q_UNUSED(liveT);
+    Q_UNUSED(liveB);
+    // One-way wire removed from Tablet host; redesign later.
 }
 
 inline void SessionDocContext::setInteractionDebug(const std::string &line)
@@ -246,8 +247,8 @@ inline void SessionDocContext::setExclusiveTool(const QString &id)
 
 inline epaper::handtouch::FollowDirection SessionDocContext::follow() const
 {
-    return m_session ? epaper::handtouch::parseFollow(m_session->followDirection().toStdString())
-                     : epaper::handtouch::FollowDirection::None;
+    // Viewport-follow session removed from host; local nav always unblocked.
+    return epaper::handtouch::FollowDirection::None;
 }
 
 inline epaper::canvasframe::CanvasFrame &SessionDocContext::frame()
@@ -297,8 +298,8 @@ inline void SessionDocContext::applyCamera(const epaper::handtouch::WorldAabb &r
 
 inline void SessionDocContext::publishViewport(bool settle)
 {
-    if (m_surface)
-        m_surface->maybePublishLocalViewport(settle);
+    Q_UNUSED(settle);
+    // Region sync / viewport publish removed from Tablet host; redesign later.
 }
 
 inline void SessionDocContext::scheduleRasterize(bool sharp)

@@ -90,65 +90,7 @@ TabletWindow {
         }
     }
 
-    // Trailing orientation-top row: DBG | Follow Infini | USB (UI-EP-07).
-    // @implements [SRS-EP-50] FollowToggle sibling of ToolChip
-    Rectangle {
-        id: followToggle
-        z: 20
-        x: drawCanvas.followToggleRect.x
-        y: drawCanvas.followToggleRect.y
-        width: drawCanvas.followToggleRect.width
-        height: drawCanvas.followToggleRect.height
-        color: drawCanvas.followPressed ? "black" : "white"
-        border.color: "black"
-        border.width: 1
-
-        Image {
-            anchors.centerIn: parent
-            width: parent.width * 0.62
-            height: parent.height * 0.62
-            fillMode: Image.PreserveAspectFit
-            smooth: false
-            source: drawCanvas.followPressed
-                    ? "qrc:/icons/icons/icon-epaper-viewport-follow-inv.png"
-                    : "qrc:/icons/icons/icon-epaper-viewport-follow.png"
-        }
-
-        Canvas {
-            id: followHatch
-            visible: drawCanvas.followUnavailable
-            anchors.fill: parent
-            onPaint: {
-                var ctx = getContext("2d")
-                ctx.clearRect(0, 0, width, height)
-                ctx.strokeStyle = "#000000"
-                ctx.lineWidth = 1
-                for (var i = -height; i < width + height; i += 4) {
-                    ctx.beginPath()
-                    ctx.moveTo(i, 0)
-                    ctx.lineTo(i + height, height)
-                    ctx.stroke()
-                }
-            }
-            Connections {
-                target: drawCanvas
-                function onFollowChanged() { followHatch.requestPaint() }
-            }
-        }
-
-        TapHandler {
-            acceptedDevices: PointerDevice.Stylus | PointerDevice.TouchScreen | PointerDevice.Mouse
-            acceptedPointerTypes: PointerDevice.Pen | PointerDevice.Finger | PointerDevice.Generic
-            // Exclusive grab on press, and nothing may take it. The canvas
-            // handlers below still get a passive grab on this point; refusing
-            // takeover is what keeps them from turning a chrome tap into ink.
-            gesturePolicy: TapHandler.ReleaseWithinBounds
-            grabPermissions: PointerHandler.CanTakeOverFromItems
-                             | PointerHandler.ApprovesCancellation
-            enabled: !drawCanvas.followUnavailable
-            onTapped: drawCanvas.tapFollowToggle()
-        }
-    }
+    // Trailing orientation-top row: DBG | USB (Follow Infini removed pending redesign).
 
     // Floating tool chip — HT + 3 tools + recognizers + 3 erasers + Undo/Redo.
     Item {

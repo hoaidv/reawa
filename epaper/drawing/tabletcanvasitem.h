@@ -8,8 +8,6 @@
 #include <QImage>
 #include <QRectF>
 #include <QTimer>
-#include <QJsonArray>
-#include <QJsonObject>
 #include <QString>
 #include <cstdint>
 #include <memory>
@@ -20,9 +18,6 @@
 #include "canvas_frame.hpp"
 #include "canvas_session.h"
 #include "document/device_document.hpp"
-#include "document/hand_touch.hpp"
-#include "document/one_way_sync.hpp"
-#include "document/viewport_follow.hpp"
 #include "input/pen_sample.hpp"
 #include "debug/rasterize_probe.hpp"
 #include "primary_toolbar.hpp"
@@ -33,14 +28,11 @@
 
 #include <optional>
 
-class StrokeSync;
-
 /**
- * Pen ink + device document rasterize for the sync region.
+ * Pen ink + device document rasterize.
  * @implements [SRS-EP-01]
  * @implements [SRS-EP-02] vector ∩ drawingRegion paint (no bitmap push)
  * @implements [SRS-EP-07] local tree paint + stroke ingest
- * @implements [SRS-EP-08] one-way sync handshake and publish
  * @implements [SRS-EP-11] live SmartGroup manipulation
  * @implements [SRS-EP-21] one-finger pick move palm pan
  * @implements [SRS-EP-23] finger exclusive-tool switch
@@ -48,9 +40,9 @@ class StrokeSync;
  * @implements [SRS-EP-24] two-finger pan pinch viewport
  * @implements [SRS-EP-25] one-finger hand-touch quality
  * @implements [SRS-EP-26] two-finger map-apply quality
- * @implements [SRS-EP-49] viewport-follow Infini session enum
- * @implements [SRS-EP-50] FollowToggle sibling of ToolChip
- * @implements [SRS-EP-51] follow exclusivity and map-apply quality
+ *
+ * Region sync / viewport-follow / one-way wire were removed from this host;
+ * redesign later (former SRS-EP-08 / EP-49–51).
  */
 class TabletCanvasItem : public QQuickPaintedItem
 {
@@ -127,7 +119,7 @@ private:
 
 /**
  * =================================================================================================
- * Canvas session — shared document / frame / chip / follow
+ * Canvas session — shared document / frame / chip
  * =================================================================================================
  */
 
@@ -381,12 +373,7 @@ public:
 
     void scheduleDocumentRasterize(bool sharp);
     void scheduleDirtyRasterize(const QRectF &panelDirty, bool sharp);
-    void publishManipPreview(const std::string &nodeId,
-                             const epaper::document::SmartTransform &liveT,
-                             const epaper::document::SmartBounds *liveB);
-    void flushWire();
     void notifyHistory();
-    void maybePublishLocalViewport(bool settle);
     void ensureLocalDrawingRegion();
     void setInteractionDebug(const QString &info);
     QRectF boundConnectorsPanelUnion(const std::string &sgId) const;
@@ -409,70 +396,6 @@ private:
 
 /**
  * =================================================================================================
- * Region sync and viewport follow
- *
- * Cycles: inbound applyViewport; 
- *          outbound maybePublishLocalViewport; 
- *          follow tapFollowToggle → applyFollowCamera → flushFollowOutbound
- * =================================================================================================
- */
-
-public: 
-    int viewportUpCount() const { return m_viewportUpCount; }
-
-    /** @implements [SRS-EP-21] pen near outranks hand touch — called from QML */
-    QString followDirection() const { return m_session.followDirection(); }
-    
-    bool followPressed() const { return m_session.follow.ariaPressed(); }
-    bool followUnavailable() const { return m_session.follow.ariaDisabled(); }
-    Q_INVOKABLE void tapFollowToggle();
-
-signals:
-    void followChanged();
-
-        
-private:
-    void applyViewport(const QJsonObject &obj);
-    void applyFollowCamera();
-    void flushFollowOutbound();
-    void cacheInfiniViewport(const QJsonObject &obj);
-    epaper::handtouch::FollowDirection followEnum() const;
-
-
-    /** Reawa-style gut pose; legacy "portrait"/"landscape" normalized on ingest. */
-    int m_viewportSeq = 0;
-    int m_viewportUpCount = 0;
-
-    Q_PROPERTY(QString followDirection READ followDirection NOTIFY followChanged)
-    Q_PROPERTY(bool followPressed READ followPressed NOTIFY followChanged)
-    Q_PROPERTY(bool followUnavailable READ followUnavailable NOTIFY followChanged)
-
-/**
- * =================================================================================================
- * One-way sync wire
- * 
- * Cycle: syncBegin → syncPoint → syncEnd → flushOneWayWire;
- *        inbound onHostMessage 
- * =================================================================================================
- */
-
-private:
-
-    // Outbound
-    void syncBegin();
-    void syncPoint(const Point &pt);
-    void syncEnd();
-    void flushOneWayWire();
-
-    // Inbound
-    void onHostMessage(const QJsonObject &obj);
-    
-    StrokeSync *m_sync = nullptr;
-    epaper::document::OneWaySyncSession m_oneWay;
-
-
-/**
- * =================================================================================================
  * Chrome layout
  * =================================================================================================
  */
@@ -480,7 +403,6 @@ private:
 public:
 
     QRectF toolChipRect() const { return m_toolChipRect; }
-    QRectF followToggleRect() const { return m_followToggleRect; }
     QRectF usbLinkRect() const { return m_usbLinkRect; }
     QRectF debugToggleRect() const { return m_debugToggleRect; }
     QRectF handTouchToggleRect() const { return m_handTouchToggleRect; }
@@ -495,7 +417,6 @@ private:
     void updateToolChipRect();
 
     QRectF m_toolChipRect;
-    QRectF m_followToggleRect;
     QRectF m_usbLinkRect;
     QRectF m_debugToggleRect;
     QRectF m_handTouchToggleRect;
@@ -503,7 +424,6 @@ private:
 
     /** Device-local exclusive tool: sel_rect | sel_freeform | pen — never synced (SRS-EP-04). */
     Q_PROPERTY(QRectF toolChipRect READ toolChipRect NOTIFY toolChipRectChanged)
-    Q_PROPERTY(QRectF followToggleRect READ followToggleRect NOTIFY trailingChromeChanged)
     Q_PROPERTY(QRectF usbLinkRect READ usbLinkRect NOTIFY trailingChromeChanged)
     Q_PROPERTY(QRectF debugToggleRect READ debugToggleRect NOTIFY trailingChromeChanged)
     Q_PROPERTY(QRectF handTouchToggleRect READ handTouchToggleRect NOTIFY trailingChromeChanged)

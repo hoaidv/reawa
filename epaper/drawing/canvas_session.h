@@ -7,7 +7,7 @@
 
 #include "canvas_frame.hpp"
 #include "document/device_document.hpp"
-#include "document/viewport_follow.hpp"
+#include "document/hand_touch.hpp"
 #include "primary_toolbar.hpp"
 
 #include <QObject>
@@ -23,7 +23,6 @@ class CanvasSession : public QObject
     Q_PROPERTY(QString exclusiveTool READ exclusiveTool NOTIFY exclusiveToolChanged)
     Q_PROPERTY(bool recogInkBox READ recogInkBox NOTIFY recogChanged)
     Q_PROPERTY(bool recogConnector READ recogConnector NOTIFY recogChanged)
-    Q_PROPERTY(QString followDirection READ followDirection NOTIFY followChanged)
     Q_PROPERTY(bool eraseBrushHover READ eraseBrushHover WRITE setEraseBrushHover NOTIFY
                    eraseBrushHoverChanged)
 
@@ -33,12 +32,10 @@ public:
     epaper::document::DeviceDocument document;
     epaper::canvasframe::CanvasFrame frame;
     epaper::toolchip::ChipModel chip;
-    epaper::follow::FollowSession follow;
 
     QString exclusiveTool() const;
     bool recogInkBox() const { return chip.recogInkBox; }
     bool recogConnector() const { return chip.recogConnector; }
-    QString followDirection() const { return m_followDirection; }
 
     /** Update exclusive tool; emits exclusiveToolChanged when changed. */
     Q_INVOKABLE bool setExclusiveTool(const QString &mode);
@@ -58,8 +55,6 @@ public:
     void emitRecogChrome(int kind, const QStringList &ids);
     /** Emit cameraChanged when frame was mutated outside applyCamera (e.g. applyFrameIntent). */
     void noteCameraChanged();
-    void setFollowDirection(const QString &id);
-    void syncFollowDirectionFromSession();
 
     /** Live-manip subtree ids omitted from Tablet rasterize — set by Tool, read by Tablet. */
     const std::unordered_set<std::string> &liveManipSuppressIds() const
@@ -76,13 +71,11 @@ signals:
     void documentMutated();
     /** kind: 0 clear stamp, 1 enclose blink, 2 connector blink, 3 membership bold. */
     void recogChrome(int kind, const QStringList &ids);
-    void followChanged();
     void eraseBrushHoverChanged();
 
 private:
     void loadPersisted();
     void persistLastUsed() const;
 
-    QString m_followDirection = QStringLiteral("none");
     std::unordered_set<std::string> m_liveManipSuppressIds;
 };

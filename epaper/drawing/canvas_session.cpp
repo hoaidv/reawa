@@ -1,7 +1,5 @@
 #include "canvas_session.h"
 
-#include "document/hand_touch.hpp"
-
 #include <QSettings>
 
 CanvasSession::CanvasSession(QObject *parent)
@@ -132,19 +130,6 @@ void CanvasSession::emitRecogChrome(int kind, const QStringList &ids)
 void CanvasSession::noteCameraChanged()
 {
     emit cameraChanged();
-}
-
-void CanvasSession::setFollowDirection(const QString &id)
-{
-    if (m_followDirection == id)
-        return;
-    m_followDirection = id;
-    emit followChanged();
-}
-
-void CanvasSession::syncFollowDirectionFromSession()
-{
-    setFollowDirection(QString::fromLatin1(epaper::handtouch::followId(follow.direction)));
 }
 
 void CanvasSession::setLiveManipSuppressIds(std::unordered_set<std::string> ids)
