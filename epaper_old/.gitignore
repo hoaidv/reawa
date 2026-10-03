@@ -1,0 +1,24 @@
+
+# C++ build supports
+build-clangd/
+build-warn/
+.cache/
+compile_commands.json
+cmake-build-debug
+.idea/
+.qmlls.ini
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+build/
+.build/
+develop-eggs/
+dist/
+
+
+# epaper: reMarkable SDK installer (~400MB) — download locally, see epaper/TOOLCHAIN.md
+docker/sdk-installer/*
+!docker/sdk-installer/.gitkeep

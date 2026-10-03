@@ -4,14 +4,14 @@ iter: iter-005
 track: TRACK-007
 owner: sm
 date: 2026-09-05
-lock: vertical · verified · wip 2
-wave: WAIT
-verdict: "TRACK-005 closed 2026-09-05 (too large). TRACK-007 remainder is queued. No NOW wave until the human names one. Nested ink-box EP-074…077 done on TRACK-005. ADR-0040 still proposed."
+lock: vertical · verified · wip 1
+wave: FROZEN
+verdict: "PAUSED 2026-10-03. Human opened TRACK-008 Rebuild Epaper. Do not start a wave on this board."
 ---
 
 # Execution board — hand-on-paper follow-through
 
-**Canonical board** for [TRACK-007](../tracks/TRACK-007-follow-through.md). Track **active**. Same iteration as the closed [TRACK-005](../tracks/TRACK-005-hand-on-paper.md) archive board: [execution-board.md](./execution-board.md). Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **done** 2026-08-27 — do **not** reopen.
+**PAUSED 2026-10-03.** Canonical board for [TRACK-007](../tracks/TRACK-007-follow-through.md). The human opened [TRACK-008](../tracks/TRACK-008-rebuild-epaper.md) (Rebuild Epaper). Do **not** start a wave here. Active board: [execution-board-rebuild-epaper.md](./execution-board-rebuild-epaper.md).
 
 ---
 

@@ -4,15 +4,6 @@
 .sandbox/
 .vscode/
 
-# epaper: local CMake/clangd artifacts
-epaper/build-clangd/
-epaper/build-warn/
-epaper/.cache/
-epaper/compile_commands.json
-epaper/cmake-build-debug
-epaper/.idea
-epaper/.qmlls.ini
-
 # IPython Notebooks
 .ipynb_checkpoints/
 output/
@@ -58,10 +49,6 @@ packaging/.eggs/
 
 # Dev SSH keys (runtime keys live in Application Support)
 .ssh/
-
-# epaper: reMarkable SDK installer (~400MB) — download locally, see epaper/TOOLCHAIN.md
-epaper/docker/sdk-installer/*
-!epaper/docker/sdk-installer/.gitkeep
 
 # Learn RAG course: datasets & model caches (keep the folder via .gitkeep)
 learn-rag/data/*

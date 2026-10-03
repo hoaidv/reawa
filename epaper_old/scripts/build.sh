@@ -13,7 +13,7 @@ usage() {
 Usage:
   ./scripts/build.sh [--no-cache] [--shell]
 
-Builds ARM epaper binary at epaper/build/bin/epaper using Docker (linux/amd64)
+Builds ARM epaper binary at epaper/build/epaper using Docker (linux/amd64)
 and the reMarkable SDK.
 
 Options:
@@ -24,7 +24,6 @@ Options:
 Prerequisites:
   1. Docker Desktop (or compatible) with amd64 emulation
   2. SDK installer .sh in epaper/docker/sdk-installer/
-     or epaper_old/docker/sdk-installer/
      See epaper/TOOLCHAIN.md
 EOF
 }
@@ -45,31 +44,14 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-find_installer() {
-  local dir hit
-  for dir in "$DOCKER_DIR/sdk-installer" "$ROOT/../epaper_old/docker/sdk-installer"; do
-    [[ -d "$dir" ]] || continue
-    hit=$(find "$dir" -maxdepth 1 \( \
-      -name 'remarkable-*-x86_64-toolchain.sh' -o \
-      -name 'meta-toolchain-remarkable-*-x86_64-toolchain.sh' \) 2>/dev/null | head -1 || true)
-    if [[ -n "$hit" ]]; then
-      echo "$hit"
-      return 0
-    fi
-  done
-  return 1
-}
-
-INSTALLER=$(find_installer || true)
+INSTALLER=$(find "$DOCKER_DIR/sdk-installer" -maxdepth 1 \( \
+  -name 'remarkable-*-x86_64-toolchain.sh' -o \
+  -name 'meta-toolchain-remarkable-*-x86_64-toolchain.sh' \) 2>/dev/null | head -1 || true)
 if [[ -z "$INSTALLER" ]]; then
-  echo "No SDK installer in $DOCKER_DIR/sdk-installer/ or $ROOT/../epaper_old/docker/sdk-installer/" >&2
+  echo "No SDK installer in $DOCKER_DIR/sdk-installer/" >&2
   echo "See $ROOT/TOOLCHAIN.md" >&2
   exit 1
 fi
-
-# Bind-mount the directory that actually holds the .sh. Do not copy it.
-export SDK_INSTALLER_DIR="$(cd "$(dirname "$INSTALLER")" && pwd)"
-echo "SDK installer: $INSTALLER"
 
 cd "$DOCKER_DIR"
 echo "Building SDK container image..."

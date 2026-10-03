@@ -2,7 +2,7 @@
 id: TRACK-007
 slug: follow-through
 kind: planned
-status: active
+status: paused
 iter: iter-005
 goal: "Hand-on-paper remainder: viewport-follow field score, barrel + Device Settings, attachments, manual create, field latency, logarithmic hit-test, clipboard clipops split"
 scope:
@@ -36,8 +36,8 @@ stories:
   - STORY-EP-049
   - STORY-EP-050
   - STORY-EP-051
-cursor: "WAIT human pick first wave. Closed TRACK-005 was too large; nothing is NOW until the human names a wave."
-paused_reason: ""
+cursor: "paused — do not pick a wave until the human ends the rebuild"
+paused_reason: "Human 2026-10-03 ordered a from-scratch Epaper tree. Interrupted by TRACK-008."
 interrupts: []
 ---
 
@@ -106,12 +106,13 @@ TRACK-005 archive: [iter-005/execution-board.md](../iter-005/execution-board.md)
 
 ## Freeze note
 
-- In flight: none. Track just opened; cursor is wait-for-human.
-- Open files / risks: no RM2 panel / no live TCP `:9877` for remaining follow field test; [ADR-0040](../../.docs/adr/ADR-0040-logarithmic-hit-test.md) `proposed`.
-- Resume: Human names a wave from the board. Do **not** reopen TRACK-005 or TRACK-006. Do **not** start Path A toolbar.
+- What was in flight: nothing. Cursor was wait-for-human. Field latency [STORY-EP-070](../iter-005/stories/STORY-EP-070.md), [STORY-EP-071](../iter-005/stories/STORY-EP-071.md), and [STORY-EP-072](../iter-005/stories/STORY-EP-072.md) were **ready** and not started.
+- Open files / risks: uncommitted edits under `epaper/drawing/` move with the archive to `epaper_old/`. [ADR-0040](../../.docs/adr/ADR-0040-logarithmic-hit-test.md) still `proposed`.
+- Resume checklist: human ends the rebuild era; re-read this note; do not implement follow-through against the new empty tree; do not reopen TRACK-005 or TRACK-006.
 
 ## Log
 
 | Date | Event |
 |---|---|
 | 2026-09-05 | Opened. Human closed TRACK-005 (too large) and moved F-19, F-IN-06, F-18, F-20, F-14, F-17, EP-070, EP-072, EP-078…080, EP-073 here. Scrum Master also moved EP-071 with the field-latency pair. Same iteration. |
+| 2026-10-03 | Paused. Human ordered [TRACK-008](./TRACK-008-rebuild-epaper.md) (Rebuild Epaper). Do not start a wave. |

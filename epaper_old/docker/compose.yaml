@@ -5,9 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      # Directory that holds remarkable-*-x86_64-toolchain.sh (not committed).
-      # build.sh sets SDK_INSTALLER_DIR to this tree or to epaper_old's drop zone.
-      - ${SDK_INSTALLER_DIR:-./sdk-installer}:/sdk-installer:ro
+      # Drop remarkable-*-x86_64-toolchain.sh here (not committed).
+      - ./sdk-installer:/sdk-installer:ro
       - ..:/workspace/epaper
       - rm-sdk-cache:/opt/remarkable-sdk
     working_dir: /workspace/epaper

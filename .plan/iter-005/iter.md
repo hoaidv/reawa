@@ -10,12 +10,14 @@ status: active
 
 # Iter 005 — Hand-on-paper
 
-Track: [TRACK-007](../tracks/TRACK-007-follow-through.md) (active) ·
+Track: [TRACK-008](../tracks/TRACK-008-rebuild-epaper.md) (active, expedite) ·
+paused [TRACK-007](../tracks/TRACK-007-follow-through.md) ·
 closed [TRACK-005](../tracks/TRACK-005-hand-on-paper.md) ·
-Board: [execution-board-follow-through](./execution-board-follow-through.md) ·
+Board: [execution-board-rebuild-epaper](./execution-board-rebuild-epaper.md) ·
+paused [execution-board-follow-through](./execution-board-follow-through.md) ·
 archive [execution-board](./execution-board.md)
 
-Lock: **vertical · verified · wip 2**.
+Lock: **vertical · verified · wip 1**. Scope narrowed 2026-10-03 to the Epaper shell ([epaper/local-pen-ink](../../.docs/modules/epaper/features/local-pen-ink/srs-logic.md)). Follow-through is paused, not deleted.
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 

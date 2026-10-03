@@ -1,29 +1,20 @@
 ---
-updated: 2026-09-05
+updated: 2026-10-03
 current_iter: iter-005
 owner: sm
 
-# Campaign: TRACK-007 hand-on-paper follow-through (remainder of REQ-10…18 except REQ-15). Vertical · verified · wip 2. TRACK-005 closed 2026-09-05.
+# Campaign: TRACK-008 rebuild Epaper — empty reMarkable 2 shell. TRACK-007 paused 2026-10-03. Vertical · verified · wip 1.
 execution:
   direction: vertical
   scope:
-    modules: [epaper, infini]
+    modules: [epaper]
     features:
-      - epaper/ink-box
-      - epaper/tool-modes
-      - epaper/connector-ink
-      - epaper/region-sync
       - epaper/local-pen-ink
-      - epaper/erase
-      - epaper/device-document
-      - infini/infinity-canvas
-      - infini/tablet-sync
-      - infini/vector-document
   stop_line: verified
   autonomy: bounded
   out_of_scope: backlog
-  wip: 2
-  # TRACK-007 WAIT human pick. Remainder: follow field test, barrel/settings, attachments, manual create, field latency EP-070…072, log hit-test EP-078…080, clipops EP-073. TRACK-005 delivered nested/erase/clipboard/Path B/undo/hand-touch.
+  wip: 1
+  # Human 2026-10-03: archive epaper/ to epaper_old/ and start an empty shell. TRACK-007 paused. Do not start a second feature.
   validated_by: ""
 ---
 
@@ -36,11 +27,11 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 | Field | Value | Why |
 |---|---|---|
-| Direction | **vertical** | One campaign remainder: hand-on-paper follow-through end-to-end |
-| Scope | epaper ink-box, tool-modes, connector-ink, region-sync, local-pen-ink, device-document, erase; infini canvas, tablet-sync, vector-document | REQ-10…14, 17, 18 + infini REQ-05 |
-| Stop line | **verified** | design → BDD → implement → human confirm |
-| Autonomy | **bounded** | Run inside lock; sink REQ-15 / REQ-08 |
-| WIP | **2** | No implement story in flight. [TRACK-007](./tracks/TRACK-007-follow-through.md) cursor is **WAIT** human pick. Field latency [STORY-EP-070](./iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](./iter-005/stories/STORY-EP-072.md) **ready** (not NOW). Logarithmic hit-test [STORY-EP-078](./iter-005/stories/STORY-EP-078.md)…[STORY-EP-080](./iter-005/stories/STORY-EP-080.md) **draft** ([ADR-0040](../.docs/adr/ADR-0040-logarithmic-hit-test.md) proposed). [STORY-EP-073](./iter-005/stories/STORY-EP-073.md) later. Nested [STORY-EP-074](./iter-005/stories/STORY-EP-074.md)…[STORY-EP-077](./iter-005/stories/STORY-EP-077.md) **done** on closed [TRACK-005](./tracks/TRACK-005-hand-on-paper.md). |
+| Direction | **vertical** | One shell, then stop. Human redirected off follow-through on 2026-10-03 |
+| Scope | epaper/local-pen-ink | Parent of the empty shell only. Other Epaper and Infini features stay specified; their stories are paused with [TRACK-007](./tracks/TRACK-007-follow-through.md) |
+| Stop line | **verified** | The shell is implement work. It does not deliver pen-ink behavior |
+| Autonomy | **bounded** | Run the shell inside the lock. Do not open a second feature |
+| WIP | **1** | Nothing in flight. [STORY-EP-081](./iter-005/stories/STORY-EP-081.md) (Empty reMarkable 2 shell) is **done** on the host. Wait for the human to name the next slice |
 | Validated | — | Follow toggles EP-055 + IN-037 **done**; EP-038 + EP-039 **done**; **hand-touch human-approved** 2026-08-20 (20 mm / HT); IN-033 **done** (host); Device Settings on-device (REQ-20 / ADR-0031). Tool system [ADR-0033](../.docs/adr/ADR-0033-tool-abstraction.md) accepted. Inverse-op undo product + bind **done**; **human verified device undo/redo** 2026-08-27. Erase product [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) **adopted**; [ADR-0034](../.docs/adr/ADR-0034-erase-clip-remnants.md) **accepted**; [ADR-0036](../.docs/adr/ADR-0036-toolcanvas-live-overlay.md) **accepted**. Erase implement **human-verified** 2026-08-31. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) / [ADR-0035](../.docs/adr/ADR-0035-tool-context-is-host-ports.md) **human-verified** 2026-08-31. Path B endpoint ink [STORY-EP-047](./iter-005/stories/STORY-EP-047.md) **human-verified** 2026-09-05. Nested ink-box [STORY-EP-074](./iter-005/stories/STORY-EP-074.md)…[STORY-EP-077](./iter-005/stories/STORY-EP-077.md) **human-verified** 2026-09-05. |
 
 **Out-of-scope log**
@@ -54,6 +45,7 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | 2026-08-27 | DeviceMap invert user interface; Mouse DragHandler; further tool-system polish | backlog — TRACK-006 closed; do not continue unless a TRACK-007 story needs it |
 | 2026-09-05 | TRACK-005 closed (too large); remainder opened as TRACK-007 | lock campaign header flipped; same feature scope; do not reopen TRACK-005 |
 | 2026-08-27 | Infini apply undo (`compound` / `set_ink_samples`); whole tablet→desktop undo sync | backlog — [STORY-IN-038](./iter-005/stories/STORY-IN-038.md) cancelled; waits independent sync algorithm |
+| 2026-10-03 | Hand-on-paper remainder (field latency, hit-test, barrel, attachments, manual create, Infini follow) | paused with [TRACK-007](./tracks/TRACK-007-follow-through.md) — human ordered [TRACK-008](./tracks/TRACK-008-rebuild-epaper.md) |
 
 ## History spine
 
@@ -69,9 +61,9 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Goal & capacity
 
-- Goal: **Hand-on-paper** plus **viewport follow** (human 2026-08-20). Cameras independent by default.
-- Capacity: committed stories include EP-053…080 / IN-036…038. [STORY-IN-033](./iter-005/stories/STORY-IN-033.md) **done**. [CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md) **adopted**. Erase [STORY-EP-062](./iter-005/stories/STORY-EP-062.md)…[STORY-EP-068](./iter-005/stories/STORY-EP-068.md) **done**. [STORY-EP-069](./iter-005/stories/STORY-EP-069.md) **done** (human-verified 2026-08-31). Nested [STORY-EP-074](./iter-005/stories/STORY-EP-074.md)…[STORY-EP-077](./iter-005/stories/STORY-EP-077.md) **done** (human-verified 2026-09-05). Clipboard [STORY-EP-044](./iter-005/stories/STORY-EP-044.md) **done** (human-verified 2026-09-04). Path B endpoint ink [STORY-EP-047](./iter-005/stories/STORY-EP-047.md) **done** (human-verified 2026-09-05). Remainder on [TRACK-007](./tracks/TRACK-007-follow-through.md): field latency **ready**, logarithmic hit-test **draft**, follow field test, barrel/settings, attachments, manual create, clipops split.
-- Risks: [CHL-0022](./iter-005/challenges/CHL-0022-shipped-no-device-pan.md); [CHL-0027](./iter-005/challenges/CHL-0027-palm-travel-not-contact-count.md); remaining Infini follow field test; device/Qt `epaper_bin` not built in this environment. Deprecated Infini snapshot rows — do not implement.
+- Goal: **Rebuild Epaper** from an empty reMarkable 2 shell (human 2026-10-03). Previous goal (hand-on-paper plus viewport follow) is paused with [TRACK-007](./tracks/TRACK-007-follow-through.md).
+- Capacity: [STORY-EP-081](./iter-005/stories/STORY-EP-081.md) (Empty reMarkable 2 shell) is **done** on the host. Earlier committed stories stay on the books. Do not start them.
+- Risks: the binary was not launched on a tablet. Product documents still describe the archived application. Git will not show `epaper/` → `epaper_old/` as a rename until that move is committed.
 
 ### Tracks
 
@@ -80,7 +72,8 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 | TRACK-001…004 | planned | **done** | — | [tracks](./tracks/) |
 | TRACK-005 | planned | **done** | Closed 2026-09-05 (too large). Remainder → TRACK-007. Leftover Path A EP-045/046 frozen. Nested EP-074…077 **done**. Erase, clipboard product, Path B, undo, hand-touch **done**. | [track](./tracks/TRACK-005-hand-on-paper.md) |
 | TRACK-006 | expedite | **done** | Closed 2026-08-27. Interrupted TRACK-005 (tool system / ADR-0033). Do not continue. | [track](./tracks/TRACK-006-tool-system-refactor.md) |
-| TRACK-007 | planned | **active** | WAIT human pick first wave. Follow field test; barrel/Device Settings; attachments; manual create; field latency EP-070…072 **ready**; logarithmic hit-test EP-078…080 **draft**; clipops EP-073 later. | [track](./tracks/TRACK-007-follow-through.md) |
+| TRACK-007 | planned | **paused** | Frozen 2026-10-03. Do not pick a wave. Interrupted by TRACK-008. | [track](./tracks/TRACK-007-follow-through.md) |
+| TRACK-008 | expedite | **active** | WAIT. [STORY-EP-081](./iter-005/stories/STORY-EP-081.md) (Empty reMarkable 2 shell) **done**. Human names the next slice. | [track](./tracks/TRACK-008-rebuild-epaper.md) |
 
 ### Open challenges / blocked
 
@@ -103,12 +96,14 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 ### Execution board(s)
 
-- [iter-005 execution-board-follow-through](./iter-005/execution-board-follow-through.md) — TRACK-007 **WAIT** human pick. Field latency EP-070…072 **ready** (not NOW). Logarithmic hit-test EP-078…080 **draft**.
+- [iter-005 execution-board-rebuild-epaper](./iter-005/execution-board-rebuild-epaper.md) — TRACK-008 shell **done**. Waiting for the human.
+- [iter-005 execution-board-follow-through](./iter-005/execution-board-follow-through.md) — TRACK-007 **paused**.
 - [iter-005 execution-board](./iter-005/execution-board.md) — TRACK-005 **archive** (closed 2026-09-05).
 
 ### Freeze notes
 
-- TRACK-005 **done** 2026-09-05 (too large): [sm-to-human-track-007](./iter-005/handoffs/2026-09-05-sm-to-human-track-007.md). Nested ink-box [STORY-EP-074](./iter-005/stories/STORY-EP-074.md)…[STORY-EP-077](./iter-005/stories/STORY-EP-077.md) **human-verified** 2026-09-05. Remainder → TRACK-007. Path A leftover frozen.
+- TRACK-007 **paused** 2026-10-03: human ordered a from-scratch Epaper tree. Active stream is [TRACK-008](./tracks/TRACK-008-rebuild-epaper.md).
+- TRACK-005 **done** 2026-09-05 (too large): [sm-to-human-track-007](./iter-005/handoffs/2026-09-05-sm-to-human-track-007.md). Nested ink-box [STORY-EP-074](./iter-005/stories/STORY-EP-074.md)…[STORY-EP-077](./iter-005/stories/STORY-EP-077.md) **human-verified** 2026-09-05. Remainder → TRACK-007 (now paused). Path A leftover frozen.
 - TRACK-004 **done**. Gate: [pm-retro-gate-pass](./iter-004/handoffs/2026-08-16-pm-retro-gate-pass.md).
 - TRACK-005 field-test pause 2026-08-20: [sm-to-human-field-test](./iter-005/handoffs/2026-08-20-sm-to-human-field-test.md). Hand-touch join: [sm-to-human-hand-touch-verified](./iter-005/handoffs/2026-08-20-sm-to-human-hand-touch-verified.md). Inverse-op undo **adopted + bound** 2026-08-27 ([CHL-0026](./iter-005/challenges/CHL-0026-inverse-op-undo.md)). Device undo/redo **human-verified** 2026-08-27. Erase product **adopted** 2026-08-29 ([CHL-0028](./iter-005/challenges/CHL-0028-eraser-three-tools.md)); erase implement **human-verified** 2026-08-31. Clipboard [STORY-EP-044](./iter-005/stories/STORY-EP-044.md) **human-verified** 2026-09-04. Path B endpoint ink [STORY-EP-047](./iter-005/stories/STORY-EP-047.md) **human-verified** 2026-09-05.
 - TRACK-006 tool-system interrupt **closed** 2026-08-27: [sm-to-human-resume-track-005](./iter-005/handoffs/2026-08-27-sm-to-human-resume-track-005.md).
@@ -117,6 +112,6 @@ Product truth in `.docs/`. Skill: [`execution-lock`](../.agent/personas/shared/e
 
 - Inverse-op undo (device): [ADR-0032](../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. [STORY-EP-059](./iter-005/stories/STORY-EP-059.md), [STORY-EP-060](./iter-005/stories/STORY-EP-060.md), and [STORY-EP-061](./iter-005/stories/STORY-EP-061.md) **done** and **human-verified** 2026-08-27. [STORY-IN-038](./iter-005/stories/STORY-IN-038.md) **cancelled** (tablet→desktop undo apply deferred until an independent sync algorithm).
 - After remaining follow field test: still outstanding (does not block other TRACK-007 waves).
-- TRACK-007 remainder: field latency [STORY-EP-070](./iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](./iter-005/stories/STORY-EP-072.md) **ready**. Logarithmic hit-test [STORY-EP-078](./iter-005/stories/STORY-EP-078.md)…[STORY-EP-080](./iter-005/stories/STORY-EP-080.md) **draft** ([ADR-0040](../.docs/adr/ADR-0040-logarithmic-hit-test.md) proposed). Do **not** start a wave until the human names it. Do **not** start [STORY-EP-073](./iter-005/stories/STORY-EP-073.md) or Path A toolbar unless the human says so.
+- After the empty shell builds: stop. Do not port behavior until the human names the next story. Field latency [STORY-EP-070](./iter-005/stories/STORY-EP-070.md)…[STORY-EP-072](./iter-005/stories/STORY-EP-072.md) stay **ready** on paused [TRACK-007](./tracks/TRACK-007-follow-through.md). Logarithmic hit-test [STORY-EP-078](./iter-005/stories/STORY-EP-078.md)…[STORY-EP-080](./iter-005/stories/STORY-EP-080.md) stay **draft**.
 - Parked: REQ-15, REQ-08, CHL-0012, EP-035 measure, DeviceMap invert user interface, Mouse DragHandler, Infini undo apply (IN-038). Nested enclose **done** on TRACK-005 ([CHL-0032](./iter-005/challenges/CHL-0032-nested-ink-box.md)). Do **not** reopen TRACK-005 or TRACK-006.
 - Backlog: [backlog.md](./backlog.md)
