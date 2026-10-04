@@ -3,11 +3,14 @@ id: CHL-0027
 author: engineer
 target: [REQ-10, SRS-EP-21]
 severity: medium
-status: open
+status: deferred
 opened: 2026-08-24
 iter: iter-005
 expedite: false
 interrupts_track: ""
+resolution: deferred
+resolved_by: pm
+resolved: 2026-10-04
 ---
 
 # CHL-0027 — Palm rest by 20 mm travel, not 3-contact eat
@@ -23,7 +26,14 @@ Field: that 3-finger eat mostly does not work on RM2. Empty-canvas palm vs pan a
 Stop eating ≥3-contact touch in the app filter. One-finger empty canvas keeps travelPastPalm / emptyTapClearsSelection (20 mm). Two-finger pan/pinch stays PinchHandler. Domain `palmByContactCount` remains for tests until PM revises SRS-EP-21.
 
 ## Resolution
-<!-- PM: adopted | deferred | rejected -->
+
+**Deferred** — 2026-10-04 (PM), at the iter-005 close.
+
+- The human direction of 2026-08-24 stands: drop the contact-count eat and rely on 20 mm travel.
+- [SRS-EP-21](../../../.docs/modules/epaper/features/ink-box/srs-logic.md#srs-ep-21-one-finger)
+  is now `deprecated` ([CHL-0033](../../iter-006/challenges/CHL-0033-forest-product-records.md)).
+  Its successor, written when one-finger touch is ported to the rebuilt Epaper, must state
+  palm rejection by travel and omit the ≥3-contact rule.
 
 ## Product doc updates
 <!-- If adopted: strike ≥3-contact palm eat from SRS-EP-21; keep 20 mm travel as SoT -->

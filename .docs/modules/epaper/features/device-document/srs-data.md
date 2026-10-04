@@ -20,6 +20,13 @@ grammar and specifies what is **device-local** — the structures that never cro
 
 ## [SRS-EP-09] Device document data and wire binding {#srs-ep-09-device-data}
 
+> **Not affected by the document forest, 2026-10-04.** This record binds the device to the shared
+> wire grammar. The rebuilt Epaper does not speak the wire yet: Infini sync is out of the current
+> implementation scope, and the forest ↔ wire mapping is deferred in
+> [CHL-0034](../../../../../.plan/iter-006/challenges/CHL-0034-forest-wire-sync-deferred.md).
+> The forest's own storage is design, in [document-forest](../../../../domain/document-forest/index.md).
+> When the wire returns, this record is revised under that challenge, not before.
+
 ### Canonical, by reference — do not fork
 
 | Shape | Canonical source |

@@ -3,9 +3,9 @@ iter: iter-005
 goal: "Hand-on-paper (REQ-10…18 except REQ-15) plus independent cameras and optional viewport follow"
 committed_points: 136
 start: 2026-08-16
-end: ""
+end: 2026-10-04
 capacity: 72
-status: active
+status: closed
 ---
 
 # Iter 005 — Hand-on-paper
@@ -21,7 +21,7 @@ Lock: **vertical · verified · wip 1**. Scope narrowed 2026-10-03 to the Epaper
 
 **Not in this iter:** [REQ-15](../../.docs/modules/epaper/prd.md#table-recognition) tables. [REQ-16](../../.docs/modules/epaper/prd.md#device-pan-zoom) retired into REQ-10.
 
-W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). 2026-08-27: [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. Inverse-undo local EP-059…061 **done** and **human-verified**. IN-038 **cancelled**. 2026-08-29: [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; brush [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-064](./stories/STORY-EP-064.md) **done** (human-verified). 2026-08-31: [STORY-EP-067](./stories/STORY-EP-067.md)/[STORY-EP-068](./stories/STORY-EP-068.md)/[STORY-EP-065](./stories/STORY-EP-065.md)/[STORY-EP-066](./stories/STORY-EP-066.md) **done**; [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified). 2026-09-04: clipboard [STORY-EP-044](./stories/STORY-EP-044.md) **done** (human-verified). 2026-09-05: Path B endpoint ink [STORY-EP-047](./stories/STORY-EP-047.md) **done** (human-verified); Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md) frozen leftover. Nested [STORY-EP-074](./stories/STORY-EP-074.md)…[STORY-EP-077](./stories/STORY-EP-077.md) **done** (human-verified). Human closed [TRACK-005](../tracks/TRACK-005-hand-on-paper.md) (too large) and opened [TRACK-007](../tracks/TRACK-007-follow-through.md) for the remainder (follow field test, barrel/Device Settings, attachments, manual create, field latency EP-070…072 **ready**, logarithmic hit-test EP-078…080 **draft**, clipops EP-073 later). Cursor: **WAIT** human pick. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **closed**. Do **not** open iter-006 until Product Manager retro-gate.
+W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini paint superseded). 2026-08-20: BRD-07 lifted; follow EP-053 / IN-036 **done**. W-pen-map EP-056 **done** ([UI-EP-08](./design/pen-button-map/ui-spec.md)). Device Settings persist on Epaper ([REQ-20](../../.docs/modules/epaper/prd.md#device-settings); [ADR-0031](../../.docs/adr/ADR-0031-device-settings-persist-on-epaper.md)). Follow toggles [STORY-EP-055](./stories/STORY-EP-055.md) and [STORY-IN-037](./stories/STORY-IN-037.md) **done**. [STORY-IN-033](./stories/STORY-IN-033.md) **done**. Hand-touch **human-approved** 2026-08-20 (20 mm / HT). 2026-08-27: [CHL-0026](./challenges/CHL-0026-inverse-op-undo.md) **adopted**; [ADR-0032](../../.docs/adr/ADR-0032-inverse-op-undo.md) **accepted**. Inverse-undo local EP-059…061 **done** and **human-verified**. IN-038 **cancelled**. 2026-08-29: [CHL-0028](./challenges/CHL-0028-eraser-three-tools.md) **adopted**; brush [STORY-EP-062](./stories/STORY-EP-062.md)…[STORY-EP-064](./stories/STORY-EP-064.md) **done** (human-verified). 2026-08-31: [STORY-EP-067](./stories/STORY-EP-067.md)/[STORY-EP-068](./stories/STORY-EP-068.md)/[STORY-EP-065](./stories/STORY-EP-065.md)/[STORY-EP-066](./stories/STORY-EP-066.md) **done**; [STORY-EP-069](./stories/STORY-EP-069.md) **done** (human-verified). 2026-09-04: clipboard [STORY-EP-044](./stories/STORY-EP-044.md) **done** (human-verified). 2026-09-05: Path B endpoint ink [STORY-EP-047](./stories/STORY-EP-047.md) **done** (human-verified); Path A [STORY-EP-045](./stories/STORY-EP-045.md) / [STORY-EP-046](./stories/STORY-EP-046.md) frozen leftover. Nested [STORY-EP-074](./stories/STORY-EP-074.md)…[STORY-EP-077](./stories/STORY-EP-077.md) **done** (human-verified). Human closed [TRACK-005](../tracks/TRACK-005-hand-on-paper.md) (too large) and opened [TRACK-007](../tracks/TRACK-007-follow-through.md) for the remainder (follow field test, barrel/Device Settings, attachments, manual create, field latency EP-070…072 **ready**, logarithmic hit-test EP-078…080 **draft**, clipops EP-073 later). Cursor: **WAIT** human pick. Tool-system interrupt [TRACK-006](../tracks/TRACK-006-tool-system-refactor.md) **closed**. PM retro gate **passed** 2026-10-04; iter-006 open.
 
 ## Committed
 
@@ -69,9 +69,9 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 - [STORY-EP-075](./stories/STORY-EP-075.md) — 5 — nested enclose + flatten — **done** (human-verified 2026-09-05)
 - [STORY-EP-076](./stories/STORY-EP-076.md) — 5 — move-commit reparent — **done** (human-verified 2026-09-05)
 - [STORY-EP-077](./stories/STORY-EP-077.md) — 3 — clip nested content to natural AABB — **done** (human-verified 2026-09-05)
-- [STORY-EP-078](./stories/STORY-EP-078.md) — 8 — spatial R-tree + named geometry queries — **draft** · depends EP-074
-- [STORY-EP-079](./stories/STORY-EP-079.md) — 5 — migrate point-query callers — **draft** · depends EP-078, EP-074
-- [STORY-EP-080](./stories/STORY-EP-080.md) — 8 — migrate range 80% callers — **draft** · depends EP-078, EP-076
+- [STORY-EP-078](./stories/STORY-EP-078.md) — 8 — spatial R-tree + named geometry queries — **cancelled** 2026-10-04 (ADR-0040 superseded) · depends EP-074
+- [STORY-EP-079](./stories/STORY-EP-079.md) — 5 — migrate point-query callers — **cancelled** 2026-10-04 (ADR-0040 superseded) · depends EP-078, EP-074
+- [STORY-EP-080](./stories/STORY-EP-080.md) — 8 — migrate range 80% callers — **cancelled** 2026-10-04 (ADR-0040 superseded) · depends EP-078, EP-076
 - [STORY-EP-049](./stories/STORY-EP-049.md) — 5 — attachments warp · depends EP-048
 - [STORY-EP-051](./stories/STORY-EP-051.md) — 8 — manual insert · depends EP-050
 - [STORY-EP-052](./stories/STORY-EP-052.md) — 5 — barrel dispatch · depends EP-056
@@ -84,6 +84,10 @@ W0 bind **done** 2026-08-19. W1 design EP-037 / IN-034 **done** (IN-034 Infini p
 ## Carry-over (not NOW)
 
 - [STORY-EP-035](../iter-004/stories/STORY-EP-035.md) — enclose A/L measure — parking lot
+- **Closed 2026-10-04** ([retro](./retro.md) · [PM retro gate](./handoffs/2026-10-04-pm-retro-gate-pass.md)).
+  Paused [TRACK-007](../tracks/TRACK-007-follow-through.md) stories EP-048…052, EP-057, EP-058 and
+  EP-070…073 carry over **paused**, not committed to iter-006. EP-045 / EP-046 stay **blocked**
+  (frozen). EP-078…080 **cancelled**. Next: [iter-006](../iter-006/iter.md).
 
 ## Parked (not this lock)
 

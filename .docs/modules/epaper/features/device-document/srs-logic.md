@@ -17,8 +17,8 @@ Device-local shapes: [SRS-EP-09](./srs-data.md). Budgets: [SRS-EP-13](./srs-qual
 Desktop peer: [SRS-IN-07](../../../infini/features/tablet-sync/srs-logic.md).
 Siblings that **write** this tree: [SRS-EP-10 / SRS-EP-11](../ink-box/srs-logic.md).
 Viewport map / paint: [SRS-EP-02](../region-sync/srs-logic.md).
-Geometry queries (spatial index): [SRS-EP-79](#srs-ep-79-geometry-queries) /
-[ADR-0040](../../../../adr/ADR-0040-logarithmic-hit-test.md).
+Geometry queries: [SRS-EP-80](#srs-ep-80-forest-geometry-queries) /
+[ADR-0041](../../../../adr/ADR-0041-document-forest.md) (replaces SRS-EP-79 / ADR-0040).
 Product rules: [srs-product](./srs-product.md) BR-D01…BR-D12.
 
 Wire grammar is canonical in [infini SRS-IN-09](../../../infini/features/vector-document/srs-data.md).
@@ -29,6 +29,16 @@ Wire grammar is canonical in [infini SRS-IN-09](../../../infini/features/vector-
 ## [SRS-EP-07] Device document, ingestion, op set, and undo ring {#srs-ep-07-device-document}
 
 Parent REQ: [REQ-04](../../prd.md#device-document).
+
+> **Rebuilt Epaper, 2026-10-04.** In `epaper/` this tree is the document forest
+> ([ADR-0041](../../../../adr/ADR-0041-document-forest.md)). The obligations here (ingestion,
+> op set, gesture commit, undo) are unchanged. Two rows of *In-memory tree* read differently:
+> a node's geometry is stored in its parent's child space, with the same world positions, and
+> the geometry index is the per-container index of [SRS-EP-80](#srs-ep-80-forest-geometry-queries).
+> Rows about `doc_load` and publishing wait on
+> [CHL-0034](../../../../../.plan/iter-006/challenges/CHL-0034-forest-wire-sync-deferred.md)
+> (Infini sync out of the implementation scope). Change record:
+> [CHL-0033](../../../../../.plan/iter-006/challenges/CHL-0033-forest-product-records.md).
 
 ### Endpoint(s)
 
@@ -49,7 +59,7 @@ and paint; they are not authored here.
 | Rule | Value |
 |---|---|
 | Lifetime | Session memory only. App restart discards the tree; the next accepted load restores what the desktop had published |
-| Geometry index | One spatial index over composed world AABBs; queries in [SRS-EP-79](#srs-ep-79-geometry-queries). Not persisted, not on the wire |
+| Geometry index | One spatial index over composed world AABBs; queries in [SRS-EP-79](#srs-ep-79-geometry-queries). Not persisted, not on the wire. Rebuilt Epaper: one index per container, [SRS-EP-80](#srs-ep-80-forest-geometry-queries) |
 | Writers | This device, via the undo-aware apply path below. The only peer mutation is an accepted `doc_load` ([SRS-EP-08](#srs-ep-08-one-way-sync)) |
 | Paint | The panel rasterizes **this** tree ([SRS-EP-02](../region-sync/srs-logic.md)). **0** inbound pictures are a paint source ([ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §2) |
 | Geometry agreement | Shared fixtures in [SRS-EP-09](./srs-data.md); divergence is a `CHL-*`, not a local tweak |
@@ -227,7 +237,9 @@ A `doc_load` offered during the gesture is deferred by [SRS-EP-08](#srs-ep-08-on
 
 ## [SRS-EP-79] Document geometry queries (spatial index) {#srs-ep-79-geometry-queries}
 
-<!-- lifecycle: active -->
+<!-- lifecycle: retired -->
+<!-- superseded-by: [SRS-EP-80] -->
+<!-- note: 2026-10-04 — one global R-tree of world boxes rebuilt on commit (ADR-0040) is replaced by one R-tree per container, updated by path copy (ADR-0041). Successor SRS-EP-80 keeps every named query and product rule. Owning change: CHL-0033. Stories EP-078…080 cancelled. -->
 
 **Parent:** [REQ-04](../../prd.md#device-document). **Serves (does not steal parents):**
 [REQ-05](../../prd.md#device-ink-box) / [REQ-06](../../prd.md#device-manipulation) hit rules in
@@ -281,6 +293,78 @@ must match today’s fixtures.
 | Query during a live gesture | Use the **committed** index; do not rebuild for the preview pose |
 | Rebuild exceeds its commit budget | Finish the rebuild — a late index is acceptable, a stale index that disagrees with the committed tree is not ([SRS-EP-78](./srs-quality.md#srs-ep-78-log-hit-test)) |
 | Candidate exact test disagrees with the pre-index fixture | Defect in the cull or in paint-rank — **not** a reason to loosen 80% |
+
+---
+
+## [SRS-EP-80] Document geometry queries on the forest {#srs-ep-80-forest-geometry-queries}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-04](../../prd.md#device-document). **Replaces:**
+[SRS-EP-79](#srs-ep-79-geometry-queries) (Document geometry queries, spatial index).
+**Serves (does not steal parents):** the hit rules of
+[REQ-05](../../prd.md#device-ink-box) and [REQ-06](../../prd.md#device-manipulation), erase culling
+([REQ-11](../../prd.md#erase)) and the tap half of paste-parent ([REQ-12](../../prd.md#clipboard)),
+when those tools are ported to the rebuilt Epaper.
+**Decision:** [ADR-0041](../../../../adr/ADR-0041-document-forest.md). **Design:**
+[spatial-index.md](../../../../domain/document-forest/spatial-index.md) and
+[concurrency.md](../../../../domain/document-forest/concurrency.md).
+**Quality:** [SRS-EP-81](./srs-quality.md#srs-ep-81-forest-query-quality).
+**Change record:** [CHL-0033](../../../../../.plan/iter-006/challenges/CHL-0033-forest-product-records.md).
+
+This section names the **query API** of the document forest. It does not change any product hit
+rule: children before ancestors, later siblings before earlier ones, marquee and freeform on the top
+level only, and every 80% bar exact. A linear walk of a container's children to answer a geometric
+question is a defect.
+
+**What changed from SRS-EP-79.** SRS-EP-79 specified one R-tree of composed, ancestor-clipped world
+boxes, rebuilt on each commit. Here each container indexes its own children in its child space. The
+writer updates that index inside the commit, and a query descends container by container. Paint
+reads the same trees. The named queries and their product rules are unchanged; the ink box is the
+forest's `InkBox` (SmartGroup on the wire).
+
+### Index
+
+| Rule | Value |
+|---|---|
+| Where | One R-tree per container, inside the container's `Children` ([spatial-index.md — Where the trees live](../../../../domain/document-forest/spatial-index.md#where-the-trees-live)) |
+| Entry box | The child's paint extent in the parent's child space |
+| Updated | By the writer, inside the commit, by path copy. Never during a live move or resize preview, and never on the ink thread |
+| Read | By any thread, without locks, under the rules of [concurrency.md](../../../../domain/document-forest/concurrency.md) |
+| Clip | Content outside an `InkBox` or a `Frame` is clipped, so it is not a hit outside that box |
+
+The index **culls**. The exact 80%, even-odd and length tests run on the candidates (size k) and
+must give the same answers as a brute-force walk of the same forest.
+
+### Named queries
+
+| Query | Input | Product rule (unchanged) | Index role |
+|---|---|---|---|
+| Point | world `(x, y)` | Nested tap: the deepest ink box whose box contains the press, later siblings first; then other pickables with `select` or `move` as the caller asks. Outside an ancestor's clip is **not** a hit. **Connector:** pen-down **on the stroke**; a press inside its box does **not** select | Descend containers whose entry contains the point; the winner is by depth and `orderKey`, not by box size |
+| Rect ≥80% | world box | Marquee: **top-level** pickables only. Ink and Connector: ≥80% of **path samples** inside. Other nodes: ≥80% of **box area**. Touching is not enough | Top-level cull by box overlap; exact 80% on k |
+| Polygon ≥80% | closed polyline (even-odd) | Freeform: **top-level**. Ink and Connector: ≥80% of path samples. Other nodes: ≥80% of a 5×5 grid on the box | Probe = the polygon's box; exact 80% on k |
+| Highest-paint container ≥80% | moving node's world box | Move-commit reparent: exclude the node and its descendants; an ink box tests its even-odd **world boundary**, a Frame or Group its box; later paint wins; else `Document`. At commit only, not during the drag | Descend with overlap cull; exact 80% and paint order on k |
+| Draw-into membership | new stroke samples | Every ink box, **nested ones included**, whose boundary contains ≥80% of the stroke's **polyline length**; highest paint wins | Descend into ink boxes whose box overlaps the stroke's box; exact length test on k |
+| Enclose capture | enclose fitted region | **Top-level** free ink (≥80% samples) and **top-level** ink boxes (≥80% of their area) | Top-level overlap cull; exact 80% on k |
+| Box overlap cull | query box | Shared probe for callers that have their **own** exact test | Returns k; applies no 80% rule |
+
+### Out of this API
+
+| Caller | Why |
+|---|---|
+| Clipboard paste **20% ancestor overlap** | After the **point** query, walk **ancestors only** (O(depth)). Do not range-scan |
+| Object erase 80% table | A **different** 80% (arc length, boundary-polygon area, warped connector length). May use the box-overlap cull; the exact table stays in erase |
+| Area erase clip | A geometric clip, not a hit-test 80%. May use the box-overlap cull |
+| Infini desktop pick | The forest is device-only. Infini sync is out of the current implementation scope ([CHL-0034](../../../../../.plan/iter-006/challenges/CHL-0034-forest-wire-sync-deferred.md)) |
+
+### Errors and partial failure
+
+| Case | Behavior |
+|---|---|
+| Query during a live gesture | Answer from the **committed** forest; the preview pose is not indexed |
+| Reader query overlaps a commit | Retry up to 3 times, then hand the query to the writer ([concurrency.md — Exact queries](../../../../domain/document-forest/concurrency.md#exact-queries-from-a-reader-thread)) |
+| A child's handle resolves to `Gone` | Skip it; it was removed by a commit the reader has not seen yet |
+| An exact test disagrees with brute force | Defect in the cull or the paint order, **not** a reason to loosen 80% |
 
 ---
 

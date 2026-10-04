@@ -4,7 +4,7 @@ title: Spatial R-tree and named geometry queries
 kind: implement
 parent_srs: [SRS-EP-79, SRS-EP-78]
 parent_req: [REQ-04]
-status: draft
+status: cancelled
 priority: P0
 iter: iter-005
 estimate: 8
@@ -24,6 +24,8 @@ wireframe: ""
 ---
 
 # STORY-EP-078 — Spatial R-tree and named geometry queries
+
+> **Cancelled 2026-10-04.** This story implemented [ADR-0040](../../../.docs/adr/ADR-0040-logarithmic-hit-test.md) on the archived tree (`epaper_old/`). ADR-0040 is superseded by [ADR-0041](../../../.docs/adr/ADR-0041-document-forest.md), and its parent SRS-EP-78 and SRS-EP-79 by [SRS-EP-81](../../../.docs/modules/epaper/features/device-document/srs-quality.md#srs-ep-81-forest-query-quality) and [SRS-EP-80](../../../.docs/modules/epaper/features/device-document/srs-logic.md#srs-ep-80-forest-geometry-queries). The per-container R-tree is built in [STORY-EP-086](../../iter-006/stories/STORY-EP-086.md) on [TRACK-009](../../tracks/TRACK-009-document-forest.md). The story file is kept for history.
 
 Owns the **index**, not the caller migrations. [SRS-EP-79](../../../.docs/modules/epaper/features/device-document/srs-logic.md#srs-ep-79-geometry-queries)
 named API; [SRS-EP-78](../../../.docs/modules/epaper/features/device-document/srs-quality.md#srs-ep-78-log-hit-test)

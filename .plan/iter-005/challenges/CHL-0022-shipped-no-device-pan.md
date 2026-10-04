@@ -3,11 +3,14 @@ id: CHL-0022
 author: architect
 target: [SRS-EP-04, SRS-EP-11, SRS-EP-19, ADR-0009]
 severity: medium
-status: open
+status: deferred
 opened: 2026-08-19
 iter: iter-005
 expedite: false
 interrupts_track: ""
+resolution: deferred
+resolved_by: pm
+resolved: 2026-10-04
 ---
 
 # CHL-0022 — Shipped “no device pan / no arrowheads” prose vs TRACK-005
@@ -35,7 +38,16 @@ PM adopt this challenge:
 4. Leave ADR-0009 append-only; ADR-0023 is the amendment.
 
 ## Resolution
-<!-- PM fills after triage: adopted | deferred | rejected -->
+
+**Deferred** — 2026-10-04 (PM), at the iter-005 close.
+
+- The application these clauses describe is archived as `epaper_old/` (2026-10-03).
+  The rebuilt `epaper/` has no input routing, ink-box manipulation or connector tools yet.
+- [SRS-EP-11](../../../.docs/modules/epaper/features/ink-box/srs-logic.md#srs-ep-11-device-manipulation)
+  is now `deprecated` ([CHL-0033](../../iter-006/challenges/CHL-0033-forest-product-records.md)).
+  Its successor drops the "no on-device pan" clause.
+- SRS-EP-04 and SRS-EP-19 are decided when input routing and connector ends are ported to the
+  rebuilt Epaper. No story is frozen by this deferral; none is in flight.
 
 ## Product doc updates
 <!-- List docs updated if adopted -->

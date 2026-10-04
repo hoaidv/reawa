@@ -1,15 +1,15 @@
 {
   "generated_by": "adlc",
-  "generated_at": "2026-10-03T01:31:53+00:00",
-  "current_iter": "iter-005",
+  "generated_at": "2026-10-04T06:28:00+00:00",
+  "current_iter": "iter-006",
   "by_status": {
-    "draft": 12,
-    "ready": 4,
+    "draft": 18,
+    "ready": 5,
     "in-progress": 0,
     "in-review": 0,
     "done": 147,
     "blocked": 15,
-    "cancelled": 7
+    "cancelled": 10
   },
   "by_module": {
     "reawa": {
@@ -18,7 +18,7 @@
       "in_review": 0
     },
     "epaper": {
-      "total": 81,
+      "total": 91,
       "done": 53,
       "in_review": 0
     },
@@ -28,9 +28,9 @@
       "in_review": 0
     }
   },
-  "open_challenges": 3,
-  "resolved_challenges_this_iter": 3,
-  "sync_orphans": 146,
+  "open_challenges": 0,
+  "resolved_challenges_this_iter": 0,
+  "sync_orphans": 59,
   "master_plan": true,
   "tracks": [
     {
@@ -85,9 +85,16 @@
     {
       "id": "TRACK-008",
       "kind": "expedite",
-      "status": "active",
-      "cursor": "WAIT human \u2014 shell is built. Name the next slice. Do not port behavior until then.",
+      "status": "done",
+      "cursor": "done \u2014 continued by TRACK-009 (Document forest).",
       "iter": "iter-005"
+    },
+    {
+      "id": "TRACK-009",
+      "kind": "planned",
+      "status": "active",
+      "cursor": "STORY-EP-082 (Forest foundations) ready \u2014 the human codes; agents guide and review.",
+      "iter": "iter-006"
     }
   ]
 }

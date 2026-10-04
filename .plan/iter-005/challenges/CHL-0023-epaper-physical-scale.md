@@ -3,11 +3,14 @@ id: CHL-0023
 author: designer
 target: [SRS-EP-05, SRS-EP-12]
 severity: medium
-status: open
+status: deferred
 opened: 2026-08-20
 iter: iter-005
 expedite: false
 interrupts_track: ""
+resolution: deferred
+resolved_by: pm
+resolved: 2026-10-04
 ---
 
 # CHL-0023 — Epaper physical scale: 246×187 mm, 1 cm tiles, dotted selection
@@ -47,7 +50,15 @@ Human override is painted in the iter packages now. Product SRS still says 64 px
 
 ## Resolution
 
-<!-- PM fills after triage: adopted | deferred | rejected -->
+**Deferred** — 2026-10-04 (PM), at the iter-005 close.
+
+- The design packages this targets describe the archived application (`epaper_old/`).
+  The rebuilt `epaper/` has no chrome yet, and iter-006 has no UI design work.
+- [SRS-EP-12](../../../.docs/modules/epaper/features/ink-box/srs-ui.md#srs-ep-12-selection-chrome)
+  is now `deprecated` ([CHL-0033](../../iter-006/challenges/CHL-0033-forest-product-records.md)).
+- Reopen when chrome is designed for the rebuilt Epaper. The physical facts in Context
+  (187 × 246 mm panel, 1 × 1 cm primary buttons, dotted selection, empty square handles)
+  are the starting input for that design.
 
 ## Product doc updates
 

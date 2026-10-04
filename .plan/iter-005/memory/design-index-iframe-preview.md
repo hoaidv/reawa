@@ -11,6 +11,7 @@ related:
   - .plan/iter-005/design/viewport-follow-epaper/index.html
   - .plan/iter-005/design/viewport-follow-infini/index.html
 scope: adlc-upstream
+promoted_to: .docs/memory/design-index-iframe-preview.md
 ---
 
 # Design index.html iframe is blank in IDE HTML preview

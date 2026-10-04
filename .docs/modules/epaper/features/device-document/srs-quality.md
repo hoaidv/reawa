@@ -176,7 +176,9 @@ logs cannot fit under those ceilings, the shipper changes — not the ink budget
 
 ## [SRS-EP-78] Logarithmic document-geometry query {#srs-ep-78-log-hit-test}
 
-<!-- lifecycle: active -->
+<!-- lifecycle: retired -->
+<!-- superseded-by: [SRS-EP-81] -->
+<!-- note: 2026-10-04 — the bars assumed one device R-tree of world boxes rebuilt on each commit (ADR-0040). The rebuilt Epaper uses one R-tree per container, updated in place by path copy (ADR-0041). Successor SRS-EP-81 keeps every product bar and replaces the rebuild rows. Owning change: CHL-0033. Stories EP-078…080 cancelled. -->
 
 **Parent:** [REQ-04](../../prd.md#device-document). **Constrains:**
 [SRS-EP-79](./srs-logic.md#srs-ep-79-geometry-queries) (named API),
@@ -231,6 +233,64 @@ product scale stays 500 / 50k).
 
 ---
 
+## [SRS-EP-81] Forest geometry-query quality {#srs-ep-81-forest-query-quality}
+
+<!-- lifecycle: active -->
+
+**Parent:** [REQ-04](../../prd.md#device-document). **Replaces:**
+[SRS-EP-78](#srs-ep-78-log-hit-test) (Logarithmic document-geometry query).
+**Constrains:** [SRS-EP-80](./srs-logic.md#srs-ep-80-forest-geometry-queries) (named queries on the forest).
+**Decision:** [ADR-0041](../../../../adr/ADR-0041-document-forest.md). **Change record:**
+[CHL-0033](../../../../../.plan/iter-006/challenges/CHL-0033-forest-product-records.md).
+**Does not steal:** the [SRS-EP-13](#srs-ep-13-device-document-quality) 500-node latency row or the
+selection-feel bar of [SRS-EP-14](../ink-box/srs-quality.md). Those stay comfort bars; this section is
+**complexity versus n**.
+
+**What changed from SRS-EP-78.** The index is no longer one tree of world boxes rebuilt on each
+commit. Each container holds its own R-tree in child space, and the writer updates it by path copy
+inside the commit ([spatial-index.md](../../../../domain/document-forest/spatial-index.md)). The
+product bars are unchanged. The two "rebuild after commit" rows become "update per commit", and a
+point query is bounded per container on its descent path.
+
+Subordinate to [SRS-EP-01](../local-pen-ink/srs-logic.md) **p95 ≤30 ms**. Index updates and
+queries never run on the ink thread. If they cannot fit, the index changes, not the ink budget.
+
+### Quality-attribute scenarios
+
+| Field | Value |
+|---|---|
+| Source | Creator pointer (tap, marquee, freeform), commit-time reparent, membership or enclose, or a paint job |
+| Stimulus | A named [SRS-EP-80](./srs-logic.md#srs-ep-80-forest-geometry-queries) query |
+| Artifact | The per-container R-trees of the document forest, plus the exact tests on candidates |
+| Environment | Normal: 500 ink nodes / 50k samples (product fixture). Stress: **5000** ink nodes and a 100k-stroke root (complexity proof only, **not** a product scale) |
+| Response | The same hit ids and winner as a brute-force walk of the same forest |
+| Response measure | See table |
+
+| Scenario | Metric | Target |
+|---|---|---|
+| Point / rect / polygon query, n = 500 | p95 wall clock | ≤**100 ms** (comfort bar; must not regress) |
+| Point query, n = 5000 | p95 wall clock | ≤**100 ms** |
+| Point query probes vs n | R-tree cells visited | **O(log n + k)** per container on the descent path: ≤ **64·⌈log₂(nᵢ)⌉ + kᵢ** in each container *i* visited, where nᵢ is its child count and kᵢ the entries overlapping the point. A probe count that tracks n linearly **fails** even under 100 ms |
+| Rect / polygon cull | Cells visited | **O(log n + k)** per container visited. The exact ≥80% test then runs on the k candidates only |
+| Exact 80% / even-odd / length | Work after cull | **O(k)**. **0** box-only substitutes for sample-count, grid, length or boundary-area tests |
+| Product agreement | Hit ids versus brute force on the nested tap, marquee, freeform, enclose, membership and move-reparent fixtures | **100%**, 0 rule changes |
+| Index update per commit, n = 500 | p95 | ≤**5 ms**; **0** updates on the ink thread |
+| Index update per commit, n = 5000 | p95 | ≤**50 ms**; still off the ink thread |
+| Reader snapshot | A query started before a commit | Answers from the cells it started on, unchanged by that commit (old cells stay alive until reclaimed) |
+| Live move / resize preview | Index writes | **0** |
+| Ink budget with the forest resident | p95 pen-down → pixel, 500-node fixture | **≤30 ms**, equal to the baseline within measurement error |
+
+The stress fixtures exist to make **O(n)** and **O(log n + k)** distinguishable. Product scale stays
+500 / 50k ([SRS-EP-13](#srs-ep-13-device-document-quality)).
+
+### Notes
+
+- A slow exact test on a huge k (pathological full-page overlap) is a measured miss. Open a `CHL-*`;
+  do not loosen 80% to clear the probe row.
+- Count probes in the query traversal, not in the paint loop.
+
+---
+
 ## Superseded
 
 SRS-EP-13: new section. Replaces, for the device, the round-trip-shaped budgets formerly in
@@ -240,3 +300,4 @@ SRS-EP-13: new section. Replaces, for the device, the round-trip-shaped budgets 
 SRS-EP-16: additive — debug sidecar isolation; does not supersede SRS-EP-13.
 SRS-EP-33: additive — clipboard; does not supersede SRS-EP-13.
 SRS-EP-78: additive — hit-test **complexity**; does not replace the ≤100 ms **latency** row of SRS-EP-13.
+Retired 2026-10-04 and superseded by SRS-EP-81 (same product bars on the per-container index).

@@ -16,6 +16,7 @@ and the desktop both hold the document tree, its anatomy stopped being an Infini
 | Doc | Concept | Implemented by |
 |---|---|---|
 | [vector-document.md](./vector-document.md) | The document tree — node kinds, roles, transforms, ops, invariants; connector terminals + attachments; node `lastOpId` | `epaper` (C++, device-side working document) · `infini` (TypeScript, mirror + persistence) |
+| [document-forest/](./document-forest/index.md) | **Accepted** in-memory forest of the rebuilt Epaper — node header and kind payloads, per-kind manipulation, connector, per-container R-tree, handles, one writer with concurrent readers, progressive tile paint. The wire, ops and Infini stay on `vector-document.md`. Decision: [ADR-0041](../adr/ADR-0041-document-forest.md) | `epaper` (C++, rebuilt `epaper/`) — **pending**, [plan](../../.plan/document-forest-implementation.md) |
 | [pen-button-map.md](./pen-button-map.md) | Barrel-button Click / Hold-move map (Device Settings, not document) | `epaper` (author, dispatch, persist on device) · `infini` (0 persist, 0 restore — [SRS-IN-23](../modules/infini/features/tablet-sync/srs-logic.md#srs-in-23-pen-map-publish) retired) |
 | [viewport-follow.md](./viewport-follow.md) | Optional exclusive one-way camera follow (session, not document) | `epaper` (toggle + apply) · `infini` (toggle + apply) |
 

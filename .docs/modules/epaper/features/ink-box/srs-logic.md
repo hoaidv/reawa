@@ -26,6 +26,9 @@ Product depth: [srs-product](./srs-product.md).
 
 ## [SRS-EP-10] Recognition, guards, and membership {#srs-ep-10-device-recognition}
 
+<!-- lifecycle: deprecated -->
+<!-- note: 2026-10-04 — still true for the archived application (epaper_old/). Rebuilt Epaper: document forest (ADR-0041). Successor written when this behavior is ported, before its story is ready. Change record: CHL-0033. Successor delta: membership and guard rules carry over; content is stored in the ink box's child space instead of layoutOffset / UV, and the forest R-tree replaces SRS-EP-79 (now SRS-EP-80). -->
+
 Parent REQ: [REQ-05](../../prd.md#device-ink-box).
 
 ### Endpoint(s)
@@ -140,6 +143,9 @@ against it before any resize story is called done.
 ---
 
 ## [SRS-EP-11] Selection, hit-testing, and manipulation {#srs-ep-11-device-manipulation}
+
+<!-- lifecycle: deprecated -->
+<!-- note: 2026-10-04 — still true for the archived application (epaper_old/). Rebuilt Epaper: document forest (ADR-0041). Successor written when this behavior is ported, before its story is ready. Change record: CHL-0033. Successor delta: resize writes bounds, not a transform (set_smart_transform); manipMode All / Boundary replaces inkScaleMode; hit-testing uses SRS-EP-80; drop the 'no on-device pan' clause (CHL-0022). -->
 
 Parent REQ: [REQ-06](../../prd.md#device-manipulation).
 
@@ -257,7 +263,8 @@ the descriptor is a logic requirement here and not merely a product aspiration.
 
 ## [SRS-EP-21] One-finger pick and move {#srs-ep-21-one-finger}
 
-<!-- lifecycle: active -->
+<!-- lifecycle: deprecated -->
+<!-- note: 2026-10-04 — still true for the archived application (epaper_old/). Rebuilt Epaper: document forest (ADR-0041). Successor written when this behavior is ported, before its story is ready. Change record: CHL-0033. Successor delta: move writes bounds or origin, not a transform; palm rejection by 20 mm travel, no >=3-contact rule (CHL-0027). -->
 
 **Parent:** [REQ-10](../../prd.md#hand-touch). **Links (not parents):** [SRS-EP-11](#srs-ep-11-device-manipulation) live-direct move, [SRS-EP-04](../tool-modes/srs-logic.md) exclusive tools, [SRS-EP-23](../tool-modes/srs-logic.md#srs-ep-23-finger-tool-switch), [SRS-EP-49](../region-sync/srs-logic.md#srs-ep-49-viewport-follow). **Decision:** [ADR-0029](../../../../adr/ADR-0029-independent-cameras-viewport-follow.md) (one-finger does **not** publish unless Infini is following; box-move never pans).
 
@@ -315,7 +322,8 @@ Finger rotation, connector re-anchor ([REQ-08](../../prd.md#node-manipulation)).
 
 ## [SRS-EP-75] Nested membership, flatten, enclose capture {#srs-ep-75-nested-membership}
 
-<!-- lifecycle: active -->
+<!-- lifecycle: deprecated -->
+<!-- note: 2026-10-04 — still true for the archived application (epaper_old/). Rebuilt Epaper: document forest (ADR-0041). Successor written when this behavior is ported, before its story is ready. Change record: CHL-0033. Successor delta: captured content keeps world placement by moving into the new box's child space; no own-transform or layoutOffset. -->
 
 **Parent:** [REQ-05](../../prd.md#device-ink-box). **Product:** [BR-B20, BR-B21](./srs-product.md). **Decision:** [ADR-0039](../../../../adr/ADR-0039-nested-ink-box-rendering.md). **Quality:** [SRS-EP-14](./srs-quality.md).
 
@@ -361,7 +369,8 @@ Surround test stays **free ink only**. Selected Smart Groups are additional capt
 
 ## [SRS-EP-76] Nested rendering (RenderingContext) {#srs-ep-76-nested-render}
 
-<!-- lifecycle: active -->
+<!-- lifecycle: deprecated -->
+<!-- note: 2026-10-04 — still true for the archived application (epaper_old/). Rebuilt Epaper: document forest (ADR-0041). Successor written when this behavior is ported, before its story is ready. Change record: CHL-0033. Successor delta: nested paint composes child origins (transform reserved, identity) instead of RenderingContext own-transforms; manipMode replaces inkScaleMode. See document-forest rendering.md. -->
 
 **Parent:** [REQ-06](../../prd.md#device-manipulation). **Product:** [BR-B22](./srs-product.md). **Decision:** [ADR-0039](../../../../adr/ADR-0039-nested-ink-box-rendering.md).
 
@@ -415,7 +424,8 @@ Live overlay (ToolCanvasLayer) uses the same compose for the selected node’s s
 
 ## [SRS-EP-77] Nested tap-hit and move reparent {#srs-ep-77-nested-hit-reparent}
 
-<!-- lifecycle: active -->
+<!-- lifecycle: deprecated -->
+<!-- note: 2026-10-04 — still true for the archived application (epaper_old/). Rebuilt Epaper: document forest (ADR-0041). Successor written when this behavior is ported, before its story is ready. Change record: CHL-0033. Successor delta: tap-hit and the reparent winner come from SRS-EP-80; reparent preserves world placement by child-space translation, not own-transform. -->
 
 **Parent:** [REQ-06](../../prd.md#device-manipulation) (finger: [REQ-10](../../prd.md#hand-touch) uses the same tap walk). **Product:** [BR-B23, BR-B24, BR-B25](./srs-product.md). **Decision:** [ADR-0039](../../../../adr/ADR-0039-nested-ink-box-rendering.md). **Chrome:** [SRS-EP-12](./srs-ui.md) — no new inventory.
 

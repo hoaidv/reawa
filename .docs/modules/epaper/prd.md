@@ -205,6 +205,12 @@ viewed at scale, and saved.
 - The **document** is **in memory only** this iter. On-device **document** persistence, offline work
   across restarts, and sync-any-moment are deferred (Non-Goals). **Device Settings** are not the
   document — they persist on this device ([REQ-20](#device-settings)). No document settings.
+- **Rebuilt Epaper, 2026-10-04.** The rebuilt `epaper/` holds this document as the document forest
+  ([ADR-0041](../../adr/ADR-0041-document-forest.md)). Every outcome above still applies except two,
+  which wait while Infini sync is out of the implementation scope
+  ([CHL-0034](../../../.plan/iter-006/challenges/CHL-0034-forest-wire-sync-deferred.md)): the initial
+  full load from the desktop, and node semantics shared with Infini. The forest's `manipMode` and
+  child-relative geometry are not yet mapped to the wire's `inkScaleMode` and `layoutOffset`.
 
 **Acceptance**
 - Given Epaper is running with no session, When the creator draws 20 strokes, Then all 20 exist as
@@ -319,6 +325,8 @@ viewed at scale, and saved.
   undo of a create. Nested tap-select chrome is [REQ-06](#device-manipulation) (no new inventory).
 
 ## [REQ-06] On-device ink-box manipulation {#device-manipulation}
+<!-- lifecycle: deprecated -->
+<!-- note: 2026-10-04 — still describes the archived application (epaper_old/). The rebuilt Epaper uses the document forest (ADR-0041): `manipMode` All / Boundary replaces `inkScaleMode` withBounds / fixedInk, resize writes `bounds` (transform stays reserved), and the live drag is an overlay preview committed at pen-up. A successor REQ is written when ink-box manipulation is ported, before its story is ready. Change record: CHL-0033. -->
 - **Priority:** Must · **Traces:** [BRD-07]
 - Needs design: yes
 - **Outcome:** manipulating a box on the tablet feels like moving paper, not like filing a request.
@@ -671,6 +679,11 @@ viewed at scale, and saved.
 - Full product depth — verb semantics, per-kind tools, gesture grammar, e-ink constraints, and the
   descriptor schema — lives in
   [features/node-manipulation/srs-product.md](./features/node-manipulation/srs-product.md).
+- **Still parked, 2026-10-04.** The move and resize model for every kind in the rebuilt Epaper is
+  decided in [ADR-0041](../../adr/ADR-0041-document-forest.md)
+  ([manipulation](../../domain/document-forest/index.md#manipulation)). This REQ is not activated
+  by that: no product verb, chrome or gesture is in scope until it is unparked
+  ([CHL-0033](../../../.plan/iter-006/challenges/CHL-0033-forest-product-records.md)).
 - [REQ-06](#device-manipulation) is the first conforming citizen of this model and must not require
   rework when this REQ lands.
 

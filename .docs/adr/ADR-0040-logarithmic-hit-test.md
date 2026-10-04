@@ -1,14 +1,32 @@
 ---
 id: ADR-0040
 title: Device logarithmic hit-test spatial index
-status: proposed
+status: superseded
 date: 2026-09-05
 deciders: [architect, pm]
 supersedes: null
+superseded-by: [ADR-0041]
 source: TRACK-005 / human 2026-09-05 hit-test complexity / [REQ-04] [REQ-06] / [SRS-EP-78] [SRS-EP-79]
 ---
 
 # ADR-0040 — Device logarithmic hit-test spatial index
+
+> **Superseded 2026-10-04** by [ADR-0041](./ADR-0041-document-forest.md) (Document
+> forest, concurrent readers, progressive paint).
+> - **Why:** this index was proposed for the tree now archived as `epaper_old/`. The
+>   rebuilt Epaper uses a per-container R-tree inside the forest instead
+>   ([spatial-index.md](../domain/document-forest/spatial-index.md#relationship-to-adr-0040)
+>   maps the two).
+> - **Kept:** the comfort bar and the query list below still state what the new index
+>   must serve.
+> - **Downstream, done 2026-10-04**
+>   ([CHL-0033](../../.plan/iter-006/challenges/CHL-0033-forest-product-records.md)):
+>   - SRS-EP-78 and SRS-EP-79 are retired, superseded by
+>     [SRS-EP-81](../modules/epaper/features/device-document/srs-quality.md#srs-ep-81-forest-query-quality)
+>     and [SRS-EP-80](../modules/epaper/features/device-document/srs-logic.md#srs-ep-80-forest-geometry-queries);
+>   - the draft stories STORY-EP-078…080 are cancelled. The forest's R-tree is
+>     [STORY-EP-086](../../.plan/iter-006/stories/STORY-EP-086.md).
+> - The original text is kept for history.
 
 ## Context
 

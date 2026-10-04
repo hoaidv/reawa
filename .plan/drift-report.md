@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-09-05T05:11:45+00:00
+generated_at: 2026-10-04T06:26:50+00:00
 ---
 
 # Drift Report
@@ -10,6 +10,8 @@ generated_at: 2026-09-05T05:11:45+00:00
 ## Stories referencing deprecated / retired SRS
 | Story | SRS | Lifecycle |
 |---|---|---|
+| STORY-EP-032 | [SRS-EP-12] | deprecated |
+| STORY-EP-035 | [SRS-EP-10] | deprecated |
 | STORY-EP-040 | [SRS-EP-29] | retired |
 | STORY-EP-040 | [SRS-EP-27] | retired |
 | STORY-EP-040 | [SRS-EP-28] | retired |
@@ -17,6 +19,16 @@ generated_at: 2026-09-05T05:11:45+00:00
 | STORY-EP-041 | [SRS-EP-30] | retired |
 | STORY-EP-042 | [SRS-EP-28] | retired |
 | STORY-EP-042 | [SRS-EP-30] | retired |
+| STORY-EP-071 | [SRS-EP-12] | deprecated |
+| STORY-EP-078 | [SRS-EP-79] | retired |
+| STORY-EP-079 | [SRS-EP-79] | retired |
+| STORY-EP-079 | [SRS-EP-77] | deprecated |
+| STORY-EP-079 | [SRS-EP-11] | deprecated |
+| STORY-EP-079 | [SRS-EP-21] | deprecated |
+| STORY-EP-080 | [SRS-EP-79] | retired |
+| STORY-EP-080 | [SRS-EP-11] | deprecated |
+| STORY-EP-080 | [SRS-EP-10] | deprecated |
+| STORY-EP-080 | [SRS-EP-75] | deprecated |
 | STORY-IN-035 | [SRS-IN-23] | retired |
 | STORY-IN-035 | [SRS-IN-25] | retired |
 

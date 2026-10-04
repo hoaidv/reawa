@@ -11,6 +11,11 @@ source: TRACK-005 / [CHL-0032] / [REQ-05] [REQ-06] / [SRS-EP-75] [SRS-EP-76] [SR
 
 # ADR-0039 — Nested ink-box RenderingContext and own-transform
 
+> **Scope note 2026-10-04.** For the rebuilt Epaper (`epaper/`), nested ink boxes are
+> placed by child origins, with no own-transform scale, under
+> [ADR-0041](./ADR-0041-document-forest.md) (Document forest, concurrent readers,
+> progressive paint). This ADR still governs Infini and the archived `epaper_old/`.
+
 ## Context
 
 [CHL-0032](../../.plan/iter-005/challenges/CHL-0032-nested-ink-box.md) schedules nested Smart Groups

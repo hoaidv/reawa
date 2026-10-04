@@ -14,6 +14,9 @@ Logic: [SRS-EP-10 / SRS-EP-11](./srs-logic.md). Document budgets:
 
 ## [SRS-EP-14] Recognition, manipulation, and CHL regression bars {#srs-ep-14-ink-box-quality}
 
+<!-- lifecycle: deprecated -->
+<!-- note: 2026-10-04 — still true for the archived application (epaper_old/). Rebuilt Epaper: document forest (ADR-0041). Successor written when this behavior is ported, before its story is ready. Change record: CHL-0033. Successor delta: fixedInk regression bars become Boundary-mode bars (content keeps its box-relative position; it is not re-centred); resize bars measure bounds, not a transform. -->
+
 ### Creation
 
 | Scenario | Metric | Target |

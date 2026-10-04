@@ -4,7 +4,7 @@ title: Migrate point-query callers to geometry index
 kind: implement
 parent_srs: [SRS-EP-79, SRS-EP-77, SRS-EP-11, SRS-EP-21]
 parent_req: [REQ-06]
-status: draft
+status: cancelled
 priority: P0
 iter: iter-005
 estimate: 5
@@ -23,6 +23,8 @@ wireframe: ""
 ---
 
 # STORY-EP-079 — Migrate point-query callers to geometry index
+
+> **Cancelled 2026-10-04.** This story implemented [ADR-0040](../../../.docs/adr/ADR-0040-logarithmic-hit-test.md) on the archived tree (`epaper_old/`). ADR-0040 is superseded by [ADR-0041](../../../.docs/adr/ADR-0041-document-forest.md), and its parent SRS-EP-78 and SRS-EP-79 by [SRS-EP-81](../../../.docs/modules/epaper/features/device-document/srs-quality.md#srs-ep-81-forest-query-quality) and [SRS-EP-80](../../../.docs/modules/epaper/features/device-document/srs-logic.md#srs-ep-80-forest-geometry-queries). The per-container R-tree is built in [STORY-EP-086](../../iter-006/stories/STORY-EP-086.md) on [TRACK-009](../../tracks/TRACK-009-document-forest.md). The story file is kept for history.
 
 Callers of **point** hit. Index owned by [STORY-EP-078](./STORY-EP-078.md). Product rules
 [SRS-EP-77](../../../.docs/modules/epaper/features/ink-box/srs-logic.md#srs-ep-77-nested-hit-reparent)

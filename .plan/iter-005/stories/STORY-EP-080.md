@@ -4,7 +4,7 @@ title: Migrate range 80-percent callers to geometry index
 kind: implement
 parent_srs: [SRS-EP-79, SRS-EP-11, SRS-EP-10, SRS-EP-75, SRS-EP-58]
 parent_req: [REQ-06]
-status: draft
+status: cancelled
 priority: P0
 iter: iter-005
 estimate: 8
@@ -23,6 +23,8 @@ wireframe: ""
 ---
 
 # STORY-EP-080 — Migrate range 80-percent callers to geometry index
+
+> **Cancelled 2026-10-04.** This story implemented [ADR-0040](../../../.docs/adr/ADR-0040-logarithmic-hit-test.md) on the archived tree (`epaper_old/`). ADR-0040 is superseded by [ADR-0041](../../../.docs/adr/ADR-0041-document-forest.md), and its parent SRS-EP-78 and SRS-EP-79 by [SRS-EP-81](../../../.docs/modules/epaper/features/device-document/srs-quality.md#srs-ep-81-forest-query-quality) and [SRS-EP-80](../../../.docs/modules/epaper/features/device-document/srs-logic.md#srs-ep-80-forest-geometry-queries). The per-container R-tree is built in [STORY-EP-086](../../iter-006/stories/STORY-EP-086.md) on [TRACK-009](../../tracks/TRACK-009-document-forest.md). The story file is kept for history.
 
 Callers of **rect / polygon / highest-paint-container / membership / enclose** 80% tests,
 plus object-erase **cull only**. Index owned by [STORY-EP-078](./STORY-EP-078.md).

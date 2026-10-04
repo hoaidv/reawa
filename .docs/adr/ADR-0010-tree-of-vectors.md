@@ -10,6 +10,11 @@ amended-by: [ADR-0020]
 
 # ADR-0010 — Tree-of-vectors document model
 
+> **Scope note 2026-10-04.** The rebuilt Epaper (`epaper/`) holds its document in
+> memory as the forest of [ADR-0041](./ADR-0041-document-forest.md) (Document forest,
+> concurrent readers, progressive paint). This ADR still governs Infini, the sync
+> wire and ops, and the archived `epaper_old/`. Epaper converts at the sync boundary.
+
 ## Context
 
 [REQ-02](../modules/infini/prd.md#vector-document) needs more than a flat list of strokes.

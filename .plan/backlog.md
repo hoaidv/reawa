@@ -1,6 +1,6 @@
 ---
 generated_by: adlc
-generated_at: 2026-10-03T01:31:53+00:00
+generated_at: 2026-10-04T06:28:00+00:00
 ---
 
 # Backlog (auto-generated from story frontmatter)
@@ -84,10 +84,20 @@ generated_at: 2026-10-03T01:31:53+00:00
 | [STORY-EP-075](./iter-005/stories/STORY-EP-075.md) | Nested enclose capture and empty-child flatten | implement | dev | epaper | [SRS-EP-75], [SRS-EP-10] | done | iter-005 | 5 |
 | [STORY-EP-076](./iter-005/stories/STORY-EP-076.md) | Reparent nested ink-box at end of move | implement | dev | epaper | [SRS-EP-77] | done | iter-005 | 5 |
 | [STORY-EP-077](./iter-005/stories/STORY-EP-077.md) | Clip nested ink-box content to natural world AABB | implement | dev | epaper | [SRS-EP-76], [SRS-EP-77] | done | iter-005 | 3 |
-| [STORY-EP-078](./iter-005/stories/STORY-EP-078.md) | Spatial R-tree and named geometry queries | implement | dev | epaper | [SRS-EP-79], [SRS-EP-78] | draft | iter-005 | 8 |
-| [STORY-EP-079](./iter-005/stories/STORY-EP-079.md) | Migrate point-query callers to geometry index | implement | dev | epaper | [SRS-EP-79], [SRS-EP-77], [SRS-EP-11], [SRS-EP-21] | draft | iter-005 | 5 |
-| [STORY-EP-080](./iter-005/stories/STORY-EP-080.md) | Migrate range 80-percent callers to geometry index | implement | dev | epaper | [SRS-EP-79], [SRS-EP-11], [SRS-EP-10], [SRS-EP-75], [SRS-EP-58] | draft | iter-005 | 8 |
+| [STORY-EP-078](./iter-005/stories/STORY-EP-078.md) | Spatial R-tree and named geometry queries | implement | dev | epaper | [SRS-EP-79], [SRS-EP-78] | cancelled | iter-005 | 8 |
+| [STORY-EP-079](./iter-005/stories/STORY-EP-079.md) | Migrate point-query callers to geometry index | implement | dev | epaper | [SRS-EP-79], [SRS-EP-77], [SRS-EP-11], [SRS-EP-21] | cancelled | iter-005 | 5 |
+| [STORY-EP-080](./iter-005/stories/STORY-EP-080.md) | Migrate range 80-percent callers to geometry index | implement | dev | epaper | [SRS-EP-79], [SRS-EP-11], [SRS-EP-10], [SRS-EP-75], [SRS-EP-58] | cancelled | iter-005 | 8 |
 | [STORY-EP-081](./iter-005/stories/STORY-EP-081.md) | Empty reMarkable 2 shell | implement | dev | epaper | [SRS-EP-01] | done | iter-005 | 3 |
+| [STORY-EP-082](./iter-006/stories/STORY-EP-082.md) | Forest foundations: host tests and geometry | implement | dev | epaper | [SRS-EP-07] | ready | iter-006 | 3 |
+| [STORY-EP-083](./iter-006/stories/STORY-EP-083.md) | Slot table, handles and NodeStore | implement | dev | epaper | [SRS-EP-07] | draft | iter-006 | 3 |
+| [STORY-EP-084](./iter-006/stories/STORY-EP-084.md) | Nodes, children, bounds and invariants | implement | dev | epaper | [SRS-EP-07] | draft | iter-006 | 5 |
+| [STORY-EP-085](./iter-006/stories/STORY-EP-085.md) | Milestone A: paint pen ink from the forest | implement | dev | epaper | [SRS-EP-07], [SRS-EP-01] | draft | iter-006 | 5 |
+| [STORY-EP-086](./iter-006/stories/STORY-EP-086.md) | R-tree per container | implement | dev | epaper | [SRS-EP-80], [SRS-EP-81] | draft | iter-006 | 8 |
+| [STORY-EP-087](./iter-006/stories/STORY-EP-087.md) | Concurrency: granules, commit, reclamation | implement | dev | epaper | [SRS-EP-07], [SRS-EP-80], [SRS-EP-81] | draft | iter-006 | 8 |
+| [STORY-EP-088](./iter-006/stories/STORY-EP-088.md) | Manipulation core: move, resize, reparent | implement | dev | epaper | [SRS-EP-07] | draft | iter-006 | 8 |
+| [STORY-EP-089](./iter-006/stories/STORY-EP-089.md) | Connector on the forest | implement | dev | epaper | [SRS-EP-18] | draft | iter-006 | 5 |
+| [STORY-EP-090](./iter-006/stories/STORY-EP-090.md) | Progressive paint: tiles, jobs, coarse pass | implement | dev | epaper | [SRS-EP-02], [SRS-EP-13] | draft | iter-006 | 8 |
+| [STORY-EP-091](./iter-006/stories/STORY-EP-091.md) | Undo and redo on the forest | implement | dev | epaper | [SRS-EP-07] | draft | iter-006 | 5 |
 | [STORY-IN-001](./iter-002/stories/STORY-IN-001.md) | Design Infini infinity canvas | design | designer | infini | [SRS-IN-02] | done | iter-002 | 3 |
 | [STORY-IN-002](./iter-002/stories/STORY-IN-002.md) | Scaffold Electron React Infini shell and canvas host | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 3 |
 | [STORY-IN-003](./iter-002/stories/STORY-IN-003.md) | Canvas transform and primitive figures | implement | dev | infini | [SRS-IN-01] | done | iter-002 | 5 |

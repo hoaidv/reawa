@@ -10,6 +10,13 @@ amended_by: [ADR-0013, ADR-0039]
 
 # ADR-0011 — Smart Group (ink-box) pilot
 
+> **Scope note 2026-10-04.** For the rebuilt Epaper (`epaper/`), the ink box and its
+> manipulation are defined by [ADR-0041](./ADR-0041-document-forest.md) (Document
+> forest, concurrent readers, progressive paint). There, `manipMode` replaces the
+> scale mode, and `transform` is reserved. This ADR still governs Infini and the
+> archived `epaper_old/`. The product-record supersession is pending (ADR-0041,
+> plan step 0).
+
 > **Amended 2026-08-11 by [ADR-0013](./ADR-0013-ink-box-tool-modes.md).** §4A's propose/accept
 > step is **withdrawn**: creation is tool-armed and immediate (undoable), and `recognize_enclose`
 > is an internal Infini step rather than a wire op. §1–§3 (node shape, local transform,

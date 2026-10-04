@@ -22,6 +22,9 @@ panel. Everything about how that is drawn is re-decided here.
 
 ## [SRS-EP-12] Selection overlay and manipulation chrome {#srs-ep-12-selection-chrome}
 
+<!-- lifecycle: deprecated -->
+<!-- note: 2026-10-04 — still true for the archived application (epaper_old/). Rebuilt Epaper: document forest (ADR-0041). Successor written when this behavior is ported, before its story is ready. Change record: CHL-0033. Successor delta: the scale-mode toggle becomes the manipMode toggle (All / Boundary); chrome is redesigned for the rebuilt Epaper (CHL-0023). -->
+
 **Parent:** [REQ-06](../../prd.md#device-manipulation).
 **Decision:** [ADR-0014](../../../../adr/ADR-0014-document-ownership-inversion.md) §2 —
 what is on the panel is the document.
