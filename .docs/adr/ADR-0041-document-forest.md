@@ -40,6 +40,7 @@ Specification: [document-forest/](../domain/document-forest/index.md).
 | 2026-10-04 | Move and resize rules for `Ink`, `Primitive`, `Group`, `Frame` and `Connector`, and for multi-selection. One `resize(m)` contract with an axis-aligned map. Every container except `Document` has a translation-only child origin; `Group` gains a stored `origin`. Primitives are not rotated. | Human decisions on each kind’s behavior |
 | 2026-10-04 | **Accepted.** Status `accepted`; supersedes ADR-0040; scope fixed to the rebuilt Epaper. Provisional choices become accepted starting values. R-tree root exempt from the minimum fill. Atomics written for C++17. Implementation plan written. | Human: “I adopt the design. Now we will commit to it.” |
 | 2026-10-04 | Consequences updated after plan step 0: product records settled (CHL-0033); Infini sync and the wire mapping deferred (CHL-0034); implementation owned by TRACK-009. No design change. | Human: sync with Infini is out of the implementation scope |
+| 2026-10-04 | Connector derived geometry type renamed from `RoutedPath` to `DerivedPath`. The field stays `route`. | Human, during implementation: the type name should say that the value is derived |
 
 ## Context
 

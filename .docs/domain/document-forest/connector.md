@@ -45,7 +45,7 @@ Connector                                   a leaf; a Document child; transform 
   rest:    RestPath                         fixed at creation; never rebuilt (ADR-0020 I1)
   stroke:  { color, width }                 width in world units
   labels:  [EdgeLabel]
-  route:   RoutedPath                       derived by the writer; not a document fact
+  route:   DerivedPath                      derived by the writer; not a document fact
 
 RestPath
   spine:   [Pt]                             S: the stroke smoothed, resampled every 2 u, world space
@@ -74,7 +74,7 @@ EdgeLabel                                   "attachment" in current docs
   t:         [0,1]                          on rest spine S, never on the route
   offset:    d                              signed perpendicular offset, world units
 
-RoutedPath                                  derived; recomputed by the writer, read by readers
+DerivedPath                                 derived; recomputed by the writer, read by readers
   spine:     [WorldPt]                      V
   body:      [WorldPt]                      the ink laid along V; this is what paints
   markers:   [[WorldPt]]
