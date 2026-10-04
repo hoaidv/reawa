@@ -1,13 +1,13 @@
 ---
-title: Document forest — handles
+
+## title: Document forest — handles
 lifecycle: active
 owner: architect
 source: ADR-0041
----
 
 # Handles: `(slot, generation)`
 
-<a id="handles"></a>
+
 
 Part of the [document forest](./index.md). Decision: [ADR-0041](../../adr/ADR-0041-document-forest.md).
 
@@ -19,9 +19,9 @@ a connector’s ends, a render cache. They need a reference that is:
 
 1. **cheap to follow**, because a visit follows thousands of them per frame;
 2. **safe after the node is removed**, because a reader on another thread may still
-   be holding it; and
+  be holding it; and
 3. **able to tell that the node is gone even if the memory now holds a different
-   node.** Reusing the same memory location for a new object, so that an old
+  node.** Reusing the same memory location for a new object, so that an old
    reference now silently points at the new one, is the *ABA problem*.
 
 A raw pointer fails 2 and 3. A node id fails 1, because every step would be a hash
@@ -61,32 +61,33 @@ Handle = { slot: u32, gen: u32 }           8 bytes; a value, held outside the ta
 The rules named in parentheses are the write rules in
 [concurrency.md](./concurrency.md#granules).
 
-**`NodeStore`** owns everything a node does not: the slot table, the id map, the
+`NodeStore` owns everything a node does not: the slot table, the id map, the
 reclamation epochs and the connector dependents. It is not a node. There is one per
 `Document`.
 
-**`SlotTable`** is an array of slots, split into chunks of 1024 so it can grow
+`SlotTable` is an array of slots, split into chunks of 1024 so it can grow
 without moving any slot.
+
 - To grow, the writer allocates a new chunk, writes its pointer into the directory,
-  then publishes `chunkCount` with a release store.
+then publishes `chunkCount` with a release store.
 - When the directory itself is full, the writer builds a larger copy of it beside
-  the old one, swaps the `directory` pointer, and retires the old copy by epoch.
+the old one, swaps the `directory` pointer, and retires the old copy by epoch.
 - The chunk pointers in both copies are the same, so no slot moves either way.
 - No chunk is freed while the store exists, so any slot a handle names is always
-  readable memory, even when the handle is stale. Following a stale handle never
-  crashes.
+readable memory, even when the handle is stale. Following a stale handle never
+crashes.
 - The chunk size 1024 is provisional.
 
-**`Slot`** is one fixed place in that array. It holds the node’s storage, plus two
+`Slot` is one fixed place in that array. It holds the node’s storage, plus two
 small atomics, `gen` and `state`, that say who currently occupies it. A slot is
 reused for many nodes over the store’s life; `gen` tells those occupancies apart.
 
-**`NodeStorage`** is the node: header fields in place, with its children and payload
+`NodeStorage` is the node: header fields in place, with its children and payload
 behind one pointer each. It has a fixed size, so slots do too. Variable-size data
 (samples, child lists, rest paths) lives in separate buffers that those pointers
 reach.
 
-**`Handle`** names one occupancy of one slot: the slot’s number, and the slot’s
+`Handle` names one occupancy of one slot: the slot’s number, and the slot’s
 `gen` at the moment the node was allocated there.
 
 ### Where is the handle in the slot table?
@@ -97,7 +98,7 @@ stamp:
 
 - `slot` finds the slot: chunk `slot / 1024`, position `slot % 1024`.
 - `gen` is a copy of that slot’s `gen` at allocation time. The slot keeps the current
-  value; the handle keeps the value it was issued with. Resolving compares the two.
+value; the handle keeps the value it was issued with. Resolving compares the two.
 
 Think of a locker. `slot` is the locker number. The slot’s `gen` counts how many
 times the locker has been reassigned. A handle is your ticket: the locker number and
@@ -110,41 +111,51 @@ the slot and reads `gen`.
 
 Where handles are stored:
 
-| Holder | Field | Lifetime | Details |
-|---|---|---|---|
-| Parent’s `Children` | `ChildLink.node`, and each R-tree entry’s `node` | while that `Children` version is published | [1](#1-child-links-and-r-tree-entries) |
-| The node itself | `header.parent` | while linked | — |
-| `NodeStore.ids` | map value | while the node is `Live` | writer only |
-| Connector payload | `NodeRef.cached` for each end and label | until the writer updates it | [6](#6-connector-ends-and-labels-noderef) |
-| Selection | set of handles | many frames | [3](#3-selection) |
-| Tool gesture | target handles | pen down to pen up | [4](#4-gesture-targets) |
-| Query result | candidate handles | until used | [5](#5-query-results-passed-between-threads) |
-| Render caches | key `(handle, version)` | until evicted | [7](#7-derived-caches) |
+
+| Holder              | Field                                            | Lifetime                                   | Details                                      |
+| ------------------- | ------------------------------------------------ | ------------------------------------------ | -------------------------------------------- |
+| Parent’s `Children` | `ChildLink.node`, and each R-tree entry’s `node` | while that `Children` version is published | [1](#1-child-links-and-r-tree-entries)       |
+| The node itself     | `header.parent`                                  | while linked                               | —                                            |
+| `NodeStore.ids`     | map value                                        | while the node is `Live`                   | writer only                                  |
+| Connector payload   | `NodeRef.cached` for each end and label          | until the writer updates it                | [6](#6-connector-ends-and-labels-noderef)    |
+| Selection           | set of handles                                   | many frames                                | [3](#3-selection)                            |
+| Tool gesture        | target handles                                   | pen down to pen up                         | [4](#4-gesture-targets)                      |
+| Query result        | candidate handles                                | until used                                 | [5](#5-query-results-passed-between-threads) |
+| Render caches       | key `(handle, version)`                          | until evicted                              | [7](#7-derived-caches)                       |
+
+
+
 
 ### How to get from one to another
 
-| From | To | How |
-|---|---|---|
-| `Handle` | `Slot` | `directory[slot / 1024][slot % 1024]`: two loads, no lookup |
-| `Slot` | `NodeStorage` | the slot contains it: same memory |
-| `Handle` | node, or `Gone` | [`resolve`](#resolving-a-handle): compare `gen`, check `state` |
-| `NodeStorage` | `NodeId` | `header.id` |
-| `NodeId` | `Handle` | `NodeStore.ids`: a hash lookup, writer only |
-| `NodeStorage` | parent | `header.parent`, a handle |
-| `NodeStorage` | children | `children` pointer → `Children.links[i].node`, handles |
-| `NodeStorage` | its own `Handle` | not stored; the caller already holds it |
+
+| From          | To               | How                                                            |
+| ------------- | ---------------- | -------------------------------------------------------------- |
+| `Handle`      | `Slot`           | `directory[slot / 1024][slot % 1024]`: two loads, no lookup    |
+| `Slot`        | `NodeStorage`    | the slot contains it: same memory                              |
+| `Handle`      | node, or `Gone`  | `[resolve](#resolving-a-handle)`: compare `gen`, check `state` |
+| `NodeStorage` | `NodeId`         | `header.id`                                                    |
+| `NodeId`      | `Handle`         | `NodeStore.ids`: a hash lookup, writer only                    |
+| `NodeStorage` | parent           | `header.parent`, a handle                                      |
+| `NodeStorage` | children         | `children` pointer → `Children.links[i].node`, handles         |
+| `NodeStorage` | its own `Handle` | not stored; the caller already holds it                        |
+
+
+
 
 ### `gen` and `state` together
 
 `gen` and `state` are two separate atomics. Together they give the meaning of a
 handle `(s, g)` issued while slot `s` had generation `g`:
 
-| Slot state | Slot `gen` | `node` memory | `resolve((s, g))` | Who can still reach the node |
-|---|---|---|---|---|
-| `Live` | `g` | constructed; reachable once [linked](#link) | the node | anyone holding `(s, g)`, and readers once it is linked |
-| `Retired` | `g` | intact, but unlinked | `Gone` | only readers that loaded the parent’s old child list in their current read section |
-| `Free` | `g + 1` | destroyed: payload buffers released | `Gone` (generation mismatch) | nobody |
-| `Live` again, for a new node | `g + 1` | the new node | `Gone` (generation mismatch) | holders of `(s, g + 1)` |
+
+| Slot state                   | Slot `gen` | `node` memory                               | `resolve((s, g))`            | Who can still reach the node                                                       |
+| ---------------------------- | ---------- | ------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------- |
+| `Live`                       | `g`        | constructed; reachable once [linked](#link) | the node                     | anyone holding `(s, g)`, and readers once it is linked                             |
+| `Retired`                    | `g`        | intact, but unlinked                        | `Gone`                       | only readers that loaded the parent’s old child list in their current read section |
+| `Free`                       | `g + 1`    | destroyed: payload buffers released         | `Gone` (generation mismatch) | nobody                                                                             |
+| `Live` again, for a new node | `g + 1`    | the new node                                | `Gone` (generation mismatch) | holders of `(s, g + 1)`                                                            |
+
 
 Only three writer steps change them: [allocate](#allocate) stores `state = Live`;
 [retire](#retire) stores `state = Retired`; [free](#free) stores `gen = g + 1`, then
@@ -158,24 +169,30 @@ section.
 
 ### Worked example: slot 7
 
-| Step | Event | Slot 7 `gen` | Slot 7 `state` | Handles held |
-|---|---|---|---|---|
-| 1 | Stroke A is committed into slot 7 | 3 | `Live` | parent link `(7, 3)`; `ids[A] = (7, 3)` |
-| 2 | The user selects A | 3 | `Live` | + selection `(7, 3)` |
-| 3 | Undo removes A | 3 | `Retired` | link gone from the new child list; `ids[A]` removed; reader R still in the old list; selection `(7, 3)` |
-| 4 | R leaves its read section; grace period over | 4 | `Free` | selection `(7, 3)` |
-| 5 | Stroke B is committed and reuses slot 7 | 4 | `Live` | parent link `(7, 4)`; `ids[B] = (7, 4)`; selection `(7, 3)` |
-| 6 | The selection resolves `(7, 3)` | 4 | `Live` | `3 ≠ 4`, so `Gone`: A drops out, and B is never selected by accident |
-| 7 | Redo restores A, same id, into free slot 12 | — | — | `ids[A] = (12, g)`; connectors bound to A get `cached = (12, g)` through `dependents` |
+
+| Step | Event                                        | Slot 7 `gen` | Slot 7 `state` | Handles held                                                                                            |
+| ---- | -------------------------------------------- | ------------ | -------------- | ------------------------------------------------------------------------------------------------------- |
+| 1    | Stroke A is committed into slot 7            | 3            | `Live`         | parent link `(7, 3)`; `ids[A] = (7, 3)`                                                                 |
+| 2    | The user selects A                           | 3            | `Live`         | + selection `(7, 3)`                                                                                    |
+| 3    | Undo removes A                               | 3            | `Retired`      | link gone from the new child list; `ids[A]` removed; reader R still in the old list; selection `(7, 3)` |
+| 4    | R leaves its read section; grace period over | 4            | `Free`         | selection `(7, 3)`                                                                                      |
+| 5    | Stroke B is committed and reuses slot 7      | 4            | `Live`         | parent link `(7, 4)`; `ids[B] = (7, 4)`; selection `(7, 3)`                                             |
+| 6    | The selection resolves `(7, 3)`              | 4            | `Live`         | `3 ≠ 4`, so `Gone`: A drops out, and B is never selected by accident                                    |
+| 7    | Redo restores A, same id, into free slot 12  | —            | —              | `ids[A] = (12, g)`; connectors bound to A get `cached = (12, g)` through `dependents`                   |
+
 
 A node id and a handle are different things:
 
-| | Node id | Handle |
-|---|---|---|
-| Identifies | the document object, across saves, sync, undo and processes | one occupancy of one slot in this process |
-| Survives undo of a delete | yes, the same id comes back | no, the restored node gets a new slot or generation |
-| Cost to follow | hash lookup in the id map (writer only) | array index plus one compare |
-| Crosses the wire | yes | never |
+
+|                           | Node id                                                     | Handle                                              |
+| ------------------------- | ----------------------------------------------------------- | --------------------------------------------------- |
+| Identifies                | the document object, across saves, sync, undo and processes | one occupancy of one slot in this process           |
+| Survives undo of a delete | yes, the same id comes back                                 | no, the restored node gets a new slot or generation |
+| Cost to follow            | hash lookup in the id map (writer only)                     | array index plus one compare                        |
+| Crosses the wire          | yes                                                         | never                                               |
+
+
+
 
 ## Children
 
@@ -213,6 +230,7 @@ container with 100,000 children holds 100,000 links, not 100,000 nodes. Growing 
 list never moves a node, so a reader holding a child keeps a valid pointer.
 
 **Two views of the same set.**
+
 - `links` answers *in what order*: paint order, and iteration.
 - `index` answers *which ones are here*: viewport, point, rectangle.
 
@@ -224,8 +242,9 @@ spatial query can sort its hits into paint order without going back to `links`.
 exactly once if and only if the node at `h` has `header.parent = P`. Readers walk
 down. Only the writer and upward bounds updates walk up.
 
-**A published `Children` is never changed.** Each change builds a new version beside
+**A published** `Children` **is never changed.** Each change builds a new version beside
 it:
+
 - the links copied with the change;
 - the R-tree copied along one path (Rule 4).
 
@@ -266,22 +285,28 @@ billion reuses.
 Five steps. Only the writer runs them, inside a commit
 ([concurrency.md](./concurrency.md#commit)). Every edit is a combination of them.
 
-| Step | What it changes | Slot state |
-|---|---|---|
-| [allocate](#allocate) | one slot; the id map | `Free` → `Live` |
-| [link](#link) | the parent’s `Children`; the child’s `header.parent` | stays `Live` |
-| [unlink](#unlink) | the parent’s `Children` | stays `Live` |
-| [retire](#retire) | slot `state`; the id map; the `retired` list | `Live` → `Retired` |
-| [free](#free) | slot `gen` and `state`; the free list | `Retired` → `Free`, `gen + 1` |
 
-| Edit | Steps | The node’s handle afterwards |
-|---|---|---|
-| Insert a new node (ink commit, paste, enclose) | allocate, then link | new |
-| Remove (erase whole stroke, delete, undo of an insert) | unlink, then retire the node and its subtree; free later | stale: resolves to `Gone` |
-| Reparent (move into a box, enclose capture) | link into the new parent, then unlink from the old one | **unchanged** |
-| Reorder (bring to front) | publish one new `Children` with a new `orderKey` | unchanged |
-| Undo of a remove | allocate with the **same id** into a new slot, then link; update `NodeRef`s through `dependents` | new |
-| Edit a payload (resize, recolor, stroke split by erase) | Rule 2 or Rule 1 on that node; a split also inserts the new pieces and removes the original | unchanged for the edited node |
+| Step                  | What it changes                                      | Slot state                    |
+| --------------------- | ---------------------------------------------------- | ----------------------------- |
+| [allocate](#allocate) | one slot; the id map                                 | `Free` → `Live`               |
+| [link](#link)         | the parent’s `Children`; the child’s `header.parent` | stays `Live`                  |
+| [unlink](#unlink)     | the parent’s `Children`                              | stays `Live`                  |
+| [retire](#retire)     | slot `state`; the id map; the `retired` list         | `Live` → `Retired`            |
+| [free](#free)         | slot `gen` and `state`; the free list                | `Retired` → `Free`, `gen + 1` |
+
+
+
+| Edit                                                    | Steps                                                                                            | The node’s handle afterwards  |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------- |
+| Insert a new node (ink commit, paste, enclose)          | allocate, then link                                                                              | new                           |
+| Remove (erase whole stroke, delete, undo of an insert)  | unlink, then retire the node and its subtree; free later                                         | stale: resolves to `Gone`     |
+| Reparent (move into a box, enclose capture)             | link into the new parent, then unlink from the old one                                           | **unchanged**                 |
+| Reorder (bring to front)                                | publish one new `Children` with a new `orderKey`                                                 | unchanged                     |
+| Undo of a remove                                        | allocate with the **same id** into a new slot, then link; update `NodeRef`s through `dependents` | new                           |
+| Edit a payload (resize, recolor, stroke split by erase) | Rule 2 or Rule 1 on that node; a split also inserts the new pieces and removes the original      | unchanged for the edited node |
+
+
+
 
 ### allocate
 
@@ -307,16 +332,18 @@ allocate(id, kind, fields) → Handle
 
 **Finding the next free slot needs no search.** There are two sources, both
 constant time:
+
 - the free list, which holds slots that were used and then freed;
 - `nextUnused`, the boundary of slots never used yet.
 
 Scanning slots for a `Free` state would be linear in the table size.
 
 **A slot a reader may still see is never handed out.**
+
 - A retired slot waits in `retired`, not on the free list.
 - It joins the free list only in [free](#free), after its grace period.
 - So a slot on the free list cannot still be reached through any `Children` a
-  reader holds.
+reader holds.
 
 **Reuse order.** Taking the last freed slot first keeps memory warm. It does not
 weaken anything: `gen` detects reuse whatever order slots come back in.
@@ -347,6 +374,7 @@ The release store is what makes the child safe to reach. A reader that loads the
 
 **Unlink means removing the edge from a parent to a child.** The child’s `ChildLink`
 and its R-tree entry leave the parent’s `Children`. That is all it does:
+
 - it does not destroy the node, free its slot or change its handle;
 - it does not touch its subtree;
 - it does not change its `state`.
@@ -362,19 +390,23 @@ unlink(P, h)
 ```
 
 After the store:
+
 - **New readers** cannot reach the child from the tree.
 - **Readers already inside a read section** may still hold the old `Children`, and
-  through it the child. Its memory is intact for them, which is why unlinking is
-  safe without waiting.
+through it the child. Its memory is intact for them, which is why unlinking is
+safe without waiting.
 
 Unlink is always half of an edit:
+
 - **In a remove**, it is followed by [retire](#retire). Readers that reach the node
-  through an old list then find it `Retired` and skip it.
+through an old list then find it `Retired` and skip it.
 - **In a reparent**, it is preceded by `link` into the new parent. The child stays
-  `Live` with the **same handle**, so a selection or a gesture that holds it stays
-  valid across the move. The new parent is published first, so a reader may briefly
-  see the node in both places, which only causes extra paint, but never in neither
-  ([concurrency.md](./concurrency.md#topology)).
+`Live` with the **same handle**, so a selection or a gesture that holds it stays
+valid across the move. The new parent is published first, so a reader may briefly
+see the node in both places, which only causes extra paint, but never in neither
+([concurrency.md](./concurrency.md#topology)).
+
+
 
 ### retire
 
@@ -432,15 +464,19 @@ may keep it for as long as it likes, because only the writer frees slots.
 
 There are two lifetimes, and handles span both:
 
-| Within one read section | Across read sections |
-|---|---|
+
+| Within one read section                                                                                 | Across read sections                                                         |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Memory cannot be freed, so a pointer is safe. A `Retired` node is still readable; most readers skip it. | Memory may have been freed and reused. Only the generation compare can tell. |
+
+
+
 
 ## Every use
 
 Each row says who holds the handle, for how long, and what happens when it is stale.
 
-<a id="use-structure"></a>
+
 
 ### 1. Child links and R-tree entries
 
@@ -456,7 +492,7 @@ damage for its removal, so the next paint of that area is correct.
 A structural link never has a stale generation. A slot cannot be freed while a
 published `Children` names it, and a reader in its section cannot see a freed slot.
 
-<a id="use-cells"></a>
+
 
 ### 2. R-tree cells are not handles
 
@@ -467,7 +503,7 @@ slices. Its queued work is pixel regions, not tree positions
 ([rendering.md](./rendering.md#why-regions)). Nothing outside a read section needs a
 handle to a cell.
 
-<a id="use-selection"></a>
+
 
 ### 3. Selection
 
@@ -483,7 +519,7 @@ generation 4. The selection still holds `(7, 3)`. Resolving it fails, so A drops
 of the selection. With a bare slot index, the selection would now silently contain B,
 and the next move would move a stroke the user never selected.
 
-<a id="use-gestures"></a>
+
 
 ### 4. Gesture targets
 
@@ -496,7 +532,7 @@ handles. The writer resolves them first. A `Gone` target (removed by sync, undo 
 another commit during the gesture) is left out of the commit with a reason. The
 writer never applies a gesture to whatever node now occupies the slot.
 
-<a id="use-results"></a>
+
 
 ### 5. Query results passed between threads
 
@@ -509,7 +545,7 @@ every handle again and re-runs the exact test it depends on (for example the 80%
 inside test), because the document may have changed since the reader’s query. The
 reader’s result was a proposal, not the decision.
 
-<a id="use-noderef"></a>
+
 
 ### 6. Connector ends and labels: `NodeRef`
 
@@ -523,13 +559,13 @@ The id is the persistent truth: it is what sync, save and undo understand. The
 cached handle is the fast path that readers use.
 
 - **Reader:** resolve `cached`. If the result is `Gone`, the bound box was deleted;
-  use that end’s `lastPose` ([connector.md](./connector.md#missing-end)). Readers never
-  consult the id map.
+use that end’s `lastPose` ([connector.md](./connector.md#missing-end)). Readers never
+consult the id map.
 - **Writer:** when a node with that id comes back (undo of a delete restores the same
-  id into a new slot), the writer finds every connector that refers to that id via
-  the `dependents` index, updates `cached`, and re-derives them in the same commit.
+id into a new slot), the writer finds every connector that refers to that id via
+the `dependents` index, updates `cached`, and re-derives them in the same commit.
 
-<a id="use-caches"></a>
+
 
 ### 7. Derived caches
 
@@ -540,18 +576,20 @@ The handle makes the key specific to one node, even across slot reuse. The versi
 makes it specific to that node’s current content. A stale key is a cache miss. It is
 never the wrong pixels.
 
-<a id="use-ids"></a>
+
 
 ### 8. Where handles are not used
 
-| Use | Uses | Why |
-|---|---|---|
-| Undo and redo entries | node ids | Undo recreates nodes, which may land in a different slot |
-| Sync, wire, save files | node ids | Handles mean nothing outside this process |
-| `dependents` index | node ids | It must outlive one occupancy of a slot |
-| Damage and render jobs | world or panel rectangles | Regions do not go stale when nodes change |
 
-<a id="use-load"></a>
+| Use                    | Uses                      | Why                                                      |
+| ---------------------- | ------------------------- | -------------------------------------------------------- |
+| Undo and redo entries  | node ids                  | Undo recreates nodes, which may land in a different slot |
+| Sync, wire, save files | node ids                  | Handles mean nothing outside this process                |
+| `dependents` index     | node ids                  | It must outlive one occupancy of a slot                  |
+| Damage and render jobs | world or panel rectangles | Regions do not go stale when nodes change                |
+
+
+
 
 ### 9. Replacing the whole document
 
@@ -563,17 +601,24 @@ and the render job queue (by bumping its epoch).
 
 ## Rejected alternatives
 
-| Alternative | Why not |
-|---|---|
-| Raw pointers | Dangle after free and cannot detect reuse |
+
+| Alternative                        | Why not                                                                                                                                                                                                                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Raw pointers                       | Dangle after free and cannot detect reuse                                                                                                                                                                                                                                      |
 | `shared_ptr` / `weak_ptr` per node | Every step of every visit would change an atomic reference count. The reader and writer threads would then contend on those counts, plus a control-block allocation per node. `weak_ptr::lock` on every child is the slowest form of the same check a generation compare does. |
-| Node ids for child links | One hash lookup per descent step |
-| Index without generation | Has the ABA problem shown in [Selection](#use-selection) |
+| Node ids for child links           | One hash lookup per descent step                                                                                                                                                                                                                                               |
+| Index without generation           | Has the ABA problem shown in [Selection](#use-selection)                                                                                                                                                                                                                       |
+
+
+
 
 ## Verification
 
-| Claim | Status |
-|---|---|
-| A stale handle never resolves to a different node | **Pending.** Test: delete, force the grace period, reallocate the slot, then resolve the old handle. |
+
+| Claim                                               | Status                                                                                               |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| A stale handle never resolves to a different node   | **Pending.** Test: delete, force the grace period, reallocate the slot, then resolve the old handle. |
 | A slot is not freed while a reader may still see it | **Pending.** Stress test under ThreadSanitizer, with a reader looping while the writer churns slots. |
-| Every holder in this file resolves before use | **Pending.** Implementation review. |
+| Every holder in this file resolves before use       | **Pending.** Implementation review.                                                                  |
+
+

@@ -5,13 +5,30 @@
 #include <optional>
 #include <vector>
 #include "geometry.hpp"
-
+#include <variant>
 
 // ==== Basic ========================================================================
 // Basic entities & value types
 // =====================================================================================
 
+// "NodeId" and ceremonies for "unordered_map"
+
 struct NodeId { uint64_t hi = 0, lo = 0; };
+
+inline bool operator==(NodeId a, NodeId b)
+{
+    return a.hi == b.hi && a.lo == b.lo;
+}
+
+namespace std {
+    template <>
+    struct hash<NodeId> {
+        size_t operator()(NodeId id) const noexcept
+        {
+            return hash<uint64_t>{}(id.hi) ^ (hash<uint64_t>{}(id.lo) << 1);
+        }
+    };
+}
 
 struct Handle { uint32_t slot = 0, gen = 0; };
 
@@ -85,7 +102,7 @@ struct ChildLink {
 
 };
 
-struct Chilren {
+struct Children {
     std::vector<ChildLink> links;
     // step 4 replaces a flat list with the R-tree; same pointer, same publish
 };
@@ -110,6 +127,8 @@ struct SampleBuffer {
 struct InkPayload {
     std::atomic<const SampleBuffer*> samples{nullptr};
     std::atomic<Stroke> stroke;
+
+    ~InkPayload() { delete samples.load(std::memory_order_relaxed); }
 };
 
 
@@ -124,6 +143,7 @@ struct InkBoxPayload {
     std::atomic<const PointBuffer*> boundaryPolygon{nullptr};
     std::atomic<ManipMode> manipMode{ManipMode::Boundary};
 
+    ~InkBoxPayload() { delete boundaryPolygon.load(std::memory_order_relaxed); }
 };
 
 // #### Payload
@@ -152,6 +172,8 @@ struct PrimitivePayload {
     std::atomic<Fill> fill;
     std::atomic<ShapeKind> shape{ShapeKind::Rectangle};
     std::atomic<const ShapeData*> data{nullptr};
+
+    ~PrimitivePayload() { delete data.load(std::memory_order_relaxed); }
 };
 
 // #### Connector Payload
@@ -244,4 +266,37 @@ struct ConnectorPayload {
 
     // computed, to be rendered 
     std::atomic<const DerivedPath*> route{nullptr};
+
+    ~ConnectorPayload()
+    {
+        delete rest.load(std::memory_order_relaxed);
+        delete labels.load(std::memory_order_relaxed);
+        delete route.load(std::memory_order_relaxed);
+    }
 };
+
+inline void destroyPayload(NodeType type, const void* p)
+{
+    if (!p)
+        return;
+    switch (type) {
+    case NodeType::Ink:
+        delete static_cast<const InkPayload*>(p);
+        break;
+    case NodeType::InkBox:
+        delete static_cast<const InkBoxPayload*>(p);
+        break;
+    case NodeType::Group:
+        delete static_cast<const GroupPayload*>(p);
+        break;
+    case NodeType::Primitive:
+        delete static_cast<const PrimitivePayload*>(p);
+        break;
+    case NodeType::Connector:
+        delete static_cast<const ConnectorPayload*>(p);
+        break;
+    case NodeType::Document:
+    case NodeType::Frame:
+        break;
+    }
+}

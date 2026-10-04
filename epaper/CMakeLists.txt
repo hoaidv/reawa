@@ -14,6 +14,7 @@ qt_add_executable(epaper_bin
     src/bridge/epaperbridge.cpp
     src/doc/geometry.hpp
     src/doc/node.hpp
+    src/doc/node_store.hpp
 )
 
 qt_add_qml_module(epaper_bin
