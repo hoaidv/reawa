@@ -275,6 +275,26 @@ struct ConnectorPayload {
     }
 };
 
+inline const void* createPayload(NodeType type)
+{
+    switch (type) {
+    case NodeType::Ink:
+        return new InkPayload{};
+    case NodeType::InkBox:
+        return new InkBoxPayload{};
+    case NodeType::Group:
+        return new GroupPayload{};
+    case NodeType::Primitive:
+        return new PrimitivePayload{};
+    case NodeType::Connector:
+        return new ConnectorPayload{};
+    case NodeType::Document:
+    case NodeType::Frame:
+        return nullptr;
+    }
+    return nullptr;
+}
+
 inline void destroyPayload(NodeType type, const void* p)
 {
     if (!p)

@@ -21,6 +21,8 @@ enum class SlotState { Free, Live, Retired };
 
 /**
  * fixed size; fixed address for the life of the store
+ * "std::atomic" has no copy-constructor, hence "Slot" has no copy-constructor.
+ * When assigning to a "Slot" variable, use reference - no copy
  */
 struct Slot {
     // How many times this slot has been freed
@@ -95,12 +97,6 @@ private:
 
         dir[n] = new Chunk;
         chunkCount.store(n + 1, std::memory_order_release);
-    }
-
-    Slot& at(uint32_t slotIndex)
-    {
-        Chunk** dir = directory.load(std::memory_order_relaxed); // writer
-        return dir[slotIndex / kChunkSize]->slots[slotIndex % kChunkSize];
     }
 
     bool ready(Retired r) {
@@ -194,6 +190,19 @@ public:
         return Handle{s, g};
     }
 
+
+    Slot& at(uint32_t slotIndex)
+    {
+        Chunk** dir = directory.load(std::memory_order_relaxed); // writer
+        return dir[slotIndex / kChunkSize]->slots[slotIndex % kChunkSize];
+    }
+
+    /** Writer-only: push onto the private retired list. Does not change slot state. */
+    void enqueueRetired(uint32_t slot, uint64_t epoch)
+    {
+        retired.push_back(Retired{slot, epoch});
+    }
+
     void free() {
         std::vector<Retired> keep;
 
@@ -237,6 +246,86 @@ public:
 class NodeStore {
 
 public:
+    Handle allocate(NodeId id, NodeType type)
+    {
+        Handle h = slots.claim();
+        Slot& slot = slots.at(h.slot);
+        NodeStorage& node = slot.node;
+
+        // relaxed: same-thread initialization of one node. Each store is
+        // sequenced-before the releases below, so "resolve"'s acquire of Live
+        // makes every one of them visible together.
+        //
+        // Nothing acquire-loads these fields; they stay private until that handshake:
+        //
+        // Other cores are also allowed to observe those relaxed stores in any order, 
+        // and even before Live is visible. That is acceptable because "resolve" does not 
+        // read them until it has seen Live.
+        node.id.store(id, std::memory_order_relaxed);
+        node.type.store(type, std::memory_order_relaxed);
+        node.parent.store(kNoParent, std::memory_order_relaxed);
+
+        node.sx.store(1.0, std::memory_order_relaxed);
+        node.sy.store(1.0, std::memory_order_relaxed);
+        node.rotation.store(0.0, std::memory_order_relaxed);
+        node.tx.store(0.0, std::memory_order_relaxed);
+        node.ty.store(0.0, std::memory_order_relaxed);
+
+        node.minX.store(0.0, std::memory_order_relaxed);
+        node.minY.store(0.0, std::memory_order_relaxed);
+        node.maxX.store(0.0, std::memory_order_relaxed);
+        node.maxY.store(0.0, std::memory_order_relaxed);
+
+        node.version.store(0, std::memory_order_relaxed);
+        node.children.store(nullptr, std::memory_order_relaxed);
+
+        // release: createPayload has finished constructing the heap object.
+        // This store publishes that object through the pointer. An acquire
+        // load of payload that sees this pointer also sees those constructor
+        // writes. resolve does not take this handshake; it waits on state.
+        //
+        // A relaxed store of the pointer would publish the address alone; 
+        // the reader could follow it into an object whose constructor writes were not yet visible.
+        node.payload.store(createPayload(type), std::memory_order_release);
+
+        // release: the door "resolve" waits on. 
+        // 
+        // A release synchronizes only with an acquire of the same atomic, 
+        // and resolve acquire-loads state. 
+        // 
+        // Everything sequenced before this store — the relaxed fields, the
+        // payload pointer, and the payload constructor writes — becomes
+        // visible once the reader observes Live. Matching gen is still required.
+        slot.state.store(SlotState::Live, std::memory_order_release);
+        ids[id] = h;
+        return h;
+    }
+
+    void retire(Handle h)
+    {
+        // for now: skip subtree walk (needs Children / link in step 3)
+        Slot& slot = slots.at(h.slot);
+
+        // Stale handle (outdated): slot already reused or never this occupancy
+        if (slot.gen.load(std::memory_order_relaxed) != h.gen)
+            return;
+
+        // Only retire a Live node. 
+        // A Free node is to be used.
+        // A Retired node has nothing to do here.
+        if (slot.state.load(std::memory_order_relaxed) != SlotState::Live)
+            return;
+
+        slot.state.store(SlotState::Retired, std::memory_order_release);
+
+        const NodeId nodeId = slot.node.id.load(std::memory_order_relaxed);
+        ids.erase(nodeId);
+
+        // dependents → lastPose later (connector step)
+
+        slots.enqueueRetired(h.slot, epoches);
+        slots.free(); // immediate grace until step 5
+    }
 
 private:
     SlotTable slots = SlotTable(4);
