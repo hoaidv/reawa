@@ -32,6 +32,10 @@ namespace std {
 
 struct Handle { uint32_t slot = 0, gen = 0; };
 
+inline bool operator ==(Handle a, Handle b) {
+    return a.slot == b.slot && a.gen == b.gen;
+}
+
 inline constexpr Handle kNoParent{0xffffffffu, 0};
 
 enum class NodeType : uint8_t {

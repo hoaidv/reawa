@@ -1,6 +1,7 @@
 
 #pragma once
 #include "node.hpp"
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -190,7 +191,7 @@ public:
         return Handle{s, g};
     }
 
-
+    /** Internal access to slot, without resolving to "NodeStorage" */
     Slot& at(uint32_t slotIndex)
     {
         Chunk** dir = directory.load(std::memory_order_relaxed); // writer
@@ -246,6 +247,18 @@ public:
 class NodeStore {
 
 public:
+    NodeStore() = default;
+
+    ~NodeStore()
+    {
+        for (const RetiredChildren& r : retiredChildren)
+            delete r.ptr;
+        retiredChildren.clear();
+    }
+
+    NodeStore(const NodeStore&) = delete;
+    NodeStore& operator=(const NodeStore&) = delete;
+
     Handle allocate(NodeId id, NodeType type)
     {
         Handle h = slots.claim();
@@ -301,9 +314,8 @@ public:
         return h;
     }
 
-    void retire(Handle h)
+    void retire(Handle h, bool reclaim = true)
     {
-        // for now: skip subtree walk (needs Children / link in step 3)
         Slot& slot = slots.at(h.slot);
 
         // Stale handle (outdated): slot already reused or never this occupancy
@@ -311,10 +323,17 @@ public:
             return;
 
         // Only retire a Live node. 
-        // A Free node is to be used.
-        // A Retired node has nothing to do here.
+        // - A Free node is to be used.
+        // - A Retired node has nothing to do here.
         if (slot.state.load(std::memory_order_relaxed) != SlotState::Live)
             return;
+
+        const Children* children = slot.node.children.load(std::memory_order_relaxed);
+        if (children != nullptr) {
+            for (const ChildLink& childLink : children->links) {
+                retire(childLink.node, false);
+            }
+        }
 
         slot.state.store(SlotState::Retired, std::memory_order_release);
 
@@ -324,12 +343,118 @@ public:
         // dependents → lastPose later (connector step)
 
         slots.enqueueRetired(h.slot, epoches);
-        slots.free(); // immediate grace until step 5
+
+        if (reclaim) {
+            // Do not call free() on every recursive level
+            // Because SlotTable::free already does the walk
+            slots.free(); // immediate grace until step 5
+        }
+    }
+
+    // link(P, h, orderKey, placement)
+    bool link(Handle P, Handle h, uint64_t orderKey, Placement placement)
+    {
+        NodeStorage* nodeH = slots.resolve(h);
+        NodeStorage* nodeP = slots.resolve(P);
+
+        if (nodeP == nullptr || nodeH == nullptr)
+            return false;
+
+        const Children* oldChildren = nodeP->children.load(std::memory_order_relaxed);
+        std::vector<ChildLink> newLinks =
+            oldChildren ? oldChildren->links : std::vector<ChildLink>{};
+
+        auto it = std::lower_bound(
+            newLinks.begin(), newLinks.end(), orderKey,
+            [](const ChildLink& a, uint64_t k) { return a.orderKey < k; });
+
+        // memory_order: parent before any reader can reach h through the new list
+        nodeH->parent.store(P, std::memory_order_relaxed);
+
+        // Note: Allow duplicated child to avoid full links scan
+        // Note: Allow duplicate orderKey (keys must be strictly increasing)
+
+        newLinks.insert(it, ChildLink{h, orderKey, placement});
+
+        Children* newChildren = new Children{std::move(newLinks)};
+        // TODO: add index for h in r-tree (step 4)
+
+        // memory_order: publish; readers can now reach h
+        nodeP->children.store(newChildren, std::memory_order_release);
+
+        // Retire old Children at the current epoch (step 5: wait before delete)
+        if (oldChildren) {
+            enqueueRetiredChildren(oldChildren);
+        }
+        reclaimChildren();
+
+        // TODO: update P’s paint extent, and its entry upward (commit protocol)
+
+        return true;
+    }
+
+    bool unlink(Handle P, Handle h) {
+        NodeStorage* nodeP = slots.resolve(P);
+
+        if (nodeP == nullptr) { return false; }
+
+        const Children *oldChildren = nodeP->children.load(std::memory_order_relaxed);
+        if (oldChildren == nullptr) { return false; }
+
+        std::vector<ChildLink> newLinks{oldChildren->links};
+        auto it = std::find_if(newLinks.begin(), newLinks.end(), [h](const ChildLink& c) {
+            return h == c.node;
+        });
+
+        if (it == newLinks.end()) {
+            return false;
+        }
+
+        newLinks.erase(it);
+    
+
+        // publish Children without h
+        Children* newChildren = new Children{std::move(newLinks)};
+        nodeP->children.store(newChildren, std::memory_order_release);
+
+        // retire old Children
+        enqueueRetiredChildren(oldChildren);
+        reclaimChildren();
+
+        // TODO: paint extent upward
+        return true;
     }
 
 private:
+    struct RetiredChildren {
+        const Children* ptr;
+        uint64_t epoch;
+    };
+
+    /** Step 5 replaces this with e ≤ globalEpoch − 2. */
+    bool childrenReady(uint64_t /*epoch*/) const { return true; }
+
+    void enqueueRetiredChildren(const Children* c)
+    {
+        retiredChildren.push_back(RetiredChildren{c, epoches});
+    }
+
+    void reclaimChildren()
+    {
+        std::vector<RetiredChildren> keep;
+        for (const RetiredChildren& r : retiredChildren) {
+            if (!childrenReady(r.epoch)) {
+                keep.push_back(r);
+                continue;
+            }
+            delete r.ptr;
+        }
+        retiredChildren = std::move(keep);
+    }
+
     SlotTable slots = SlotTable(4);
     std::unordered_map<NodeId, Handle> ids{};
     uint64_t epoches = 0;
     std::unordered_map<NodeId, std::vector<NodeId>> dependents{};
+    std::vector<RetiredChildren> retiredChildren{};
 };

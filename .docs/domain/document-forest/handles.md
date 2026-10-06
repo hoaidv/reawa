@@ -1,13 +1,12 @@
 ---
 
 ## title: Document forest — handles
+
 lifecycle: active
 owner: architect
 source: ADR-0041
 
 # Handles: `(slot, generation)`
-
-
 
 Part of the [document forest](./index.md). Decision: [ADR-0041](../../adr/ADR-0041-document-forest.md).
 
@@ -476,8 +475,6 @@ There are two lifetimes, and handles span both:
 
 Each row says who holds the handle, for how long, and what happens when it is stale.
 
-
-
 ### 1. Child links and R-tree entries
 
 **Holder:** the parent’s `Children` object. **Lifetime:** as long as that `Children`
@@ -492,8 +489,6 @@ damage for its removal, so the next paint of that area is correct.
 A structural link never has a stale generation. A slot cannot be freed while a
 published `Children` names it, and a reader in its section cannot see a freed slot.
 
-
-
 ### 2. R-tree cells are not handles
 
 R-tree internal cells are plain allocations, reclaimed the same way as other
@@ -502,8 +497,6 @@ progressive renderer therefore never keeps cells or a traversal frontier across
 slices. Its queued work is pixel regions, not tree positions
 ([rendering.md](./rendering.md#why-regions)). Nothing outside a read section needs a
 handle to a cell.
-
-
 
 ### 3. Selection
 
@@ -519,8 +512,6 @@ generation 4. The selection still holds `(7, 3)`. Resolving it fails, so A drops
 of the selection. With a bare slot index, the selection would now silently contain B,
 and the next move would move a stroke the user never selected.
 
-
-
 ### 4. Gesture targets
 
 **Holder:** a tool operation (move, resize, erase, connector drag). **Lifetime:** pen
@@ -532,8 +523,6 @@ handles. The writer resolves them first. A `Gone` target (removed by sync, undo 
 another commit during the gesture) is left out of the commit with a reason. The
 writer never applies a gesture to whatever node now occupies the slot.
 
-
-
 ### 5. Query results passed between threads
 
 **Holder:** whoever receives a hit-test or lasso result. **Lifetime:** until it is
@@ -544,8 +533,6 @@ they can be sent anywhere. When the result becomes an edit, the writer resolves
 every handle again and re-runs the exact test it depends on (for example the 80%
 inside test), because the document may have changed since the reader’s query. The
 reader’s result was a proposal, not the decision.
-
-
 
 ### 6. Connector ends and labels: `NodeRef`
 
@@ -575,8 +562,6 @@ raster. **Key:** `(handle, version)`.
 The handle makes the key specific to one node, even across slot reuse. The version
 makes it specific to that node’s current content. A stale key is a cache miss. It is
 never the wrong pixels.
-
-
 
 ### 8. Where handles are not used
 
